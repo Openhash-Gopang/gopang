@@ -192,7 +192,6 @@ migrate((db) => {
         }
     ],
     "indexes": [
-        "CREATE UNIQUE INDEX idx_sp_gov_tree_instance_realtime_key ON sp_gov_tree_instance_realtime (instance_key)",
         "CREATE INDEX idx_sp_gov_tree_instance_realtime_status ON sp_gov_tree_instance_realtime (status)",
         "CREATE INDEX idx_sp_gov_tree_instance_realtime_tier ON sp_gov_tree_instance_realtime (tier)"
     ],
