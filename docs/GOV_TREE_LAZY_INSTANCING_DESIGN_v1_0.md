@@ -541,7 +541,7 @@ AC-PRO-CORE §1 원칙: "혼디 안의 모든 개체(entity) — 사람, 기관,
 | §5-1 PocketBase 컬렉션 | ✅ 스키마 정의 + 헬퍼 함수 | `worker.js` `_l1*GovTreeInstanceRealtime()`, `docs/schema/sp_gov_tree_instance_realtime.schema.json` |
 | §5-1 조회 엔드포인트(gov-router.js가 읽을 read-only 경로) | ✅ 구현 | `worker.js` `handleGovTreeInstanceLookup` — `GET /gov-tree-instance/lookup` |
 | §5-1 큐잉 엔드포인트 확장 | ✅ 구현 | `worker.js` `handleSPAuthorQueue`의 `request_type==='gov_tree_instance'` 분기 |
-| §9-2 비용 상한 | ✅ 구현 | `worker.js` `_checkGovTreeInstanceRateLimit()` |
+| §9-2 비용 상한 | ✅ 구현 | `worker.js` `_checkGovTreeInstanceRateLimit()` — ★ 이것과 별개로, 실사용 중 Cloudflare Workers 플랫폼 자체의 "요청 1건당 하위요청 수" 상한("Too many subrequests by single Worker invocation")이 실제로 걸림을 확인(부트스트랩 시딩 배치 크기 10건에서 재현) — `handleGovTreeInstanceSeed`가 레코드 1건당 최대 4개 하위요청(sp_gov_tree_instance_realtime 조회+생성, profiles 조회+등록)을 만들어서, `/gov-tree-instance/seed`에 한 번에 넘기는 레코드 수(`tools/seed_gov_tree_pocketbase.mjs`의 `BATCH_SIZE`)를 10→4로 낮춰 대응(2026-08-05). `/sp-author/queue`의 `gov_tree_instance` 실시간 생성 분기(§4-1)는 레코드 1건씩만 처리하므로 이 문제와 무관 — 부트스트랩처럼 여러 건을 한 요청에 묶어 보내는 경로에서만 해당. |
 | §5-2 gov-router.js 데이터소스 우선순위(PocketBase 우선) | ✅ 구현 | `gov-router.js` `_fetchCityDeptText`/`_loadEmdRecordsForProvince` 앞단에 PocketBase 조회 삽입 |
 | §5-2 시딩 스크립트 | ✅ 구현+dry-run 검증(부산 city-dept 11건+emd 43건=54건 수집·렌더링 확인) | `tools/seed_gov_tree_pocketbase.mjs` — `_generateGovDraftSP` 재구현 대신 `assembleGovSystemPrompt()` 자체를 재사용해 실제 렌더링 결과와 100% 동일한 텍스트를 얻음 |
 | §5-2 시딩 수신 엔드포인트 | ✅ 구현 | `worker.js` `handleGovTreeInstanceSeed` — `POST /gov-tree-instance/seed`, LLM 생성 없이 직접 삽입, 멱등(기존 있으면 스킵) |

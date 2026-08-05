@@ -178,7 +178,15 @@ async function main() {
 
   // 한 번에 너무 많이 보내지 않는다(§9-2 비용 상한 정신과 동일 —
   // worker.js 요청 바디 크기 제한도 고려). 10건씩 배치.
-  const BATCH_SIZE = 10;
+  // ★ 2026-08-05 축소(10→4, 주피터님 실사용 중 발견) — Cloudflare Workers
+  // 하위요청(subrequest) 한도 초과("Too many subrequests by single Worker
+  // invocation")가 실사용에서 재현됨. 레코드 1건당 PocketBase 왕복이
+  // 최대 4번(sp_gov_tree_instance_realtime 조회+생성, profiles 조회+
+  // 등록) 필요해 배치 10건이면 최대 40건 — 실측 결과 배치 뒷부분(8~9번째
+  // 레코드 근방)에서 한도를 넘겨 실패했다(§9-2 비용 상한 KV 카운터와는
+  // 무관한 별개 제약 — Cloudflare 플랫폼 자체의 요청당 하위요청 수
+  // 상한). 4건이면 최대 16개 하위요청으로 여유 있게 안전.
+  const BATCH_SIZE = 4;
   let created = 0, skipped = 0, failed = 0;
   for (let i = 0; i < allRecords.length; i += BATCH_SIZE) {
     const batch = allRecords.slice(i, i + BATCH_SIZE);
