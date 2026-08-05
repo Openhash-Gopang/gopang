@@ -92,7 +92,26 @@ function mockNationalAgencyResolve(province, domain, city) {
 globalThis.fetch = async (url) => {
   const u = String(url);
   if (u.includes('sp-catalog.json')) {
-    return { ok: true, json: async () => ({ 'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt', 'SP_common_guardrails': 'SP-COMMON-02_v1.0.md' }) };
+    return { ok: true, json: async () => ({
+      'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt',
+      'SP_common_guardrails': 'SP-COMMON-02_v1.0.md',
+      // [2026-08-06 추가 — 사전 존재 버그] gov-router.js가
+      // _fetchByManifestKey('GOV-COMMON-OVERLAY-TEMPLATE')를 호출하는데
+      // (assembleGovSystemPrompt 진입 시 매 요청 필수 경로) 이 목에는
+      // 키가 아예 없어 _fetchByManifestKey가 하드 throw — 103건 전부가
+      // 실행조차 못 되고 예외로 죽고 있었다. 실제 prompts/sp-catalog.json
+      // 기준 파일명으로 매핑.
+      'GOV-COMMON-OVERLAY-TEMPLATE': 'GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md',
+      // [2026-08-06 추가] 같은 이유 — _loadJejuTreeProtocol()이
+      // _fetchByManifestKey('GOV-TREE-PROTOCOL')을 부르는데(구
+      // JEJU-TREE-PROTOCOL에서 이름이 바뀐 것으로 보임 — 플랫폼이 제주
+      // 단일 도 범위를 넘어 전국으로 일반화되며 개명된 듯) 이 목엔 없었음.
+      'GOV-TREE-PROTOCOL': 'GOV-TREE-PROTOCOL_v1.0.md',
+      // [2026-08-06 추가] 같은 이유 — 국가기관(national) 경로 조립 시
+      // _fetchByManifestKey('NATIONAL-SP-CORE') 필요.
+      'NATIONAL-SP-CORE': 'NATIONAL-SP-CORE_v1.2.md',
+      'NATIONAL-SP-OVERLAY-TEMPLATE': 'NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md',
+    }) };
   }
   if (u.includes('sigungu-national-list.json')) {
     return { ok: true, json: async () => ({ 시군구목록: SIGUNGU_LIST }) };

@@ -1697,7 +1697,7 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
 // tools/build_ksic_parent_map.py가 data/classification/ksic-flat.csv에서
 // 생성한다 — 이 파일을 직접 손으로 고치지 않는다(tools/check_ksic_parent_map_
 // freshness.py가 CI에서 실측 대조).
-import KSIC_PARENT_MAP_DATA from './data/classification/ksic-parent-map.json';
+import KSIC_PARENT_MAP_DATA from './data/classification/ksic-parent-map.json' with { type: 'json' };
 
 // 대분류(level1)까지 다 뒤져도 없으면 그게 진짜 "최초 사례"다. 몇 건이면
 // 상위 레벨로 올라갈지는 대화 판단이 아니라 순수 계산이므로 SP에 맡기지

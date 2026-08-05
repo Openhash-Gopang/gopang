@@ -1,7 +1,18 @@
 // SP-INTERCALL 오케스트레이션 실제 코드 검증 하네스
 // worker.js를 그대로 import해서 실제 handleGovRelay 경로를 통과시킨다
 // (재구현이 아니라 실행 결과로 검증 — 기존 라우팅 검증과 동일한 방식).
-import worker from '../../worker.js';
+//
+// [2026-08-06 수정 — 사전 존재 버그] worker.js가 gov-router.js를 정적
+// import하고, gov-router.js 최상단에 `window.resolveGovAgency = ...`
+// 등 6개 비가드 전역 할당이 있다(§215행의 `typeof window !== 'undefined'`
+// 가드와 달리 무가드). ESM은 정적 import를 다른 모든 코드보다 먼저
+// 로드·실행하므로, 이 파일 하단에 `globalThis.window = globalThis`를
+// 아무리 일찍 적어도 정적 `import worker from '../../worker.js'`가 이미
+// 그 전에 gov-router.js를 실행해버려 `window is not defined`로 죽는다.
+// gov-router.test.mjs 등 다른 테스트 파일들이 이미 쓰고 있는 패턴(전역을
+// 먼저 세팅한 뒤 동적 import로 전환)을 그대로 따른다.
+globalThis.window = globalThis;
+const { default: worker } = await import('../../worker.js');
 
 // ── DeepSeek 응답 스크립트 ────────────────────────────────
 // 시나리오별로 순서대로 소비되는 응답 큐. agency 호출과 상관없이
@@ -15,7 +26,24 @@ const PROMPT_FILES = {
   'UNIVERSAL-common_v1_1.md':    '[UNIVERSAL-common v1.1 텍스트 — U9 포함]',
   'K-Public_common_v1_3.md':     '[K-Public_common 텍스트]',
   'PROFESSIONAL-common_v1_0.md': '[PROFESSIONAL-common 텍스트]',
-  'sp-catalog.json': JSON.stringify({ 'SP-04_khealth': 'SP-04_khealth_v2.1.txt', 'SP-10_kpublic': 'SP-10_kpublic_v3.4.txt' }),
+  'sp-catalog.json': JSON.stringify({
+    'SP-04_khealth': 'SP-04_khealth_v2.1.txt',
+    'SP-10_kpublic': 'SP-10_kpublic_v3.4.txt',
+    // [2026-08-06 추가 — 사전 존재 버그] 실제 sp-catalog.json(prompts/)에는
+    // 있지만 이 목에는 빠져 있던 4개 키. UNIVERSAL-INTEGRITY·UNIVERSAL-
+    // common·PROFESSIONAL-common은 PROMPT_FILES에 내용까지 이미 있었는데
+    // 카탈로그 쪽 키-파일명 매핑만 빠져 있어 "manifest 키 없음"으로
+    // 조용히 실패하고 있었다(HUMAN-AUTHORITY-GATE-SCHEMA·PDV-TRANSFER-
+    // PROTOCOL은 코드가 로드 실패를 무시하도록 이미 방어돼 있어 그대로 둠
+    // — 아래 두 줄은 그래도 붙여서 그 무시 경로 자체가 잘 도는지도 함께
+    // 확인).
+    'UNIVERSAL-INTEGRITY':          'UNIVERSAL-INTEGRITY_v1_0.md',
+    'UNIVERSAL-common':             'UNIVERSAL-common_v1_1.md',
+    'PROFESSIONAL-common':          'PROFESSIONAL-common_v1_0.md',
+    'HUMAN-AUTHORITY-GATE-SCHEMA':  'HUMAN-AUTHORITY-GATE-SCHEMA_v1_0.md',
+    'PDV-TRANSFER-PROTOCOL':        'PDV-TRANSFER-PROTOCOL_v1_0.md',
+    'K-Public_common':              'K-Public_common_v1_3.md',
+  }),
   'SP-04_khealth_v2.1.txt': '[K-Health SP 텍스트]',
   // ★ 2026-07-09 추가 — jeju_do/jeju_national이 이제 kgov+OVERLAY+
   // TREE-PROTOCOL 상위 체인을 fetch한다(worker.js _loadGovCommonChain).
@@ -36,6 +64,8 @@ const PROMPT_FILES = {
   // 나머지 검증이 줄줄이 어긋남).
   'JEJU-DO-SP_v1.5.md':       '[제주도청 총괄 SP 텍스트]',
   'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트]',
+  'HUMAN-AUTHORITY-GATE-SCHEMA_v1_0.md': '[HUMAN-AUTHORITY-GATE-SCHEMA 텍스트]',
+  'PDV-TRANSFER-PROTOCOL_v1_0.md':       '[PDV-TRANSFER-PROTOCOL 텍스트]',
 };
 
 global.fetch = async (url, opts = {}) => {
