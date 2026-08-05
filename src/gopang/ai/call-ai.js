@@ -957,6 +957,46 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
 }
 
 /**
+ * _recoverOrchestrationFailure — 오케스트레이션 홉 워치독의 복구 처리
+ * (2026-08-06 신설, "필요한 지점에만 감독" 합의 반영)
+ *
+ * 배경: 기존엔 K-Intent/K-Compose/K-Execute 등 체인 중 어느 한 홉이라도
+ * 실패(전체 LLM 후보 소진, 네트워크 오류, 45초 타임아웃)하면 _callAIInner의
+ * 일반 catch가 "⚠️ API 오류: ..." 문구만 사용자에게 보여주고 그대로 멈췄다 —
+ * 재시도도, 대안 안내도, AC의 재판단도 없었다.
+ *
+ * 설계: 매 홉마다 AC(hondi-pro)가 상시 감독하게 하면(모든 재주입 결과를 다시
+ * AC 판단에 태우면) 어제 hondi-flash로 분리해 줄인 지연 비용이 다시 늘어난다
+ * (§HANDOFF_2026-08-06 modelTier 배선과 정면 충돌). 대신 실패가 "실제로
+ * 발생한" 홉에서만 AC를 다시 불러 복구를 맡기는 워치독 방식을 쓴다 —
+ * 평소엔 개입 없이 relay가 그대로 진행되고, 딱 필요한 지점에서만 감독이
+ * 켜진다.
+ *
+ * CFG.system을 system_base(AC)로 강제 복원하는 게 핵심이다 — 안 하면 실패한
+ * SP의 system 프롬프트가 그대로 남아 복구 메시지도 그 SP 인격으로
+ * 응답해버린다(예: K-Execute가 자기 실패를 K-Execute 문법으로 서술).
+ */
+async function _recoverOrchestrationFailure(err, sendFn, userText, hopLabel) {
+  console.warn(`[Orchestration][Watchdog] "${hopLabel}" 홉 실패 — AC로 복귀:`, err?.message || err);
+  CFG.system = CFG.system_base || CFG.system;
+  const reason = String(err?.message || err || '알 수 없는 오류').slice(0, 200);
+  const recoveryMsg =
+    `[INTERNAL: 오케스트레이션 진행 중 "${hopLabel}" 단계 처리에 실패했습니다(사유: ${reason}). ` +
+    `사용자에게 이 실패를 기술적 오류 문구 그대로 노출하지 말고 자연스럽게 설명하고, ` +
+    `재시도가 의미 있으면 재시도 의사를 물어보거나 정부24 등 대체 경로를 안내하세요. ` +
+    `원래 사용자 발화: "${userText}"]`;
+  try {
+    // 복구 호출 자체는 워치독 없이(=onFailure 없이) 보낸다 — 이것마저 실패하면
+    // 기존 일반 오류 UI로 자연스럽게 떨어진다(무한 재귀 방지).
+    await sendFn(recoveryMsg);
+  } catch (e2) {
+    console.error('[Orchestration][Watchdog] 복구 호출도 실패 — 포기:', e2.message);
+  }
+}
+
+
+
+/**
  * _handleOrchestrationTags — AC↔K-Intent↔K-Compose↔K-Deliver 및 그
  * 내부의 중첩 위임(K-Search/EXPERT scope=orchestration_subtask)을
  * 공통 처리한다(2026-07-08 신설, AGENT-COMMON §0-H v3.40).
@@ -972,6 +1012,20 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     if (_usb) _usb(bubble, text);
   };
 
+  // [2026-08-06 신설 — 워치독] 이 함수 안의 모든 재귀 sendFn(...) 호출을 이
+  // 래퍼로 교체해서 쓴다(아래 일괄 치환). 어느 한 홉이 실패해도 AC로 복귀해
+  // 복구를 시도한다 — 자세한 설계 근거는 위 _recoverOrchestrationFailure
+  // 함수 주석 참고. hopLabel은 각 호출부 근처 주석/태그명을 그대로 쓴다.
+  const _watchdogSendFn = (hopLabel) => async (text, imageFile, preTabArg, modelTierArg) => {
+    try {
+      await sendFn(text, imageFile, preTabArg, modelTierArg,
+        (err) => _recoverOrchestrationFailure(err, sendFn, userText, hopLabel));
+    } catch (err) {
+      // sendFn 자체가 onFailure(5번째 인자)를 모르는 커스텀 구현(예: 패널의
+      // _panelSendFn — 아직 미지원)일 경우를 대비한 방어적 fallback.
+      await _recoverOrchestrationFailure(err, sendFn, userText, hopLabel);
+    }
+  };
   // ── [ORCHESTRATION_PROGRESS: step=n/total, doing=...] 실시간 진행상황
   // 표시 (2026-07-12 신설, K-Compose SP-20 v1.4와 함께) ──
   // ★ 배경: 오케스트레이션(K-Intent→K-Compose→K-Deliver)이 여러 기관을
@@ -1025,7 +1079,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[PROCEDURE_MAP_UPDATE 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_UPDATE_RESULT'));
+      await _watchdogSendFn('PROCEDURE_MAP_UPDATE')(`[PROCEDURE_MAP_UPDATE 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_UPDATE_RESULT'));
       return true;
     }
 
@@ -1041,7 +1095,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_LOOKUP_RESULT'));
+      await _watchdogSendFn('PROCEDURE_MAP_LOOKUP')(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_LOOKUP_RESULT'));
       return true;
     }
 
@@ -1070,7 +1124,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_SEMANTIC_SEARCH_RESULT'));
+      await _watchdogSendFn('BENEFIT_SEMANTIC_SEARCH')(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_SEMANTIC_SEARCH_RESULT'));
       return true;
     }
 
@@ -1099,7 +1153,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[BENEFIT_CANDIDATE_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_CANDIDATE_SEARCH_RESULT'));
+      await _watchdogSendFn('BENEFIT_CANDIDATE_SEARCH')(`[BENEFIT_CANDIDATE_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_CANDIDATE_SEARCH_RESULT'));
       return true;
     }
 
@@ -1129,7 +1183,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
           resultText = `{"error":"${e.message}"}`;
         }
       }
-      await sendFn(`[PROCEDURE_MAP_DRAFT 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_DRAFT_RESULT'));
+      await _watchdogSendFn('PROCEDURE_MAP_DRAFT')(`[PROCEDURE_MAP_DRAFT 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_DRAFT_RESULT'));
       return true;
     }
 
@@ -1154,7 +1208,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`, null, null, resolveOrchestrationModel('CALL_GOVSYS_RESULT'));
+      await _watchdogSendFn('CALL_GOVSYS')(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`, null, null, resolveOrchestrationModel('CALL_GOVSYS_RESULT'));
       return true;
     }
 
@@ -1182,7 +1236,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[CALL_GOVTREE 결과] ${resultText}\n\nstatus가 gov_tree_ref_stale이면 org_profiles와 gov-tree가 어긋난 것이므로 이 기관은 미연결로 취급하고 대체 경로(K-Search 등)를 시도하세요. status=ok면 institution_response를 그 기관이 실제로 답한 내용으로 취급해 다음 단계로 진행하세요.`, null, null, resolveOrchestrationModel('CALL_GOVTREE_RESULT'));
+      await _watchdogSendFn('CALL_GOVTREE')(`[CALL_GOVTREE 결과] ${resultText}\n\nstatus가 gov_tree_ref_stale이면 org_profiles와 gov-tree가 어긋난 것이므로 이 기관은 미연결로 취급하고 대체 경로(K-Search 등)를 시도하세요. status=ok면 institution_response를 그 기관이 실제로 답한 내용으로 취급해 다음 단계로 진행하세요.`, null, null, resolveOrchestrationModel('CALL_GOVTREE_RESULT'));
       return true;
     }
   }
@@ -1194,7 +1248,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKIntentSP, 'K-Intent');
-    await sendFn(`[INTERNAL: AC→K-Intent 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+    await _watchdogSendFn('AC-to-KIntent')(`[INTERNAL: AC→K-Intent 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
       `다음 발화를 목표로 구조화하세요: "${kIntentMatch[1].trim()}"]`);
     return true;
   }
@@ -1206,7 +1260,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKComposeSP, 'K-Compose');
-    await sendFn(`[INTERNAL: K-Intent→K-Compose 위임 — 아래 목표를 이어받아 진행하세요: ${kComposeMatch[1].trim()}]`);
+    await _watchdogSendFn('KIntent-to-KCompose')(`[INTERNAL: K-Intent→K-Compose 위임 — 아래 목표를 이어받아 진행하세요: ${kComposeMatch[1].trim()}]`);
     return true;
   }
 
@@ -1217,7 +1271,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKExecuteSP, 'K-Execute');
-    await sendFn(`[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: ${kExecuteMatch[1].trim()}]`);
+    await _watchdogSendFn('KCompose-to-KExecute')(`[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: ${kExecuteMatch[1].trim()}]`);
     return true;
   }
 
@@ -1329,7 +1383,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKExecuteSP, 'K-Execute');
-    await sendFn(`[INTERNAL: AC→K-Execute 재개 위임 — 아래 저장된 project_state부터 이어서 실행하세요: ${resumeMatch[1].trim()}]`);
+    await _watchdogSendFn('AC-to-KExecute-resume')(`[INTERNAL: AC→K-Execute 재개 위임 — 아래 저장된 project_state부터 이어서 실행하세요: ${resumeMatch[1].trim()}]`);
     return true;
   }
 
@@ -1342,7 +1396,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKDeliverSP, 'K-Deliver');
-    await sendFn(`[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverMatch[1].trim()}]`);
+    await _watchdogSendFn('to-KDeliver')(`[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverMatch[1].trim()}]`);
     return true;
   }
 
@@ -1353,7 +1407,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKReportSP, 'K-Report');
-    await sendFn(`[INTERNAL: K-Deliver→K-Report 위임 — 아래 결과에 대한 이해당사자 통지/신고를 처리하세요: ${kReportMatch[1].trim()}]`);
+    await _watchdogSendFn('KDeliver-to-KReport')(`[INTERNAL: K-Deliver→K-Report 위임 — 아래 결과에 대한 이해당사자 통지/신고를 처리하세요: ${kReportMatch[1].trim()}]`);
     return true;
   }
 
@@ -1370,7 +1424,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _pushAndSwitchSP(_loadKSearchSP, 'K-Search');
-    await sendFn(`[INTERNAL: K-Compose→K-Search 위임 — 조회 후 결과를 반환하세요: ${kSearchMatch[1].trim()}]`);
+    await _watchdogSendFn('KCompose-to-KSearch')(`[INTERNAL: K-Compose→K-Search 위임 — 조회 후 결과를 반환하세요: ${kSearchMatch[1].trim()}]`);
     return true;
   }
   if (kSearchMatch) {
@@ -1383,7 +1437,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKSearchSP, 'K-Search');
-    await sendFn(`[INTERNAL: AC→K-Search 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+    await _watchdogSendFn('AC-to-KSearch')(`[INTERNAL: AC→K-Search 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
       `다음 발화를 그대로 이어받아 대상을 특정하세요: "${kSearchMatch[1].trim()}"]`);
     return true;
   }
@@ -1405,7 +1459,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       await _updateBubble(_stripInternalTags(fullReply));
       history.length = 0;
       await _forwardSwitchSP(loader, label);
-      await sendFn(`[INTERNAL: AC→${label} 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+      await _watchdogSendFn('AC-to-EXPERT')(`[INTERNAL: AC→${label} 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
         `다음 발화를 그대로 이어받아 상담을 시작하세요: "${switchMatch[2].trim()}"]`);
       return true;
     }
@@ -1433,7 +1487,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       if (!def) return null;
       return _composeExpertPrompt(def);
     }, `EXPERT:${personaId}`);
-    await sendFn(`[INTERNAL: K-Compose→EXPERT(${personaId}) 위임(scope=orchestration_subtask) — ` +
+    await _watchdogSendFn('KCompose-to-EXPERT-subtask')(`[INTERNAL: K-Compose→EXPERT(${personaId}) 위임(scope=orchestration_subtask) — ` +
       `STEP 0-(-1)을 따라 전체 파이프라인을 생략하고 다음 질문에만 짧게 답하세요: ` +
       `${kExpertSubtaskMatch[2].trim()} 답변은 [ORCHESTRATION_SUBTASK_RESULT: verdict=..., ` +
       `confidence=..., needs_full_consultation=...] 형식으로만 출력하세요.]`);
@@ -1454,7 +1508,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     const resultPayload = (subtaskResultMatch || kSearchResultMatch)[1].trim();
     history.length = 0;
     await _popSP();
-    await sendFn(`[INTERNAL: 위임 결과 수신 — 다음 결과를 이어받아 진행하세요: ${resultPayload}]`);
+    await _watchdogSendFn('delegation-result')(`[INTERNAL: 위임 결과 수신 — 다음 결과를 이어받아 진행하세요: ${resultPayload}]`);
     return true;
   }
 
@@ -1472,7 +1526,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _forwardSwitchSP(_loadAgentCommonSP, 'AGENT-COMMON');
     const payload = kSearchResultMatch ? kSearchResultMatch[1].trim()
       : `reason=${kSearchHandoffBackMatch[1]}`;
-    await sendFn(`[INTERNAL: K-Search 결과 수신 — §TAGS의 [KSEARCH_HANDOFF] 항목에 ` +
+    await _watchdogSendFn('KSearch-result')(`[INTERNAL: K-Search 결과 수신 — §TAGS의 [KSEARCH_HANDOFF] 항목에 ` +
       `정리된 결과 처리 지침(institution/person/matched_list/not_found/insufficient별 ` +
       `분기)에 따라 처리하세요: ${payload}]`);
     return true;
@@ -1490,7 +1544,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _popSP(); // 스택에 AC가 남아 있으면 정확히 그 자리로, 없으면 폴백으로 AC 로드
-    await sendFn(`[INTERNAL: 오케스트레이션 완료 — 다음 결과를 이용자에게 자연스럽게 ` +
+    await _watchdogSendFn('orchestration-complete')(`[INTERNAL: 오케스트레이션 완료 — 다음 결과를 이용자에게 자연스럽게 ` +
       `전달하고, pdv_note가 있으면 §2 형식으로 PDV_STORE에 기록하세요: ${orchestrationCompleteMatch[1].trim()}]`);
     return true;
   }
@@ -1511,7 +1565,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     history.length = 0;
     CFG.systemStack = [];
     await _switchToAssistantSP();
-    await sendFn(`[INTERNAL: mode=project가 human_action에서 일시정지됨 — 방금 K-Deliver가 ` +
+    await _watchdogSendFn('mode-project-paused')(`[INTERNAL: mode=project가 human_action에서 일시정지됨 — 방금 K-Deliver가 ` +
       `전달한 요약과 pending_user_action을 이용자에게 자연스럽게 전달하고, "프로젝트 일시정지: ` +
       `{project_id}, {human_action_desc}"로 §4-1 PDV 기록을 남기세요(project_state 자체는 ` +
       `K-Execute가 이미 PDV에 저장했으므로 여기서는 일반 6하원칙 로그만 남기면 된다).]`);
@@ -1569,9 +1623,9 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     // 로 차례차례 돌아가는 것보다 AC로 즉시 뛰는 게 항상 안전하다.
     await _switchToAssistantSP();
     if (handoffBackMatch[1] === 'emergency' && userText) {
-      await sendFn(userText); // 응급 신호가 담긴 원래 발화를 AC가 다시 보게 함
+      await _watchdogSendFn('handoff-back-emergency')(userText); // 응급 신호가 담긴 원래 발화를 AC가 다시 보게 함
     } else if (userText) {
-      await sendFn(userText);
+      await _watchdogSendFn('handoff-back')(userText);
     }
     return true;
   }
@@ -3026,11 +3080,15 @@ function _setSendBtnGenerating(active) {
 
 // callAI는 얇은 래퍼 — 실제 로직(_callAIInner)이 어떤 경로로 끝나든(정상 종료/
 // 에러/중지) try/finally가 버튼 상태와 AbortController를 항상 정리한다.
-export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null) {
+// [2026-08-06 신설] 5번째 인자 onFailure — 오케스트레이션 홉으로 호출된 경우
+// (_handleOrchestrationTags의 워치독) 실패를 이 콜백으로 받아 AC 복구 판단으로
+// 돌릴 수 있게 한다. 기본값 null이면 기존과 동일하게 _callAIInner가 직접
+// "⚠️ API 오류" 말풍선을 띄운다(메인 채팅 최상위 호출 등 기존 동작 보존).
+export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null) {
   _currentAbort = new AbortController();
   _setSendBtnGenerating(true);
   try {
-    await _callAIInner(userText, imageFile, _preTab, modelTier);
+    await _callAIInner(userText, imageFile, _preTab, modelTier, onFailure);
   } finally {
     _setSendBtnGenerating(false);
     _currentAbort = null;
@@ -3948,7 +4006,7 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
 }
 
 
-async function _callAIInner(userText, imageFile = null, _preTab = null, modelTier = null) {
+async function _callAIInner(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null) {
   showTyping();
 
   // urgent=true → kemergency면 경고 표시 후 계속 처리
@@ -4407,6 +4465,17 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
     if (err.name === 'AbortError') {
       console.log('[AI] 응답 생성이 중지되었습니다 (사용자 요청)');
       document.querySelector('.bubble-ai.streaming')?.classList.remove('streaming');
+      return;
+    }
+    // [2026-08-06 신설 — 워치독] onFailure가 넘어왔다는 건 이 호출이 사용자
+    // 최상위 발화가 아니라 오케스트레이션 홉(재귀 sendFn)이라는 뜻이다. 기존
+    // 처럼 "⚠️ API 오류: ..." 문구를 그대로 사용자에게 보여주고 조용히
+    // 멈추는 대신, 호출부(_handleOrchestrationTags의 워치독)가 실패를 받아
+    // AC 복구 판단으로 돌리게 한다. 아래 일반 오류 UI 분기는 건너뛴다.
+    if (typeof onFailure === 'function') {
+      console.warn('[AI][Watchdog] 오케스트레이션 홉 실패 — onFailure로 위임:', err.message);
+      try { await onFailure(err); }
+      catch (e2) { console.error('[AI][Watchdog] 복구 콜백 자체가 실패:', e2.message); }
       return;
     }
     const existingBubble = document.querySelector('.bubble-ai.streaming');
