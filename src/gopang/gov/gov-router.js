@@ -2124,6 +2124,22 @@ async function _resolveEmdTeam(text, emdRec, classifyFn) {
   }
 }
 
+// ── TBD 리터럴 폴백 안전망 (2026-08-05 신설) ────────────────────
+// 실사로 발견된 패턴: 마스터데이터에 "값이 없다"는 뜻으로 빈 문자열/
+// undefined가 아니라 리터럴 문자열 "TBD"가 저장된 레코드가 있다.
+// `rec.field || 'TBD — 재검증 필요'`는 falsy만 걸러내므로 "TBD"라는
+// 3글자가 그대로 통과해 사용자 화면에 정제 안 된 채 노출된다(최초
+// 발견: EMD team 콜센터번호 184건 중 179건, HANDOFF_2026-08-05 §1-3).
+// 이 헬퍼가 falsy·리터럴 "TBD"(공백 트림 후 대소문자 무관 일치) 둘 다
+// 폴백 대상으로 취급한다 — 값이 실제로 "TBD"라는 문자열을 담고 있어야
+// 하는 정당한 케이스는 없으므로(사람이 읽는 안내문에 "TBD"라는 영문
+// 약어를 그대로 노출할 이유가 없다) 안전하게 일반화할 수 있다.
+function _fallbackIfTbd(value, fallback) {
+  if (!value) return fallback;
+  if (typeof value === 'string' && value.trim().toUpperCase() === 'TBD') return fallback;
+  return value;
+}
+
 function _renderTeamTemplate(template, teamRec, emdRec) {
   return template
     .replaceAll('{읍면동명}', emdRec.읍면동명 || teamRec.읍면동이름 || '')
@@ -2132,7 +2148,7 @@ function _renderTeamTemplate(template, teamRec, emdRec) {
     .replaceAll('{emd_short_code}', emdRec.emd_short_code || teamRec.emd_short_code || '')
     .replaceAll('{주력산업}', emdRec.주력산업 || '')
     .replaceAll('{콜센터명}', teamRec.콜센터명 || '제주콜센터')
-    .replaceAll('{콜센터번호}', teamRec.콜센터번호 || 'TBD — 재검증 필요')
+    .replaceAll('{콜센터번호}', _fallbackIfTbd(teamRec.콜센터번호, 'TBD — 재검증 필요'))
     .replaceAll('{콜센터운영시간}', teamRec.콜센터운영시간 || emdRec.운영시간 || '평일 09:00~18:00')
     // 구 SP-TEAM-TEMPLATE_v1.0(팀 단독 범용 템플릿)만 쓰는 필드 —
     // v2.1 5종 원형은 안 쓰지만 폴백 상황을 대비해 같이 치환해둔다.
@@ -3018,8 +3034,8 @@ function _renderEmdTemplate(template, rec) {
     .filter(x => x)
     .map(x => `| ${x.업무영역} | ${x.실질처리주체} | ${x.연결SP || '-'} |`).join('\n');
 
-  const 상위기관명 = rec.상위기관명 || rec.행정시명 || 'TBD — 재검증 필요';
-  const 상위기관구분 = rec.상위기관구분 || (rec.행정시명 ? '행정시' : 'TBD — 재검증 필요');
+  const 상위기관명 = _fallbackIfTbd(rec.상위기관명, null) || rec.행정시명 || 'TBD — 재검증 필요';
+  const 상위기관구분 = _fallbackIfTbd(rec.상위기관구분, null) || (rec.행정시명 ? '행정시' : 'TBD — 재검증 필요');
   const 관할구역구분 = rec.관할구역구분 || (['읍', '면'].includes(rec.읍면동구분) ? '법정리' : '법정동');
   const 관할구역목록 = (rec.관할구역목록 || rec.관할리목록 || []);
 
@@ -3030,16 +3046,16 @@ function _renderEmdTemplate(template, rec) {
     .replaceAll('{행정시명}', 상위기관명) // 구 버전 템플릿(v1.2 이하) 호환용
     .replaceAll('{읍면동구분}', rec.읍면동구분)
     .replaceAll('{관할구역구분}', 관할구역구분)
-    .replaceAll('{청사주소}', rec.청사주소 || 'TBD — 재검증 필요')
-    .replaceAll('{대표전화}', rec.대표전화 || 'TBD — 재검증 필요')
+    .replaceAll('{청사주소}', _fallbackIfTbd(rec.청사주소, 'TBD — 재검증 필요'))
+    .replaceAll('{대표전화}', _fallbackIfTbd(rec.대표전화, 'TBD — 재검증 필요'))
     .replaceAll('{운영시간}', rec.운영시간 || '평일 09:00~18:00 (점심 12:00~13:00), 무인민원발급기 24시간')
     .replaceAll('{관할구역목록}', 관할구역목록.join(', '))
     .replaceAll('{관할리목록}', 관할구역목록.join(', ')) // 구 버전 템플릿 호환용
     .replaceAll('{주력산업}', rec.주력산업 || '')
-    .replaceAll('{상수도소관기관}', rec.상수도소관기관 || 'TBD — 재검증 필요')
-    .replaceAll('{통합콜센터명}', rec.통합콜센터명 || 'TBD — 재검증 필요')
-    .replaceAll('{통합콜센터번호}', rec.통합콜센터번호 || 'TBD — 재검증 필요')
-    .replaceAll('{무인발급기위치}', rec.무인발급기위치 || 'TBD — 재검증 필요')
+    .replaceAll('{상수도소관기관}', _fallbackIfTbd(rec.상수도소관기관, 'TBD — 재검증 필요'))
+    .replaceAll('{통합콜센터명}', _fallbackIfTbd(rec.통합콜센터명, 'TBD — 재검증 필요'))
+    .replaceAll('{통합콜센터번호}', _fallbackIfTbd(rec.통합콜센터번호, 'TBD — 재검증 필요'))
+    .replaceAll('{무인발급기위치}', _fallbackIfTbd(rec.무인발급기위치, 'TBD — 재검증 필요'))
     .replaceAll('{특이사항}', rec.특이사항 || '')
     + (teamRows ? `\n\n### 렌더링된 팀 구성\n| 팀 | 업무 |\n|---|---|\n${teamRows}` : '')
     + (linkedRows ? `\n\n### 렌더링된 연계 업무\n| 업무영역 | 실질 처리 주체 | 연결 SP |\n|---|---|---|\n${linkedRows}` : '');
