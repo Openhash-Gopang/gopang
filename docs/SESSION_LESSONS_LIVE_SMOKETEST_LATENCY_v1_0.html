@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-05 저녁 세션(org_profiles/gov-tree §4-2
+  라이브 검증 이어받기 → hondi.net 실사용자 계정으로 개인파산·안심상속
+  시나리오 라이브 스모크테스트 → 응답 지연·빈 응답 현상 발견 → wrangler
+  tail·브라우저 Network/Console·PocketBase SQL을 오가며 원인 추적)에서
+  실제로 밟은 디버깅 삽질과 최종적으로 확인된 사실을 다룹니다. 특정 기능의
+  사용법이 아니라 "다음에 라이브 시스템을 디버깅할 때 반복하지 말아야 할
+  시행착오" 모음입니다.
+  관련 문서: MANUAL_INDEX.html 에서 전체 문서 지도 확인
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-05): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>라이브 스모크테스트 디버깅 실전 교훈 매뉴얼 — Gopang</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.gs.in { opacity: 1; transform: none; }
+.gs-head {
+  display: flex; align-items: flex-start; gap: 13px;
+  padding: 20px 24px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.gs-icon {
+  flex-shrink: 0; width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: var(--accent-lt);
+  border-radius: var(--radius);
+}
+.gs-icon svg { width: 16px; height: 16px; }
+.gs-num {
+  font-size: 11px; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 2px;
+}
+.gs-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+.gs-subtitle { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+.gs-body { padding: 22px 24px 24px; }
+.gs-body p { margin-bottom: 14px; color: var(--ink-2); }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body ul, .gs-body ol { margin: 0 0 14px 20px; color: var(--ink-2); }
+.gs-body li { margin-bottom: 7px; }
+.gs-body li:last-child { margin-bottom: 0; }
+.gs-body h4 { font-size: 13px; font-weight: 700; color: var(--ink); margin: 18px 0 8px; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12.5px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 3px; padding: 1px 5px;
+}
+.gs-body pre {
+  background: #1c1c1c; color: #e8e8e8;
+  border-radius: var(--radius);
+  padding: 14px 16px; overflow-x: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  margin-bottom: 14px;
+}
+.gs-body pre code { background: none; border: none; padding: 0; color: inherit; }
+
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-lt);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 16px;
+  font-size: 13px; color: var(--ink-2);
+  margin-bottom: 14px;
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; color: var(--ink);
+  text-transform: uppercase; letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+.doc-hero { margin-bottom: 32px; }
+.doc-hero-eyebrow {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
+  color: var(--ink-4); text-transform: uppercase; margin-bottom: 10px;
+}
+.doc-hero-title {
+  font-size: 25px; font-weight: 800; line-height: 1.4; color: var(--ink);
+  margin-bottom: 14px; letter-spacing: -0.3px;
+}
+.doc-hero-title em { color: var(--accent); font-style: normal; }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); margin-bottom: 18px; max-width: 760px; }
+.doc-hero-meta {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  font-size: 12px; color: var(--ink-3);
+  border-top: 1px solid var(--line); padding-top: 14px;
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+table.evidence { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12.5px; }
+table.evidence th, table.evidence td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; }
+table.evidence th { background: var(--bg-3); font-weight: 700; color: var(--ink); }
+table.evidence td { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#goal">오늘 세션의 목표와 흐름</a>
+    <a href="#lesson-sse">① SSE 청크 수를 호출 횟수로 착각하지 마라</a>
+    <a href="#lesson-logsplit">② 서버 로그와 브라우저 콘솔은 완전히 다른 프로세스다</a>
+    <a href="#lesson-networkfilter">③ Network URL 필터로 응답 본문을 찾을 수 없다</a>
+    <a href="#lesson-emptystop">④ finish_reason:"stop"은 성공을 보장하지 않는다</a>
+    <a href="#lesson-sequential">⑤ 순차 다단계 LLM 재주입이 지연을 곱한다</a>
+    <a href="#checklist">다음에 라이브 디버깅할 때 체크리스트</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SITE MANUAL — 2026-08-05 저녁 세션 발견 정리</div>
+      <h1 class="doc-hero-title">응답이 "안 온다"는 증상 하나에도 <em>최소 세 가지 서로 다른 원인</em>이 겹쳐 있을 수 있다</h1>
+      <p class="doc-hero-desc">
+        이날 저녁 세션은 K-Compose STEP 1의 <code>status:draft</code> 처리
+        수정(같은 날 오전 커밋)을 라이브에서 검증하려던 것으로 시작했다.
+        hondi.net에서 "안심상속" 시나리오를 여러 번 입력했는데 응답이
+        5분 이상 지연되거나 아예 안 오는 현상을 만났고, 그 원인을 추적하며
+        여러 번 잘못된 가설을 세웠다가 스스로 정정했다. 최종적으로는
+        검증하려던 버그와 전혀 무관한, 훨씬 근본적인 두 가지 문제(빈 응답·
+        순차 지연)를 발견했다. 이 문서는 그 추적 과정에서 실제로 밟은
+        디버깅 함정을 정리한 것이다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>관련 커밋</strong> 7d6366e · 9c84bd8 · 4ecdb1c</span>
+        <span><strong>작성</strong> 2026-08-05</span>
+      </div>
+    </div>
+
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이 문서는 <strong>응답 지연·빈 응답 버그 자체의 수정 방법을
+          다루지 않는다</strong>(그건
+          <code>HANDOFF_2026-08-05_live-smoketest-latency-and-empty-content.md</code>가
+          다룬다). hondi.net처럼 사용자가 실제로 쓰는 시스템에서 "왜 응답이
+          안 오지?"를 라이브로 디버깅할 때 <strong>또 밟게 될 게 뻔한
+          함정들</strong>을 모아뒀다. 전부 오늘 세션에서 실제로 겪은
+          시행착오이고, 몇 개는 스스로 세운 가설을 스크린샷 몇 장 뒤에
+          스스로 정정한 사례다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            이 문서를 읽어야 하는 상황
+          </div>
+          라이브 시스템에서 "응답이 안 온다/느리다"를 디버깅할 때 /
+          <code>wrangler tail</code>·브라우저 DevTools를 같이 쓸 때 /
+          SSE 스트리밍 응답을 분석해야 할 때 / "정상 종료됐는데 결과가
+          이상하다"는 버그를 마주쳤을 때 / 여러 단계로 이어지는
+          오케스트레이션·에이전트 체인의 지연 원인을 찾을 때.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="goal">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Goal</div>
+          <div class="gs-title">오늘 세션의 목표와 흐름</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ol>
+          <li><strong>검증 목표</strong> — 그날 오전 커밋한 K-Compose STEP 1
+              <code>status:draft</code> 처리 수정이 라이브에서 실제로
+              동작하는지 확인.</li>
+          <li><strong>1차 관찰</strong> — hondi.net에 "안심상속" 관련
+              발화를 입력, 응답이 5분+ 지연되거나 다른 메시지("안녕")에
+              뒤늦게 붙어서 나오는 현상 관찰.</li>
+          <li><strong>1차(틀린) 가설</strong> — GDC 지갑 잔액 0으로 인한
+              과금 실패(<code>AI_CHARGE_FAILED</code>)가 원인이라고 짐작 →
+              <code>worker.js</code>의 <code>_chargeGdcForAiUsage()</code>
+              주석을 코드로 직접 확인한 결과 응답 자체는 막지 않는다는 게
+              드러나 정정.</li>
+          <li><strong>2차(틀린) 가설</strong> — "수천 번 deepseek 호출"로
+              폭주 중이라고 우려 → <code>wrangler tail</code>과 Network
+              패널을 대조한 결과 SSE 스트리밍 청크 수를 호출 횟수로 착각한
+              것으로 확인·정정(§1 참고).</li>
+          <li><strong>결정적 증거</strong> — 브라우저 Console에 fetch
+              가로채기 스크립트를 심어 응답의 <code>reasoning_content</code>와
+              <code>content</code>를 분리해서 확인 → <code>content</code>가
+              완전히 비어있는데 <code>finish_reason:"stop"</code>으로 정상
+              종료된 것을 확인(§4 참고).</li>
+          <li><strong>근본 원인 확정</strong> — 코드 감사로 (a) thinking
+              모드가 completion 예산을 잠식하는 기존에 알려진 버그의
+              재발, (b) 오케스트레이션 체인의 모든 홉이 순차·동일 모델로
+              실행되는 구조적 지연, 두 가지를 확정.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lesson-sse">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">01 · Streaming</div>
+          <div class="gs-title">SSE 청크 수를 호출 횟수로 착각하지 마라</div>
+          <div class="gs-subtitle">"1000여 줄이 찍혔다" = 폭주가 아니라 토큰 하나당 한 줄일 뿐</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          DevTools Network 패널에서 <code>deepseek</code> 요청의 Response를
+          열었을 때, 왼쪽 파일 목록에 같은 이름의 요청이 여러 개(<code>792,
+          793, 795, 797...</code>) 있는 것처럼 보여서 "deepseek 5건이 각기
+          1000여 건씩 출력"이라고 순간적으로 판단했다. 실제로는 <strong>SSE
+          (Server-Sent Events) 스트리밍은 토큰 하나(또는 몇 글자)마다 별도의
+          <code>data: {...}</code> 줄을 찍기 때문에, 답변 하나가 조금만
+          길어도 수백~수천 줄이 되는 게 정상</strong>이다. 마지막 줄의
+          <code>data: [DONE]</code>이 "이 응답 하나가 정상 종료됐다"는
+          표준 신호다.
+        </p>
+        <table class="evidence">
+          <tr><th>줄 번호로 보인 것</th><th>실제 의미</th></tr>
+          <tr><td>같은 요청 안의 1567~1592번 줄</td><td>토큰 스트리밍 청크 26개(응답 하나)</td></tr>
+          <tr><td><code>wrangler tail</code>의 <code>POST /deepseek</code> 횟수</td><td>실제 API 호출 횟수(이 시간대엔 3회뿐이었음)</td></tr>
+        </table>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          실제 <strong>호출 횟수</strong>는 서버 진입점 로그(예: <code>wrangler
+          tail</code>의 <code>POST</code> 라인 수)로 세는 게 정확하다.
+          클라이언트 Network 패널에 보이는 줄 수는 스트리밍 프로토콜의
+          청크 단위일 뿐, 호출 단위가 아니다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lesson-logsplit">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">02 · Client vs. server</div>
+          <div class="gs-title">서버 로그와 브라우저 콘솔은 완전히 다른 프로세스다</div>
+          <div class="gs-subtitle"><code>wrangler tail</code>에서 클라이언트 전용 로그를 찾다가 여러 턴을 낭비함</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>_handleOrchestrationTags()</code>(<code>call-ai.js</code>)의
+          <code>console.log('[Orchestration] PROCEDURE_MAP_LOOKUP 감지...')</code>는
+          <strong>브라우저에서 실행되는 클라이언트 코드</strong>다. 이걸
+          Cloudflare Workers의 <code>wrangler tail</code>(서버 진입점 로그)로
+          찾으려고 몇 번을 살펴봤는데 당연히 안 나온다 — 애초에 다른
+          프로세스, 다른 머신에서 실행되는 로그다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          코드를 뒤지기 전에 <strong>그 로그가 어디서 실행되는 코드에
+          있는지부터 확인</strong>하라 — 프론트엔드(<code>src/gopang/ai/
+          call-ai.js</code>, 브라우저 Console) vs 백엔드
+          (<code>worker.js</code>, <code>wrangler tail</code>)는 겹치지
+          않는 두 세계다. 파일 경로만 봐도 대개 구분된다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lesson-networkfilter">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">03 · DevTools 사용법</div>
+          <div class="gs-title">Network URL 필터로 콘솔 로그·응답 본문을 찾을 수 없다</div>
+          <div class="gs-subtitle">"Orchestration"으로 필터링해도 항상 0건 — 애초에 URL에 그 문자열이 없기 때문</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          Network 탭 상단의 필터 입력창은 <strong>요청 이름(URL)</strong>만
+          걸러낸다. 응답 본문 안의 텍스트나 콘솔 로그 문구를 찾는 용도가
+          아니다 — <code>Orchestration</code>으로 필터링하면 그 문자열이
+          URL에 없는 한 항상 0건이 나온다. 이걸로 몇 턴을 허비한 뒤에야
+          제대로 된 방법으로 바꿨다:
+        </p>
+        <h4>제대로 된 방법 — Console에서 fetch 가로채기</h4>
+        <pre><code>(function(){
+  const orig = window.fetch;
+  window.fetch = async function(...args) {
+    const res = await orig.apply(this, args);
+    if (String(args[0]).includes('deepseek')) {
+      const clone = res.clone();
+      clone.text().then(t =&gt; {
+        const lines = t.split('\n').filter(l =&gt; l.startsWith('data: ') &amp;&amp; !l.includes('[DONE]'));
+        let reasoning = '', content = '';
+        for (const line of lines) {
+          try {
+            const j = JSON.parse(line.slice(6));
+            const d = j.choices?.[0]?.delta;
+            if (d?.reasoning_content) reasoning += d.reasoning_content;
+            if (d?.content) content += d.content;
+          } catch(e) {}
+        }
+        console.log('=== REASONING ===\n' + reasoning);
+        console.log('=== FINAL CONTENT ===\n' + content);
+      });
+    }
+    return res;
+  };
+})();</code></pre>
+        <p>
+          이 방법이 이번 세션에서 실제로 결정적 증거를 냈다(§4 참고) — SSE
+          청크를 한 줄씩 눈으로 읽거나 URL 필터로 헤매는 것보다 훨씬 빠르다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lesson-emptystop">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">04 · Silent failure</div>
+          <div class="gs-title"><code>finish_reason:"stop"</code>은 성공을 보장하지 않는다</div>
+          <div class="gs-subtitle">reasoning이 completion 예산을 다 먹으면 content가 빈 채로 "정상 종료"된다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          fetch 가로채기로 확인한 실제 사례 — 사용자가 "안심상속 확인해줘"를
+          재차 보냈을 때, 모델의 <code>reasoning_content</code>는 "재요청해야
+          하나, status-check용 표준 태그가 없는데..."를 장문으로 고민했고,
+          <code>content</code>(사용자에게 실제로 보일 답)는 <strong>완전히
+          빈 문자열</strong>이었다. 그런데도 응답은
+          <code>finish_reason:"stop"</code>으로, 즉 API 관점에서는 정상
+          종료됐다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            근본 원인(코드로 확인됨)
+          </div>
+          <code>src/gopang/core/token-policy.js</code>에 <strong>이미 한 번
+          발견되고 부분 완화된 동일 클래스 버그</strong>가 기록돼 있었다(#180).
+          hondi-pro는 <code>thinking: enabled</code>가 기본값이라 최종 답
+          전에 reasoning에 토큰을 먼저 쓴다. <code>CHAT_REPLY_PRO</code>를
+          800→4000으로 이미 한 번 올려 완화했지만, 이번처럼 reasoning이
+          그보다 길어지면 4000 예산 전체를 reasoning이 잠식하고 content가
+          0으로 남는다.
+        </div>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          reasoning/thinking 모드가 있는 모델을 쓸 때, <strong>API가
+          보고하는 종료 사유(<code>finish_reason</code>)와 실제 유용한
+          출력이 생성됐는지는 별개다.</strong> content가 비어있는지를
+          reasoning과 별도로 검사하지 않으면, 시스템은 이 실패를 영원히
+          "정상"으로 취급한다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lesson-sequential">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">05 · Latency</div>
+          <div class="gs-title">순차 다단계 LLM 재주입 구조가 지연을 곱한다</div>
+          <div class="gs-subtitle">태그 하나 감지될 때마다 새 hondi-pro 호출 — 5단계면 지연이 5번 곱해짐</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>_handleOrchestrationTags</code>는 <code>PROCEDURE_MAP_LOOKUP</code>
+          같은 태그를 감지할 때마다 <code>sendFn</code>(기본값
+          <code>callAI</code>)으로 <strong>새 deepseek 호출을 만든다.</strong>
+          이 재호출에 모델을 지정하는 override가 없어서, 오케스트레이션
+          체인의 모든 홉(AC 판단 → K-Intent → 태그 재주입 → K-Compose →
+          K-Execute → K-Deliver)이 전부 hondi-pro(thinking 켜짐)로, 그것도
+          <strong>순차(sequential)</strong>로 실행된다. 무거운 호출 하나가
+          수십 초 걸리는데 그게 4~6단계 이어지면 수 분이 걸리는 게 당연하다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          다단계 에이전트/오케스트레이션 체인을 설계할 때, <strong>모든
+          홉이 같은 무게의 모델을 쓸 필요는 없다.</strong> "결과를 받아서
+          다음 단계로 넘기기만 하는" 기계적 홉과 "진짜 판단이 필요한" 홉을
+          구분하지 않으면 지연이 홉 수만큼 곱해진다. (구체적인 해법은
+          <code>HANDOFF_2026-08-05_live-smoketest-latency-and-empty-content.md</code>
+          §4에 정리돼 있다 — 진행상황 표시 의무화 → 홉별 모델 분리 →
+          기계적 분기의 LLM 호출 자체 제거, 3단계 순서로 진행 예정.)
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="checklist">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Checklist</div>
+          <div class="gs-title">다음에 라이브 디버깅할 때</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>"응답이 안 온다/느리다"를 처음 마주쳤을 때</h4>
+        <ul>
+          <li>먼저 아주 단순한 메시지("안녕")로 기준선을 확인했는가 — 이 시나리오만 문제인지, 시스템 전체가 막혔는지 구분</li>
+          <li>서버 로그(<code>wrangler tail</code>)와 클라이언트 로그(브라우저 Console)를 둘 다 확인했는가, 그리고 각각 어느 코드가 찍는 건지 파일 경로로 먼저 확인했는가</li>
+        </ul>
+        <h4>Network 패널을 읽을 때</h4>
+        <ul>
+          <li>같은 이름의 요청이 여러 줄 보이면, 그게 별도 호출인지 하나의 스트리밍 응답의 청크인지(<code>data: [DONE]</code> 유무로) 확인했는가</li>
+          <li>응답 본문 안의 특정 문자열을 찾아야 한다면 URL 필터가 아니라 fetch 가로채기나 응답 본문 검색 기능을 썼는가</li>
+        </ul>
+        <h4>reasoning/thinking 모드가 있는 모델을 쓸 때</h4>
+        <ul>
+          <li><code>finish_reason:"stop"</code>만 보고 성공으로 단정하지 않고, content가 실제로 비어있지 않은지 별도로 확인했는가</li>
+          <li>다단계 체인이라면 각 홉이 정말 무거운 모델(thinking 켜짐)이 필요한 홉인지, 아니면 결과만 넘기는 기계적 홉인지 구분했는가</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M14.5 4.5l5 5"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li>저장소 내 <code>docs/HANDOFF_2026-08-05_live-smoketest-latency-and-empty-content.md</code> — 이 세션의 원인 규명·다음 작업 지시(3→1→2 순서) 전체</li>
+          <li>저장소 내 <code>docs/ORG_PROFILES_GOVTREE_RECONCILIATION_v1_0.md</code> — 같은 날 오전 진행한 org_profiles/gov-tree 작업 전체 이력</li>
+          <li><a href="./SESSION_LESSONS_VECTORIZE_GOVTREE_v1_0.html" target="_blank">Vectorize·gov-tree 실전 교훈 매뉴얼</a> — "짐작으로 좁히지 말고 로그부터 보라"는 같은 교훈의 선행 사례</li>
+          <li><a href="./MANUAL_INDEX.html" target="_blank">개발 문서 전체 지도</a></li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
