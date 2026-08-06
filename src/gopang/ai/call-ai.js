@@ -4014,6 +4014,13 @@ export async function _enforceRoutingBias(fullReply, bubble, sendFn = callAI, us
   }
   _routingBiasRetryCount += 1;
 
+  // 콘솔 가시성(2026-08-06 신설, 디버그용) — 브라우저 콘솔에서 실제
+  // 발동 여부를 직접 관찰할 수 있도록 함. Network 탭의 "추가 API 호출"
+  // 만으로는 확신하기 어렵다는 피드백 반영 — svcId까지 로그로 남긴다.
+  const _gwpMatchForLog = fullReply.match(/\[GWP:\s*([\w-]+)\]/);
+  console.info('[RoutingBias] 재확인 개입 —', _gwpMatchForLog?.[1] || '(알 수 없음)',
+    '선택에 위임의도 마커 감지, EXPERT 재검토 요청 전송');
+
   history.push({ role: 'assistant', content: fullReply });
   const nudge =
     `[INTERNAL: 방금 GWP(기관 서비스)로 라우팅했는데, 사용자 발화에 ` +
