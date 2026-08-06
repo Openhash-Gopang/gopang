@@ -548,6 +548,18 @@ const EXPERT_ID_ALIAS = {
   'property-appraiser': 'appraiser', 'valuation-appraiser': 'appraiser',
   'insurance-adjuster': 'loss-adjuster',
   'labor-consultant': 'labor-attorney', 'employment-attorney': 'labor-attorney',
+  // 2026-08-06 신설 — 라이브 재검증(패널 오케스트레이션) 중 실사로 발견:
+  // K-Compose가 가족관계등록(출생신고 등) 적합성 확인을 위해 EXPERT
+  // 위임을 낼 때 'kfam'이라는, 등록된 적 없는 ID를 스스로 지어냈다.
+  // 전용 가족법 전문가 페르소나가 아직 없어 일반 변호사('lawyer')로
+  // 대신 받도록 흔히 나올 법한 표기를 미리 별칭 처리한다. 다만 이건
+  // '그럴듯한 오표기 안전망'일 뿐이라, 화이트리스트에도 없는 완전히
+  // 새로운 이름을 지어내는 경우까지는 못 막는다 — 그 경우를 위한
+  // 방어는 call-ai.js의 EXPERT(scope=orchestration_subtask) 처리부에
+  // 별도로 추가했다(존재하지 않는 ID면 침묵하지 않고 K-Compose에게
+  // 정정 요청을 되돌려준다).
+  'kfam': 'lawyer', 'family-law': 'lawyer', 'family-law-attorney': 'lawyer',
+  'civil-registration': 'lawyer', 'family-registration': 'lawyer',
   'emt': 'paramedic', 'emergency-medical-technician': 'paramedic',
   'patent-agent': 'patent-attorney', 'ip-attorney': 'patent-attorney',
   'customs-agent': 'customs-broker',
