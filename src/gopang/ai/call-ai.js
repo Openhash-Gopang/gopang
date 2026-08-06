@@ -3954,6 +3954,82 @@ const NUMBERED_LIST_RE = /(^|\n)\s*\d+[.)]\s.+(\n\s*\d+[.)]\s.+){2,}/;
 const BULLET_LIST_RE = /(^|\n)\s*[-•*]\s.+(\n\s*[-•*]\s.+){2,}/;
 const STYLE_MAX_LEN = 300; // 대략 1~3문장을 넉넉히 넘는 길이 — 오탐 방지 위해 넓게 잡음
 
+// ── [라우팅 자기점검] GWP↔EXPERT 편향 방지 (2026-08-06 신설) ──────────
+// 배경: AC-PRO-CORE §CORE 2단계 R1 판정축(2026-08-01)이 "위임의도 명시
+// 시 EXPERT 우선"을 규정했지만, scenarios_batch2_20260801.json 300건
+// 라이브 테스트에서 진짜 FAIL 39건 중 23건(59%)이 정확히 이 축에서
+// 나왔다 — 니치 전문가(감정평가사·변리사·관세사·법무사·공인노무사·
+// 공인중개사·정보보안전문가 등)에게 위임의도를 명시했는데도 인접
+// GWP가 대신 채간 사례가 압도적으로 많았다(§CORE 2단계 주석 원문
+// 인용). §CORE의 확신도 기반 되묻기 규칙도 이 편향 자체는 못 잡는다
+// — 편향이 확신도 판단 자체를 왜곡시키기 때문("판단력 부족이 아니라
+// 습관" — 더 일반적이고 눈에 익은 후보로 자동 수렴).
+//
+// C50(_enforceConversationalStyle)과 동일 철학의 코드 레벨 방어망:
+// LLM이 스스로 세운 R1 기준을 실제로 어겼을 가능성이 있는지 순수
+// 패턴 매칭으로 감지해 재확인을 요청한다. 정확도는 완벽하지 않다
+// (휴리스틱 정규식) — 오탐 위험을 낮추기 위해 (1) 위임의도 마커가
+// 있고 (2) 최종 선택이 GWP이고 (3) 그 GWP 도메인에 EXPERT 형제가
+// 실제로 존재하는 경우에만 재확인을 요청하며, 재확인 지시 자체도
+// "무조건 EXPERT로 바꾸라"가 아니라 "다시 판단해서 GWP가 맞으면
+// 유지해도 된다"는 열린 형태로 낸다(강제 아님 — 이미 맞는 판단을
+// 뒤집을 위험을 줄이기 위함).
+//
+// 반대 방향(GWP가 맞는데 EXPERT로 새는 경우, 39건 중 나머지 41%)은
+// 이번 신설 범위에 포함하지 않았다 — 실측 근거상 이 방향이 상대적으로
+// 작은 문제였고, "제도적 관점" 마커는 정규식으로 안정적으로 잡기엔
+// 오탐 위험이 더 커서(거의 모든 질문이 표면적으로 "정보성"으로 보일
+// 수 있음) 별도 설계가 필요하다 — 다음 과제로 남긴다.
+const _DELEGATION_INTENT_RE =
+  /(해\s*주실\s*분|께\s*직접|에게\s*직접|봐\s*주실\s*(분|전문가)|맡기고\s*싶|여쭤보고\s*싶|상담받고\s*싶|자문\s*(받고|구하고)\s*싶|의뢰하고\s*싶)/;
+
+// GWP id → 동일 도메인에 EXPERT 형제 페르소나가 실제로 존재하는지
+// (expert-registry.js EXPERT_REGISTRY의 ownerAgency 필드 기준, 2026-08-06
+// 확인). kbank는 gwp-registry.js에서 이미 삭제됐지만 financial-planner.
+// ownerAgency가 아직 'kbank'로 남아있는 스테일 참조라 kgdc로 별칭
+// 처리한다(kgdc가 kbank의 기능을 흡수했으므로 — §CATALOG kgdc 행 참고).
+const _GWP_HAS_EXPERT_SIBLINGS = new Set([
+  'klaw', 'khealth', 'kedu', 'kfinance', 'ktax', 'kestate',
+  'ksecurity', 'kcommerce', 'kgdc',
+]);
+
+export function _violatesRoutingBias(userText, fullReply) {
+  if (!userText || !fullReply) return false;
+  const gwpMatch = fullReply.match(/\[GWP:\s*([\w-]+)\]/);
+  if (!gwpMatch) return false; // GWP 태그가 아니면(EXPERT거나 direct) 이 점검 대상 아님
+  const svcId = gwpMatch[1];
+  if (!_GWP_HAS_EXPERT_SIBLINGS.has(svcId)) return false; // 경쟁할 EXPERT 자체가 없으면 편향 위험 없음
+  return _DELEGATION_INTENT_RE.test(userText);
+}
+
+let _routingBiasRetryCount = 0;
+const _ROUTING_BIAS_RETRY_MAX = 2;
+
+export async function _enforceRoutingBias(fullReply, bubble, sendFn = callAI, userText = '') {
+  if (!_violatesRoutingBias(userText, fullReply)) return false;
+
+  if (_routingBiasRetryCount >= _ROUTING_BIAS_RETRY_MAX) {
+    console.warn('[RoutingBias] 재확인 재시도 한도 초과 — 이번 턴은 그냥 통과');
+    return false;
+  }
+  _routingBiasRetryCount += 1;
+
+  history.push({ role: 'assistant', content: fullReply });
+  const nudge =
+    `[INTERNAL: 방금 GWP(기관 서비스)로 라우팅했는데, 사용자 발화에 ` +
+    `"~해주실 분"·"~께 직접"·"맡기고 싶다" 류의 개인 위임의도 표현이 ` +
+    `있었습니다 — AC-PRO-CORE §CORE 2단계 R1 판정축상 이런 경우 ` +
+    `EXPERT(면허 전문가)가 우선해야 할 수 있습니다. 이 발화가 정말 ` +
+    `제도 정보·제3자 관점 질문이었는지, 아니면 특정 자격직에게 직접 ` +
+    `맡기려는 위임 요청이었는지 다시 판단해서, 필요하면 EXPERT로 ` +
+    `다시 라우팅하세요. 재확인 후에도 GWP가 맞다고 판단되면 그 판단을 ` +
+    `유지해도 됩니다 — 무조건 EXPERT로 바꾸라는 지시가 아닙니다.]`;
+  history.push({ role: 'user', content: nudge });
+
+  await sendFn(nudge);
+  return true;
+}
+
 export function _violatesConversationalStyle(fullReply) {
   if (!fullReply || typeof fullReply !== 'string') return false;
   if (MD_HEADER_RE.test(fullReply)) return true;
@@ -4774,6 +4850,13 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
         setTimeout(() => _injectAuthConfirmButton(requiredLevel), 400);
       }
     }
+
+    // ── [라우팅 자기점검] GWP↔EXPERT 편향 방지 (2026-08-06 신설) ──
+    // 대화 스타일 강제보다 먼저 검사한다 — 라우팅 자체가 잘못됐으면
+    // 그 응답의 문서형 여부를 따지는 게 의미가 없다(어차피 재확인
+    // 결과에 따라 완전히 다른 응답으로 바뀔 수 있으므로).
+    const _routingBiasHandled = await _enforceRoutingBias(fullReply, bubble, callAI, userText);
+    if (_routingBiasHandled) return;
 
     // ── [대화 스타일] 문서형 응답 강제 재작성 (2026-08-06 신설) ──
     // 위 AUTH 처리까지 끝난 뒤, 즉 이번 응답이 정말 최종 응답으로

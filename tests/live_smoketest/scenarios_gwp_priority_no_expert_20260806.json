@@ -13,11 +13,11 @@
     "no": 2,
     "utterance": "교통사고가 났는데 보험금이 어떻게 산정되는 건지 일반적인 기준이 궁금해요",
     "expected_type": "GWP",
-    "expected_id": "klaw",
-    "expected_name": "K-Law",
+    "expected_id": "kinsurance",
+    "expected_name": "K-Insurance",
     "category": "부정테스트(EXPERT 오발동 방지 — LAW/손해사정 인접)",
-    "static_verdict": "WARN",
-    "basis": "expert-registry.js loss-adjuster.triggers('손해사정사','보험금 산정','손해사정')와 '보험금이 어떻게 산정되는지' 의미가 인접해 EXPERT로 새기 쉬운 케이스로 의도적 설계. 위임의도('~해주실 분') 없이 '일반적인 기준'을 묻는 제도적 관점이라 klaw 또는 kinsurance가 정답이어야 하나, loss-adjuster로 새는지가 검증 포인트라 확신도는 낮게 표시"
+    "static_verdict": "PASS",
+    "basis": "★ 2026-08-06 라이브 실행 후 정정 — 최초엔 expected_id=klaw였으나 실제 응답은 GWP:kinsurance였다. 보험금 산정 기준은 klaw(가상판결 시뮬레이션)보다 K-Insurance(실제 보험금 산정·청구 서비스, gwp-registry.js kinsurance.triggers에 '보험','청구' 포함)가 훨씬 더 정확한 소관이다 — 원래 정답이 R1축(제도정보→GWP)을 지나치게 klaw 쪽으로만 좁게 적용한 오류였다. loss-adjuster(EXPERT)로 새지 않고 정확한 GWP로 간 것 자체가 이 시나리오의 핵심 검증 포인트였으므로 결과적으로 의도 확인됨."
   },
   {
     "no": 3,
