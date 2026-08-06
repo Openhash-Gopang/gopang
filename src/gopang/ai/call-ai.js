@@ -619,7 +619,21 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 2026-07-17 신설 — 자기 갱신 제안(RULE-03, K-Intent v1.3 등)
   .replace(/\[SELF_UPDATE_PROPOSAL:[^\]]*\]/g, '')
   .replace(/\[USER_FEEDBACK:[^\]]*\]/g, '')      // 사용자 개선 제안 포착 태그 (2026-07-17 신설)
+  // 2026-08-06 수정 — 라이브 재검증(패널 오케스트레이션 연결) 중 실사로 발견:
+  // 정식 태그 형식은 콜론이 태그명 바로 뒤([PROCEDURE_MAP_LOOKUP: goal=...])라
+  // 아래 첫 줄로 정상 케이스는 잡히지만, 모델이 조회 결과를 사용자에게
+  // 설명하며 "[PROCEDURE_MAP_LOOKUP 결과: miss]"처럼 내부 용어를 자연어
+  // 문장에 섞어 쓰는 이탈 케이스(콜론이 태그명 바로 뒤에 안 붙음)는
+  // 기존 정규식이 못 잡아 원문이 그대로 노출됐다. 콜론 위치 제약을 없애고
+  // 대괄호 안에 PROCEDURE_MAP_LOOKUP이 등장하는 모든 경우를 방어적으로 제거.
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
+  .replace(/\[PROCEDURE_MAP_LOOKUP[^\]]*\]/g, '')
+  // 2026-08-06 신설 — PDV_REVIEWED(call-ai.js:722, 2026-07-13 신설)가
+  // localStorage 기록용으로 fullReply.includes()는 감지하면서 정작 이
+  // 스트립 목록엔 빠져 있던 결함. SP가 이번 턴 응답을 이 태그 하나로만
+  // 끝내면(예: 주기적 PDV 검토 완료 알림 턴) 태그 원문이 그대로 독립된
+  // 채팅 버블로 노출됐다(라이브 재검증 중 실사 확인).
+  .replace(/\[PDV_REVIEWED\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
   .replace(/\[CALL_GOVTREE:[^\]]*\]/g, '')  // 2026-08-05 신설 — gov-tree 지방행정 SP 실행 태그(§ handleGovTreeStepExecute)
