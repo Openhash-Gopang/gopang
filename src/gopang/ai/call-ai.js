@@ -541,6 +541,31 @@ function _stripBracketTag(text, tagName) {
   return out;
 }
 
+// ── _stripBracketTag와 같은 원리로, 스트립 대신 태그 본문을 추출한다
+// (2026-08-06 신설). HANDOFF_TO_KEXECUTE/KDELIVER처럼 plan={steps:[...]}
+// 같은 중첩 배열을 본문에 담는 태그를 단순 정규식(`[^\]]*`)으로 캡처하면
+// 배열 안쪽 첫 ]에서 잘린다 — 라이브 재검증(2026-08-06)에서 실사로 발견:
+// HANDOFF_TO_KEXECUTE 감지 캡처가 딱 그 지점에서 끊겨 K-Execute가 받는
+// project_brief 자체가 반토막이었고, 스트립도 같은 지점에서 멈춰 나머지
+// 원시 JSON(parallel_group, eligibility_gate, user_profile 등)이 화면에
+// 그대로 노출됐다(PROCEDURE_MAP_DRAFT와 같은 계열의 버그, 그건 이미
+// _stripBracketTag로 고쳐져 있었는데 이 태그들은 안 옮겨져 있었다).
+function _extractBracketTag(text, tagName) {
+  const idx = text.indexOf(`[${tagName}:`);
+  if (idx === -1) return null;
+  let depth = 0, end = -1;
+  for (let i = idx; i < text.length; i++) {
+    if (text[i] === '[') depth++;
+    else if (text[i] === ']') {
+      depth--;
+      if (depth === 0) { end = i + 1; break; }
+    }
+  }
+  if (end === -1) return null; // 짝이 안 맞으면(응답이 잘림 등)
+  const bodyStart = idx + tagName.length + 2; // '[' + tagName + ':'
+  return text.slice(bodyStart, end - 1);
+}
+
 // ── PROJECT_STATE_SAVE 태그의 중첩 배열/객체 필드(remaining_steps 등)를
 // 안전하게 떼어낸다(2026-07-17 신설). 정규식으로 완벽한 JSON 파싱을
 // 시도하지 않는다 — LLM 출력은 형식이 살짝 흔들릴 수 있어, 실패하면
@@ -565,8 +590,9 @@ function _safeParseJsonField(raw, key) {
 }
 
 export const _stripInternalTags = (text) => _stripBracketTag(
-  _stripBracketTag(_stripBracketTag(text,
-    'PROCEDURE_MAP_DRAFT'), 'PROCEDURE_MAP_UPDATE'), 'KSEARCH_CANDIDATES')
+  _stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(text,
+    'PROCEDURE_MAP_DRAFT'), 'PROCEDURE_MAP_UPDATE'), 'KSEARCH_CANDIDATES'),
+    'HANDOFF_TO_KEXECUTE'), 'HANDOFF_TO_KDELIVER'), 'PROJECT_STATE_SAVE')
   .replace(/PROFILE_SUBMIT\s*\{[\s\S]*?\n\}/, '')
   .replace(/\[PARTIAL_SAVE\]\s*\{[\s\S]*?\}/g, '')
   .replace(/\[\d+\/\d+단계\]/g, '')
@@ -587,6 +613,13 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[JOB_KSCO_REVIEW_DUE:[\s\S]*?\]/g, '')  // 방어적 — 정상 경로는 컨텍스트 주입용, AI가 실수로 에코하면 제거
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
+  // 2026-08-06 신설 — 라이브 재검증 실사로 발견: 위 라인은 단순
+  // '[EXPERT: id]' 형식만 잡는다. orchestration_subtask 확장 포맷
+  // ('[EXPERT: id, scope=orchestration_subtask, question="..."]' 또는
+  // 'personaId=id,' 키=값 변형)은 못 잡아 원시 태그가 그대로 노출됐다
+  // (해당 위임 로직 자체는 위쪽 kExpertSubtaskMatch가 이미 정상 처리
+  // 하므로, 이건 그 처리 이전/실패 시에도 화면에 안 새도록 하는 방어망).
+  .replace(/\[EXPERT:\s*(?:personaId=)?[\w-]+,\s*scope=orchestration_subtask,\s*question=[^\]]*\]/gi, '')
   // 2026-07-07 신설 — 아래 5개는 이전부터 _parseAgentTags가 실제 동작은
   // 처리해왔지만 이 스트립 목록에는 빠져있어, 태그 원문이 채팅 버블에
   // 그대로 노출되던 기존 결함이었다(SEARCH/OPEN_PROFILE/P2P_INVITE).
@@ -614,15 +647,20 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 넓혀 고쳤고, 이건 그 방어망을 한 번 더 두는 것).
   .replace(/\[CALL_K?INTENT(?::[^\]]*)?\]/gi, '')
   .replace(/\[HANDOFF_TO_KCOMPOSE:[^\]]*\]/g, '')
-  .replace(/\[HANDOFF_TO_KEXECUTE:[^\]]*\]/g, '')  // 2026-07-16 신설(5단계 확장)
-  .replace(/\[HANDOFF_TO_KDELIVER:[^\]]*\]/g, '')
+  // 2026-08-06 수정 — HANDOFF_TO_KEXECUTE/KDELIVER는 이제 위쪽
+  // _stripBracketTag 체인에서 대괄호 깊이 계산으로 처리한다(중첩
+  // 배열/객체 본문 때문에 아래 같은 단순 정규식은 배열 안쪽 첫 ]에서
+  // 잘려 나머지 원시 JSON이 노출되는 버그가 있었다 — 라이브 재검증
+  // 실사로 확인). 옛 단순 정규식 라인은 제거.
   .replace(/\[HANDOFF_TO_KREPORT:[^\]]*\]/g, '')  // 2026-07-16 신설(5단계 확장)
   .replace(/\[ORCHESTRATION_COMPLETE:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_HANDOFF_BACK:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   // 2026-07-17 신설 — mode=project(SP-19 v1.2/SP-20 v1.6/SP-22 v1.1)
-  .replace(/\[PROJECT_STATE_SAVE:[^\]]*\]/g, '')
+  // 2026-08-06 수정 — PROJECT_STATE_SAVE도 위쪽 _stripBracketTag
+  // 체인으로 이동(HANDOFF_TO_KEXECUTE와 같은 이유 — remaining_steps
+  // 등 중첩 배열 때문에 아래 단순 정규식이 잘렸었다). 옛 라인 제거.
   .replace(/\[RESUME_KEXECUTE:[^\]]*\]/g, '')
   // 2026-07-17 신설 — 자기 갱신 제안(RULE-03, K-Intent v1.3 등)
   .replace(/\[SELF_UPDATE_PROPOSAL:[^\]]*\]/g, '')
@@ -1357,13 +1395,17 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   }
 
   // ── K-Compose → K-Execute (forward, 2026-07-16 신설 — 5단계 확장) ──
-  const kExecuteMatch = fullReply.match(/\[HANDOFF_TO_KEXECUTE:([^\]]*)\]/);
-  if (kExecuteMatch) {
+  // 2026-08-06 수정 — plan={steps:[...]} 중첩 배열 때문에 단순 정규식
+  // ([^\]]*)이 배열 안쪽 첫 ]에서 잘리던 버그를 _extractBracketTag로 수정
+  // (라이브 재검증 실사 확인 — K-Execute가 받는 project_brief 자체가
+  // 반토막이었고, 화면에 원시 JSON 잔여물이 노출됐다).
+  const kExecuteBody = _extractBracketTag(fullReply, 'HANDOFF_TO_KEXECUTE');
+  if (kExecuteBody !== null) {
     console.log('[Orchestration] HANDOFF_TO_KEXECUTE 감지 — K-Execute로 전달 전환');
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKExecuteSP, 'K-Execute');
-    await _watchdogSendFn('KCompose-to-KExecute')(`[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: ${kExecuteMatch[1].trim()}]`);
+    await _watchdogSendFn('KCompose-to-KExecute')(`[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: ${kExecuteBody.trim()}]`);
     return true;
   }
 
@@ -1372,10 +1414,13 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   // ★ forward가 아니다 — 같은 K-Execute 응답 안에 이 태그와
   // [HANDOFF_TO_KDELIVER]가 함께 나오므로, 여기서 return true 하지
   // 않고 저장만 한 뒤 아래 kDeliverMatch 처리로 계속 흘러가게 둔다.
-  const projectStateSaveMatch = fullReply.match(/\[PROJECT_STATE_SAVE:([^\]]*)\]/);
-  if (projectStateSaveMatch) {
+  // 2026-08-06 수정 — remaining_steps/fan_out_targets 등 중첩 배열 때문에
+  // 단순 정규식([^\]]*)이 배열 안쪽 첫 ]에서 raw 자체를 반토막 내던 버그
+  // 수정(HANDOFF_TO_KEXECUTE와 같은 계열, 같은 실사에서 함께 확인).
+  const projectStateSaveBody = _extractBracketTag(fullReply, 'PROJECT_STATE_SAVE');
+  if (projectStateSaveBody !== null) {
     try {
-      const raw = projectStateSaveMatch[1];
+      const raw = projectStateSaveBody;
       const pick = (key) => {
         const m = raw.match(new RegExp(key + '=("[^"]*"|\\{[\\s\\S]*?\\}(?=,\\s*\\w+=|$)|[^,}]*)'));
         return m ? m[1].replace(/^"|"$/g, '') : null;
@@ -1482,13 +1527,13 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   // ── K-Execute → K-Deliver (forward) — 기존 K-Compose→K-Deliver와
   // 같은 태그를 K-Execute도 낸다(무료 이관 경로는 K-Compose가 여전히
   // 직접 냄, 아래 kDeliverMatch가 양쪽 다 받는다). ──
-  const kDeliverMatch = fullReply.match(/\[HANDOFF_TO_KDELIVER:([^\]]*)\]/);
-  if (kDeliverMatch) {
+  const kDeliverBody = _extractBracketTag(fullReply, 'HANDOFF_TO_KDELIVER');
+  if (kDeliverBody !== null) {
     console.log('[Orchestration] HANDOFF_TO_KDELIVER 감지 — K-Deliver로 전달 전환');
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKDeliverSP, 'K-Deliver');
-    await _watchdogSendFn('to-KDeliver')(`[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverMatch[1].trim()}]`);
+    await _watchdogSendFn('to-KDeliver')(`[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverBody.trim()}]`);
     return true;
   }
 
@@ -1557,11 +1602,19 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     }
   }
 
-  // ── K-Compose 내부에서의 중첩 위임(nested) — EXPERT scope=orchestration_subtask ──
+  // ── K-Compose/K-Execute 내부에서의 중첩 위임(nested) — EXPERT scope=orchestration_subtask ──
+  // 2026-08-06 수정 — 라이브 재검증 실사로 두 가지 확인:
+  // (1) K-Compose뿐 아니라 K-Execute도 같은 패턴으로 EXPERT 서브태스크
+  //     위임을 낸다(SP-22도 이 태그를 재사용) — 기존엔 CFG.system이
+  //     K-Compose일 때만 이 핸들러가 반응해서, K-Execute 단계에서 나온
+  //     동일 태그는 어디서도 안 걸려 원시 텍스트로 그대로 노출됐다.
+  // (2) 모델이 첫 인자를 위치 인자(id,)가 아니라 키=값(personaId=id,)
+  //     형태로 내는 경우가 있었다 — 기존 정규식은 이것도 못 잡았다.
+  // 둘 다 허용하도록 정규식과 게이트 조건을 넓힌다.
   const kExpertSubtaskMatch = fullReply.match(
-    /\[EXPERT:\s*([\w-]+),\s*scope=orchestration_subtask,\s*question=([^\]]+)\]/);
-  if (kExpertSubtaskMatch && CFG.system?.includes('K-Compose')) {
-    console.log('[Orchestration] K-Compose 내부 EXPERT(scope=orchestration_subtask) 감지 — 위임(push) 전환');
+    /\[EXPERT:\s*(?:personaId=)?([\w-]+),\s*scope=orchestration_subtask,\s*question=([^\]]+)\]/i);
+  if (kExpertSubtaskMatch && (CFG.system?.includes('K-Compose') || CFG.system?.includes('K-Execute'))) {
+    console.log(`[Orchestration] ${CFG.system?.includes('K-Compose') ? 'K-Compose' : 'K-Execute'} 내부 EXPERT(scope=orchestration_subtask) 감지 — 위임(push) 전환`);
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     const personaId = kExpertSubtaskMatch[1];
