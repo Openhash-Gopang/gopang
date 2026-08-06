@@ -605,6 +605,14 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[PROFILE_INTERRUPT_HANDOFF\]/g, '')
   // 2026-07-08 신설 — 오케스트레이션 3단계(K-Intent/K-Compose/K-Deliver) 핸드오프 태그(§0-H v3.40)
   .replace(/\[CALL_KINTENT:[^\]]*\]/g, '')
+  // 2026-08-06 신설 — 라이브 재검증 중 실사로 발견: 위 정규식은 정식
+  // 형식([CALL_KINTENT: query=...])만 잡는다. 모델이 콜론·본문 없이
+  // '[CALL_KINTENT]'만 괄호 인용으로 언급하거나 'CALL_INTENT'(K자
+  // 탈락)로 오탈자를 내는 경우, 위 라인은 못 잡아 원시 태그가 그대로
+  // 노출됐다(감지 로직도 같은 이유로 못 걸려 전달 자체가 정지되는
+  // 더 심각한 문제와 짝을 이룸 — 그쪽은 kIntentMatch 정규식 자체를
+  // 넓혀 고쳤고, 이건 그 방어망을 한 번 더 두는 것).
+  .replace(/\[CALL_K?INTENT(?::[^\]]*)?\]/gi, '')
   .replace(/\[HANDOFF_TO_KCOMPOSE:[^\]]*\]/g, '')
   .replace(/\[HANDOFF_TO_KEXECUTE:[^\]]*\]/g, '')  // 2026-07-16 신설(5단계 확장)
   .replace(/\[HANDOFF_TO_KDELIVER:[^\]]*\]/g, '')
@@ -1311,14 +1319,28 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   }
 
   // ── AC → K-Intent (§0-H 트리거, forward — AC는 이후 관여 안 함) ──
-  const kIntentMatch = fullReply.match(/\[CALL_KINTENT:\s*query=([^\]]+)\]/);
+  // 2026-08-06 수정 — 라이브 재검증 중 실사로 발견: 모델이 이 태그를
+  // '[CALL_KINTENT]'(콜론·query= 없이 괄호 인용 형태로만 언급) 또는
+  // 'CALL_INTENT'(K자 탈락 오탈자)로 내는 경우가 실제로 있었다. 원래의
+  // 좁은 정규식(`\[CALL_KINTENT:\s*query=...\]`)은 둘 다 못 잡아서,
+  // AC→K-Intent 전달 자체가 발동을 안 하는데도 사용자에게는 "확인
+  // 중이니 기다려 주세요"라는 안내만 남고 그대로 정지하는 치명적
+  // 결함으로 이어졌다(EXPERT:kfam과 같은 계열의 문제이지만, 이번엔
+  // 오케스트레이션 진입점 자체라 사용자 입장에선 "시스템 다운"처럼
+  // 보였다). 태그명 철자(K 유무)와 본문 유무를 모두 허용하도록 넓히고,
+  // query= 본문이 없으면 원 사용자 발화(userText)를 목표로 대신 쓴다 —
+  // AC가 이 태그를 냈다는 것 자체가 "지금 발화를 K-Intent에 넘기겠다"는
+  // 의도이므로 안전한 폴백이다.
+  const kIntentMatch = fullReply.match(/\[CALL_K?INTENT\s*(?::\s*query=([^\]]+))?\]/i);
   if (kIntentMatch) {
-    console.log('[Orchestration] CALL_KINTENT 감지 — K-Intent로 전달 전환');
+    const forwardQuery = (kIntentMatch[1] || userText || '').trim();
+    console.log('[Orchestration] CALL_KINTENT 감지 — K-Intent로 전달 전환' +
+      (kIntentMatch[1] ? '' : ' (⚠️ 태그 형식 이탈 — userText로 폴백)'));
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKIntentSP, 'K-Intent');
     await _watchdogSendFn('AC-to-KIntent')(`[INTERNAL: AC→K-Intent 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
-      `다음 발화를 목표로 구조화하세요: "${kIntentMatch[1].trim()}"]`);
+      `다음 발화를 목표로 구조화하세요: "${forwardQuery}"]`);
     return true;
   }
 
