@@ -13390,10 +13390,10 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // 필드를 쓰는 클라이언트도 있어(client-shape 불일치), 두 형태 모두 지원한다.
   if (outboundBody && parsedBody?.service_id && UNIVERSAL_FORCED_K_SERVICES.has(parsedBody.service_id)) {
     delete outboundBody.service_id; // 벤더 API는 이 필드를 모름
-    const [universalIntegrity, universalCommon] = await Promise.all([
-      _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+    const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
+      _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
     ]);
-    const injected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+    const injected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
     if (injected) {
       if (Array.isArray(outboundBody.messages)) {
         outboundBody.messages = [{ role: 'system', content: injected }, ...outboundBody.messages];
@@ -13525,10 +13525,10 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   // "모든 SP가 이 문서를 상속한다"는 원칙을 예외 없이 지키기 위함).
   let relayMessages = messages;
   if (service_id && UNIVERSAL_FORCED_K_SERVICES.has(service_id)) {
-    const [universalIntegrity, universalCommon] = await Promise.all([
-      _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+    const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
+      _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
     ]);
-    const injected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+    const injected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
     if (injected) relayMessages = [{ role: 'system', content: injected }, ...messages];
     _dlog(env, JSON.stringify({ tag: 'LLM_RELAY_UNIVERSAL_INJECTED', service_id, ts: new Date().toISOString(), ...meta }));
   }
@@ -13621,10 +13621,14 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // 메시지를 대체하지는 않되 그 앞에 별도 system 메시지로 추가한다.
   // ★ 2026-07-20 실사로 발견: UNIVERSAL-common은 그동안 이 릴레이에서
   // 누락돼 있었다 — U7-3·U8·U11 등이 K-Law에는 적용되지 않고 있었다.
-  const [universalIntegrity, universalCommon] = await Promise.all([
-    _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+  // ★ 2026-08-06 실사로 추가 발견: CONTROL-TOWER-PRINCIPLE(모든 SP
+  // 제1원칙)도 동일한 이유로 누락돼 있었다 — K-Law가 놓친 문서 중
+  // 하나였다는 게 두 번째로 재현된 셈이라, 아래 다른 릴레이들
+  // (_callDelegationTarget 등)도 같은 실수가 없는지 이번에 전수 확인했다.
+  const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
   ]);
-  const universalInjected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+  const universalInjected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
   let messagesWithIntegrity = universalInjected
     ? [{ role: 'system', content: universalInjected }, ...messages]
     : messages;
@@ -13885,6 +13889,40 @@ async function _fetchKPublicCommon() {
   return _kPublicCommonCache;
 }
 
+// ═══════════════════════════════════════════════════════════
+// CONTROL-TOWER-PRINCIPLE — 모든 SP 제1원칙 (2026-08-06 신설, 서버측 배선)
+//
+// 배경: 이 원칙은 SP_common_guardrails C50으로 먼저 만들어졌다가,
+// "혼디의 모든 SP가 예외 없이 지켜야 할 제1원칙"이라는 취지에 맞게
+// prompts/CONTROL-TOWER-PRINCIPLE_v1_0.md로 독립시켜 클라이언트
+// manifest-loader.js(_loadSpByKey)가 로드하는 모든 SP에 UNIVERSAL-
+// INTEGRITY·TASK-DELEGATION-GUIDE와 동일한 방식으로 자동 결합되도록
+// 이미 배선됐다. 그런데 그 배선은 클라이언트 측 로더에만 적용됐고,
+// 이 파일(worker.js, /gov/relay·/business/relay를 서빙하는 서버측
+// 프롬프트 조립부)은 그 자체로 독립된 fetch 파이프라인이라 전혀
+// 영향을 받지 않았다 — 그 결과 K-Law·K-Tax·K-Health·K-Police·K-119·
+// K-Democracy·K-Insurance·K-Traffic·K-Logistics·K-Public(9~10개 핵심
+// 기관 AI)과 K-Business 계열은 관제탑 원칙(및 SP_common_guardrails
+// C1~C50 전체)을 하나도 상속받지 못하고 있었다 — 실사로 확인
+// (systemParts 배열에 SP_common_guardrails/CONTROL-TOWER-PRINCIPLE
+// 참조가 0건). 이 함수와 아래 두 systemParts 삽입이 그 공백을 메운다.
+let _controlTowerPrincipleCache = null;
+let _controlTowerPrincipleCacheAt = 0;
+const _CONTROL_TOWER_PRINCIPLE_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchControlTowerPrinciple() {
+  const now = Date.now();
+  if (_controlTowerPrincipleCache && (now - _controlTowerPrincipleCacheAt) < _CONTROL_TOWER_PRINCIPLE_TTL_MS) return _controlTowerPrincipleCache;
+  try {
+    _controlTowerPrincipleCache = await _fetchByManifestKeyFromGithub('CONTROL-TOWER-PRINCIPLE');
+    _controlTowerPrincipleCacheAt = now;
+  } catch (e) {
+    console.warn('[ControlTowerPrinciple] 로드 실패:', e.message);
+    if (!_controlTowerPrincipleCache) _controlTowerPrincipleCache = ''; // 완전 실패해도 서비스 자체는 지속(경고만)
+  }
+  return _controlTowerPrincipleCache;
+}
+
 // agency 식별자 허용 목록 — K-Law는 다음 개정 때 이 경로로 통합 예정(현재는 /klaw/relay 유지)
 // REGISTERED_SERVICES 키와 완전히 동일하게 통일(하이픈 접두어 제거) —
 // /pdv/report의 _getSvcRegistration()이 이 값을 그대로 svc 키로 쓰기 때문에
@@ -14015,10 +14053,10 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
   if (_gateBlocked) return _gateBlocked;
 
-  const [universalIntegrity, universalCommon, kBusiness, businessKr] = await Promise.all([
-    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchKBusiness(), _fetchBusinessKr(),
+  const [universalIntegrity, universalCommon, controlTowerPrinciple, kBusiness, businessKr] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(), _fetchKBusiness(), _fetchBusinessKr(),
   ]);
-  const systemParts = [universalIntegrity, universalCommon, kBusiness, businessKr, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, controlTowerPrinciple, kBusiness, businessKr, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || '');
@@ -14555,18 +14593,18 @@ async function _callDelegationTarget(env, regKey, query, backendModel, provinceC
   try { promptText = await _fetchDelegationPrompt(regKey, provinceCode); }
   catch (e) { return { ok: false, reason: 'PROMPT_LOAD_FAILED', detail: e.message }; }
 
-  const [universalIntegrity, universalCommon] = await Promise.all([
-    _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+  const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
   ]);
   let systemContent;
   if (entry.identity === 'professional') {
     const prof = await _fetchProfessionalCommon();
-    systemContent = [universalIntegrity, universalCommon, prof, promptText].filter(Boolean).join('\n\n---\n\n');
+    systemContent = [universalIntegrity, universalCommon, controlTowerPrinciple, prof, promptText].filter(Boolean).join('\n\n---\n\n');
   } else if (entry.identity === 'kpublic') {
     const kpub = await _fetchKPublicCommon();
-    systemContent = [universalIntegrity, universalCommon, kpub, promptText].filter(Boolean).join('\n\n---\n\n');
+    systemContent = [universalIntegrity, universalCommon, controlTowerPrinciple, kpub, promptText].filter(Boolean).join('\n\n---\n\n');
   } else {
-    systemContent = [universalIntegrity, universalCommon, promptText].filter(Boolean).join('\n\n---\n\n');
+    systemContent = [universalIntegrity, universalCommon, controlTowerPrinciple, promptText].filter(Boolean).join('\n\n---\n\n');
   }
   systemContent += '\n\n---\n\n[내부 안내] 이 요청은 다른 SP로부터 위임받은 서브 질의입니다. ' +
     '당신은 이 요청에 대해 다시 다른 SP로 위임할 수 없습니다(U9-3) — 아는 선에서 직접 답하십시오.';
@@ -15267,9 +15305,10 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 로그로 실제 캐시 hit/miss와 소요시간을 눈으로 확인한다(추측 금지
   // 원칙 — 지금까지 이 세션에서 반복 확인한 방법론과 동일).
   const _spAssemblyStart = Date.now();
-  const [universalIntegrity, universalCommonRaw, identityDocRaw, ownSpAndGates] = await Promise.all([
+  const [universalIntegrity, universalCommonRaw, controlTowerPrinciple, identityDocRaw, ownSpAndGates] = await Promise.all([
     _fetchUniversalIntegrity(),
     _fetchUniversalCommon(),
+    _fetchControlTowerPrinciple(),
     noIdentityLayer ? Promise.resolve('') : (usesProfessionalIdentity ? _fetchProfessionalCommon() : _fetchKPublicCommon()),
     // ★ 2026-07-29 신설 — agency 자신의 정본 SP(예: public→SP-10_kpublic)
     // + HUMAN-AUTHORITY-GATE-SCHEMA + PDV-TRANSFER-PROTOCOL. 위
@@ -15285,6 +15324,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     cacheState: {
       universalIntegrity: !!_universalIntegrityCache,
       universalCommon: !!_universalCommonCache,
+      controlTowerPrinciple: !!_controlTowerPrincipleCache,
       kPublicCommon: !!_kPublicCommonCache,
     },
     ts: new Date().toISOString(), ...meta,
@@ -15294,7 +15334,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const universalCommon = pdvScope
     ? universalCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
     : universalCommonRaw;
-  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, controlTowerPrinciple, identityDocRaw, ownSpAndGates, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속

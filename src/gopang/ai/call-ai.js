@@ -3966,13 +3966,23 @@ export function _violatesConversationalStyle(fullReply) {
 let _styleRetryCount = 0;
 const _STYLE_RETRY_MAX = 2;
 
-export async function _enforceConversationalStyle(fullReply, bubble, sendFn = callAI, userText = '') {
+export async function _enforceConversationalStyle(fullReply, bubble, sendFn = callAI, userText = '', systemTextOverride = undefined) {
   // AC 본체·K-Execute·K-Deliver의 사용자 응대 발화만 대상 — 다른
   // 단계(K-Compose의 계획 태그, K-Search 조회 등)는 이 원칙의 적용
   // 범위가 아니다(오탐 위험을 늘리지 않기 위해 실제로 "사용자에게
   // 직접 말을 거는" 단계만 좁혀서 강제한다).
-  const inScope = CFG.system?.includes('§0. 정체성')
-    || CFG.system?.includes('K-Execute') || CFG.system?.includes('K-Deliver');
+  //
+  // ★ 2026-08-06 신설(systemTextOverride) — webapp.html의 AI 패널
+  // (_callPanelAI)은 CFG.system이 아니라 자체 history(_panelHistory[0])로
+  // system을 관리한다(§0-1 상단 주석 참조) — 메인 채팅 전용인 CFG.system을
+  // 그대로 읽으면 패널 오케스트레이션 전환 이전 단계(AC 자신이 아직
+  // 활성 상태인 구간, 정확히 #235가 "알려진 한계"로 정직하게 남긴 그
+  // 지점)에서 이 게이트가 항상 무의미하게 통과해버린다. 호출부가 실제
+  // system 텍스트를 명시적으로 넘기면 그걸 쓰고, 안 넘기면(기존 call-ai.js
+  // 호출부들과 100% 하위호환) 기존처럼 CFG.system을 쓴다.
+  const _systemText = systemTextOverride !== undefined ? systemTextOverride : CFG.system;
+  const inScope = _systemText?.includes('§0. 정체성')
+    || _systemText?.includes('K-Execute') || _systemText?.includes('K-Deliver');
   if (!inScope) return false;
   if (!_violatesConversationalStyle(fullReply)) return false;
 

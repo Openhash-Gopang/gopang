@@ -3714,7 +3714,7 @@ window.closePDV = closePDV;
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
       _resolveHondiTier, _parseAgentTags, _handleWebSearchTag, _handleDelegateToFlashTag,
-      _handleSPAuthorTags,
+      _handleSPAuthorTags, _enforceConversationalStyle,
     } = await import('./src/gopang/ai/call-ai.js');
     // BUG-FIX(2026-07-02): _callPanelAI(AI 패널 — 실제로 쓰이는 주 경로)가
     // 지금까지 _parseAgentTags를 호출한 적이 없었다. 메인 채팅 전용
@@ -4148,6 +4148,23 @@ window.closePDV = closePDV;
         handleExpertTag(full).catch(e =>
           console.warn('[Panel] EXPERT 태그 처리 실패(무시):', e.message)
         );
+
+        // ── [대화 스타일] 문서형 응답 강제 재작성 (2026-08-06 신설) ──
+        // call-ai.js._enforceConversationalStyle과 동일 함수를 재사용 —
+        // 단, 이 패널은 CFG.system이 아니라 _panelHistory[0]로 system을
+        // 관리하므로(§0-1 상단 주석 참조) 그 텍스트를 명시적으로 넘긴다.
+        // #235가 "알려진 한계"로 정직하게 남겼던 지점(패널의 오케스트레이션
+        // 전환 이전 단계, 즉 AC 자신이 문서형으로 응답하던 바로 그 구간)을
+        // 메운다 — 위 오케스트레이션 핸드오프 분기(_handleOrchestrationTags)
+        // 에서 이미 return한 경우는 여기 도달하지 않으므로 핸드오프 자체를
+        // 건드릴 위험은 없다(그 우려로 #235가 이번 지점을 보류했던 것).
+        try {
+          const _panelSystemText = _panelHistory[0]?.role === 'system' ? _panelHistory[0].content : '';
+          const _styleHandled = await _enforceConversationalStyle(full, bubbleEl, _panelSendFn, userText, _panelSystemText);
+          if (_styleHandled) return;
+        } catch (e) {
+          console.warn('[Panel] _enforceConversationalStyle 처리 실패(무시):', e.message);
+        }
         return;
       } catch(e) {
         clearTimeout(_idleTimer); // 타임아웃/오류 어느 경로든 타이머 누수 방지
