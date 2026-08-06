@@ -1,0 +1,498 @@
+[
+  {
+    "id": "lawyer",
+    "key": "SP_lawyer",
+    "label": "변호사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "빚이 6천만원쯤 되는데 소득이 거의 없어서 파산 신청을 실제로 하고 싶어요."
+  },
+  {
+    "id": "judicial-scrivener",
+    "key": "SP_judicial-scrivener",
+    "label": "법무사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "아파트를 매수했는데 소유권이전등기를 실제로 신청하고 싶어요. 매매대금은 5억원이고 다음 주까지 등기 접수해야 해요."
+  },
+  {
+    "id": "tax-accountant",
+    "key": "SP_tax-accountant",
+    "label": "세무사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "작년에 프리랜서로 디자인 일을 했는데 종합소득세 신고를 제대로 못 한 것 같아요. 경정청구 좀 실제로 진행하게 도와주세요."
+  },
+  {
+    "id": "accountant",
+    "key": "SP_accountant",
+    "label": "공인회계사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "소프트웨어 개발비를 지출했는데 자산으로 잡아야 하나 비용으로 처리해야 하나요? 실제로 재무제표에 반영해서 외부감사 대응까지 하고 싶어요."
+  },
+  {
+    "id": "financial-planner",
+    "key": "SP_financial-planner",
+    "label": "재무설계사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "저는 35세이고 연금저축과 IRP를 활용해서 조기은퇴를 준비하고 싶어요. 실제로 저축 계획을 세워서 지금 바로 실행하고 싶어요."
+  },
+  {
+    "id": "appraiser",
+    "key": "SP_appraiser",
+    "label": "감정평가사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "담보대출용으로 아파트 시세 감정평가 참고치가 필요해요. 실제로 담보평가 진행하고 싶어요."
+  },
+  {
+    "id": "loss-adjuster",
+    "key": "SP_loss-adjuster",
+    "label": "손해사정사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "자동차 사고 났는데 보험사 제시액이 너무 낮은 것 같아요. 실제로 이의신청 진행하고 싶어요."
+  },
+  {
+    "id": "labor-attorney",
+    "key": "SP_labor-attorney",
+    "label": "공인노무사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "사직서를 강요당해서 썼는데 부당해고 구제신청을 실제로 진행하고 싶어요."
+  },
+  {
+    "id": "patent-attorney",
+    "key": "SP_patent-attorney",
+    "label": "변리사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "새 브랜드 이름을 상표로 등록할 수 있는지 확인하고 싶고, 실제로 출원 준비를 하고 싶어요."
+  },
+  {
+    "id": "customs-broker",
+    "key": "SP_customs-broker",
+    "label": "관세사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "중국에서 전자제품을 수입하려는데 HS Code와 관세율을 확인하고, 실제로 수입신고를 진행하고 싶어요."
+  },
+  {
+    "id": "physician",
+    "key": "SP_physician",
+    "label": "의사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "3일째 열이 안 내리고 기침이 심한데, 실제로 병원 가야 할지 판단하는 데 참고하고 싶어요."
+  },
+  {
+    "id": "dentist",
+    "key": "SP_dentist",
+    "label": "치과의사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "어금니가 계속 욱신거리는데, 실제로 언제 치과에 가야 하는지 알고 싶어요."
+  },
+  {
+    "id": "traditional-medicine-doctor",
+    "key": "SP_traditional-medicine-doctor",
+    "label": "한의사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "몇 달째 소화가 잘 안 되고 속이 더부룩한데, 실제로 한의원 방문 전에 참고하고 싶어요."
+  },
+  {
+    "id": "pharmacist",
+    "key": "SP_pharmacist",
+    "label": "약사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "혈압약을 먹고 있는데 감기약을 새로 처방받았어요. 실제로 같이 먹어도 되는지 확인하고 싶어요."
+  },
+  {
+    "id": "veterinarian",
+    "key": "SP_veterinarian",
+    "label": "수의사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "강아지가 이틀째 밥을 안 먹고 축 처져 있어요. 실제로 병원에 데려가야 할지 판단하고 싶어요."
+  },
+  {
+    "id": "nurse",
+    "key": "SP_nurse",
+    "label": "간호사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "수술 후 상처 부위가 붉게 부어오르는데, 실제로 병원에 다시 가야 하는지 판단하고 싶어요."
+  },
+  {
+    "id": "physical-therapist",
+    "key": "SP_physical-therapist",
+    "label": "물리치료사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "허리디스크 진단받았는데, 실제로 할 수 있는 재활운동 계획을 세우고 싶어요."
+  },
+  {
+    "id": "medical-lab-technologist",
+    "key": "SP_medical-lab-technologist",
+    "label": "임상병리사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "건강검진 혈액검사 결과에서 간수치가 높게 나왔어요. 실제로 어떤 의미인지 참고하고 싶어요."
+  },
+  {
+    "id": "radiologic-technologist",
+    "key": "SP_radiologic-technologist",
+    "label": "방사선사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "흉부 X-ray를 찍었는데 결과지의 소견을 실제로 이해하는 데 참고하고 싶어요."
+  },
+  {
+    "id": "dental-hygienist",
+    "key": "SP_dental-hygienist",
+    "label": "치과위생사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "스케일링을 받으려는데 치석이 얼마나 있는지, 실제로 관리 계획을 세우고 싶어요."
+  },
+  {
+    "id": "occupational-therapist",
+    "key": "SP_occupational-therapist",
+    "label": "작업치료사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "뇌졸중 후유증으로 손을 잘 못 쓰는데, 실제로 재활 계획을 세우고 싶어요."
+  },
+  {
+    "id": "dental-technician",
+    "key": "SP_dental-technician",
+    "label": "치과기공사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "틀니가 자꾸 헐거워지는데, 실제로 보철물 조정을 받으려면 어떻게 해야 하는지 알고 싶어요."
+  },
+  {
+    "id": "advanced-practice-nurse",
+    "key": "SP_advanced-practice-nurse",
+    "label": "전문간호사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "당뇨 환자인데 최근 혈당 조절이 잘 안 돼요. 실제로 관리 계획을 조정하고 싶어요."
+  },
+  {
+    "id": "dietitian",
+    "key": "SP_dietitian",
+    "label": "영양사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "체중감량을 위해 실제로 식단 계획을 세워서 바로 시작하고 싶어요."
+  },
+  {
+    "id": "paramedic",
+    "key": "SP_paramedic",
+    "label": "응급구조사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "눈앞에서 사람이 갑자기 쓰러졌어요. 지금 당장 어떻게 해야 하나요."
+  },
+  {
+    "id": "midwife",
+    "key": "SP_midwife",
+    "label": "조산사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "임신 34주인데 배 뭉침이 심해요. 실제로 정상인지 조기진통인지 판단하는 데 참고하고 싶어요."
+  },
+  {
+    "id": "speech-language-pathologist",
+    "key": "SP_speech-language-pathologist",
+    "label": "언어재활사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "4살 아이가 또래보다 말이 많이 늦은 것 같아요. 실제로 평가를 받으려고 하는데 참고하고 싶어요."
+  },
+  {
+    "id": "optician",
+    "key": "SP_optician",
+    "label": "안경사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "눈이 침침한데 실제로 안경 도수를 확인해서 새로 맞추고 싶어요."
+  },
+  {
+    "id": "sanitarian",
+    "key": "SP_sanitarian",
+    "label": "위생사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "식당을 운영하는데 곧 위생점검이 있어요. 실제로 대비하고 싶어요."
+  },
+  {
+    "id": "health-educator",
+    "key": "SP_health-educator",
+    "label": "보건교육사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "직장에서 금연 교육 프로그램을 실제로 운영하려고 하는데 준비하고 싶어요."
+  },
+  {
+    "id": "teacher",
+    "key": "SP_teacher",
+    "label": "교사(정교사)",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "학생이 계속 결석하는데 학습부진 때문인지 가정문제 때문인지 판단이 필요해요. 실제 지도계획을 세우고 싶어요."
+  },
+  {
+    "id": "professor",
+    "key": "SP_professor",
+    "label": "교수(1:1 맞춤교육)",
+    "needs_medical_safety": false,
+    "has_step_d": false,
+    "utterance": "논문 심사가 곧 있는데 통계 방법론이 적절한지 검토받고 싶어요."
+  },
+  {
+    "id": "advisor",
+    "key": "SP_advisor",
+    "label": "구매자문(K-Advisor)",
+    "needs_medical_safety": false,
+    "has_step_d": false,
+    "utterance": "이직을 고민하고 있는데 실제로 결정하는 데 도움이 필요해요."
+  },
+  {
+    "id": "clinical-psychologist",
+    "key": "SP_clinical-psychologist",
+    "label": "임상심리사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "최근 계속 무기력한데 우울증인지 궁금해요. 실제로 상담을 받아보고 싶어요."
+  },
+  {
+    "id": "school-counselor",
+    "key": "SP_school-counselor",
+    "label": "전문상담교사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "친구들이 자꾸 저를 따돌리는데 어른한테 말하기 싫어요."
+  },
+  {
+    "id": "mental-health-professional",
+    "key": "SP_mental-health-professional",
+    "label": "정신건강전문요원",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "약 부작용 같아서 스스로 끊고 싶은데, 실제로 어떻게 해야 하는지 알고 싶어요."
+  },
+  {
+    "id": "social-worker",
+    "key": "SP_social-worker",
+    "label": "사회복지사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "기초생활수급을 신청하려는데 부양의무자 기준에 걸릴까봐 걱정돼요. 실제로 신청 절차를 진행하고 싶어요."
+  },
+  {
+    "id": "curator",
+    "key": "SP_curator",
+    "label": "학예사(큐레이터)",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "소장하고 있는 유물 상태가 걱정되는데, 실제로 보존처리를 의뢰하고 싶어요."
+  },
+  {
+    "id": "librarian",
+    "key": "SP_librarian",
+    "label": "사서",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "이 자료가 저작권이 만료됐는지 확인하고, 실제로 복제·배포하고 싶어요."
+  },
+  {
+    "id": "youth-counselor",
+    "key": "SP_youth-counselor",
+    "label": "청소년상담사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "친구가 자해하는 것 같다고 말했는데 어떻게 해야 할지 모르겠어요."
+  },
+  {
+    "id": "childcare-teacher",
+    "key": "SP_childcare-teacher",
+    "label": "보육교사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "18개월 아기가 또래보다 말이 느린 것 같은데, 실제로 상담을 받고 싶어요."
+  },
+  {
+    "id": "lifelong-educator",
+    "key": "SP_lifelong-educator",
+    "label": "평생교육사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "학점은행제로 학위를 취득하려는데, 실제 절차를 진행하고 싶어요."
+  },
+  {
+    "id": "architect",
+    "key": "SP_architect",
+    "label": "건축사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "다세대주택을 근린생활시설로 용도변경하려는데, 실제로 인허가 준비를 하고 싶어요."
+  },
+  {
+    "id": "professional-engineer",
+    "key": "SP_professional-engineer",
+    "label": "기술사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "20년 된 건물 외관은 양호한데, 실제로 정밀안전진단이 필요한지 판단하고 싶어요."
+  },
+  {
+    "id": "marine-pilot",
+    "key": "SP_marine-pilot",
+    "label": "도선사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "총톤수가 강제도선 기준에 근접한 선박인데, 실제로 도선을 신청하고 싶어요."
+  },
+  {
+    "id": "naval-architect",
+    "key": "SP_naval-architect",
+    "label": "조선사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "복원성 계산 여유가 근소한 설계인데, 실제로 설계변경 승인을 받고 싶어요."
+  },
+  {
+    "id": "navigation-officer",
+    "key": "SP_navigation-officer",
+    "label": "항해사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "기상예보가 경계선상인 해역인데, 실제로 출항 여부를 판단해야 해요."
+  },
+  {
+    "id": "marine-engineer",
+    "key": "SP_marine-engineer",
+    "label": "기관사(선박)",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "엔진 소음과 함께 출력저하가 있는데, 실제로 정비 계획을 세우고 싶어요."
+  },
+  {
+    "id": "industrial-safety-consultant",
+    "key": "SP_industrial-safety-consultant",
+    "label": "산업안전·보건지도사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "우리 사업장이 중대재해처벌법 적용대상인지 애매한데, 실제로 위험성평가를 진행하고 싶어요."
+  },
+  {
+    "id": "weather-forecaster",
+    "key": "SP_weather-forecaster",
+    "label": "기상예보사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "태풍 경로 예측 모델이 발산하는 상황인데, 실제로 대응 계획을 세워야 해요."
+  },
+  {
+    "id": "fire-safety-manager",
+    "key": "SP_fire-safety-manager",
+    "label": "소방시설관리사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "복합용도 건물인데 특정소방대상물 해당여부가 애매해요. 실제로 점검을 진행하고 싶어요."
+  },
+  {
+    "id": "landscape-engineer",
+    "key": "SP_landscape-engineer",
+    "label": "조경기술사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "아파트 단지 조경설계가 필요한데, 실제로 설계를 의뢰하고 싶어요."
+  },
+  {
+    "id": "surveying-engineer",
+    "key": "SP_surveying-engineer",
+    "label": "측량 및 지형공간정보기술사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "옆집과 토지 경계가 애매한데, 실제로 측량을 의뢰하고 싶어요."
+  },
+  {
+    "id": "electrical-safety-engineer",
+    "key": "SP_electrical-safety-engineer",
+    "label": "전기안전기술사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "오래된 주택 배선이 걱정되는데, 실제로 전기안전 점검을 받고 싶어요."
+  },
+  {
+    "id": "gas-safety-engineer",
+    "key": "SP_gas-safety-engineer",
+    "label": "가스기술사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "가스냄새가 나는 것 같은데, 실제로 점검을 받고 싶어요."
+  },
+  {
+    "id": "real-estate-agent",
+    "key": "SP_real-estate-agent",
+    "label": "공인중개사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "전세 계약을 하려는데, 실제로 계약을 진행하고 싶어요."
+  },
+  {
+    "id": "security-engineer",
+    "key": "SP_security-engineer",
+    "label": "정보보안전문가",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "회사 시스템 보안점검이 필요한데, 실제로 점검을 의뢰하고 싶어요."
+  },
+  {
+    "id": "translator-interpreter",
+    "key": "SP_translator-interpreter",
+    "label": "통역사·번역사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "계약서를 번역해야 하는데, 실제로 공증 제출까지 하고 싶어요."
+  },
+  {
+    "id": "tour-guide",
+    "key": "SP_tour-guide",
+    "label": "관광통역안내사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "제주도 3일 일정을 짜고 있는데, 실제로 가이드 서비스를 예약하고 싶어요."
+  },
+  {
+    "id": "sports-instructor",
+    "key": "SP_sports-instructor",
+    "label": "생활스포츠지도사",
+    "needs_medical_safety": true,
+    "has_step_d": true,
+    "utterance": "무릎 수술 이력이 있는데, 실제로 운동처방을 받고 싶어요."
+  },
+  {
+    "id": "hairdresser",
+    "key": "SP_hairdresser",
+    "label": "미용사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "셀프 염색을 하고 싶은데, 실제로 배합 비율을 알고 싶어요."
+  },
+  {
+    "id": "chef",
+    "key": "SP_chef",
+    "label": "조리사",
+    "needs_medical_safety": false,
+    "has_step_d": true,
+    "utterance": "직접 만든 잼을 팔고 싶은데, 실제로 위생 절차를 확인하고 싶어요."
+  }
+]

@@ -49,6 +49,37 @@ export function currentExpertLabel() {
   return _expert.def ? `${_expert.def.icon} ${_expert.def.label}` : null;
 }
 
+// ── C50(관제탑 원칙) 코드 층 강제 — 2026-08-06 신설 ────────────────
+// SP_common_guardrails C50-3이 요구하는 [NEXT_STEP: ...] 태그가 EXPERT
+// 세션 진행 중 응답에 실제로 있는지 감지하는 순수 함수. call-ai.js가
+// isExpertActive() === true인 턴에서 이걸 호출해, 빠져 있으면
+// [INTERNAL: ...] 보정 지시를 재전송한다(GOV_TASK_SUBMIT_REQUEST 형식
+// 오류 시 재시도 지시 패턴과 동일 메커니즘 — call-ai.js 쪽 훅 참고).
+//
+// 오탐 방지를 위해 "아직 결론이 없는 되묻기 턴"은 예외로 둔다(C50-3에
+// 명시된 예외와 동일) — 정규식만으로 "이 턴이 결론에 도달했는가"를
+// 정확히 판정할 수는 없으므로, 최소 침습적인 근사치를 쓴다: 응답이
+// 짧은 되묻기 형태(물음표로 끝나거나 CLARIFY 패턴)이면서 동시에 STEP D
+// 정형 블록([위험 고지]/[인간 전문가 연결]) 중 어느 것도 없으면, 아직
+// 결론 이전 단계로 보고 보정 대상에서 제외한다. 이 휴리스틱이 실제
+// 라이브 트래픽에서 오탐/누락을 만들면(예: 결론이 났는데 되묻기로
+// 오분류) tests/live_smoketest/expert_persona_smoketest.py의 채점
+// 결과로 드러날 것 — 그 결과를 보고 조정할 것.
+const NEXT_STEP_TAG_RE = /\[\s*NEXT_STEP\s*:/i;
+const RISK_NOTICE_RE = /\[\s*위험\s*고지\s*\]/;
+const HUMAN_CONNECT_RE = /\[\s*CONNECT_HUMAN_EXPERT|\[\s*인간\s*전문가\s*연결\s*\]/;
+const CLARIFY_ONLY_RE = /(말씀해\s*주(시겠|세요|시면)|알려\s*주(시겠|세요|시면)|어떤\s*상황|\?\s*$)/;
+
+export function _missingNextStepMarker(fullReply) {
+  if (!fullReply || typeof fullReply !== 'string') return false;
+  if (NEXT_STEP_TAG_RE.test(fullReply)) return false; // 태그가 있으면 충족
+  const looksLikeConclusion =
+    RISK_NOTICE_RE.test(fullReply) || HUMAN_CONNECT_RE.test(fullReply);
+  const looksLikeClarifyOnly = CLARIFY_ONLY_RE.test(fullReply) && !looksLikeConclusion;
+  if (looksLikeClarifyOnly) return false; // 아직 결론 이전 — 예외 대상, 보정 안 함
+  return true; // 그 외에는 태그가 빠졌다고 판정
+}
+
 // ── 합성 System Prompt 로드 (2026-07-19 재구성) ──────────────────────
 // 조립 순서: UNIVERSAL-INTEGRITY → UNIVERSAL-common → PROFESSIONAL-common
 //   → 공통 가드레일(C1~C43) → (의료시) 의료 안전모듈 → 페르소나 SP

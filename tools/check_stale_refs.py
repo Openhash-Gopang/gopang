@@ -58,6 +58,8 @@ JS_FILES_TO_SCAN = [
     # 사고를 계기로 스캔 대상에 추가. 이 스크립트는 .js/.html을 구분하지
     # 않고 텍스트 패턴만 본다.
     ROOT / 'pages' / 'professional-ai.html',
+    # 2026-08-06 추가 — 위 UNQUOTED_RELATIVE_RE 발견과 같은 사고 계기.
+    ROOT / '.github' / 'workflows' / 'live-smoketest.yml',
 ]
 
 # jeju-router.js는 별도 저장소 — 공개 raw 엔드포인트에서 fetch해 함께 검사.
@@ -90,6 +92,17 @@ BLOB_URL_RE = re.compile(
 # 자체엔 없다) — 매칭되면 'gov-tree/' 접두사를 붙여 로컬 인덱스 키와 맞춘다.
 JEJU_RELATIVE_RE = re.compile(
     r"""_fetchText\(\s*['"]([\w./-]+\.(?:md|txt|json))['"]"""
+)
+
+
+# 2026-08-06 추가 — .github/workflows/live-smoketest.yml이 시스템 프롬프트를
+# `../../prompts/AC-PRO-CORE_v1_0.txt`처럼 따옴표 없이 셸 인자로 참조하고
+# 있어, 기존 네 패턴(전부 따옴표로 감싸인 참조만 매칭) 전부의 사각지대였다
+# — v1.1이 나온 뒤로도 19회 실행 전부가 구버전으로 돌아간 걸 사용자가
+# 라이브 스모크테스트 착수 직전 발견. `../../prompts/` 접두사(워크플로
+# 파일 기준 상대경로)가 특징적이라 이걸로 매칭한다.
+UNQUOTED_RELATIVE_RE = re.compile(
+    r"\.\./\.\./prompts/([\w./-]+\.(?:md|txt|json))"
 )
 
 
@@ -151,7 +164,8 @@ def index_prompts_dir() -> dict:
 def check_refs(label: str, text: str, latest_map: dict, results: list, jeju_relative: bool = False):
     refs = set(m.group(1) for m in FILE_REF_RE.finditer(text)) | \
            set(m.group(1) for m in RAW_URL_RE.finditer(text)) | \
-           set(m.group(1) for m in BLOB_URL_RE.finditer(text))
+           set(m.group(1) for m in BLOB_URL_RE.finditer(text)) | \
+           set(m.group(1) for m in UNQUOTED_RELATIVE_RE.finditer(text))
     if jeju_relative:
         refs |= set(f"gov-tree/{m.group(1)}" for m in JEJU_RELATIVE_RE.finditer(text))
     for ref in refs:
