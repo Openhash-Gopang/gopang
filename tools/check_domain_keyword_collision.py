@@ -101,9 +101,65 @@ def find_table_start(lines, section_name):
     return None
 
 
+EXPERT_TRIGGER_RE = re.compile(r"triggers:\s*\[([^\]]+)\]", re.S)
+EXPERT_ID_RE = re.compile(r"^\s*'?([\w-]+)'?:\s*\{")
+
+
+def _extract_expert_triggers(expert_registry_path):
+    """expert-registry.js를 파싱해 {trigger_string: persona_id} 딕셔너리를
+    반환한다 — 2026-08-06 신설(#3 회귀로 발견한 사각지대 메우기). 완전한
+    JS 파서가 아니라 이 파일의 실제 포맷(각 persona 블록에 정확히 하나의
+    triggers: [...] 배열)에 의존하는 정규식 기반 파싱이다 — 포맷이 크게
+    바뀌면 이 함수도 같이 손봐야 한다."""
+    try:
+        with open(expert_registry_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError:
+        return {}
+
+    trigger_owner = {}
+    # persona 블록 단위로 잘라서 각 블록 안의 id와 triggers를 짝짓는다
+    blocks = re.split(r"\n(?=\s*'?[\w-]+'?:\s*\{)", content)
+    for block in blocks:
+        id_m = EXPERT_ID_RE.match(block)
+        trig_m = EXPERT_TRIGGER_RE.search(block)
+        if not id_m or not trig_m:
+            continue
+        pid = id_m.group(1)
+        triggers = [t.strip().strip("'\"") for t in trig_m.group(1).split(",")]
+        for t in triggers:
+            if len(t) >= 2:
+                trigger_owner[t] = pid
+    return trigger_owner
+
+
+def check_expert_trigger_collisions(content, expert_registry_path):
+    """§CORE 안의 '예시' 문장들이 EXPERT 페르소나의 등록 trigger 문자열을
+    그대로(글자 그대로) 재사용하고 있는지 검사 — #3(감정평가/appraiser)
+    회귀의 직접 원인이었던 패턴. GWP 표 밖 전체(사실상 §CORE 서술 전체)를
+    대상으로, EXPERT trigger 문자열이 '위임의도 없이도 GWP가 기본값'
+    이라고 주장하는 문맥(R1/R2류 문단, "광의의...사무이므로" 같은 표현)
+    근처에 그대로 등장하면 강한 신호로 본다. 완벽한 문맥 이해는 아니므로
+    — 이번에도 사람이 검토할 목록만 낸다."""
+    triggers = _extract_expert_triggers(expert_registry_path)
+    if not triggers:
+        return []
+
+    findings = []
+    for trig, pid in triggers.items():
+        for m in re.finditer(re.escape(trig), content):
+            window = content[max(0, m.start() - 150):m.start()]
+            if "GWP" in window and ("기본값" in window or "우선" in window):
+                snippet = content[max(0, m.start() - 60):m.start() + 60].replace("\n", " ")
+                findings.append((trig, pid, snippet))
+    return findings
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--prompt", default="prompts/AC-PRO-CORE_v1_1.txt")
+    ap.add_argument("--expert-registry", default="src/gopang/ai/expert-registry.js",
+                     help="EXPERT trigger 교차검사에 쓸 expert-registry.js 경로")
     ap.add_argument("--strict", action="store_true",
                      help="교차참조 충돌 발견 시 nonzero exit(기본은 정보 제공만)")
     args = ap.parse_args()
@@ -194,7 +250,23 @@ def main():
     else:
         print("\n[표 밖 교차참조 의심] 없음")
 
-    if cross_findings and args.strict:
+    # ── (3) EXPERT trigger 교차참조 — #3(감정평가) 회귀로 발견한 사각지대 ──
+    # (1)(2)는 §CATALOG(GWP)만 봤는데, 실제로는 GWP 문단이 EXPERT의
+    # 등록 trigger 문자열을 그대로 재사용해도 충돌이 난다(2026-08-06,
+    # appraiser.triggers의 "감정평가"와 R1 예시 문장이 토씨 하나 안 틀리고
+    # 일치해 GWP 기본값 지시가 무력화됨). expert-registry.js를 함께 읽어
+    # 검사한다.
+    expert_findings = check_expert_trigger_collisions(content, args.expert_registry)
+    if expert_findings:
+        print(f"\n[EXPERT trigger 교차참조 의심] {len(expert_findings)}건 — 사람 검토 필요")
+        print("(GWP 기본값을 주장하는 문맥 근처에 EXPERT의 등록 trigger 문자열이 그대로 등장)")
+        for trig, pid, snippet in expert_findings:
+            print(f"  '{trig}'는 EXPERT:{pid}의 등록 trigger인데 GWP 기본값 문맥 근처에서 발견")
+            print(f"    ...{snippet}...")
+    else:
+        print("\n[EXPERT trigger 교차참조 의심] 없음")
+
+    if (cross_findings or expert_findings) and args.strict:
         return 1
     return 0
 
