@@ -1,24 +1,23 @@
 /**
- * ai/expert-session.js — 전문가 AI(26개 페르소나) 세션 관리
+ * ai/expert-session.js — 전문가 AI(60개 페르소나) 라우팅 + 프롬프트 합성
  *
- * 전문 분야(기관) AI(K-Law 등)는 새 탭으로 열리지만, 전문가 AI(변호사·간호사 등)는
- * 별도 서비스가 없는 순수 System Prompt이므로 "같은 스레드 안에서 System Prompt만
- * 교체"하는 방식으로 호출한다. PA→AGENT-COMMON 전환과 동일한 패턴을 재사용한다.
+ * ARCHITECTURE NOTE (2026-08-06 재정리): 전문 분야(기관) AI(K-Law 등)와
+ * 마찬가지로, 전문가 AI(변호사·간호사 등)도 2026-07-03부로 "같은 스레드
+ * System Prompt 교체" 방식이 아니라 새 탭(pages/expert-chat.html)에서
+ * 독립 실행된다. 이 파일에는 그 새 탭을 여는 라우팅 로직(handleExpertTag)과
+ * K-Compose/K-Execute 내부 위임(scope=orchestration_subtask, call-ai.js
+ * §0-H)이 재사용하는 프롬프트 합성 로직(_composeExpertPrompt)만 남아있다.
  *
- * 종료 시점 정의(예외 없이 그림자 AI에게 보고하기 위해 둘 다 적용):
- *   1) 명시적 종료 발화 — "끝났어", "그만", "돌아가줘" 등 감지 시 즉시 종료
- *   2) 무응답 타임아웃 — EXPERT_TIMEOUT_MS(기본 10분) 동안 추가 발화가 없으면 자동 종료
- *   (장차 페르소나 SP가 자체적으로 [EXPERT_DONE] 태그를 출력하도록 개정되면,
- *    handleExpertTag()의 done 분기에서 동일하게 처리되도록 이미 분기를 마련해 두었다.)
- *
- * 종료되면: history에서 세션 시작 이후 구간만 잘라 6하원칙 요약 → PDV 기록
- *          → CFG.system을 그림자 AI(AGENT-COMMON)로 복원 → 안내 버블 출력.
+ * 예전에 이 파일에 있던 "같은 스레드 세션" 서브시스템(startExpertSession/
+ * isExpertActive/maybeHandleExpertTurn/applyExpertSystemIfActive/
+ * endExpertSession 등, 2026-07-03 이후 유일한 진입점이던 startExpertSession을
+ * 아무도 호출하지 않아 전부 죽은 코드였다)은 2026-08-06 감사로 확인 후
+ * src/_archive/expert-session-legacy-inthread.js.md로 코드와 근거를 보존해
+ * 이관했다 — 부활이 필요하면 그 파일 참조.
  */
 import { CFG } from '../core/config.js';
-import { history, _USER } from '../core/state.js';
+import { history } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
-import { _recordPDV } from '../pdv/record.js';
-import { summarizeTranscript6W, summarizeHandoffContext6W } from './report-utils.js';
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
@@ -26,35 +25,25 @@ import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { _buildRoutingFacts } from '../services/location.js';
 
-const EXPERT_TIMEOUT_MS = 10 * 60 * 1000; // 10분 무응답 → 자동 종료
-const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
-
-// ── 세션 상태 (단일 사용자 탭 기준 — 전역 1개) ───────────────
-let _expert = {
-  active:     false,
-  personaId:  null,
-  def:        null,
-  startIdx:   0,       // 세션 시작 시점의 history.length (요약 시 슬라이스 기준)
-  timer:      null,    // 무응답 타임아웃 setTimeout 핸들
-};
-
-// 합성된 System Prompt 캐시 (같은 페르소나 재호출 시 재요청 방지)
+// 합성된 System Prompt 캐시 (같은 페르소나 재호출 시 재요청 방지 — K-Compose
+// nested 위임처럼 한 세션 안에서 같은 페르소나가 반복 호출될 수 있다)
 const _promptCache = new Map();
 
-export function isExpertActive() {
-  return _expert.active;
-}
-
-export function currentExpertLabel() {
-  return _expert.def ? `${_expert.def.icon} ${_expert.def.label}` : null;
-}
-
-// ── C50(관제탑 원칙) 코드 층 강제 — 2026-08-06 신설 ────────────────
+// ── C50(관제탑 원칙) 코드 층 강제용 순수 판정 함수 — 2026-08-06 신설 ──────
+// 실제 강제(재시도 카운터·보정 지시 재전송)는 EXPERT 페르소나 대화가
+// 실제로 벌어지는 pages/expert-chat.html의 _maybeEnforceNextStep()이
+// 수행한다 — 이 함수는 그쪽에서 재사용하는 순수 판정부만 제공한다.
 // SP_common_guardrails C50-3이 요구하는 [NEXT_STEP: ...] 태그가 EXPERT
-// 세션 진행 중 응답에 실제로 있는지 감지하는 순수 함수. call-ai.js가
-// isExpertActive() === true인 턴에서 이걸 호출해, 빠져 있으면
-// [INTERNAL: ...] 보정 지시를 재전송한다(GOV_TASK_SUBMIT_REQUEST 형식
-// 오류 시 재시도 지시 패턴과 동일 메커니즘 — call-ai.js 쪽 훅 참고).
+// 페르소나 응답에 실제로 있는지 감지하는 순수 함수. expert-chat.html이
+// 매 턴 이걸 호출해, 빠져 있으면 [INTERNAL: ...] 보정 지시를 재전송한다
+// (GOV_TASK_SUBMIT_REQUEST 형식 오류 시 재시도 지시 패턴과 동일 메커니즘).
+//
+// ⚠️ 2026-08-06 정정: 최초 구현 시 이 훅을 call-ai.js에 걸고 isExpertActive()
+// (이 파일의 죽은 같은-스레드 세션 게이트)로 가드했었다 — 그 결과 "코드로
+// 강제하라"는 지시를 지키려다 실제로는 한 번도 실행될 수 없는 코드를
+// 만드는 실수를 했다. 실제 EXPERT 대화는 이 파일이 아니라
+// pages/expert-chat.html에서 벌어지므로, 강제 로직 자체도 거기 있어야
+// 한다 — 이 파일에는 재사용 가능한 순수 판정 함수만 남긴다.
 //
 // 오탐 방지를 위해 "아직 결론이 없는 되묻기 턴"은 예외로 둔다(C50-3에
 // 명시된 예외와 동일) — 정규식만으로 "이 턴이 결론에 도달했는가"를
@@ -316,121 +305,4 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
 
   _gwpLaunch(gwpDef, finalCtx, _preTab, _buildRoutingFacts());
   return true;
-}
-
-// ── CFG.system과 history[0]을 함께 갱신 ──────────────────────
-// ⚠️ call-ai.js는 history가 비어있지 않으면 history[0](캐시된 system)을
-// 그대로 보내고 CFG.system은 쳐다보지 않는다(캐시 최적화 설계 — 위
-// _callAIInner 주석 참조). 그래서 CFG.system만 바꾸면 실제 전송되는
-// 프롬프트는 안 바뀌는 버그가 있었다. 페르소나 전환 시점은 어차피
-// 캐시 프리픽스가 바뀌는 지점이므로(다른 SP로 진짜 전환하는 것이니
-// 캐시 재사용을 기대할 수 없다), history[0]도 같이 덮어써서 실제로도
-// 전환되게 한다.
-function _applySystemEverywhere(text) {
-  CFG.system = text;
-  if (history.length > 0 && history[0]?.role === 'system') {
-    history[0] = { role: 'system', content: text };
-  }
-}
-
-// ── 전문가 AI 세션 시작 (같은 스레드 방식) ──────────────────────
-// @deprecated 2026-07-22 — call-ai.js는 이 함수를 import하지 않음(2026-07-03
-// 이후 handleExpertTag의 "새 탭 방식"으로 대체됨, scenario-test.html A17
-// 확인 이력과 일치). 허브(gopang) 내부 grep 기준 살아있는 호출부 없음.
-// 위성 저장소(18개) 쪽에서 이 파일을 직접 fetch해 쓰는 경로가 있는지는
-// 확인 못 했으므로, 삭제 대신 표시만 해두고 1개 배포 주기 관찰 후 제거할 것.
-export async function startExpertSession(personaId, def) {
-  if (_expert.active && _expert.personaId === personaId) return; // 이미 같은 페르소나 진행 중
-
-  const prompt = await _composeExpertPrompt(def);
-  _applySystemEverywhere(prompt);  // 같은 스레드 — history 대화 자체는 유지(맥락 보존), system만 교체
-
-  _expert = {
-    active: true, personaId, def,
-    startIdx: history.length,     // 이 지점 이후만 "전문가 세션" 구간으로 취급
-    timer: null,
-  };
-  _resetTimeoutTimer();
-
-  appendBubble('ai',
-    `${def.icon} <b>${def.label} AI</b>와 연결되었습니다. 상담이 끝나면 "끝났어"라고 말씀해주세요.`,
-    true
-  );
-  console.info('[Expert] 세션 시작:', personaId);
-}
-
-// ── 사용자 발화 시 매 턴 호출 — 명시적 종료 발화 감지 + 타임아웃 리셋 ──
-// call-ai.js _callAIInner() 최상단에서 호출한다.
-// @returns {boolean} 이번 발화로 세션이 종료되었는지(true면 이어서 그림자 AI가 응답)
-export async function maybeHandleExpertTurn(userText) {
-  if (!_expert.active) return false;
-
-  _resetTimeoutTimer(); // 살아있는 발화이므로 타임아웃 연장
-
-  if (userText && TERMINATION_RE.test(userText)) {
-    await endExpertSession('user_phrase');
-    return true;
-  }
-  return false; // 세션 유지 — 호출부에서 CFG.system을 페르소나 프롬프트로 유지해야 함
-}
-
-// 활성 세션의 System Prompt를 보장 적용(매 턴 — system 캐시에 덮어쓰기 방지)
-export function applyExpertSystemIfActive() {
-  if (!_expert.active) return false;
-  // _composeExpertPrompt가 캐시돼 있으므로 동기적으로 즉시 적용 가능
-  if (_promptCache.has(_expert.def.key)) {
-    _applySystemEverywhere(_promptCache.get(_expert.def.key));
-    return true;
-  }
-  return false;
-}
-
-// ── 전문가 AI 세션 종료 — 6하원칙 요약 → PDV 기록 → 그림자 AI 복원 ──
-export async function endExpertSession(reason = 'unknown') {
-  if (!_expert.active) return;
-  _clearTimeoutTimer();
-
-  const def       = _expert.def;
-  const personaId = _expert.personaId;
-  const turns     = history.slice(_expert.startIdx);
-
-  _expert = { active: false, personaId: null, def: null, startIdx: 0, timer: null };
-
-  // ── 세션 구간 대화를 "[역할] 발화" 로그로 변환 ──────────────
-  const transcript = turns
-    .map(t => `[${t.role === 'user' ? '사용자' : def.label}] ${
-      typeof t.content === 'string' ? t.content : JSON.stringify(t.content)
-    }`)
-    .join('\n');
-
-  const report6w = transcript.trim() ? await summarizeTranscript6W(transcript) : null;
-  const summaryText = report6w?.what || report6w?.result ||
-    (transcript.trim()
-      ? `${def.label} AI와의 상담이 종료됨(요약 실패 — 원문 ${turns.length}턴 보존)`
-      : `${def.label} AI와의 상담이 대화 없이 종료됨`);
-
-  await _recordPDV({
-    type:      'agent_report',
-    serviceId: personaId,
-    service:   def.label,
-    summary:   summaryText,
-    who:       report6w?.who   || _USER?.nickname || _USER?.ipv6 || null,
-    when:      report6w?.when  || new Date().toISOString(),
-    where:     report6w?.where || '혼디',
-    what:      report6w?.what  || summaryText,
-    how:       report6w?.how   || `expert_session_${reason}`,
-    why:       report6w?.why   || '',
-    ts:        new Date().toISOString(),
-  }).catch(e => console.warn('[Expert] PDV 기록 실패:', e.message));
-
-  // ── 그림자 AI(AGENT-COMMON)로 복원 ───────────────────────
-  _applySystemEverywhere(CFG.system_base || CFG.system);
-
-  const reasonLabel = reason === 'timeout' ? '(응답이 없어 자동 종료됨)' : '';
-  appendBubble('ai',
-    `✅ <b>${def.icon} ${def.label} AI</b> 상담이 끝났습니다${reasonLabel}. 그림자 AI로 돌아왔습니다.<br>` +
-    `<span style="font-size:12px;color:var(--label-3)">요약: ${summaryText}</span>`,
-    true
-  );
-  console.info('[Expert] 세션 종료(' + reason + '):', personaId, '| 요약:', summaryText);
 }

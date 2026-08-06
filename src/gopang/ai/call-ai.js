@@ -29,9 +29,7 @@ import { openSearch } from '../ui/p2p-search.js';
 import { inviteByHandle } from '../ui/p2p-chat.js';
 import { _openProfilePanel } from '../ui/settings.js';
 import { _gwpLaunch } from '../gwp/engine.js';
-import { maybeHandleExpertTurn, applyExpertSystemIfActive,
-         isExpertActive, handleExpertTag, _composeExpertPrompt,
-         _missingNextStepMarker } from './expert-session.js';
+import { handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
 import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate, _submitUserFeedback } from '../pdv/record.js';
@@ -2007,39 +2005,14 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  * 호출하고 결과를 history에 재주입한다. K-Search든 AC 자신이든 이
  * 태그를 낼 수 있으므로 특정 system으로 게이트하지 않는다.
  */
-// ── C50(관제탑 원칙) 코드 층 강제 — 2026-08-06 신설 ────────────────
-// SP_common_guardrails C50 참조. EXPERT 세션 진행 중 응답에
-// [NEXT_STEP: ...] 태그가 빠져 있으면(_missingNextStepMarker() 판정),
-// 이미 나간 답변은 그대로 사용자에게 보여준 채로(숨기지 않는다 —
-// GOV_TASK_SUBMIT_REQUEST처럼 사용자가 이미 읽었을 내용을 지우는 건
-// 나쁜 UX다) 페르소나에게 "다음 행동 한 가지를 [NEXT_STEP:]으로
-// 명시해서 이어 답하라"는 보정 지시만 조용히 재전송한다. 무한루프
-// 방지 상한(_NEXT_STEP_RETRY_MAX)을 넘으면 더 이상 재촉하지 않고
-// 조용히 포기한다(사용자 경험을 해치는 게 원칙 준수보다 나쁘므로).
-export async function _enforceNextStepMarker(fullReply, bubble, sendFn = callAI, userText = '') {
-  if (!isExpertActive()) return false; // 라우팅 결정 턴 등은 대상 아님
-  if (!_missingNextStepMarker(fullReply)) return false; // 이미 충족 또는 예외 대상
-
-  if (_nextStepRetryCount >= _NEXT_STEP_RETRY_MAX) {
-    console.warn('[C50] NEXT_STEP 보정 재시도 한도 초과 — 이번 턴은 그냥 통과');
-    return false;
-  }
-  _nextStepRetryCount += 1;
-
-  // 이미 스트리밍된 답변은 그대로 두고(사용자가 이미 읽고 있을 수 있음),
-  // history에 정상 기록한 뒤 보정 지시만 추가로 보낸다.
-  history.push({ role: 'assistant', content: fullReply });
-  const nudge =
-    `[INTERNAL: 방금 응답에 [NEXT_STEP: ...] 태그가 없습니다 — ` +
-    `SP_common_guardrails C50(관제탑 원칙)에 따라, 지금 사용자가 당장 ` +
-    `할 수 있는 다음 행동이나 답해야 할 질문 한 가지를 ` +
-    `[NEXT_STEP: ...] 태그로 명시해 짧게 이어서 답하세요. 방금 답변을 ` +
-    `반복하지 말고, 정말로 다음 한 걸음만 제시하세요.]`;
-  history.push({ role: 'user', content: nudge });
-
-  await sendFn(nudge);
-  return true;
-}
+// ── C50(관제탑 원칙) [NEXT_STEP:] 태그 강제 — 이 파일에는 없음 ─────
+// (2026-08-06 정정) 이 자리에 있던 _enforceNextStepMarker()는
+// isExpertActive()(항상 false — expert-session.js 아카이브 참조)로
+// 가드돼 있어 한 번도 실행될 수 없는 죽은 코드였다. 실제 EXPERT
+// 페르소나 대화는 이 파일(그림자 AI 스레드)이 아니라
+// pages/expert-chat.html에서 벌어지므로, 강제 로직도 그쪽으로
+// 옮겼다(_maybeEnforceNextStep, expert-session.js의
+// _missingNextStepMarker 재사용).
 
 // ── 재무제표(fs) 실시간 조회 (2026-07-13 신설) ──────────────
 // GDC 시스템 소속 데이터라 프로필에 스냅샷으로 저장하지 않는다 —
@@ -3917,15 +3890,6 @@ async function _delegateToFlash(task, context) {
 let _delegateRetryCount = 0;
 const _DELEGATE_RETRY_MAX = 2;
 
-// C50(관제탑 원칙) 코드 층 강제용 재시도 상한 — _delegateRetryCount와
-// 동일한 설계(모듈 스코프, 탭 새로고침 시 리셋, 무한루프 방지 목적).
-// EXPERT 세션 1개당이 아니라 모듈 전역 카운터인 이유도 동일 — 이 훅이
-// 실제로 계속 실패한다는 신호 자체가 더 심각한 문제(예: 프롬프트가
-// 태그 요구사항을 못 따라가는 모델을 쓰고 있음)이므로, 세션이 바뀌어도
-// 굳이 리셋해 계속 재시도를 허용할 이유가 없다.
-let _nextStepRetryCount = 0;
-const _NEXT_STEP_RETRY_MAX = 2;
-
 export async function _handleDelegateToFlashTag(fullReply, bubble, sendFn = callAI, userText = '') {
   const tagMatch = fullReply.match(/\[DELEGATE_TO_FLASH:([\s\S]*?)\]/);
   if (!tagMatch) return false;
@@ -4278,26 +4242,18 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
   //     (_buildEnhancedUserContent/_buildFirstContactContext 참조)
   //   • 그림자 컨텍스트(_buildShadowContext): 제거 — user 메시지 병합 방식으로 대체
 
-  // ── 전문가 AI(페르소나) 세션 처리 ────────────────────────
-  // 명시적 종료 발화("끝났어" 등) 감지 시 endExpertSession()이 즉시 실행되어
-  // CFG.system을 개인 AC(AC-PRO-CORE)로 복원한다 — 이 경우 아래 SP 결정
-  // 로직을 정상적으로 통과시켜 AC가 이번 발화에 바로 응답하게 한다.
-  await maybeHandleExpertTurn(userText);
-
-  if (isExpertActive()) {
-    // 전문가 세션이 이번 턴에도 유지됨 — AC-PRO-CORE 결정 로직을 건너뛰고
-    // 페르소나 System Prompt를 그대로 유지한다(history는 공유 — 맥락 보존,
-    // PA→AC-PRO-CORE 전환과 달리 여기서는 history를 비우지 않는다).
-    applyExpertSystemIfActive();
-  } else {
+  // ── 전문가 AI(페르소나)는 이 스레드에 없음 ───────────────
+  // (2026-08-06 정정) EXPERT 페르소나 대화는 새 탭(pages/expert-chat.html)
+  // 에서 독립 실행되므로, 이 그림자 AI 스레드는 매 턴 그대로
+  // AC-PRO-CORE로 응답한다 — 예전에 여기 있던 isExpertActive() 분기는
+  // 항상 else(AC-PRO-CORE 로드)만 타는 죽은 조건문이었다(상세는
+  // src/_archive/expert-session-legacy-inthread.js.md).
 
   // AC-PRO-CORE 최초 1회 로드 (이후 캐시) — manifest["AC-PRO-CORE"] 키로 버전 결정
   if (!CFG.system_base) {
     CFG.system_base = await _loadAgentCommonSP();
   }
   if (!CFG.system) CFG.system = CFG.system_base || '';
-
-  } // ← isExpertActive() else 블록 종료
 
   // ── 이미지 첨부 시: Gemini 범용 분석 → SP-00 컨텍스트 주입 ──
   if (imageFile && CFG.geminiKey) {
@@ -4682,7 +4638,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
     // ── EXPERT 태그 감지 → 전문가 AI(같은 스레드 페르소나) 세션 시작 ──
     // 그림자 AI(AGENT-COMMON) 응답에서만 인식한다 — 페르소나 본인이 발급한
     // 텍스트가 우연히 같은 패턴을 포함해도 재귀적으로 세션을 바꾸지 않도록.
-    if (!isExpertActive() && CFG.system?.includes('§0. 정체성')) {
+    if (CFG.system?.includes('§0. 정체성')) {
       handleExpertTag(fullReply, userText, _preTab).catch(e =>
         console.warn('[Expert] 태그 처리 오류 (무시):', e.message)
       );
@@ -4699,13 +4655,6 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
         setTimeout(() => _injectAuthConfirmButton(requiredLevel), 400);
       }
     }
-
-    // ── C50(관제탑 원칙) [NEXT_STEP:] 태그 강제 (2026-08-06 신설) ──
-    // 위 AUTH 처리까지 끝난 뒤, 즉 이번 응답이 정말 최종 응답으로
-    // 확정된 시점에 검사한다 — isExpertActive() 자체가 함수 내부
-    // 가드라 라우팅 결정 턴(아직 세션 시작 전)은 자동으로 제외된다.
-    const _nextStepHandled = await _enforceNextStepMarker(fullReply, bubble, callAI, userText);
-    if (_nextStepHandled) return;
 
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);
