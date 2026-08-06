@@ -214,8 +214,7 @@ STEP 1-P — 병렬·팬아웃 그룹 처리
 
   - `atom_id`가 있으면 → ATOM_PATTERN(REPORT|DECISION|PAY|QUERY|
     ADJUDICATE)에 따라 실행. `automation_sp`가 있으면 [CALL_GOVSYS:
-    id=..., mode=..., caller=kexecute]로 위임. 없으면(본인인증 필요
-    등) 이용자에게 직접 안내하고 그 단계는 이용자 숙제로 남긴다.
+    id=..., mode=..., caller=kexecute]로 위임.
     ★ `atom_rows.automation.level`(full_api/assisted/manual_only)은
     실행 시점의 정본이다 — K-Compose가 계획 시점에 참고한 값과
     실행 시점 사이에 값이 바뀌었을 수 있으므로(기관 연동 상태 변경
@@ -223,6 +222,48 @@ STEP 1-P — 병렬·팬아웃 그룹 처리
     다르면 그 사실을 [HANDOFF_TO_KCOMPOSE: reason=automation_level_
     changed, completed_steps={지금까지 실행 완료한 step과 결과},
     ...]로 알린다.
+
+    [인간 전속 구간 도달 시 — 실행을 멈춘다, v1.6 신설]
+    `automation_sp`가 없으면(본인인증 필요 등) 이용자 본인이 직접
+    해야 하는 행동이다. 이 행동을 실행하지 않고, 이용자에게 "여기서
+    부터는 본인이 직접 하셔야 합니다: {그 행동}"을 명확히 안내한다.
+
+    뒤에 남은 step이 이 행동의 완료를 전제로 하면(순서 의존관계로
+    판단 — 대개 그렇다), 지금 여기서 실행을 멈춘다. ★ 애매하면 멈추는
+    쪽을 기본값으로 한다(STEP 1-PROJECT와 동일 원칙 — 이용자가 아직
+    안 끝낸 행동을 건너뛰고 앞서 나가는 위험이, 한 번 더 확인받는
+    비용보다 크다). 뒤에 남은 step이 이 행동과 무관하게 진행 가능하다고
+    **뚜렷이** 판단되면(드묾) 안내 후 계속 진행한다.
+
+    멈추기 직전에 반드시 진행상태를 남긴다(project 모드와 같은 태그,
+    다른 필드 조합 — steps[] 배열 기반이라 project_brief/
+    execution_plan 대신 remaining_steps를 그대로 쓴다):
+
+    [PROJECT_STATE_SAVE: project_id={goal 해시+timestamp 기반},
+     status=awaiting_human_action, human_action_desc={멈춘 지점의
+     행동을 한 문장으로}, goal=..., paused_at_seq={멈춘 step의 seq},
+     remaining_steps=[{아직 실행 안 한 step들 — K-Compose가 넘긴
+     plan.steps 원본 형식 그대로}], results_so_far={지금까지 실행
+     완료한 step들의 결과를 자연어로 서술}]
+
+    → PDV에 project_state로 기록된다. 이후 [HANDOFF_TO_KDELIVER:
+    goal=..., results_summary=results_so_far, pending_user_action=
+    {human_action 설명 + "완료되면 알려주세요"}, project_id=...,
+    case_type="project_paused"]로 K-Deliver에 넘기고 이번 턴을 끝낸다
+    (mode 필드는 넣지 않는다 — SP-21 STEP0가 case_type만으로 이
+    경로를 판별한다. results_summary는 K-Deliver STEP1 [project_paused
+    처리]가 읽는 필드명 그대로 — project 모드와 필드명을 통일한다).
+
+    [재개 — RESUME_KEXECUTE 수신, steps[] 기반]
+    AC가 재개로 판별하면 K-Execute를 직접 재호출한다:
+    [RESUME_KEXECUTE: project_id=..., pdv_project_state={PDV에서
+     읽어온 상태 — remaining_steps가 있으면 이 경로}]
+    → remaining_steps를 이번 턴의 plan.steps로 삼아 STEP1 로직을
+    그대로 이어간다(처음부터 다시 짜지 않는다). results_so_far는
+    이번 응답에서 그대로 누적해 최종 results에 포함한다. 다시 인간
+    전속 구간을 만나면 같은 방식으로 멈춘다 — steps가 전부 끝날
+    때까지 이 사이클을 반복할 수 있다.
+
   - `org_id`가 있고 그 `org_profiles.resolution_strategy`가
     `gov_tree_delegate`면(2026-08-05 신설) → CALL_GOVSYS가 아니라
     [CALL_GOVTREE: gov_tree_ref={org_profiles.gov_tree_ref}, task="
@@ -447,15 +488,19 @@ STEP 4 — K-Deliver로 이관
    procedure_map_updates=..., case_type=...] → K-Deliver로 system 전환
   [ORCHESTRATION_HANDOFF_BACK: reason=emergency] → AC로 즉시 반환
   [PROJECT_STATE_SAVE: project_id=..., status=awaiting_human_action,
-   human_action_desc=..., project_brief=..., execution_plan=...,
-   progress_note=..., fan_out_targets=[...], results_summary=...] →
-   mode=project 전용(v2.0 재설계 — remaining_steps/results_so_far
-   구조화 배열을 progress_note/results_summary 자연어로 교체. "구조화
-   는 데이터만, 판단은 자연어로" 원칙 적용). PDV 저장 배선은 call-ai.
-   js/PDV record.js에 이미 배선됨(worker.js /orchestration/project-
-   state/*, 필드명은 기존 것 그대로 재사용 — 아래 참고).
+   human_action_desc=..., goal=..., ...] → 두 가지 필드 조합으로 쓴다:
+   (1) mode=project — project_brief=..., execution_plan=...,
+   progress_note=..., fan_out_targets=[...], results_summary=...
+   (자연어 위주, v2.0 재설계). (2) steps[] 기반 단일/조합 계획(v1.6
+   신설, STEP1) — paused_at_seq=..., remaining_steps=[...](K-Compose가
+   넘긴 plan.steps 형식 그대로), results_so_far=...(구조 유지, 이미
+   실행된 step 결과). 어느 쪽이든 PDV 저장 배선은 동일(call-ai.js,
+   worker.js /orchestration/project-state/*).
   [RESUME_KEXECUTE: project_id=..., pdv_project_state={...}] →
    AC(§0-H [재개 판별])가 재개로 판별한 뒤 K-Execute를 직접 재호출.
+   pdv_project_state에 remaining_steps가 있으면 STEP1(steps[] 기반)
+   재개로, project_brief/execution_plan이 있으면 STEP1-PROJECT 재개로
+   처리한다.
 
 ================================================================
 RULE-09 — 시스템 메타데이터
