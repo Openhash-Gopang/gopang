@@ -1,0 +1,42 @@
+[
+  {
+    "no": 1,
+    "utterance": "해외에서 물건을 수입해 올 때 관세가 대략 어떻게 매겨지는지 일반적인 기준이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "R2 검증(재확인 — scenarios_r1_domain_concept_matching #5와 동일 발화)",
+    "static_verdict": "WARN",
+    "basis": "ktax·klogistics 둘 다 '관세' trigger 보유(gwp-registry.js 직접 확인) — R2 신설(2026-08-06) 전에는 klogistics로 갔었다. '관세가 어떻게 매겨지는지'는 세율·과세 기준을 묻는 질문이라 세무 기관(ktax)이 더 적합하다고 판단했으나, 두 서비스 모두 방어 가능한 애매한 사례라 확신도는 낮게 유지 — R2가 어느 쪽으로든 명확하게 개선했는지가 관전 포인트"
+  },
+  {
+    "no": 2,
+    "utterance": "부가세 신고를 처음 하는 사업자인데 전체적인 흐름이 어떻게 되는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "R2 검증(재확인 — scenarios_r1_domain_concept_matching #9와 동일 발화)",
+    "static_verdict": "PASS",
+    "basis": "kbusiness.triggers에 '부가세 신고'(긴 구체적 구)가 정확히 등록돼 있음(gwp-registry.js 직접 확인) — R2 신설 전에는 매번 더 일반적인 ktax(trigger '부가세'만)로 흡수됐다. '사업자'라는 문맥이 명시적이라 kbusiness가 명확히 더 정확한 정답 — R2의 '구체적 trigger 우선' 규칙이 실제로 작동하는지의 핵심 검증 케이스"
+  },
+  {
+    "no": 3,
+    "utterance": "중고 거래로 캠핑용품을 하나 등록해서 팔아보려고 하는데 어떻게 시작하면 되나요",
+    "expected_type": "GWP",
+    "expected_id": "kcommerce_seller",
+    "expected_name": "K-Market(판매자 등록)",
+    "category": "R2 검증(일반화 확인 — 새 도메인)",
+    "static_verdict": "PASS",
+    "basis": "kcommerce(사려는 방향)와 kcommerce_seller(팔려는 방향) 둘 다 '등록'이 표면적으로 걸릴 수 있으나, '팔아보려고'라는 명시적 방향성이 있어 kcommerce_seller가 명확히 맞음 — §CATALOG 표 자체에 이미 '방향 착각 주의' 경고가 있던 기존 사례라 R2 신설과 무관하게 원래도 잘 됐어야 하는 대조군(회귀 없는지 확인용)"
+  },
+  {
+    "no": 4,
+    "utterance": "국민연금을 언제부터 얼마나 받을 수 있는지 제 수급자격을 좀 확인해주세요",
+    "expected_type": "GWP",
+    "expected_id": "kgov",
+    "expected_name": "K-Public",
+    "category": "R2 검증(일반화 확인 — §GOV_MATCH 경계)",
+    "static_verdict": "WARN",
+    "basis": "AC-PRO-CORE §GOV_MATCH 예시 자체가 '국민연금 수급자격'→국민연금공단(전용 경로)이라고 명시하고 있어, kgov로 뭉뚱그리지 않고 §GOV_MATCH 확장 레지스트리(GWP_REGISTRY_SEARCH)로 국민연금공단 전용 id를 찾아야 할 수도 있음 — 이 경우 expected_id는 참고용이고 실제로는 kgov보다 더 구체적인 id가 나오면 오히려 R2 원칙에 부합하는 더 나은 결과일 수 있어 확신도를 낮게 표시"
+  }
+]
