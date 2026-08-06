@@ -442,6 +442,45 @@ async function ensureSystemPrompt() {
   return systemPrompt;
 }
 
+// ── [PDV_REQUEST:]/[PDV_HISTORY_REQUEST:] 방어적 스트립 (2026-08-06 신설) ──
+// 배경: UNIVERSAL-common(U7-3/U8)이 이 두 태그를 지시하는데, 이 페이지는
+// 그걸 실제로 가로채 /pdv/query를 호출하는 실행기(pdv-history-client.js —
+// K-서비스 13개 저장소에만 연동돼 있음, 이 허브 저장소엔 없음)를 로드하지
+// 않는다. U8-3 자체가 "scope 자리표시자가 치환 안 된 채(`{`로 시작) 남아
+// 있으면 태그를 쓰지 않는다"고 지시하고, 이 페이지는 애초에 서버측
+// 자리표시자 치환 경로(worker.js handleGovRelay)를 타지 않으므로(정적
+// 파일을 직접 fetch) 정상적으로는 모델이 이 자기점검으로 태그 사용을
+// 스스로 억제할 것으로 기대된다 — 그래도 그 억제는 프롬프트 준수에 기댄
+// 것이지 코드로 강제된 게 아니므로, 혹시 새나오면 사용자 화면에 원시
+// 태그 텍스트가 그대로 노출되지 않도록 최소한의 방어망만 둔다. (실행
+// 자체를 구현하지 않는 이유: VALID_PDV_SCOPES가 GWP 기관/부서 단위로만
+// 등록돼 있고 개별 EXPERT 페르소나 60개엔 등록된 scope가 없다 — U8은
+// 애초에 EXPERT 페르소나를 염두에 두고 설계된 기능이 아니다. call-ai.js의
+// K-Compose→EXPERT(orchestration_subtask) 경로도 2026-07-19부터 동일한
+// 노출을 안고 있었다 — 거기도 동일 원리로 방어 스트립을 추가했다.)
+function _stripPdvTags(text) {
+  // PDV_HISTORY_REQUEST(U8)는 평문 본문(scope=/period=/reason=)이라 단순
+  // 정규식으로 안전하지만, PDV_REQUEST(U7-3)는 fields=[field1, field2, ...]
+  // 처럼 본문에 중첩 대괄호를 가진다 — call-ai.js의 _stripBracketTag와
+  // 동일한 depth-aware 스캔이 필요하다(단순 `[^\]]*` 정규식은 배열 안쪽
+  // 첫 ]에서 잘려 나머지 원문이 그대로 노출된다, 실사로 확인).
+  let out = text.replace(/\[PDV_HISTORY_REQUEST:[^\]]*\]/g, '');
+  let idx;
+  while ((idx = out.indexOf('[PDV_REQUEST:')) !== -1) {
+    let depth = 0, end = -1;
+    for (let i = idx; i < out.length; i++) {
+      if (out[i] === '[') depth++;
+      else if (out[i] === ']') {
+        depth--;
+        if (depth === 0) { end = i + 1; break; }
+      }
+    }
+    if (end === -1) break; // 짝이 안 맞으면(응답이 잘림 등) 더 이상 진행 안 함
+    out = out.slice(0, idx) + out.slice(end);
+  }
+  return out.trim();
+}
+
 async function sendTurn(text, attachment) {
   const typing = appendTyping();
   const aiBubble = appendBubble('ai', '');
@@ -465,11 +504,23 @@ async function sendTurn(text, attachment) {
 
     messages.push({ role: 'user', content });
     let shown = false;
-    const full = await callExpertAI(messages, (delta, fullText) => {
+    let full = await callExpertAI(messages, (delta, fullText) => {
       if (!shown) { typing.remove(); aiBubble.style.display = ''; shown = true; }
       aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
       document.getElementById('chat-thread').scrollTop = 1e9;
     });
+
+    // ── [PDV_REQUEST:]/[PDV_HISTORY_REQUEST:] 방어적 스트립 (2026-08-06 신설) ──
+    // (근거는 위 _stripPdvTags 주석 참조) `full`을 여기서 곧바로 클린 버전으로
+    // 교체한다 — 아래 EXPERT_DONE/WEB_SEARCH/CONNECT_HUMAN_EXPERT/C50 로직이
+    // 전부 이 시점 이후의 `full`을 참조하므로, 여기서 한 번만 처리하면
+    // 이후 어떤 분기를 타도(예: EXPERT_DONE이 뒤에서 다시 자르는 경우) 원시
+    // 태그가 되살아나지 않는다.
+    if (/\[PDV(?:_HISTORY)?_REQUEST:/.test(full)) {
+      console.warn('[Expert] PDV_REQUEST/PDV_HISTORY_REQUEST 태그가 응답에 나타나 화면에서 제거함(실행기 미구현 — 상세는 _stripPdvTags 주석)');
+      full = _stripPdvTags(full);
+      aiBubble.innerHTML = escHtml(full).replace(/\n/g, '<br>');
+    }
     messages.push({ role: 'assistant', content: full });
 
     // ── [EXPERT_DONE] 태그 감지 (2026-07-20, C45 신설) ──────────────

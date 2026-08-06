@@ -589,9 +589,9 @@ function _safeParseJsonField(raw, key) {
 }
 
 export const _stripInternalTags = (text) => _stripBracketTag(
-  _stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(text,
+  _stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(_stripBracketTag(text,
     'PROCEDURE_MAP_DRAFT'), 'PROCEDURE_MAP_UPDATE'), 'KSEARCH_CANDIDATES'),
-    'HANDOFF_TO_KEXECUTE'), 'HANDOFF_TO_KDELIVER'), 'PROJECT_STATE_SAVE')
+    'HANDOFF_TO_KEXECUTE'), 'HANDOFF_TO_KDELIVER'), 'PROJECT_STATE_SAVE'), 'PDV_REQUEST')
   .replace(/PROFILE_SUBMIT\s*\{[\s\S]*?\n\}/, '')
   .replace(/\[PARTIAL_SAVE\]\s*\{[\s\S]*?\}/g, '')
   .replace(/\[\d+\/\d+단계\]/g, '')
@@ -679,6 +679,20 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 끝내면(예: 주기적 PDV 검토 완료 알림 턴) 태그 원문이 그대로 독립된
   // 채팅 버블로 노출됐다(라이브 재검증 중 실사 확인).
   .replace(/\[PDV_REVIEWED\]/g, '')
+  // 2026-08-06 신설 — U8(PDV_HISTORY_REQUEST)/U7-3(PDV_REQUEST)이
+  // UNIVERSAL-common을 통해 2026-07-19부터 K-Compose→EXPERT(scope=
+  // orchestration_subtask, expert-session.js._composeExpertPrompt 경로,
+  // §0-H) 위임에도 실려가고 있었다 — 이 스레드엔 그 태그를 실제로
+  // 가로채 /pdv/query를 호출하는 실행기(pdv-history-client.js, K-서비스
+  // 13개 저장소에만 연동됨)가 없다. VALID_PDV_SCOPES가 GWP 기관/부서
+  // 단위로만 등록돼 있어(개별 EXPERT 페르소나엔 scope 자체가 없음) U8은
+  // 애초에 이 경로를 염두에 두고 설계되지 않았다 — 실행 구현 대신, 모델이
+  // U8-3 자기점검(자리표시자 미치환 시 태그 미사용)을 안 지켰을 때를 대비한
+  // 최소 방어망만 둔다(pages/expert-chat.html의 _stripPdvTags와 동일 원리).
+  // PDV_REQUEST(U7-3, fields=[...] 중첩 배열 본문)는 위 _stripBracketTag
+  // 체인에서 이미 처리했으므로 여기선 평문 본문(scope=/period=/reason=,
+  // 중첩 대괄호 없음)인 PDV_HISTORY_REQUEST(U8)만 남는다.
+  .replace(/\[PDV_HISTORY_REQUEST:[^\]]*\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
   .replace(/\[CALL_GOVTREE:[^\]]*\]/g, '')  // 2026-08-05 신설 — gov-tree 지방행정 SP 실행 태그(§ handleGovTreeStepExecute)
