@@ -1,0 +1,252 @@
+[
+  {
+    "no": 1,
+    "utterance": "전세 계약서에 이상한 조항이 있는 것 같은데 이게 법적으로 문제가 될 수 있는 내용인지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "부정테스트(EXPERT 오발동 방지 — LAW 카테고리)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js klaw.triggers('계약서') 매칭, lawyer/judicial-scrivener 위임의도 문구 없이 제도적 문제 여부만 묻는 관점 — R1축상 GWP 기본값. appraiser·loss-adjuster·patent-attorney·customs-broker 등 니치 EXPERT로 새지 않는지도 함께 확인"
+  },
+  {
+    "no": 2,
+    "utterance": "교통사고가 났는데 보험금이 어떻게 산정되는 건지 일반적인 기준이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "부정테스트(EXPERT 오발동 방지 — LAW/손해사정 인접)",
+    "static_verdict": "WARN",
+    "basis": "expert-registry.js loss-adjuster.triggers('손해사정사','보험금 산정','손해사정')와 '보험금이 어떻게 산정되는지' 의미가 인접해 EXPERT로 새기 쉬운 케이스로 의도적 설계. 위임의도('~해주실 분') 없이 '일반적인 기준'을 묻는 제도적 관점이라 klaw 또는 kinsurance가 정답이어야 하나, loss-adjuster로 새는지가 검증 포인트라 확신도는 낮게 표시"
+  },
+  {
+    "no": 3,
+    "utterance": "발명한 아이디어를 특허로 등록하려면 어떤 절차를 거쳐야 하는지 알고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "부정테스트(EXPERT 오발동 방지 — patent-attorney 인접)",
+    "static_verdict": "WARN",
+    "basis": "expert-registry.js patent-attorney.triggers('특허 출원')와 의미상 인접(패러프레이즈: '특허로 등록'). 위임의도 없이 절차 자체를 묻는 관점이라 GWP가 기본값이어야 하나, 이 직역명 자체가 워낙 특정적이라 EXPERT로 새기 쉬운 케이스"
+  },
+  {
+    "no": 4,
+    "utterance": "해외에서 물건을 들여올 때 세금이나 통관 절차가 보통 어떻게 되는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "부정테스트(EXPERT 오발동 방지 — customs-broker 인접)",
+    "static_verdict": "WARN",
+    "basis": "expert-registry.js customs-broker.triggers('수입 통관')와 패러프레이즈로 인접. 위임의도 없는 절차 질문 — ktax(세금)와 klaw 사이에서도 갈릴 수 있어 GWP 어느 쪽이든 PASS로 채점되지만 EXPERT:customs-broker로 새면 FAIL"
+  },
+  {
+    "no": 5,
+    "utterance": "누가 제 아이디랑 비밀번호를 도용해서 계정에 들어간 것 같아요, 이런 경우 신고는 어떻게 하나요",
+    "expected_type": "GWP",
+    "expected_id": "ksecurity",
+    "expected_name": "K-Security",
+    "category": "부정테스트(EXPERT 오발동 방지 — security-engineer 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js ksecurity.triggers('계정 탈취')와 의미 인접, '신고는 어떻게 하나요'라는 절차 질문이 명확해 EXPERT(개인 자문) 아닌 GWP(기관 신고 서비스)가 맞음"
+  },
+  {
+    "no": 6,
+    "utterance": "최근에 며칠째 소화가 안 되고 속이 더부룩한데 어디로 가서 진료를 받으면 좋을지 병원을 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "khealth",
+    "expected_name": "K-Health",
+    "category": "부정테스트(EXPERT 오발동 방지 — physician 인접)",
+    "static_verdict": "WARN",
+    "basis": "gwp-registry.js khealth.triggers('아파요','병원','증상') 매칭. '병원을 찾아달라'는 병원 탐색·연결 요청이라 khealth가 맞아 보이나, 증상을 서술하며 '진료'를 언급해 EXPERT:physician(직접 상담)으로 새기 쉬운 경계 케이스로 의도적 설계"
+  },
+  {
+    "no": 7,
+    "utterance": "이가 좀 아픈 것 같은데 근처에 지금 문 연 곳이 있는지 좀 알아봐 주세요",
+    "expected_type": "GWP",
+    "expected_id": "khealth",
+    "expected_name": "K-Health",
+    "category": "부정테스트(EXPERT 오발동 방지 — dentist 인접)",
+    "static_verdict": "PASS",
+    "basis": "'문 연 곳을 찾아달라'는 명백한 병원 탐색 요청 — 진료 상담 위임(dentist)이 아닌 기관 연결(khealth) 요청임이 명확"
+  },
+  {
+    "no": 8,
+    "utterance": "저희 강아지 예방접종을 어디서 맞힐 수 있는지, 근처 동물병원 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "khealth",
+    "expected_name": "K-Health",
+    "category": "부정테스트(EXPERT 오발동 방지 — veterinarian 인접)",
+    "static_verdict": "WARN",
+    "basis": "⚠️ expert-registry.js veterinarian.triggers에 '동물병원'이 등록돼 있어(직업명+법정업무명 원칙) 이 발화는 EXPERT 트리거 키워드를 실제로 포함한다 — 의도적으로 남겨둔 케이스: '찾아주세요'라는 위치 탐색 의도가 명확한데도 모델이 키워드 매칭만으로 EXPERT:veterinarian(직접 진료 상담)으로 새는지, 아니면 문맥을 읽고 khealth(병원 탐색)로 정확히 가는지가 이 시나리오의 진짜 검증 포인트 — 순수 문자열 매칭이 아니라 의도 판별 능력을 시험함"
+  },
+  {
+    "no": 9,
+    "utterance": "요즘 시험 준비 때문에 스트레스가 심한 학생들은 보통 어떻게 관리하나요, 일반적인 방법이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kedu",
+    "expected_name": "K-School",
+    "category": "부정테스트(EXPERT 오발동 방지 — school-counselor/clinical-psychologist 인접)",
+    "static_verdict": "WARN",
+    "basis": "gwp-registry.js kedu.triggers('시험') 매칭. 본인 상담 위임이 아니라 '학생들은 보통' 식 일반화된 질문 — direct-response나 kedu 둘 다 방어 가능하나, EXPERT:school-counselor/clinical-psychologist로 새면 명백한 과발동"
+  },
+  {
+    "no": 10,
+    "utterance": "주식 계좌를 새로 개설하려고 하는데 어떤 절차가 필요한지 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "kfinance",
+    "expected_name": "K-Stock",
+    "category": "부정테스트(EXPERT 오발동 방지 — accountant/financial-planner 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kfinance.triggers('주식','포트폴리오') 인접, 계좌 개설은 실행 서비스(kfinance) 소관이지 재무설계 자문(financial-planner) 위임이 아님"
+  },
+  {
+    "no": 11,
+    "utterance": "실손보험 청구할 때 필요한 서류가 뭔지랑 처리 기간이 보통 얼마나 걸리는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kinsurance",
+    "expected_name": "K-Insurance",
+    "category": "부정테스트(EXPERT 오발동 방지 — loss-adjuster 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kinsurance.triggers('보험','청구','실손') 정확 매칭. 서류·기간 등 실무 절차 질문이라 개인 손해사정 위임(loss-adjuster)이 아닌 kinsurance"
+  },
+  {
+    "no": 12,
+    "utterance": "지금 살고 있는 동네에 나와 있는 전세 매물이 어떤 게 있는지 좀 보여주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "부정테스트(EXPERT 오발동 방지 — real-estate-agent 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kestate.triggers('전세','매매 매물') 정확 매칭. 매물 탐색은 kestate 실행 영역이지 공인중개사 개인 위임(real-estate-agent, '직접 의뢰'류 문구)이 아님"
+  },
+  {
+    "no": 13,
+    "utterance": "올해 종합소득세 신고 기간이 언제까지인지랑 어떻게 신고하는지 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "부정테스트(EXPERT 오발동 방지 — tax-accountant 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js ktax.triggers('종합소득세','연말정산') 정확 매칭. 일반적 신고 기간·절차 안내는 ktax 소관이지 개인 세무 상담 위임(tax-accountant)이 아님"
+  },
+  {
+    "no": 14,
+    "utterance": "저녁에 먹을 치킨을 하나 시켜먹고 싶은데 근처에 뭐가 있는지 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kcommerce",
+    "expected_name": "K-Market",
+    "category": "부정테스트(EXPERT 오발동 방지 — chef 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kcommerce.triggers('주문','배달','음식') 정확 매칭. 음식 주문 실행 요청이라 요리 상담 위임(chef)이 아님"
+  },
+  {
+    "no": 15,
+    "utterance": "집들이 때 손님상에 뭘 낼지 고민인데 밀키트나 완제품으로 살 만한 걸 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kcommerce",
+    "expected_name": "K-Market",
+    "category": "부정테스트(EXPERT 오발동 방지 — chef 인접, 이전 배치 #20 대비)",
+    "static_verdict": "WARN",
+    "basis": "이전 배치(paraphrase_hard #20)의 '손님상에 낼 요리를 상황에 맞춰 짜주실 분'(chef 기대, LIVE-PASS)과 표면적으로 유사하지만, 이번엔 '살 만한 걸 찾아달라'는 상품 구매 요청으로 의도를 바꿔 kcommerce가 정답이어야 함 — 같은 도메인 발화가 의도(자문 위임 vs 구매)에 따라 다른 라우팅으로 정확히 갈리는지 확인하는 대비 케이스"
+  },
+  {
+    "no": 16,
+    "utterance": "어제 주차 단속에 걸린 것 같은데 과태료가 얼마나 나오는지랑 이의제기하는 방법이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "부정테스트(EXPERT 오발동 방지 — 교통)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js ktransport.triggers('과태료','단속','주정차') 정확 매칭. 대응하는 EXPERT 페르소나가 없는 카테고리라(엔지니어링 계열 ENG 페르소나는 도선사·항해사 등 해상 전용) 오발동 위험 자체가 낮은 대조군 케이스"
+  },
+  {
+    "no": 17,
+    "utterance": "제주도에서 서울까지 이삿짐을 옮기려고 하는데 물류 업체를 좀 알아봐 주세요",
+    "expected_type": "GWP",
+    "expected_id": "klogistics",
+    "expected_name": "K-Logistics",
+    "category": "부정테스트(EXPERT 오발동 방지 — 물류)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js klogistics.triggers('배송','물류','운송') 매칭. 대응하는 EXPERT 페르소나 없음 — 대조군 케이스"
+  },
+  {
+    "no": 18,
+    "utterance": "이번 여름에 배를 타고 섬에 놀러가려고 하는데 운항 시간표를 좀 확인해 주세요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "부정테스트(EXPERT 오발동 방지 — marine-pilot/navigation-officer 인접)",
+    "static_verdict": "WARN",
+    "basis": "'배'·'운항'이라는 단어가 marine-pilot(도선사)·navigation-officer(항해사) EXPERT의 도메인과 표면적으로 겹치지만, 실제 요청은 여객선 시간표 조회(교통 정보)이지 도선·항해 자문 위임이 아님 — 오발동하기 쉬운 함정으로 의도적 설계"
+  },
+  {
+    "no": 19,
+    "utterance": "주민등록등본을 인터넷으로 발급받으려면 어떻게 해야 하는지 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "kgov",
+    "expected_name": "K-Public",
+    "category": "부정테스트(EXPERT 오발동 방지 — judicial-scrivener 동음이의 함정)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kgov.triggers('등본','주민등록') 정확 매칭. '등본'(주민등록 증명서)과 judicial-scrivener.triggers의 '등기'(부동산 권리 등록)는 발음이 비슷하지만 완전히 다른 개념 — 동음이의 함정으로 의도적 설계. judicial-scrivener로 새면 명백한 오발동"
+  },
+  {
+    "no": 20,
+    "utterance": "기초생활수급자 신청 자격이 어떻게 되는지랑 어디서 신청하는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kgov",
+    "expected_name": "K-Public",
+    "category": "부정테스트(EXPERT 오발동 방지 — social-worker 인접)",
+    "static_verdict": "WARN",
+    "basis": "gwp-registry.js kgov.triggers('복지','행정') 매칭. 제도 자격·신청처를 묻는 순수 제도 정보 질문이라 kgov가 맞아야 하나, '복지'라는 단어가 social-worker(사회복지사)와도 인접해 오발동 가능성 있는 경계 케이스"
+  },
+  {
+    "no": 21,
+    "utterance": "이번에 새로 나온 정책 제안에 대해 주민들이 투표로 의견을 낼 수 있는 방법이 있는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kdemocracy",
+    "expected_name": "K-Democracy",
+    "category": "부정테스트(EXPERT 오발동 방지 — 거버넌스)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kdemocracy.triggers('투표','정책') 매칭. 대응 EXPERT 페르소나 없음 — 대조군 케이스"
+  },
+  {
+    "no": 22,
+    "utterance": "우리 동네 해안가에 쓰레기가 많이 떠밀려온 것 같은데 이거 신고하거나 치울 수 있는 방법이 있나요",
+    "expected_type": "GWP",
+    "expected_id": "fiil-kcleaner",
+    "expected_name": "K-Cleaner",
+    "category": "부정테스트(EXPERT 오발동 방지 — 환경)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js fiil-kcleaner.triggers('쓰레기','해안') 정확 매칭. 대응 EXPERT 페르소나 없음 — 대조군 케이스"
+  },
+  {
+    "no": 23,
+    "utterance": "인터넷 요금제를 좀 더 저렴한 걸로 바꾸고 싶은데 지금 나와 있는 상품들 좀 보여주세요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "부정테스트(EXPERT 오발동 방지 — 통신)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js ktelecom.triggers('요금제','인터넷 설치') 정확 매칭. 대응 EXPERT 페르소나 없음 — 대조군 케이스(#228 커밋에서 ktelecom 관련 회귀 정리 이력 있어 함께 재확인)"
+  },
+  {
+    "no": 24,
+    "utterance": "이번 달 카드값이 왜 이렇게 많이 나왔는지 사용 내역을 좀 확인해 주세요",
+    "expected_type": "GWP",
+    "expected_id": "kgdc",
+    "expected_name": "GDC",
+    "category": "부정테스트(EXPERT 오발동 방지 — 결제/자산)",
+    "static_verdict": "WARN",
+    "basis": "gwp-registry.js kgdc.triggers('잔고') 등과 의미 인접(패러프레이즈). 개인 자산 현황 조회라 실행 서비스(kgdc)가 맞아야 하나 financial-planner(자산관리)로 새는지 확인하는 경계 케이스"
+  },
+  {
+    "no": 25,
+    "utterance": "사업자 등록하고 나서 부가세 신고를 어떻게 처음 하는 건지 전체적인 흐름이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "부정테스트(EXPERT 오발동 방지 — accountant/tax-accountant 인접)",
+    "static_verdict": "PASS",
+    "basis": "gwp-registry.js kbusiness.triggers('사업자 세금','부가세 신고') 정확 매칭. 사업자 소관 세무는 kbusiness 소관 — 개인 세무사·회계사 위임 문구 없음"
+  }
+]
