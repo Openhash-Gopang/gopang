@@ -47,6 +47,21 @@ jobs:
       - name: Install deps
         run: pip install requests
 
+      # ── 도메인 키워드 충돌 검사 (2026-08-06 신설) ──────────────────
+      # 배경: 이 워크플로가 잡는 "행동적 정확도" 회귀와는 다른 층위의
+      # 문제 — R1류 조항에 새 예시를 추가할 때 그 단어가 이미 다른 GWP의
+      # "분야" 칸에 등록돼 있는지 확인 안 하면(순수 의미론적 판단만
+      # 하고 문자열 검색을 생략하면), 그 자체로 새 라우팅 충돌을 만들
+      # 수 있다는 걸 실사로 확인했다(klaw 문단에 "관세 통관" 예시를
+      # 넣었다가 klogistics의 기존 "통관" 등록과 충돌해 명확한 위임의도
+      # 발화가 [CALL_KINTENT:]로 새는 회귀를 20/20 재현). 비용이 거의
+      # 없는 정적 검사라 라이브 API 호출(아래 단계, 비용·시간 소요)보다
+      # 먼저 돈다 — 정보 제공용이라 기본은 빌드를 막지 않는다(--strict
+      # 안 씀, 오탐 소지가 check_no_hardcoded_sp_refs.py류 구조적 검사
+      # 보다 커서).
+      - name: Check domain keyword collisions (informational)
+        run: python3 tools/check_domain_keyword_collision.py --prompt prompts/AC-PRO-CORE_v1_1.txt
+
       - name: Run routing-focused scenario batches
         working-directory: tests/live_smoketest
         env:
