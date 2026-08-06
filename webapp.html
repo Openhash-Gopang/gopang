@@ -3714,7 +3714,7 @@ window.closePDV = closePDV;
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
       _resolveHondiTier, _parseAgentTags, _handleWebSearchTag, _handleDelegateToFlashTag,
-      _handleSPAuthorTags, _enforceConversationalStyle,
+      _handleSPAuthorTags, _enforceConversationalStyle, _enforceRoutingBias,
     } = await import('./src/gopang/ai/call-ai.js');
     // BUG-FIX(2026-07-02): _callPanelAI(AI 패널 — 실제로 쓰이는 주 경로)가
     // 지금까지 _parseAgentTags를 호출한 적이 없었다. 메인 채팅 전용
@@ -4148,6 +4148,17 @@ window.closePDV = closePDV;
         handleExpertTag(full).catch(e =>
           console.warn('[Panel] EXPERT 태그 처리 실패(무시):', e.message)
         );
+
+        // ── [라우팅 자기점검] GWP↔EXPERT 편향 방지 (2026-08-06 신설) ──
+        // call-ai.js._enforceRoutingBias와 동일 함수를 재사용 — CFG.system을
+        // 참조하지 않는 순수 userText/fullReply 패턴 검사라 대화 스타일
+        // 검사와 달리 systemTextOverride가 필요 없다.
+        try {
+          const _biasHandled = await _enforceRoutingBias(full, bubbleEl, _panelSendFn, userText);
+          if (_biasHandled) return;
+        } catch (e) {
+          console.warn('[Panel] _enforceRoutingBias 처리 실패(무시):', e.message);
+        }
 
         // ── [대화 스타일] 문서형 응답 강제 재작성 (2026-08-06 신설) ──
         // call-ai.js._enforceConversationalStyle과 동일 함수를 재사용 —
