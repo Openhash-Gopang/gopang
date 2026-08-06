@@ -31,6 +31,20 @@ on:
 permissions:
   contents: write
 
+# 2026-08-06 신설(주피터 지적) — AC-PRO-CORE_v1_1.txt를 이 세션에서만도
+# 여러 번 고쳤는데, 그때마다 이 워크플로가 새로 트리거된다. cancel-
+# in-progress 없이는 짧은 시간에 연속으로 push하면(실사 중 흔한 패턴)
+# 이전 실행이 아직 라이브 API 호출 중인 채로 새 실행이 쌓여 러너 풀을
+# 동시에 여러 개 점유한다 — 실제로 이 문제가 관찰됨: prompts/**를
+# 건드리는 push 하나가 이 워크플로를 포함해 5개 워크플로를 동시에
+# 트리거해 수동 workflow_dispatch 실행이 대기열에 밀리는 걸 확인했다.
+# manifest.yml이 이미 쓰는 것과 동일한 패턴 — 최신 push만 살아남고
+# 이전 실행은 자동 취소된다(어차피 최신 코드 기준 결과만 의미 있으므로
+# 취소해도 손실 없음).
+concurrency:
+  group: routing-regression
+  cancel-in-progress: true
+
 jobs:
   routing-regression-gate:
     runs-on: ubuntu-latest
