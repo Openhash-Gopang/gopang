@@ -3020,7 +3020,7 @@ window.closePDV = closePDV;
       const msg = window._aiPanelOnboardingMsg;
       delete window._aiPanelOnboardingMsg;
       setTimeout(async () => {
-        const aiBubble = _appendPanelMsg('ai', '…');
+        const aiBubble = _appendPanelMsg('ai', _pickGreeting());
         aiBubble.classList.add('streaming');
         try { await _callPanelAI(msg, aiBubble); }
         catch(e) { aiBubble.textContent = 'AI 오류: ' + e.message; }
@@ -3100,7 +3100,7 @@ window.closePDV = closePDV;
         (async () => {
           const user = (() => { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}'); } catch { return {}; } })();
           const nickname = user.nickname || '';
-          const aiBubble = _appendPanelMsg('ai', '…');
+          const aiBubble = _appendPanelMsg('ai', _pickGreeting(nickname));
           aiBubble.classList.add('streaming');
           // ★ 2026-07-11 수정: 튜토리얼 대본이 AC에서 profile-assistant로
           // 이관됐다(§0-1-T 삭제, PHASE -1 신설) — 그래서 이 트리거가
@@ -3242,6 +3242,29 @@ window.closePDV = closePDV;
     msgList.appendChild(div);
     msgList.scrollTop = msgList.scrollHeight;
     return b;
+  }
+
+  // ── 즉시 표시용 인사말 풀 (2026-08-06 신설) ──────────────
+  // hondi-pro는 thinking 모드로 reasoning에 먼저 시간을 쓰기 때문에,
+  // 패널을 열었을 때 실제 AI 응답(대화 이력 복기 포함)이 오기까지
+  // 수십 초~1분 가까이 걸릴 수 있다(SP-22 STEP1 2026-08-05 명확화와
+  // 동일 원인). 그동안 사용자가 빈 말풍선을 바라보게 하는 대신,
+  // Claude가 매번 다른 인사말을 즉시 띄우는 것과 같은 방식으로
+  // 대기 시간을 체감하지 않게 한다 — 실제 AI 응답이 도착하면
+  // 아래 _callPanelAI 스트리밍 로직이 이 텍스트를 자연스럽게 덮어쓴다
+  // (통째로 비우지 않고 첫 실제 델타가 올 때 교체 — 아래 참조).
+  const _GREETINGS = [
+    '안녕하세요! 오늘은 어떤 걸 도와드릴까요?',
+    '반가워요. 무슨 일부터 시작해 볼까요?',
+    '어서 오세요! 궁금하신 절차나 신청할 게 있으신가요?',
+    '안녕하세요, 혼디예요. 필요하신 일 말씀해 주세요.',
+    '오셨네요! 잠시만요, 지난 대화도 같이 살펴보고 있어요.',
+    '안녕하세요! 오늘 처리하고 싶은 일이 있으신가요?',
+    '반갑습니다. 이어서 진행할 일이 있으신지 확인해 볼게요.',
+  ];
+  function _pickGreeting(nickname) {
+    const g = _GREETINGS[Math.floor(Math.random() * _GREETINGS.length)];
+    return nickname ? `${nickname}님, ${g}` : g;
   }
 
   // ── 튜토리얼 신호 시스템 (v2.0) ──────────────────────
@@ -3893,7 +3916,12 @@ window.closePDV = closePDV;
         }
 
         // 스트리밍 렌더
-        bubbleEl.textContent = '';
+        // 2026-08-06 수정 — 여기서 즉시 textContent를 비우면, hondi-pro의
+        // thinking 모드 reasoning 구간(실제 첫 델타가 오기까지 수십 초~1분)
+        // 동안 화면이 통째로 빈 말풍선으로 보이는 문제가 있었다(패널을 열
+        // 때 미리 띄워둔 인사말이 이 순간 바로 지워져 버림). 첫 실제 델타가
+        // 도착하는 순간에만 교체하도록 바꾼다 — 그 전까지는 미리 띄워둔
+        // 텍스트(인사말 등)가 그대로 남아 대기 체감을 줄인다.
         const reader = res.body.getReader();
         const dec = new TextDecoder();
         let full = '';
@@ -3918,6 +3946,7 @@ window.closePDV = closePDV;
             if (data === '[DONE]') break;
             try {
               const chunk = JSON.parse(data)?.choices?.[0]?.delta?.content || '';
+              if (!chunk) continue; // 빈 델타(예: 리즈닝 하트비트)로는 화면을 건드리지 않는다
               full += chunk;
               bubbleEl.textContent = full;
               msgList.scrollTop = msgList.scrollHeight;
