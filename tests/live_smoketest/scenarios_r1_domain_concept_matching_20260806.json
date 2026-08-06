@@ -1,0 +1,102 @@
+[
+  {
+    "no": 1,
+    "utterance": "발명한 아이디어를 특허로 등록하려면 어떤 절차를 거쳐야 하는지 알고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "R1 분야개념매칭 검증(2026-08-06 신설 조항 직접 대상)",
+    "static_verdict": "PASS",
+    "basis": "이 발화가 바로 R1 보강 조항(AC-PRO-CORE §CORE 2단계, 2026-08-06 추가)의 계기가 된 실패 사례 — klaw.triggers엔 '특허' 자체가 없지만 klaw의 '분야' 칸(법률 소송·계약·형사·민사 등)에 개념적으로 속한다. 위임의도 문구 없음(절차 자체를 묻는 관점) — 조항 적용 후 EXPERT:patent-attorney로 새지 않고 klaw로 가는지가 이 배치의 핵심 검증 포인트"
+  },
+  {
+    "no": 2,
+    "utterance": "가게 이름을 상표로 등록하고 싶은데 그 절차가 전반적으로 어떻게 되는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "R1 분야개념매칭 검증",
+    "static_verdict": "PASS",
+    "basis": "klaw.triggers엔 '상표' 없음(patent-attorney.triggers에만 '상표 등록' 있음). '절차가 어떻게 되는지 궁금하다'는 순수 제도 정보 관점, 위임의도 없음 — #1과 같은 축의 두 번째 사례(같은 patent-attorney 인접, 다른 표현)"
+  },
+  {
+    "no": 3,
+    "utterance": "제가 살고 있는 땅이 대략 얼마쯤 하는지, 이런 감정평가라는 게 원래 어떤 절차로 이루어지는 건지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "R1 분야개념매칭 검증(새 도메인 — appraiser 인접)",
+    "static_verdict": "WARN",
+    "basis": "klaw.triggers엔 '감정평가'·'시세' 없음(appraiser.triggers에만 있음). 위임의도 없이 절차 자체를 묻는 순수 정보성 질문 — patent-attorney/customs-broker 외의 다른 니치 EXPERT 인접 도메인에서도 이 조항이 일반화되는지 확인하는 새 케이스라 확신도는 중간(#1/#2보다 처음 시도하는 도메인)"
+  },
+  {
+    "no": 4,
+    "utterance": "등기부등본에 근저당권이라는 게 적혀 있던데 이게 무슨 뜻이고 왜 생기는 건지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "R1 분야개념매칭 검증(새 도메인 — judicial-scrivener 인접)",
+    "static_verdict": "WARN",
+    "basis": "klaw.triggers엔 '등기' 없음(judicial-scrivener.triggers에만 있음). 순수 용어·개념 설명 요청(위임의도 없음) — direct-response(일반 지식)로 갈 가능성도 있어 klaw 단정보다 확신도를 낮게 표시. GWP로 가면 klaw가 맞고, direct-response로 가도 EXPERT:judicial-scrivener로만 안 새면 이 조항 취지엔 부합"
+  },
+  {
+    "no": 5,
+    "utterance": "해외에서 물건을 수입해 올 때 관세가 대략 어떻게 매겨지는지 일반적인 기준이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "R1 분야개념매칭 검증(재정정 — ktax가 klaw보다 정확한 GWP)",
+    "static_verdict": "PASS",
+    "basis": "★ 이전 배치(gwp_priority #4)에서 klaw를 정답으로 뒀던 게 재검토 결과 부정확했음을 확인 — ktax.triggers에 '관세'가 문자 그대로 등록돼 있다(직접 확인). customs-broker(EXPERT)와의 인접쌍 검증이라는 원래 취지는 유지하되, 대상 GWP를 ktax로 바로잡았다. 위임의도 없음"
+  },
+  {
+    "no": 6,
+    "utterance": "가게 이름을 상표로 등록하고 싶은데 변리사님께 직접 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "patent-attorney",
+    "expected_name": "변리사",
+    "category": "회귀 확인(위임의도 있으면 여전히 EXPERT — 과교정 방지)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_regression_R1_20260801.json #21과 유사 취지 발화(원문: \"가게 이름을 상표로 등록하고 싶은데 도와줄 사람이 필요해요\", 위임의도를 더 명시적으로 바꿔 재구성 — 정답 expected_id는 원본과 동일하게 유지). R1 분야개념매칭 조항이 '위임의도 없을 때의 GWP 기본값'만 건드렸으므로, 위임의도가 명시된 이 케이스는 영향받지 않고 여전히 EXPERT로 가야 함 — #1/#2 보강이 이 케이스를 과교정(overcorrect)하지 않는지 확인"
+  },
+  {
+    "no": 7,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "회귀 확인(위임의도 있으면 여전히 EXPERT — 과교정 방지)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_regression_R1_20260801.json #22와 유사 취지 발화(원문: \"해외에서 물건을 들여오는데 통관 절차를 전문가한테 맡기고 싶어요\", \"전문가\"를 \"관세사\"로 구체화해 재구성 — 정답 expected_id는 원본과 동일하게 유지). #5(같은 관세 도메인, 위임의도 없음, ktax 기대)와 정확히 대비되는 짝 — 같은 도메인이 위임의도 유무 하나로 GWP/EXPERT가 갈리는지 확인"
+  },
+  {
+    "no": 8,
+    "utterance": "등기 이전 절차를 법무사한테 직접 부탁드리고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "judicial-scrivener",
+    "expected_name": "법무사",
+    "category": "회귀 확인(위임의도 있으면 여전히 EXPERT — 과교정 방지)",
+    "static_verdict": "PASS",
+    "basis": "#4(같은 등기 도메인, 위임의도 없음, klaw 기대)와 대비되는 짝"
+  },
+  {
+    "no": 9,
+    "utterance": "부가세 신고를 처음 하는 사업자인데 전체적인 흐름이 어떻게 되는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "기지 이슈 재확인(R1 조항과 무관 — ktax 흡수 문제 재현되는지)",
+    "static_verdict": "WARN",
+    "basis": "scenarios_gwp_priority_no_expert_20260806.json #25(원문: '사업자 등록하고 나서 부가세 신고를 어떻게 처음 하는 건지')의 패러프레이즈 재현 — 이번 R1 보강은 GWP↔EXPERT 축만 다루고 GWP↔GWP(kbusiness vs ktax) 축은 안 건드렸으므로 개선을 기대하진 않지만, 우연히라도 나아졌는지 재확인 차 포함"
+  },
+  {
+    "no": 10,
+    "utterance": "저희 강아지가 요 며칠 밥을 잘 안 먹는데 근처에 지금 갈 수 있는 동물병원 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "khealth",
+    "expected_name": "K-Health",
+    "category": "기지 이슈 재확인(R1 조항과 무관 — trigger 키워드 오염 재현되는지)",
+    "static_verdict": "WARN",
+    "basis": "scenarios_gwp_priority_no_expert_20260806.json #8과 유사 재현(veterinarian.triggers에 '동물병원' 등록됨, 의도적 함정) — 이번 R1 보강 범위 밖이라 개선 기대하진 않지만 회귀 여부 재확인"
+  }
+]
