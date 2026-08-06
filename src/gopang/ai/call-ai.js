@@ -2026,7 +2026,12 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
 // 페르소나 대화는 이 파일(그림자 AI 스레드)이 아니라
 // pages/expert-chat.html에서 벌어지므로, 강제 로직도 그쪽으로
 // 옮겼다(_maybeEnforceNextStep, expert-session.js의
-// _missingNextStepMarker 재사용).
+// _missingNextStepMarker 재사용). ★ 2026-08-06 추가 확인(CONTROL-
+// TOWER-PRINCIPLE 신설 검토 중) — [NEXT_STEP:] 태그 자체가 K-Execute/
+// K-Deliver SP 본문에서 요구된 적이 없고 _stripInternalTags도 이
+// 태그를 걸러내지 않는다. K-Execute/K-Deliver 쪽 코드 강제는 태그
+// 요구 없이 구조를 직접 보는 별도 메커니즘(_violatesConversationalStyle/
+// _enforceConversationalStyle)이 담당한다 — 아래(모듈 하단)에 정의.
 
 // ── 재무제표(fs) 실시간 조회 (2026-07-13 신설) ──────────────
 // GDC 시스템 소속 데이터라 프로필에 스냅샷으로 저장하지 않는다 —
@@ -3904,6 +3909,83 @@ async function _delegateToFlash(task, context) {
 let _delegateRetryCount = 0;
 const _DELEGATE_RETRY_MAX = 2;
 
+// ── [대화 스타일] 코드 층 강제 — 2026-08-06 신설, 2026-08-06 재배선 ──
+// SP-22(K-Execute)/SP-21(K-Deliver)·CONTROL-TOWER-PRINCIPLE(모든 SP
+// 공통 상속)에 "정확히 하나의 실행 가능한 동작만, 문서 서식 없이
+// 1~3문장으로" 원칙을 프롬프트로 넣었지만, 프롬프트에 규칙을 적는
+// 것과 모델이 실제로 매번 지키는 건 별개 문제다 — hondi-pro는
+// thinking 모드로 방대한 reasoning을 거친 뒤 content를 내는데, 그
+// 내부 사고 습관이 최종 출력 스타일에 스며들 위험이 있다(실사로
+// 확인 — 원시 스트림 reasoning_content 참고).
+//
+// ★ 최초 배선(2026-08-06)에서는 K-Execute/K-Deliver만 대상이었으나,
+// 같은 날 라이브 재검증에서 **AC(AGENT-COMMON) 자신**이 K-Intent로
+// 넘기기 직전 응답에서 이미 "### 지금 당장 준비하실 것 1. ... 2. ..."
+// 식 문서 나열을 쏟아내는 게 확인됐다 — CALL_KINTENT 태그가 그 안에
+// 섞여 나왔다는 것 자체가 이 응답이 AC 활성 상태에서 생성됐다는
+// 증거다(오케스트레이션 전환은 그 태그가 감지된 *이후*에 일어난다).
+// 그래서 AC도 대상에 포함한다 — CFG.system?.includes('§0. 정체성')는
+// AC-PRO-CORE 자신이 "call-ai.js의 일부 로직이 이 문자열로 AC 본체
+// 활성 여부를 판별한다"고 명시한 기존 호환 마커를 그대로 재사용한다
+// (임의로 새 마커를 만들지 않음 — 1777·4655행의 기존 용례와 동일).
+//
+// ★ max_tokens을 낮춰 강제로 자르는 방식은 의도적으로 쓰지 않는다 —
+// SP-22 v1.4 커밋 메시지에 기록된 실제 사고(hondi-pro thinking 모드가
+// reasoning에 예산을 다 써서 content가 빈 채로 finish_reason:"length"
+// 나던 문제, resolveChatBudget으로 겨우 고침)와 정확히 같은 실패
+// 모드를 다시 불러올 위험이 크다. 대신 생성이 끝난 뒤 결과물의 구조
+// (마크다운 제목·번호 매김 목록 3개 이상·과도한 길이)를 보고 판정한다
+// — "응답 길이 제한"의 효과는 내되, 문장 중간에 잘리는 위험은 없다.
+const MD_HEADER_RE = /^#{1,6}\s/m;
+const NUMBERED_LIST_RE = /(^|\n)\s*\d+[.)]\s.+(\n\s*\d+[.)]\s.+){2,}/;
+const BULLET_LIST_RE = /(^|\n)\s*[-•*]\s.+(\n\s*[-•*]\s.+){2,}/;
+const STYLE_MAX_LEN = 300; // 대략 1~3문장을 넉넉히 넘는 길이 — 오탐 방지 위해 넓게 잡음
+
+export function _violatesConversationalStyle(fullReply) {
+  if (!fullReply || typeof fullReply !== 'string') return false;
+  if (MD_HEADER_RE.test(fullReply)) return true;
+  if (NUMBERED_LIST_RE.test(fullReply)) return true;
+  if (BULLET_LIST_RE.test(fullReply)) return true;
+  if (fullReply.length > STYLE_MAX_LEN) return true;
+  return false;
+}
+
+let _styleRetryCount = 0;
+const _STYLE_RETRY_MAX = 2;
+
+export async function _enforceConversationalStyle(fullReply, bubble, sendFn = callAI, userText = '') {
+  // AC 본체·K-Execute·K-Deliver의 사용자 응대 발화만 대상 — 다른
+  // 단계(K-Compose의 계획 태그, K-Search 조회 등)는 이 원칙의 적용
+  // 범위가 아니다(오탐 위험을 늘리지 않기 위해 실제로 "사용자에게
+  // 직접 말을 거는" 단계만 좁혀서 강제한다).
+  const inScope = CFG.system?.includes('§0. 정체성')
+    || CFG.system?.includes('K-Execute') || CFG.system?.includes('K-Deliver');
+  if (!inScope) return false;
+  if (!_violatesConversationalStyle(fullReply)) return false;
+
+  if (_styleRetryCount >= _STYLE_RETRY_MAX) {
+    console.warn('[대화스타일] 보정 재시도 한도 초과 — 이번 턴은 그냥 통과');
+    return false;
+  }
+  _styleRetryCount += 1;
+
+  // C50/NEXT_STEP과 동일한 판단 — 이미 스트리밍돼 사용자가 봤을 답변을
+  // 지우지 않는다(지우는 게 오히려 더 나쁜 UX). history에 정상 기록한
+  // 뒤, 짧게 다시 답하라는 보정 지시만 추가로 보낸다.
+  history.push({ role: 'assistant', content: fullReply });
+  const nudge =
+    `[INTERNAL: 방금 응답이 여러 항목을 나열하는 문서형 응답이었습니다 — ` +
+    `[대화 스타일 — 절대 원칙]/CONTROL-TOWER-PRINCIPLE(관제탑 원칙) 위반입니다. ` +
+    `지금 사용자가 당장 할 수 있는 정확히 하나의 동작만, 사람이 옆에서 ` +
+    `말해주듯 1~3문장으로 다시 답하세요. 목록·제목(###)·여러 단계 설명을 ` +
+    `넣지 말고, 방금 답변을 짧게 요약하지도 말고 처음부터 다시 그 형식으로 ` +
+    `쓰세요.]`;
+  history.push({ role: 'user', content: nudge });
+
+  await sendFn(nudge);
+  return true;
+}
+
 export async function _handleDelegateToFlashTag(fullReply, bubble, sendFn = callAI, userText = '') {
   const tagMatch = fullReply.match(/\[DELEGATE_TO_FLASH:([\s\S]*?)\]/);
   if (!tagMatch) return false;
@@ -4669,6 +4751,14 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
         setTimeout(() => _injectAuthConfirmButton(requiredLevel), 400);
       }
     }
+
+    // ── [대화 스타일] 문서형 응답 강제 재작성 (2026-08-06 신설) ──
+    // 위 AUTH 처리까지 끝난 뒤, 즉 이번 응답이 정말 최종 응답으로
+    // 확정된 시점에 검사한다. _enforceConversationalStyle 내부의
+    // CFG.system 가드가 대상 범위(AC·K-Execute·K-Deliver) 밖은
+    // 자동으로 제외한다.
+    const _styleHandled = await _enforceConversationalStyle(fullReply, bubble, callAI, userText);
+    if (_styleHandled) return;
 
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);

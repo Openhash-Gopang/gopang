@@ -79,6 +79,32 @@ async function _loadTaskDelegationGuideRaw() {
   }
 }
 
+// ★ 2026-08-06 신설(주피터님 지시) — CONTROL-TOWER-PRINCIPLE(관제탑
+// 원칙) 자동 상속. SP_common_guardrails C50으로 먼저 신설됐으나 그
+// 문서는 EXPERT 페르소나 합성 경로(_composeExpertPrompt)에만 결합돼
+// K-Intent/K-Compose/K-Execute/K-Deliver/K-Report 오케스트레이션
+// 체인에는 전혀 도달하지 않았다 — K-Execute/K-Deliver가 "한 번에
+// 하나씩 지시"가 아니라 문서형 정보 나열로 응답이 새던 근본 원인
+// 중 하나였다(라이브 재검증으로 확인). UNIVERSAL-INTEGRITY·TASK-
+// DELEGATION-GUIDE와 동일한 패턴으로 _loadSpByKey()가 로드하는
+// 모든 SP 앞에 강제 결합한다 — 이제 예외 없이 전부 상속받는다.
+let _controlTowerPrincipleCache = null;
+async function _loadControlTowerPrincipleRaw() {
+  if (_controlTowerPrincipleCache) return _controlTowerPrincipleCache;
+  try {
+    const manifest = await _loadManifest();
+    const fname = manifest['CONTROL-TOWER-PRINCIPLE'];
+    if (!fname) return '';
+    const res = await fetch(_SP_BASE + fname);
+    if (!res.ok) return '';
+    _controlTowerPrincipleCache = await res.text();
+    return _controlTowerPrincipleCache;
+  } catch (e) {
+    console.warn('[SP] CONTROL-TOWER-PRINCIPLE 로드 실패(무시, 개별 SP만 적용):', e.message);
+    return '';
+  }
+}
+
 export async function _loadSpByKey(manifestKey, label) {
   const manifest = await _loadManifest();
   const fname = manifest[manifestKey];
@@ -87,21 +113,24 @@ export async function _loadSpByKey(manifestKey, label) {
   if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
   const sp = await res.text();
 
-  // UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE 자기 자신을 로드할 때는
-  // 중복 결합하지 않는다(self-concat은 무의미).
-  if (manifestKey === 'UNIVERSAL-INTEGRITY' || manifestKey === 'TASK-DELEGATION-GUIDE') {
+  // UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE·CONTROL-TOWER-PRINCIPLE
+  // 자기 자신을 로드할 때는 중복 결합하지 않는다(self-concat은 무의미).
+  if (manifestKey === 'UNIVERSAL-INTEGRITY' || manifestKey === 'TASK-DELEGATION-GUIDE'
+      || manifestKey === 'CONTROL-TOWER-PRINCIPLE') {
     console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
     return sp;
   }
 
   const universal = await _loadUniversalIntegrityRaw();
   const taskGuide = await _loadTaskDelegationGuideRaw();
-  const parts = [universal, taskGuide, sp].filter(Boolean);
+  const controlTower = await _loadControlTowerPrincipleRaw();
+  const parts = [universal, taskGuide, controlTower, sp].filter(Boolean);
   const combined = parts.join('\n\n---\n\n');
   console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars` +
     (universal ? ` + UNIVERSAL-INTEGRITY ${universal.length} chars` : '') +
     (taskGuide ? ` + TASK-DELEGATION-GUIDE ${taskGuide.length} chars` : '') +
-    (!universal && !taskGuide ? ' — 공통문서 없이' : '') + `)`);
+    (controlTower ? ` + CONTROL-TOWER-PRINCIPLE ${controlTower.length} chars` : '') +
+    (!universal && !taskGuide && !controlTower ? ' — 공통문서 없이' : '') + `)`);
   return combined;
 }
 
