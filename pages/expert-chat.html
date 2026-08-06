@@ -402,6 +402,21 @@ function _maybeHandleServiceRedirectSuggestion(fullReply, aiBubble) {
   return cleaned;
 }
 
+// ── 디버그 훅 (2026-08-06 신설) — 브라우저 콘솔 직접 테스트용 ──────
+// 이 페이지는 별도 모듈 파일이 아니라 인라인 <script type="module">이라
+// 이 안의 함수들은 기본적으로 외부(콘솔 포함)에서 안 보인다. 라이브
+// 검증 편의를 위해 필요한 것만 최소로 window에 노출한다 — 프로덕션
+// 동작에는 영향 없음(다른 코드가 이 전역을 참조하지 않음, 순수 QA용).
+// 콘솔 사용 예:
+//   __hondiExpertDebug._maybeHandleServiceRedirectSuggestion(
+//     '이 사안은 K-Law가 더 정확합니다.\n\n[SUGGEST_SERVICE_REDIRECT: type=GWP, id=klaw, reason=제도 정보]',
+//     document.querySelector('.bubble.ai:last-child') // 실제 페이지의 마지막 AI 버블 DOM
+//   );
+window.__hondiExpertDebug = {
+  _maybeHandleServiceRedirectSuggestion,
+  _REDIRECT_GWP_TABLE,
+};
+
 // ── §7 기관측 PDV 리포팅 상태 (2026-07-20 신설) ──────────────────
 let _escalationReason    = null; // null | 'success' | 'limit' — C39-5 반영(2026-07-20)
 let _ownerPdvRecorded     = false; // 중복 기록 방지(종료 경로가 여러 개라 한 번만 기록)
