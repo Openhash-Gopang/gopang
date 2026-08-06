@@ -21,7 +21,7 @@ import { aiActive, history, _userLocation,
          _USER, USER_GUID, _locationPending, _locationReady,
          _gwpLiveProgress, _paHandoffPending, setPaHandoffPending } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
-         _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
+         _createStreamBubble, _updateStreamBubble, setBubbleTarget } from '../ui/bubble.js';
 import { _buildLocNote, _buildRoutingFacts } from '../services/location.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
@@ -3139,7 +3139,15 @@ function _setSendBtnGenerating(active) {
 // (_handleOrchestrationTags의 워치독) 실패를 이 콜백으로 받아 AC 복구 판단으로
 // 돌릴 수 있게 한다. 기본값 null이면 기존과 동일하게 _callAIInner가 직접
 // "⚠️ API 오류" 말풍선을 띄운다(메인 채팅 최상위 호출 등 기존 동작 보존).
-export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null) {
+// [2026-08-06 신설 — 메인 채팅/패널 통합 1단계] 6번째 인자 bubbleTarget —
+// ui/bubble.js가 어느 DOM 컨테이너(#message-list vs #ai-panel-messages
+// 등)에 버블을 그릴지 지정한다. **"넘기면 바꾸고, 안 넘기면 그대로 둔다"**가
+// 핵심 — _handleOrchestrationTags 등의 재귀 sendFn(...) 호출 47곳은 아무도
+// 이 인자를 넘기지 않으므로, 최상위 호출(예: 패널의 send 핸들러)이 턴 시작
+// 시점에 한 번 지정한 컨테이너를 체인 전체가 그대로 상속한다 — 매 호출마다
+// 인자를 스레딩할 필요가 없다. bubble.js의 setBubbleTarget 주석 참고.
+export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null, bubbleTarget = null) {
+  if (bubbleTarget) setBubbleTarget(bubbleTarget);
   _currentAbort = new AbortController();
   _setSendBtnGenerating(true);
   try {
