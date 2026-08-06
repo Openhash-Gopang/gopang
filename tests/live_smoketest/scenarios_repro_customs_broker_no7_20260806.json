@@ -1,0 +1,202 @@
+[
+  {
+    "no": 1,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 2,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 3,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 4,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 5,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 6,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 7,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 8,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 9,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 10,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 11,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 12,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 13,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 14,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 15,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 16,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 17,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 18,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 19,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  },
+  {
+    "no": 20,
+    "utterance": "해외에서 물건을 들여오는데 통관 절차를 관세사한테 맡기고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "재현성 확인(#7 CALL_KINTENT 오류 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "scenarios_r1_domain_concept_matching_20260806.json #7과 완전히 동일한 발화를 20회 반복 — temperature=0(live_smoketest.py 확인)인데도 [CALL_KINTENT]로 새는 게 재현되는지, 아니면 1회성 변동이었는지 확인. customs-broker는 §CATALOG-EXPERT 표에 실제 등록된 항목이라 §CORE 자체 규칙(표 안에 있으면 오케스트레이션 아닌 직접 라우팅)상 EXPERT가 정답"
+  }
+]
