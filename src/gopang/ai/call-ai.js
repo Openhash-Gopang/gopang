@@ -2026,7 +2026,12 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
 // 페르소나 대화는 이 파일(그림자 AI 스레드)이 아니라
 // pages/expert-chat.html에서 벌어지므로, 강제 로직도 그쪽으로
 // 옮겼다(_maybeEnforceNextStep, expert-session.js의
-// _missingNextStepMarker 재사용).
+// _missingNextStepMarker 재사용). ★ 2026-08-06 추가 확인(CONTROL-
+// TOWER-PRINCIPLE 신설 검토 중) — [NEXT_STEP:] 태그 자체가 K-Execute/
+// K-Deliver SP 본문에서 요구된 적이 없고 _stripInternalTags도 이
+// 태그를 걸러내지 않는다. K-Execute/K-Deliver 쪽 코드 강제는 태그
+// 요구 없이 구조를 직접 보는 별도 메커니즘(_violatesConversationalStyle/
+// _enforceConversationalStyle)이 담당한다 — 아래(모듈 하단)에 정의.
 
 // ── 재무제표(fs) 실시간 조회 (2026-07-13 신설) ──────────────
 // GDC 시스템 소속 데이터라 프로필에 스냅샷으로 저장하지 않는다 —

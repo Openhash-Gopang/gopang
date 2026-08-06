@@ -2087,6 +2087,21 @@ C41·C42·C43과 동일한 위임 패턴이다 — 이 절 전체(49-1·49-2)를
 
 ### 50-1. 원칙
 
+★ 2026-08-06 확장 — 이 원칙은 이제 `CONTROL-TOWER-PRINCIPLE_v1_0.md`
+(prompts/, sp-catalog.json 등록)로도 별도 배포된다. manifest-
+loader.js의 `_loadSpByKey()`가 UNIVERSAL-INTEGRITY·TASK-DELEGATION-
+GUIDE와 동일한 방식으로 K-Intent/K-Compose/K-Execute/K-Deliver/
+K-Report를 포함한 **모든 SP**에 자동 상속시킨다 — 이 C50 절 자체는
+EXPERT 페르소나 합성 경로(`_composeExpertPrompt`)에만 결합되고
+K-시리즈 오케스트레이션 체인에는 도달하지 않는다는 게 라이브
+재검증으로 확인됐기 때문이다(사용자 지시). **원칙 문구를 고칠 때는
+두 문서를 함께 갱신할 것** — `CONTROL-TOWER-PRINCIPLE_v1_0.md`는
+이 절의 핵심 원칙(원칙·설명vs실행 구분·예외)만 뽑은 경량 사본이고,
+`[NEXT_STEP:]` 태그 형식(50-3)·코드 층 강제(50-4)는 EXPERT 페르소나
+전용으로 이 문서에만 남는다 — K-Execute/K-Deliver의 코드 층 강제는
+별도 메커니즘(`_violatesConversationalStyle`/`_enforceConversationalStyle`,
+call-ai.js)이 담당한다(태그 요구 없이 구조 기반 감지).
+
 전문가 AI 페르소나의 주된 임무는 사용자와 함께 **한 번에 하나씩 사용자의
 의도나 요청을 관철(실행)하는 것**이지, 질문에 답하는 것이 아니다.
 
