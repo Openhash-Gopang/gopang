@@ -3694,10 +3694,23 @@ function _buildCallCandidates(userText, messages, modelTier = null) {
   // 기본값 그대로 — v4.0 결정을 뒤집는 게 아니라, 그 이후 재주입 턴에만
   // 선택적으로 더 가벼운 티어를 쓸 길을 연다(판단 기준은
   // token-policy.js의 resolveOrchestrationModel() 한 곳).
+  //
+  // v5.0(2026-08-06, 주피터님 지시 — v4.0을 뒤집음): 라이브 재검증에서
+  // AC의 hondi-pro thinking 모드가 매 턴 20~30초를 잡아먹으면서도
+  // 문서형 응답을 계속 쏟아내는 게 확인됐다("판단력이 필요해서 pro가
+  // 낫다"는 v4.0의 전제와 달리, 응답 품질(대화 스타일 준수) 문제는
+  // CONTROL-TOWER-PRINCIPLE 프롬프트 상속·_enforceConversationalStyle
+  // 코드 강제로 별도 대응 중이라 pro 고정이 그 문제를 안 풀어줬다).
+  // "flash를 디폴트로 하고 필요 시 pro를 호출"로 원칙을 다시 뒤집는다
+  // — _resolveHondiTier()가 이미 갖고 있던 복잡도 채점(PDV 컨텍스트
+  // 중첩·정체성 신호 다중 등)을 다시 실제 판단 근거로 쓴다. 호출부
+  // (webapp.html _sendToAI 등)가 이제 이 함수를 직접 불러 modelTier를
+  // 명시적으로 채워 넘기므로, 여기 폴백(모델 인자 자체가 안 넘어온
+  // 드문 경우 대비)도 안전한 쪽(빠른 flash)으로 맞춘다.
   candidates.push({
     provider: 'deepseek-default',
     baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-    model:    modelTier || 'hondi-pro',
+    model:    modelTier || 'hondi-flash',
     apiKey:   null,
     isProxy:  true,
   });
