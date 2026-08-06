@@ -1,0 +1,99 @@
+name: Check Routing Regression (auto-gate)
+
+# 배경(2026-08-06, 주피터 지시 — 라우팅 검색순서 편향 방지책 1번):
+# AC-PRO-CORE·gwp-registry.js·expert-registry.js가 바뀌어도 지금까지는
+# 실제 라우팅 정확도를 아무도 자동으로 검증하지 않았다(live-smoketest.yml은
+# workflow_dispatch 전용). check-stale-refs.yml 등 정적 정합성 검사는 이미
+# push마다 자동 실행되는데, "이 변경이 실제로 더 정확하게 라우팅하는가"라는
+# 행동적 정확도 검증엔 그런 게이트가 없었다는 게 이 워크플로의 존재 이유다.
+#
+# 300건 전체(scenarios.json)가 아니라, 이번 세션에서 GWP↔EXPERT 판별
+# 정확도(선순위/후순위 편향)를 직접 겨냥해 만든 3개 배치만 돈다 — 비용·
+# 시간을 감안한 의도적 축소(전체 300건은 여전히 live-smoketest.yml로
+# 수동 실행). 각 배치의 임계치는 100%가 아니라 "현재 알려진 기준선에서
+# 더 나빠지지 않는다"는 회귀 방지 목적으로 설정했다 — kestate/ktelecom
+# 태그 문법 미준수, kbusiness/ktax 혼동처럼 이미 알려졌지만 아직 안 고쳐진
+# 이슈 때문에 100%로 잡으면 항상 빨갛게 떠서 게이트 자체를 무시하게 만드는
+# 역효과가 난다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prompts/AC-PRO-CORE_v1_1.txt"
+      - "prompts/AC-PRO-CORE_v1_0.txt"
+      - "prompts/UNIVERSAL-common_v1_10.md"
+      - "prompts/PROFESSIONAL-common_v2_0.md"
+      - "gwp-registry.js"
+      - "src/gopang/ai/expert-registry.js"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  routing-regression-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run routing-focused scenario batches
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          set -e
+          for SCEN in \
+            scenarios_regression_R1_20260801.json \
+            scenarios_expert_routing_paraphrase_hard_20260806.json \
+            scenarios_gwp_priority_no_expert_20260806.json ; do
+            BASE=$(basename "$SCEN" .json)
+            OUT="../../results/${BASE}"
+            echo "=== running $SCEN -> $OUT ==="
+            python3 live_smoketest.py --scenarios "$SCEN" \
+              --system-prompt ../../prompts/AC-PRO-CORE_v1_1.txt \
+              --out "$OUT" --resume
+          done
+
+      - name: Check thresholds (fails the build below baseline)
+        working-directory: tests/live_smoketest
+        run: |
+          set -e
+          FAILED=0
+          python3 check_routing_regression_threshold.py \
+            --results ../../results/scenarios_regression_R1_20260801/live_results.json \
+            --threshold 0.85 --label "R1 회귀(2026-08-01 canonical, 39건)" || FAILED=1
+          python3 check_routing_regression_threshold.py \
+            --results ../../results/scenarios_expert_routing_paraphrase_hard_20260806/live_results.json \
+            --threshold 0.85 --label "패러프레이즈 하드모드(30건)" || FAILED=1
+          python3 check_routing_regression_threshold.py \
+            --results ../../results/scenarios_gwp_priority_no_expert_20260806/live_results.json \
+            --threshold 0.65 --label "GWP 우선(25건) — kestate/ktelecom 태그문법·kbusiness/ktax 혼동 기지 이슈로 임계치 낮춤" || FAILED=1
+          exit $FAILED
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-routing-regression-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: routing regression gate results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: routing-regression-results
+          path: results/

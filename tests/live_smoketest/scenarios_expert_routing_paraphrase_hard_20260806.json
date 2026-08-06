@@ -3,11 +3,11 @@
     "no": 1,
     "utterance": "회사에서 부당하게 잘린 것 같은데, 제 편에서 이 상황을 어떻게 다퉈볼 수 있을지 직접 봐주실 분 있을까요",
     "expected_type": "EXPERT",
-    "expected_id": "lawyer",
-    "expected_name": "변호사",
+    "expected_id": "labor-attorney",
+    "expected_name": "공인노무사",
     "category": "정상경로(패러프레이즈 — trigger 문자열 미사용)",
-    "static_verdict": "WARN",
-    "basis": "trigger 문자열('변호사 선임' 등) 미포함. 개인 이익을 위한 위임의도('제 편에서', '직접 봐주실 분')는 명시했으나 '부당해고'는 klaw.triggers에도 있어 lawyer/klaw 인접쌍 — R1축상 위임의도가 이겨야 하지만 모델이 klaw로 새거나 되물을 가능성도 있어 확신도는 중간"
+    "static_verdict": "PASS",
+    "basis": "★ 2026-08-06 라이브 실행 후 정정 — 최초엔 expected_id=lawyer였으나 실제 응답은 EXPERT:labor-attorney였고, 재검토 결과 이게 더 정확함을 확인했다. 한국 노동법 실무상 부당해고는 노동위원회 구제신청이 1차 경로이고 이건 정확히 공인노무사(labor-attorney) 소관이다(expert-registry.js 주석: '노무사에게 상담'류 위임의도 구로 트리거 교체, 일반적인 부당해고 서술은 klaw로 가는 게 맞다는 전제와도 일치 — 이 발화는 명시적 위임의도('제 편에서', '직접 봐주실 분')가 있어 EXPERT 우선). 소송(법원)까지 갈 때만 lawyer가 등장 — 원래 내 정답(lawyer)이 일반적 연상에 의존한 오류였다."
   },
   {
     "no": 2,
