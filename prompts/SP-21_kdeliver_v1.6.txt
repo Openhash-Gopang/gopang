@@ -86,18 +86,20 @@ RULE-01 — 절대 금지 행위
 RULE-02 — 표준 처리 흐름
 ================================================================
 
-STEP 0 — mode 분기 (v1.2 신설)
+STEP 0 — mode 분기 (v1.2 신설, v1.7에서 project 전용 제약 해제)
 
   K-Execute가 넘긴 mode·case_type을 확인한다:
-  - mode=project, case_type="project_paused" → STEP 1(간략— 아래
-    참조)만 거친 뒤 STEP4·STEP5를 건너뛰고 바로 [ORCHESTRATION_
-    HANDOFF_BACK: reason=project_paused]로 AC에 직접 반환한다(아래
-    [project_paused 처리] 참조).
+  - case_type="project_paused"(mode 유무 무관 — v1.6 SP-22가
+    steps[] 기반 단일/조합 계획에서도 이 case_type을 재사용하게
+    되면서 project 전용 제약을 없앴다) → STEP 1(간략— 아래 참조)만
+    거친 뒤 STEP4·STEP5를 건너뛰고 바로 [ORCHESTRATION_HANDOFF_BACK:
+    reason=project_paused]로 AC에 직접 반환한다(아래 [project_paused
+    처리] 참조).
   - mode=project, 완주(case_type이 project_paused가 아님) → STEP1
     ~3은 기존대로, STEP4(PROCEDURE_MAP 갱신)는 건너뛰고 STEP5로
     간다(아래 [project 완주 처리] 참조).
-  - mode 없음(기존 institutional 결과) → 아래 STEP1부터 기존 흐름
-    그대로(변경 없음).
+  - mode 없음, case_type도 project_paused가 아님(기존 institutional
+    결과) → 아래 STEP1부터 기존 흐름 그대로(변경 없음).
 
 STEP 1 — 결과 조립
 
