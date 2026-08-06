@@ -1328,6 +1328,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     console.log('[Orchestration] HANDOFF_TO_KCOMPOSE 감지 — K-Compose로 전달 전환');
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
+    CFG._kcomposeHandoffRetried = false; // 2026-08-06 신설 — 아래 프로토콜 가드용, 새 K-Compose 세션마다 초기화
     await _forwardSwitchSP(_loadKComposeSP, 'K-Compose');
     await _watchdogSendFn('KIntent-to-KCompose')(`[INTERNAL: K-Intent→K-Compose 위임 — 아래 목표를 이어받아 진행하세요: ${kComposeMatch[1].trim()}]`);
     return true;
@@ -1542,20 +1543,30 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     const personaId = kExpertSubtaskMatch[1];
-    await _pushAndSwitchSP(async () => {
-      // 2026-07-09 정정 — getExpertGwpDef(새 탭 URL 빌더, .url만 반환)와
-      // .systemPromptLoader라는 존재하지 않는 필드를 쓰던 버그를 고쳤다.
-      // 실제로 필요한 건 getExpertDef(원본 def 객체, .key 보유)이고,
-      // EXPERT 프롬프트는 페르소나 파일 하나만이 아니라 UNIVERSAL-
-      // INTEGRITY+공통가드레일(+의료안전모듈)까지 합성해야 하므로
-      // expert-session.js의 _composeExpertPrompt()를 그대로 재사용한다
-      // (로직 중복 구현 방지 — 그 파일 상단 2026-07-09 주석 참조).
-      const resolvedId = resolveExpertId(personaId);
-      if (!resolvedId) return null;
-      const def = getExpertDef(resolvedId);
-      if (!def) return null;
-      return _composeExpertPrompt(def);
-    }, `EXPERT:${personaId}`);
+    // 2026-08-06 수정 — 라이브 재검증 중 실사로 발견: resolveExpertId가
+    // 실패해도 (기존 코드처럼) loaderFn 내부에서 조용히 null을 반환하면
+    // _pushAndSwitchSP는 "위임 전환 실패(무시)"로 넘어가고 CFG.system은
+    // K-Compose에 그대로 남는데, 그 직후 무조건 전송되는 아래
+    // watchdogSendFn 메시지("EXPERT로 위임됨 — ORCHESTRATION_SUBTASK_RESULT
+    // 형식으로만 답하라")가 실제로는 K-Compose 자신에게 전달돼 맥락에
+    // 안 맞는 지시를 받고, 같은 STEP을 반복하는 원인이 됐다(2026-08-06
+    // 실사, K-Compose가 존재하지 않는 'kfam' ID를 지어낸 사례). 존재
+    // 여부를 먼저 확인해 갈라서, 실패하면 K-Compose에게 정확히 무엇이
+    // 틀렸는지와 대체 ID를 돌려줘 스스로 정정하게 한다 — 침묵 대신
+    // 명시적 피드백 루프. getExpertGwpDef/.systemPromptLoader 관련
+    // 함정은 2026-07-09에 이미 한 차례 정리됐다(아래는 getExpertDef +
+    // expert-session.js의 _composeExpertPrompt() 재사용, 그대로 유지).
+    const resolvedId = resolveExpertId(personaId);
+    const def = resolvedId ? getExpertDef(resolvedId) : null;
+    if (!def) {
+      console.warn(`[Orchestration] EXPERT:${personaId} 위임 대상 없음 — K-Compose에 정정 요청`);
+      await _watchdogSendFn('KCompose-EXPERT-not-found')(`[INTERNAL: EXPERT 위임 실패 — '${personaId}'는 카탈로그에 등록되지 않은 ` +
+        `전문가 ID입니다(존재하지 않는 이름을 지어내지 마세요). 가족관계·민사 등록 관련 적합성 확인이 필요하면 ` +
+        `'lawyer'(변호사)를 쓰세요. 그 외 분야는 실제 등록된 카탈로그 ID만 사용하고, 확실하지 않으면 EXPERT 위임 없이 ` +
+        `바로 STEP 4(HANDOFF_TO_KEXECUTE)로 진행하세요.]`);
+      return true;
+    }
+    await _pushAndSwitchSP(async () => _composeExpertPrompt(def), `EXPERT:${personaId}`);
     await _watchdogSendFn('KCompose-to-EXPERT-subtask')(`[INTERNAL: K-Compose→EXPERT(${personaId}) 위임(scope=orchestration_subtask) — ` +
       `STEP 0-(-1)을 따라 전체 파이프라인을 생략하고 다음 질문에만 짧게 답하세요: ` +
       `${kExpertSubtaskMatch[2].trim()} 답변은 [ORCHESTRATION_SUBTASK_RESULT: verdict=..., ` +
@@ -1696,6 +1707,43 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     } else if (userText) {
       await _watchdogSendFn('handoff-back')(userText);
     }
+    return true;
+  }
+
+  // ★ 2026-08-06 신설 — K-Compose 프로토콜 강제 가드 ★
+  // K-Compose는 계획을 세우는 게 끝이 아니라 반드시 [HANDOFF_TO_KEXECUTE]
+  // (실행 필요) 또는 [HANDOFF_TO_KDELIVER](실행 불필요)로 넘겨야 완결된다
+  // (SP-20 STEP4/§5). 그런데 여기까지 왔다는 건 이번 fullReply가 위의
+  // 어떤 알려진 태그와도 안 걸렸다는 뜻 — 지금까지는 이 경우 그냥 false를
+  // 반환해 fullReply가 평범한 채팅 답변인 것처럼 화면에 그대로 뿌려졌다.
+  // 실사 재검증(2026-08-06)에서 EXPERT 위임 실패 후 K-Compose가 계획만
+  // 세워놓고 HANDOFF 없이 안내문으로 응답을 끝내버리는 사례가 발견됐는데,
+  // 이게 바로 "혼디가 정보 안내만 하고 실행은 안 하는 FAQ 봇처럼 보이는"
+  // 근본 원인이었다(사용자 지적, 2026-08-06) — steps/atom_id/org_id까지
+  // 다 준비해놓고 K-Execute를 못 불러 실행 이관이 조용히 실패한 것.
+  // 1회에 한해 정정 요청을 보내고, 그래도 반복되면(모델이 계속 규칙을
+  // 못 지키면) 무한루프 방지를 위해 사용자에게 실패를 있는 그대로
+  // 알리고 AC로 안전 복귀시킨다 — "성공한 것처럼 보이는 미완료 응답"을
+  // 침묵 속에 화면에 내보내는 것보다 훨씬 안전하다.
+  if (CFG.system?.includes('K-Compose')) {
+    if (!CFG._kcomposeHandoffRetried) {
+      console.warn('[Orchestration] ⚠️ K-Compose 프로토콜 위반 감지 — HANDOFF_TO_KEXECUTE/KDELIVER 없이 응답 종료. 1회 정정 요청.');
+      CFG._kcomposeHandoffRetried = true;
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      await _watchdogSendFn('KCompose-protocol-violation')(`[INTERNAL: 방금 응답이 [HANDOFF_TO_KEXECUTE]나 [HANDOFF_TO_KDELIVER] 없이 끝났습니다 — ` +
+        `이는 규칙 위반입니다(STEP4/§5). steps가 준비됐다면 반드시 [HANDOFF_TO_KEXECUTE: goal=..., plan={steps:[...]}]를, ` +
+        `실행이 필요 없는 단순 안내라면 [HANDOFF_TO_KDELIVER: goal=..., results={...}]를 내야 합니다. ` +
+        `지금 바로 정확한 형식으로 다시 응답하세요.]`);
+      return true;
+    }
+    console.warn('[Orchestration] ⚠️ K-Compose 프로토콜 위반 재발 — 무한루프 방지를 위해 AC로 안전 복귀');
+    CFG._kcomposeHandoffRetried = false;
+    await _updateBubble(_stripInternalTags(fullReply) +
+      '\n\n(⚠️ 절차 실행 준비 중 내부 오류가 발생해 여기서 중단했습니다. 방금 요청을 다시 말씀해 주시면 처음부터 다시 시도하겠습니다.)');
+    history.length = 0;
+    CFG.systemStack = [];
+    await _switchToAssistantSP();
     return true;
   }
 
