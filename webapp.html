@@ -3716,7 +3716,7 @@ window.closePDV = closePDV;
     // 안 일어나던 근본 원인. handleExpertTag는 CFG.system 기반 게이팅이
     // 메인 채팅 전용 상태라 패널의 system(=_panelHistory[0])과 안 맞으므로
     // 별도로 판단한다.
-    const { handleExpertTag, isExpertActive } = await import('./src/gopang/ai/expert-session.js');
+    const { handleExpertTag } = await import('./src/gopang/ai/expert-session.js');
     // HONDI-FAQ(2026-07-01 신설) — 메인 채팅과 동일한 라우터를 그대로 재사용.
     // 자세한 설계 근거는 src/gopang/ai/hondi-faq-router.js 상단 주석 참조.
     const { buildHondiFaqContext } = await import('./src/gopang/ai/hondi-faq-router.js');
@@ -4123,16 +4123,14 @@ window.closePDV = closePDV;
         try { _parseAgentTags(full, null, userText, _preTab); }
         catch (e) { console.warn('[Panel] _parseAgentTags 처리 실패(무시):', e.message); }
 
-        // ── EXPERT 태그 감지 → 전문가 세션 시작 ──────────────
-        // _callAIInner의 CFG.system 기반 게이팅은 메인 채팅 전용 상태를
-        // 보므로 그대로 재사용할 수 없다 — 패널은 항상 AGENT-COMMON만
-        // 쓰므로(§0-1 상단 주석 참조) 이미 전문가 세션이 활성화돼 있지만
-        // 않다면 그냥 감지를 시도한다.
-        if (!isExpertActive()) {
-          handleExpertTag(full).catch(e =>
-            console.warn('[Panel] EXPERT 태그 처리 실패(무시):', e.message)
-          );
-        }
+        // ── EXPERT 태그 감지 → 전문가 페르소나 새 탭 오픈 ──────────
+        // (2026-08-06 정정) 예전 isExpertActive() 가드는 항상 false를
+        // 반환하는 죽은 게이트였다(상세는
+        // src/_archive/expert-session-legacy-inthread.js.md) — 제거해도
+        // 동작 변화 없음(가드가 상시 통과였으므로).
+        handleExpertTag(full).catch(e =>
+          console.warn('[Panel] EXPERT 태그 처리 실패(무시):', e.message)
+        );
         return;
       } catch(e) {
         clearTimeout(_idleTimer); // 타임아웃/오류 어느 경로든 타이머 누수 방지

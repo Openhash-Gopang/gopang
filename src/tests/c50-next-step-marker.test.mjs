@@ -6,11 +6,12 @@
 // _missingNextStepMarker())을 단위 검증한다.
 //
 // [한계] 이 테스트는 순수 함수(정규식 판정) 하나만 검증한다.
-// call-ai.js의 _enforceNextStepMarker()(감지 결과를 실제로 재시도
-// 카운터·sendFn 재호출로 이어붙이는 부분)와, 그게 실제 브라우저
-// 스트리밍 UI에서 어떻게 동작하는지는 라이브 환경에서 별도 확인이
-// 필요하다 — 여기서 검증하지 못한다(2026-08-06 신설 당시 커밋 메시지
-// 참고).
+// pages/expert-chat.html의 _maybeEnforceNextStep()(감지 결과를 실제로
+// 재시도 카운터·callExpertAI 재호출로 이어붙이는 부분, 2026-08-06 정정
+// 이후 이 파일이 정본이다 — 예전엔 call-ai.js의 죽은 게이트에 물려
+// 있던 동명의 로직이 여기 있었다)와, 그게 실제 브라우저 스트리밍
+// UI에서 어떻게 동작하는지는 라이브 환경에서 별도 확인이 필요하다 —
+// 여기서 검증하지 못한다.
 
 import { test, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
