@@ -279,7 +279,8 @@ body {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: width 0.22s cubic-bezier(.4,0,.2,1);
 }
 .sidebar:hover { width: var(--sb-expanded); }
@@ -492,10 +493,16 @@ body {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: width 0.22s cubic-bezier(.4,0,.2,1);
 }
 .sidebar:hover { width: var(--sb-expanded); }
+
+/* 얇은 스크롤바 — #chat-panel-messages와 동일 관례(3645행 근처) */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border, #e5e7eb); border-radius: 2px; }
+.sidebar { scrollbar-width: thin; }
 
 .sb-logo {
   display: flex; align-items: center;
