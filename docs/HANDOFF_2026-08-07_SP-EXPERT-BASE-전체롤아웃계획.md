@@ -253,6 +253,37 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
   참조형으로 축약), §5 세부분야 실제 착수(physician→내과/외과/신경과,
   professor→반도체/법학/경제학).
 
+### 라이브 스모크테스트 결과 (2026-08-07, 62개 전체, DeepSeek 실통화)
+
+**최종: PASS 18 · NEEDS-REVIEW 44 · FAIL 0 · ERROR 0.**
+
+과정에서 하네스 자체의 결함 3건을 발견·수정(전부 이 문서와 코드에 반영
+완료):
+1. `compose_expert_prompt()`가 `SP_EXPERT_BASE` 신설 이후 갱신되지 않아
+   실제 프로덕션과 조립 순서가 어긋나 있었음.
+2. 되묻기+`[NEXT_STEP:]` 조합을 곧장 엄격채점으로 넘겨버리는 그레이딩
+   버그 — "잘한 행동(되묻기 중에도 NEXT_STEP을 정확히 붙임)"일수록
+   오히려 FAIL 확률이 올라가는 역설이 있었다(실사 사례: architect
+   1차 실행).
+3. `max_tokens=1200`이 너무 낮아 STEP D 도달 직전(위험고지 문장 중간)
+   에서 잘리는 경우가 있었음(veterinarian·architect 재현 확인) →
+   2500으로 상향.
+
+수정 후 재실행 결과 FAIL 0건 — **hairdresser·architect가 앞선 두 차례
+실행에서 각각 다른 이유(형식 생략, 토큰 잘림)로 FAIL이 나왔던 것이
+전부 SP 파일 결함이 아니라 실행 간 모델 출력 변동성이었음이 3회 반복
+실행으로 최종 확인됨.** 파일은 추가로 손대지 않았다 — 이미 정확한
+형식(대괄호 헤딩·CONNECT_HUMAN_EXPERT 태그·NEXT_STEP)을 갖추고 있었기
+때문.
+
+NEEDS-REVIEW 44건(71%)은 결함이 아니라 하네스 자체 한계(단일 턴만
+검증, C43 능동적 정보수집 원칙상 실현형 요청에도 구체 정보를 먼저
+캐묻는 게 정상 설계)로 인한 예상된 결과다.
+
+**미실행**: `scenarios_next_step_rollout_20260807.json`(12건 — physician
+위험도 등급별 NEXT_STEP 3종, paramedic 평시/응급 2종, advisor·professor
+§3-8/§3-9 재확인 2종, 위험고지 신규 5종)은 아직 라이브로 안 돌려봄.
+
 ---
 
 ## 5. §5 세부분야 착수 (전체 배치 완료 후 또는 §6 완료 직후 별도 트랙)
