@@ -69,6 +69,24 @@ export const EXPERT_REGISTRY = {
     // 위에 별도 경고 문구로 대응한다(gwp-registry.js/AC-PRO-CORE 참고).
     triggers: ['변호사 선임', '변호사에게 맡기고 싶어', '변호사 상담', '법적 조치'],
   },
+  'lawyer-criminal': {
+    label: '변호사(형사법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-criminal', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(SP_EXPERT_BASE §5 세부분야 + §5-1 동적 자문 호출)
+    triggers: ['형사법 상담', '형사 전문 변호사'],
+  },
+  'lawyer-civil': {
+    label: '변호사(민사법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-civil', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['민사법 상담', '민사 전문 변호사'],
+  },
+  'lawyer-corporate': {
+    label: '변호사(기업법무)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-corporate', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['기업법무 상담', '기업 전문 변호사', 'M&A 법률 자문'],
+  },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
@@ -563,6 +581,27 @@ export const EXPERT_REGISTRY = {
 
 export function getExpertDef(personaId) {
   return EXPERT_REGISTRY[personaId] || null;
+}
+
+// 2026-08-07 신설(내부 자문 호출 기능) — 부모 SP가 대화 중 "이 사안은
+// 세부분야 전문의 소견이 필요하다"고 판단했을 때, 실제로 소환 가능한
+// 자식 SP 목록을 역조회한다. `parentKey`는 이미 §5(세부분야 상속)에서
+// 정적 조립(EXPERT_BASE→부모→자식)에 쓰이고 있었는데, 이 함수는 그
+// 동일한 관계를 동적 호출("자식을 부모 자리에서 아예 로드"가 아니라
+// "부모가 대화를 이어가며 자식에게 좁은 질문 하나만 던지고 소견만
+// 받아오는") 정당성 검증에 재사용한다 — 등록되지 않은 임의의 페르소나를
+// 자문 대상으로 호출하는 것을 막는 화이트리스트 역할.
+export function getConsultableChildren(parentId) {
+  return Object.entries(EXPERT_REGISTRY)
+    .filter(([, def]) => def && def.parentKey === parentId)
+    .map(([id, def]) => ({ id, label: def.label, key: def.key, needsMedicalSafety: !!def.needsMedicalSafety }));
+}
+
+// 위와 짝을 이루는 검증 함수 — childId가 실제로 parentId의 등록된
+// 자식인지 확인한다(단순 truthy 체크가 아니라 정확한 관계 매칭).
+export function isConsultableChild(parentId, childId) {
+  const childDef = EXPERT_REGISTRY[childId];
+  return !!(childDef && childDef.parentKey === parentId);
 }
 
 // BUG-FIX(2026-07-03): GWP_REGISTRY와 동일한 문제 — AGENT-COMMON SP는
