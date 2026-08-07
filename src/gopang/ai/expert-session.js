@@ -137,24 +137,45 @@ export async function _composeExpertPrompt(def) {
     parts.push(await _loadSpRawByKey(EXPERT_BASE_KEY, 'EXPERT_BASE'));
   } catch (e) { console.warn('[Expert] EXPERT_BASE 로드 실패:', e.message); }
 
-  // 부모(직업군) SP — 2026-08-07 신설(§6-3·6-4, SP_EXPERT_BASE §5 세부분야
-  // 상속 규칙). def.parentKey가 있으면(세부분야 SP인 경우), EXPERT_BASE
-  // 다음·리프 SP 이전에 부모 직업군 SP 원문을 그대로 삽입한다. 부모 자신도
-  // parentKey를 가질 수 있다는 전제는 두지 않는다(§5가 3단까지만 규정 —
-  // 부모의 부모는 설계 범위 밖이며, 그 이상 깊이가 필요해지면 그때 별도
-  // 검토). 순환 참조(부모가 자기 자신을 가리키는 등)를 막기 위해 방문
-  // 집합으로 1단 초과 여부만 확인한다.
+  // 조상(상위 직업군/계열) SP 체인 — 2026-08-07 신설 → 2026-08-08 N단 재귀로
+  // 확장(§6-4 개정, HANDOFF_교수-교과계열-계층설계). 기존에는 "부모 1단만"
+  // 지원하고(예: physician-internal-medicine → physician) 그 이상(예:
+  // professor-semiconductor → professor-engineering-electronics → professor
+  // 같은 3단)은 경고만 내고 조상 로드를 건너뛰었다 — 계열(중간) 계층이 필요한
+  // 교수(professor) 세부전공 구조를 지원하려고 진짜 N단 재귀로 바꿨다.
+  //
+  // def.parentKey부터 시작해 EXPERT_REGISTRY를 계속 따라 올라가며(각 노드의
+  // parentKey를 다음 조상으로) 체인을 모으고, 루트(가장 위 조상)부터 순서대로
+  // EXPERT_BASE 다음·리프 SP 이전에 전부 삽입한다. 방문 집합으로 순환 참조
+  // (A→B→A)를 막고, 최대 깊이(5단)로 설정 실수로 인한 무한/과잉 체인을 막는다.
+  const MAX_ANCESTOR_DEPTH = 5;
   if (def.parentKey) {
-    const parentDef = EXPERT_REGISTRY[def.parentKey];
-    if (!parentDef) {
-      console.warn(`[Expert] parentKey 미등록: ${def.parentKey} (${def.label})`);
-    } else if (parentDef.parentKey) {
-      console.warn(`[Expert] 부모 SP(${def.parentKey})가 또 parentKey를 가짐 — ` +
-        `SP_EXPERT_BASE §5는 3단(EXPERT_BASE→부모→자식)까지만 규정. 2단째 부모 로드는 건너뜀.`);
-    } else {
+    const chain = [];              // 수집 순서: 바로 위 부모 → ... → 최상위 조상
+    const visited = new Set();
+    let curKey = def.parentKey;
+    while (curKey) {
+      if (visited.has(curKey)) {
+        console.warn(`[Expert] parentKey 순환 참조 감지(${def.label} 조상 체인 중 ${curKey}) — 이 지점에서 체인 중단`);
+        break;
+      }
+      if (chain.length >= MAX_ANCESTOR_DEPTH) {
+        console.warn(`[Expert] parentKey 체인이 최대 깊이(${MAX_ANCESTOR_DEPTH}단)를 초과(${def.label}) — 이후 조상은 무시`);
+        break;
+      }
+      const curDef = EXPERT_REGISTRY[curKey];
+      if (!curDef) {
+        console.warn(`[Expert] parentKey 미등록: ${curKey} (${def.label} 조상 체인 중 발견)`);
+        break;
+      }
+      visited.add(curKey);
+      chain.push(curDef);
+      curKey = curDef.parentKey;
+    }
+    chain.reverse();               // 루트(최상위 조상)부터 삽입되도록 뒤집는다
+    for (const ancestorDef of chain) {
       try {
-        parts.push(await _loadSpRawByKey(parentDef.key, `${parentDef.label}(부모 SP)`));
-      } catch (e) { console.warn('[Expert] 부모 SP 로드 실패:', e.message); }
+        parts.push(await _loadSpRawByKey(ancestorDef.key, `${ancestorDef.label}(상위 SP)`));
+      } catch (e) { console.warn('[Expert] 상위 SP 로드 실패:', ancestorDef.key, e.message); }
     }
   }
 

@@ -153,9 +153,14 @@ describe('§6-3·6-4 — parentKey 재귀 상속(세부분야 SP)', () => {
     assert.ok(composed.includes('변호사 페르소나 SP 원문'), '부모 미등록이어도 리프 SP는 로드돼야 함');
   });
 
-  test('부모 SP가 또 parentKey를 가지면(3단 초과) 2단째 부모는 건너뛰고 경고만 냄', async () => {
+  test('2026-08-08 개정: 부모 SP가 또 parentKey를 가지면(3단 이상) 루트부터 순서대로 전부 로드됨', async () => {
+    // 구 동작(§6-4 구판): 2단째 부모는 경고만 내고 건너뜀.
+    // 신 동작(§6-4 N단 재귀 개정, HANDOFF_교수-교과계열-계층설계): professor
+    // → 중계열 → 소계열 같은 3단 이상 체인을 실제로 전부 조립해야 하므로,
+    // 조상을 전부 루트부터 순서대로 삽입하도록 바뀌었다 — 이 테스트는 그
+    // 새 동작을 검증한다(구 테스트를 대체).
     EXPERT_REGISTRY['parent-with-own-parent'] = {
-      key: 'SP_parent-with-own-parent', label: '문제있는 부모',
+      key: 'SP_parent-with-own-parent', label: '중간부모',
       needsMedicalSafety: false, parentKey: 'grandparent',
     };
     EXPERT_REGISTRY['grandparent'] = {
@@ -163,18 +168,62 @@ describe('§6-3·6-4 — parentKey 재귀 상속(세부분야 SP)', () => {
     };
     try {
       const childDef = {
-        key: 'SP_child-of-bad-parent', label: '3단초과 자식',
+        key: 'SP_child-of-bad-parent', label: '3단 자식',
         needsMedicalSafety: false, parentKey: 'parent-with-own-parent',
       };
       const composed = await _composeExpertPrompt(childDef);
 
-      assert.ok(!composed.includes('조부모 SP 원문'), '조부모(2단째 부모)가 로드되면 안 됨 — §5는 3단까지만 규정');
-      assert.ok(!composed.includes('부모(자기도 parentKey 있음) SP 원문'),
-        '규정 위반 부모(자기도 parentKey를 가진) 자신도 로드되지 않아야 함 — 현재 구현은 부모 로드 자체를 건너뜀');
-      assert.ok(composed.includes('자식(3단 초과 케이스) SP 원문'), '리프(자식) SP는 그래도 로드돼야 함');
+      const idxBase = composed.indexOf('EXPERT_BASE 골격 원문');
+      const idxGrandparent = composed.indexOf('조부모 SP 원문');
+      const idxParent = composed.indexOf('부모(자기도 parentKey 있음) SP 원문');
+      const idxChild = composed.indexOf('자식(3단 초과 케이스) SP 원문');
+
+      assert.ok(idxGrandparent >= 0, '조부모(루트 조상)가 조립에서 빠짐 — N단 재귀 미동작');
+      assert.ok(idxParent >= 0, '중간부모가 조립에서 빠짐');
+      assert.ok(idxChild >= 0, '리프(자식) SP가 조립에서 빠짐');
+      assert.ok(idxBase < idxGrandparent, 'EXPERT_BASE가 최상위 조상보다 뒤에 옴 — 순서 위반');
+      assert.ok(idxGrandparent < idxParent, '조부모가 중간부모보다 뒤에 옴 — 루트부터 순서로 안 실림');
+      assert.ok(idxParent < idxChild, '중간부모가 리프보다 뒤에 옴 — 순서 위반');
     } finally {
       delete EXPERT_REGISTRY['parent-with-own-parent'];
       delete EXPERT_REGISTRY['grandparent'];
+    }
+  });
+
+  test('순환 참조(A→B→A)는 무한루프 없이 경고 후 중단, 리프 SP는 그래도 로드됨', async () => {
+    EXPERT_REGISTRY['cycle-a'] = { key: 'SP_cycle-a', label: '순환A', needsMedicalSafety: false, parentKey: 'cycle-b' };
+    EXPERT_REGISTRY['cycle-b'] = { key: 'SP_cycle-b', label: '순환B', needsMedicalSafety: false, parentKey: 'cycle-a' };
+    try {
+      const childDef = {
+        key: 'SP_child-of-bad-parent', label: '순환참조 자식',
+        needsMedicalSafety: false, parentKey: 'cycle-a',
+      };
+      const composed = await _composeExpertPrompt(childDef);
+      assert.ok(composed.includes('자식(3단 초과 케이스) SP 원문'), '순환 참조가 있어도 리프 SP는 로드돼야 함');
+    } finally {
+      delete EXPERT_REGISTRY['cycle-a'];
+      delete EXPERT_REGISTRY['cycle-b'];
+    }
+  });
+
+  test('조상 체인이 최대 깊이(5단)를 넘으면 그 이후 조상은 무시하고 리프는 로드됨', async () => {
+    // L1←L2←L3←L4←L5←L6←leaf : 조상만 6단이라 깊이 초과
+    const levels = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'];
+    levels.forEach((key, i) => {
+      EXPERT_REGISTRY[key] = {
+        key: `SP_${key}`, label: key, needsMedicalSafety: false,
+        parentKey: i > 0 ? levels[i - 1] : undefined,
+      };
+    });
+    try {
+      const childDef = {
+        key: 'SP_child-of-bad-parent', label: '깊이초과 자식',
+        needsMedicalSafety: false, parentKey: 'l6',
+      };
+      const composed = await _composeExpertPrompt(childDef);
+      assert.ok(composed.includes('자식(3단 초과 케이스) SP 원문'), '깊이 초과해도 리프 SP는 로드돼야 함');
+    } finally {
+      levels.forEach((key) => delete EXPERT_REGISTRY[key]);
     }
   });
 });
