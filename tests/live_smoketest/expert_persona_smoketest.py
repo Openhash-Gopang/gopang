@@ -173,7 +173,13 @@ def call_deepseek(api_key, system_prompt, user_utterance):
     payload = {
         "model": MODEL,
         "temperature": 0,
-        "max_tokens": 1200,
+        # 2026-08-07 1200→2500 상향(HANDOFF SP-EXPERT-BASE-전체롤아웃계획
+        # 라이브 스모크테스트) — veterinarian·architect가 STEP D 도달
+        # 직전(위험고지 문장 중간)에서 정확히 1200에 잘려 FAIL로 오채점된
+        # 것을 실사로 확인. temperature=0이어도 DeepSeek API 응답 길이가
+        # 완전히 결정론적이지 않아 같은 시나리오도 실행마다 분량이 달라질
+        # 수 있다는 것도 함께 확인됨.
+        "max_tokens": 2500,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance},
