@@ -123,3 +123,43 @@ python3 expert_persona_smoketest.py --resume
 사람 확인 필요) / `SKIP`(professor·advisor — STEP D 파이프라인 자체가
 없는 별종 페르소나) / `ERROR`(API 호출 실패).
 
+## 라우팅 결정 트리 커버리지 세트 (scenarios_branch_coverage_20260806.json)
+
+`scenarios.json`(300건 실제 발화 샘플)과는 목적이 다릅니다 — 이건
+`prompts/ROUTING-BRANCH-REFERENCE_v1_0.md`에 정리된 **결정 트리 각
+분기마다 대표 발화 1건씩**만 골라 담은 작은(11건) 커버리지 세트입니다.
+AC-PRO-CORE의 §CORE·§TAGS를 고치는 프롬프트 PR이 있을 때, 300건 전체를
+돌리기 전에 먼저 이 11건만 빠르게 돌려 "분기 트리 자체가 깨지지
+않았는지"부터 확인하는 용도입니다.
+
+**실행(GitHub Actions)**: Actions 탭 →
+`Live Smoketest (DeepSeek, 300 scenarios)` → `Run workflow` →
+`scenarios_file`에 `scenarios_branch_coverage_20260806.json` 입력
+(워크플로우가 이미 임의 파일명을 받게 돼 있어 YAML 수정 불필요).
+
+**로컬에서**:
+```bash
+cd tests/live_smoketest
+export DEEPSEEK_API_KEY=sk-xxxx
+python3 live_smoketest.py --scenarios scenarios_branch_coverage_20260806.json \
+  --system-prompt ../../prompts/AC-PRO-CORE_v1_1.txt --out ../../results/branch-coverage
+```
+
+**이 세트가 커버하는 분기**: R0(응급)·0단계(잡담/감정표현)·1단계(의도
+불명확 되묻기)·2단계 확신도 게이트·R1-AC(GWP 기본값/EXPERT 위임의도)·
+R2-AC(GWP끼리 충돌 해소)·ktelecom/kestate 예외 태그·표밖(CALL_KINTENT
+오케스트레이션)·§INFO 경로1(웹검색).
+
+**이 세트가 커버 못 하는 분기(별도 검증 필요)**:
+- §INFO 경로2(PDV 조회)·경로3(핸드셰이크) — 단일 턴 라이브 호출로는
+  전제 데이터(과거 대화 기록, 온보딩된 상대 SP)를 세팅할 수 없음.
+- `SP_DRAFT_REQUEST`/`GWP_REGISTRY_SEARCH`/`SEARCH type=user`/
+  `DELEGATE_TO_FLASH`/`OPEN_SETTINGS_TAB` 등 — live_smoketest.py의
+  채점 로직(`grade()`)에 아직 전용 분기가 없다. k-intent/web-search-tag/
+  ktelecom/kestate가 추가됐던 것과 동일한 패턴으로, 필요해지면 그때
+  추가할 것(지금은 오탐 채점 위험을 피하려 시나리오 자체를 안 만듦).
+- R3(AGENT-SUPPLIER 사업자 레이어) — 라우팅 태그가 아니라 시스템
+  프롬프트 조립 시점의 배경 주입이라, 이 태그 기반 채점 방식 자체로는
+  검증 불가능. 별도로 "사업자 프로필이 있는 계정으로 실제 system
+  prompt에 그 블록이 들어갔는지" 같은 조립 단계 검증이 필요하다
+  (CONTROL-TOWER-PRINCIPLE 상속 확인 때 썼던 방식과 유사).
