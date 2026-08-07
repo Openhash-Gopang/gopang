@@ -123,6 +123,60 @@ export const EXPERT_REGISTRY = {
     parentKey: 'lawyer',
     triggers: ['경매 전문 변호사', '명도소송 상담'],
   },
+  'lawyer-commercial': {
+    label: '변호사(상사법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-commercial', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치2)
+    triggers: ['상사법 상담', '어음수표 소송'],
+  },
+  'lawyer-execution': {
+    label: '변호사(민사집행)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-execution', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['민사집행 상담', '채권압류 상담'],
+  },
+  'lawyer-collection': {
+    label: '변호사(채권추심)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-collection', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['채권추심 전문 변호사', '지급명령 상담'],
+  },
+  'lawyer-insolvency': {
+    label: '변호사(도산)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-insolvency', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['법인회생 상담', '법인파산 상담', '기업회생 전문 변호사'],
+  },
+  'lawyer-securities': {
+    label: '변호사(증권)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-securities', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['증권 전문 변호사', '불공정거래 대응'],
+  },
+  'lawyer-finance': {
+    label: '변호사(금융)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-finance', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['금융 전문 변호사', '대출 약관 분쟁'],
+  },
+  'lawyer-insurance': {
+    label: '변호사(보험)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-insurance', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['보험 전문 변호사', '보험금 지급거절 상담'],
+  },
+  'lawyer-government-contract': {
+    label: '변호사(국가계약)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-government-contract', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['국가계약 상담', '입찰 무효 상담', '부정당업자 제재'],
+  },
+  'lawyer-antitrust': {
+    label: '변호사(공정거래)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-antitrust', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['공정거래 전문 변호사', '가맹사업 분쟁'],
+  },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
