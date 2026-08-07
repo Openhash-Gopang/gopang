@@ -82,14 +82,21 @@ fail로 베이스라인과 동일 — **신규 회귀 없음** 확인. 라이브
 열어 실제 상태를 먼저 확인한다(4개 소스 페르소나도 "예상"과 실제가 다른
 경우가 계속 나왔다 — 예: appraiser의 위험고지 누락).
 
-### 배치 1 — LAW 나머지 4개 (최우선, 구조 유사도 최고)
+### 배치 1 — LAW 나머지 4개 — ✅ 완료(2026-08-07)
 
-| id | 라벨 | 현재 SP | 예상 작업량 |
+| id | 라벨 | 현재 SP | 실제 결과 |
 |---|---|---|---|
-| loss-adjuster | 손해사정사 | `SP_loss-adjuster` | STEP R·D 존재 여부부터 확인 — 4개 소스와 같은 시기(2026-07)에 만들어졌다면 이미 상당수 훅 보유 가능성 |
-| labor-attorney | 공인노무사 | `SP_labor-attorney` | 동일 |
-| patent-attorney | 변리사 | `SP_patent-attorney` | 동일 |
-| customs-broker | 관세사 | `SP_customs-broker` | 동일 |
+| loss-adjuster | 손해사정사 | `SP_loss-adjuster_v1_6` | STEP R·D(L2/L3 분기)·번호체계 전부 이미 정상. **[위험 고지] 통째로 누락**(D-2가 "반복"을 언급하는데 원본이 없던 내부 모순) 발견·수정 + NEXT_STEP 반영 |
+| labor-attorney | 공인노무사 | `SP_labor-attorney_v1_6` | 동일 결함(위험고지 누락) 발견·수정 + NEXT_STEP 반영 |
+| patent-attorney | 변리사 | `SP_patent-attorney_v1_6` | 동일 결함 + NEXT_STEP. 위험고지는 특허 도메인 특유(신규성 영구상실)로 구체화 |
+| customs-broker | 관세사 | `SP_customs-broker_v1_6` | 동일 결함 + NEXT_STEP. 위험고지는 관세 도메인 특유(추징·가산세·형사처벌)로 구체화 |
+
+**패턴 발견**: 이 4개는 전부 2026-07-17 같은 세션·같은 템플릿으로 생성됐고,
+그 템플릿 자체에 STEP D `[위험 고지]` 블록이 빠져 있어 4개 전부 동일한
+결함을 공유하고 있었다. **같은 날짜에 배치 생성된 다른 SP 그룹도 이
+결함을 공유할 가능성이 높다** — 이후 배치 착수 시 각 SP의 v1.0 changelog
+날짜를 먼저 확인해, 2026-07-17 생성분이면 위험고지 존재 여부를 우선
+점검할 것.
 
 ### 배치 2 — FIN 나머지 3개
 
