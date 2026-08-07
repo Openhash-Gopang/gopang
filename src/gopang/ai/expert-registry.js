@@ -87,6 +87,42 @@ export const EXPERT_REGISTRY = {
     parentKey: 'lawyer',
     triggers: ['기업법무 상담', '기업 전문 변호사', 'M&A 법률 자문'],
   },
+  'lawyer-family': {
+    label: '변호사(가사법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-family', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치1)
+    triggers: ['가사법 상담', '이혼 전문 변호사', '양육권 상담'],
+  },
+  'lawyer-inheritance': {
+    label: '변호사(상속)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-inheritance', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['상속 전문 변호사', '유류분 상담', '상속포기 상담'],
+  },
+  'lawyer-realestate': {
+    label: '변호사(부동산)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-realestate', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['부동산 전문 변호사', '임대차 분쟁 상담'],
+  },
+  'lawyer-traffic': {
+    label: '변호사(교통사고)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-traffic', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['교통사고 전문 변호사'],
+  },
+  'lawyer-damages': {
+    label: '변호사(손해배상)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-damages', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['손해배상 전문 변호사', '의료소송 상담'],
+  },
+  'lawyer-auction': {
+    label: '변호사(등기·경매)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-auction', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['경매 전문 변호사', '명도소송 상담'],
+  },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
@@ -197,6 +233,30 @@ export const EXPERT_REGISTRY = {
     key: 'SP_physician-neurology', needsMedicalSafety: true,
     parentKey: 'physician',
     triggers: ['신경과 상담', '신경과 전문의'],
+  },
+  'physician-pediatrics': {
+    label: '의사(소아청소년과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-pediatrics', needsMedicalSafety: true,
+    parentKey: 'physician', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치1)
+    triggers: ['소아청소년과 상담', '소아과 상담', '소아 전문의'],
+  },
+  'physician-obgyn': {
+    label: '의사(산부인과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-obgyn', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['산부인과 상담', '산부인과 전문의'],
+  },
+  'physician-psychiatry': {
+    label: '의사(정신건강의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-psychiatry', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['정신건강의학과 상담', '정신과 상담', '정신과 전문의'],
+  },
+  'physician-emergency': {
+    label: '의사(응급의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-emergency', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['응급의학과 상담', '응급실 전문의'],
   },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
