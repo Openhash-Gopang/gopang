@@ -37,6 +37,12 @@ export const UNIVERSAL_INTEGRITY_KEY   = 'UNIVERSAL-INTEGRITY'; // 2026-07-09: �
 // 실제로 로드된다.
 export const COMMON_GUARDRAILS_KEY     = 'SP_common_guardrails'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
 export const COMMON_MEDICAL_SAFETY_KEY = 'SP_common_medical_safety'; // 2026-07-09: 상동
+export const EXPERT_BASE_KEY           = 'SP_EXPERT_BASE'; // 2026-08-07 신설(HANDOFF
+// SP-EXPERT-BASE-전체롤아웃계획 §6-1) — SP_EXPERT_BASE_v1_0.md(SP-COMMON-06,
+// 법무사·변호사·감정평가사·세무사 4개 실사검증 페르소나에서 추출한 STEP 골격
+// 스캐폴드). COMMON_GUARDRAILS_KEY·COMMON_MEDICAL_SAFETY_KEY와 동일한 원문
+// 로드(_loadSpRawByKey) 패턴을 따른다 — 개별 SP는 이 문서가 이미 정의한
+// STEP 0-(-1)/STEP R 본체/STEP D 본체/C50 NEXT_STEP을 재서술하지 않는다.
 
 export const EXPERT_REGISTRY = {
   // ── 법률 ──────────────────────────────────────────────

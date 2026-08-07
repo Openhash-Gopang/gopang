@@ -242,18 +242,32 @@ SP_EXPERT_BASE_v1_0 (신설 — 이 문서, manifest key: EXPERT_BASE)
 개별 SP(리프 — def.key)
 ```
 
-**필요한 코드 변경(★ 미착수 ★)**:
-1. `manifest-loader.js`의 `_loadSpByKey()` 매니페스트에 `EXPERT_BASE` 키
-   등록, `sp-catalog.json` 자동 갱신 대상에 포함.
-2. `expert-session.js`의 `_composeExpertPrompt()`에 `EXPERT_BASE` 로드
-   구간 추가 — 공통 가드레일(§2 표) 다음, `def.key` 로드 이전에 삽입해야
-   H2(캐시 프리픽스) 순서가 지켜진다.
-3. `expert-registry.js`의 개별 def 스키마에 `parentKey?: string` 필드
-   신설(§5용). `_composeExpertPrompt()`가 `def.parentKey`를 만나면
-   `EXPERT_BASE` 다음, `def.key` 이전에 부모 SP(`EXPERT_REGISTRY[def.parentKey].key`)
-   텍스트를 원문 그대로 삽입하는 재귀 처리 추가.
-4. `C50`의 `_missingNextStepMarker()`가 `EXPERT_BASE` 로드 여부와 무관하게
-   기존과 동일하게 작동하는지 회귀 테스트 추가(`expert-session-switch.test.mjs`).
+**필요한 코드 변경 — ✅ 완료(2026-08-07)**:
+1. ✅ `manifest-loader.js`는 수정 불필요로 판명 — 이미 `_loadSpByKey()`가
+   manifest 키 기반으로 동작해 신규 키 추가는 `sp-catalog.json`·
+   `expert-registry.js` 상수 추가만으로 충분했다. `sp-catalog.json`에
+   `"SP_EXPERT_BASE": "SP_EXPERT_BASE_v1_0.md"` 등록(기존 명명 규칙상
+   `EXPERT_BASE`가 아니라 `SP_common_guardrails`/`SP_common_medical_safety`와
+   같은 `SP_` 접두 패턴을 따름 — `expert-registry.js`에
+   `EXPERT_BASE_KEY = 'SP_EXPERT_BASE'` 상수로 반영).
+2. ✅ `expert-session.js`의 `_composeExpertPrompt()`에 `EXPERT_BASE` 로드
+   구간 추가 — 공통 가드레일(및 의료 안전모듈) 다음, `def.key` 로드
+   이전에 삽입(H2 캐시 프리픽스 순서 준수, 테스트로 검증).
+3. ✅ `expert-registry.js`에 `parentKey?: string`(비강제 관례 필드) 지원.
+   `_composeExpertPrompt()`가 `def.parentKey`를 만나면 `EXPERT_BASE` 다음,
+   `def.key` 이전에 `EXPERT_REGISTRY[def.parentKey]`의 원문을 삽입하는
+   재귀 처리 추가 — 3단 초과(부모가 또 parentKey를 가짐)는 경고 후
+   2단째 부모 로드를 건너뛰는 안전장치 포함(무한 재귀 방지, §5 "3단까지만
+   규정"과 일치).
+4. ✅ 회귀 테스트는 기존 `expert-session-switch.test.mjs`에 추가하지 않고
+   **`expert-base-composition.test.mjs` 신설**로 진행 — 기존 파일이
+   2026-08-06 아카이브된 same-thread 함수(`startExpertSession` 등)를
+   여전히 import하고 있어 이미 7/11건 실패 상태였고(EXPERT_BASE 작업과
+   무관한 기존 결함), 그 파일에 얹으면 신규 검증과 기존 결함이 뒤섞인다.
+   신규 파일 6건 전부 통과, 기존 파일은 베이스라인 그대로(4 pass/7 fail,
+   신규 회귀 없음) 확인.
+
+상세 커밋: HANDOFF_2026-08-07_SP-EXPERT-BASE-전체롤아웃계획.md §2 참조.
 
 ---
 

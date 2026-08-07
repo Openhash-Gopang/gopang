@@ -19,7 +19,7 @@ import { CFG } from '../core/config.js';
 import { history } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
-         getExpertGwpDef, resolveExpertId }
+         EXPERT_BASE_KEY, getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
 import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
@@ -125,6 +125,37 @@ export async function _composeExpertPrompt(def) {
     try {
       parts.push(await _loadSpRawByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈'));
     } catch (e) { console.warn('[Expert] 의료 안전모듈 로드 실패:', e.message); }
+  }
+
+  // EXPERT_BASE(SP-COMMON-06) — 2026-08-07 신설(HANDOFF SP-EXPERT-BASE-
+  // 전체롤아웃계획 §6-2). 법무사·변호사·감정평가사·세무사 4개 실사검증
+  // 페르소나에서 추출한 STEP 골격 스캐폴드. 공통 가드레일(및 의료
+  // 안전모듈) 다음, 개별 페르소나 SP(또는 §6-4의 부모 SP) 이전에 정확히
+  // 한 번만 결합한다 — H2(캐시 프리픽스 고정) 순서를 지키기 위해 이
+  // 위치를 벗어나면 안 된다.
+  try {
+    parts.push(await _loadSpRawByKey(EXPERT_BASE_KEY, 'EXPERT_BASE'));
+  } catch (e) { console.warn('[Expert] EXPERT_BASE 로드 실패:', e.message); }
+
+  // 부모(직업군) SP — 2026-08-07 신설(§6-3·6-4, SP_EXPERT_BASE §5 세부분야
+  // 상속 규칙). def.parentKey가 있으면(세부분야 SP인 경우), EXPERT_BASE
+  // 다음·리프 SP 이전에 부모 직업군 SP 원문을 그대로 삽입한다. 부모 자신도
+  // parentKey를 가질 수 있다는 전제는 두지 않는다(§5가 3단까지만 규정 —
+  // 부모의 부모는 설계 범위 밖이며, 그 이상 깊이가 필요해지면 그때 별도
+  // 검토). 순환 참조(부모가 자기 자신을 가리키는 등)를 막기 위해 방문
+  // 집합으로 1단 초과 여부만 확인한다.
+  if (def.parentKey) {
+    const parentDef = EXPERT_REGISTRY[def.parentKey];
+    if (!parentDef) {
+      console.warn(`[Expert] parentKey 미등록: ${def.parentKey} (${def.label})`);
+    } else if (parentDef.parentKey) {
+      console.warn(`[Expert] 부모 SP(${def.parentKey})가 또 parentKey를 가짐 — ` +
+        `SP_EXPERT_BASE §5는 3단(EXPERT_BASE→부모→자식)까지만 규정. 2단째 부모 로드는 건너뜀.`);
+    } else {
+      try {
+        parts.push(await _loadSpRawByKey(parentDef.key, `${parentDef.label}(부모 SP)`));
+      } catch (e) { console.warn('[Expert] 부모 SP 로드 실패:', e.message); }
+    }
   }
 
   try {
