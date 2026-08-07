@@ -151,33 +151,37 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
 사고실험을 거쳤는지" changelog에서 먼저 확인하면 작업량을 정확히
 가늠할 수 있다.
 
-### 배치 4 — EDU 11개 (정신건강 계열 6개는 세분화 주의)
+### 배치 4 — EDU 11개 — ✅ 완료(2026-08-07)
 
-**4-A (순수 교육/문화, 리스크 낮음)**
+**4-A (순수 교육/문화)**
 
-| id | 라벨 | 비고 |
+| id | 라벨 | 실제 결과 |
 |---|---|---|
-| teacher | 교사(정교사) | |
-| curator | 학예사(큐레이터) | |
-| librarian | 사서 | C39-2+ 예외 훅을 이미 보유한 것으로 실사 언급됨(v3.27 changelog) — 재확인만 |
-| childcare-teacher | 보육교사 | |
-| lifelong-educator | 평생교육사 | |
+| teacher | 교사(정교사) | 2026-08-06 EDU 그룹 사고실험서 이미 정비됨(v3.2)→v3.3, NEXT_STEP만 추가 |
+| curator | 학예사(큐레이터) | 동일(v3.2→v3.3) |
+| librarian | 사서 | 동일(v3.2→v3.3) — C39-2+ 예외 훅 기존 보유 확인됨 |
+| childcare-teacher | 보육교사 | 동일(v1.6→v1.7) |
+| lifelong-educator | 평생교육사 | 동일(v1.6→v1.7) |
 
-**4-B (정신건강 상담 계열, C6 응급상황 원칙과 밀접)**
+**4-B (정신건강 상담 계열)**
 
-| id | 라벨 | 비고 |
+| id | 라벨 | 실제 결과 |
 |---|---|---|
-| clinical-psychologist | 임상심리사 | needsMedicalSafety |
-| school-counselor | 전문상담교사 | needsMedicalSafety |
-| mental-health-professional | 정신건강전문요원 | needsMedicalSafety |
-| social-worker | 사회복지사 | needsMedicalSafety, C43 최초 적용 대상으로 앞서 언급된 바 있음(4개 소스 다음으로 검증도가 높을 가능성) |
-| youth-counselor | 청소년상담사 | needsMedicalSafety |
+| clinical-psychologist | 임상심리사 | v3.3→v3.4, NEXT_STEP만 추가 |
+| school-counselor | 전문상담교사 | v3.2→v3.3. **학생에게 직접 말을 거는 반말 SP**라 NEXT_STEP도 그 어투로 맞춰 작성("...연결해줄지 한 마디로 알려줄래?") |
+| mental-health-professional | 정신건강전문요원 | v3.2→v3.3 |
+| social-worker | 사회복지사 | v1.9→v2.0 |
+| youth-counselor | 청소년상담사 | v1.6→v1.7 |
 
-**4-C (부모 SP 후보 — 별도 취급)**
+**부수 발견(수정 안 함, 기록만)**: `mental-health-professional`과
+`social-worker`가 SP 코드(`SP-EDU-04`)를 중복 사용 중이다. 이번 작업
+범위(STEP D/NEXT_STEP) 밖이라 손대지 않았다 — 별도 정리 필요 시 백로그로.
 
-| id | 라벨 | 비고 |
+**4-C (부모 SP 후보)**
+
+| id | 라벨 | 실제 결과 |
 |---|---|---|
-| professor | 교수(1:1 맞춤교육) | **§5 세부분야(반도체/법학/경제학) 부모 SP** — 이 배치에서는 §3 훅 17개를 "완결된 일반 교수 SP"로 채우기만 하고, 세부분야 분기는 §6 코드 완료 후 별도 세션(§6 참조) |
+| professor | 교수(1:1 맞춤교육) | **advisor(K-Advisor)와 완전히 동일한 계열임을 확인** — STEP D 자체가 없는 §1~§5 구조(K-Advisor의 IDENTITY가 "K-Professor와 같은 구조"라고 직접 명시한 그대로). advisor처럼 별도 조항(§3-9)으로 NEXT_STEP 반영(v1.2→v1.3). **부수 발견**: §5 "정직 고지"에 "expert-registry.js 미등록"이라는 낡은 문구가 남아 있었다 — 실제로는 이미 등록 완료 상태라 정정. §5(세부분야 반도체/법학/경제학 분기)는 이번 배치 범위 밖, §6 코드 완료 후 별도 세션 그대로 유지 |
 
 ### 배치 5 — HEALTH 20개 (최고 위험군, §6 완료 확인 후 착수 권장)
 
