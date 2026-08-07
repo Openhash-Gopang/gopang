@@ -26,12 +26,11 @@ export const PROFESSOR_REGISTRY = {
   'professor-semiconductor': {
     label: '교수(반도체공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-semiconductor', needsMedicalSafety: false,
-    parentKey: 'professor', // 2026-08-07 신설(SP_EXPERT_BASE §5 세부분야 착수)
-    // 2026-08-08 참고: 정부 표준분류체계(공공데이터포털 API 원문)상
-    // 반도체공학(093)은 중계열 D-18 "재료" 소속이지만, 표준분류체계
-    // 3단 계층화 배치1(언어·문학/인문학/사회과학/화학생명과학환경/
-    // 수학물리천문지구)에 재료 중계열은 아직 없어 professor 직속으로
-    // 유지한다 — 재료 중계열 신설 시 재소속 검토.
+    // 2026-08-08 배치5: professor 직속 → 재료(18) 중계열로 재소속
+    // (배치1 시점부터 예고했던 마이그레이션 — 정부 표준분류체계상
+    // 반도체공학(093)은 D-18 재료 소속. economics의 경영·경제
+    // 중계열 재소속(배치2)과 동일 패턴으로 이번에 정리 완료)
+    parentKey: 'professor-materials-series',
     triggers: ['반도체공학 지도', '반도체 교수'],
   },
   // ── 중계열(2단, professor의 자식이자 소계열의 부모) — 2026-08-08
@@ -560,5 +559,181 @@ export const PROFESSOR_REGISTRY = {
     key: 'SP_professor-musicology', needsMedicalSafety: false,
     parentKey: 'professor-music-series',
     triggers: ['음악사 지도', '음악학 지도'],
+  },
+  // ── 중계열(2단) 배치5 신설 3개 (공학 확장) ───────────────────
+  'professor-industrial-safety-series': {
+    label: '교수(산업·안전 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-industrial-safety-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-materials-series': {
+    label: '교수(재료 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-materials-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-chemeng-energy-series': {
+    label: '교수(화공·고분자·에너지 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-chemeng-energy-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  // ── 소계열(3단, 리프) 배치5: 공학 확장 26개 ──────────────────
+  'professor-controlengineering': {
+    label: '교수(제어계측공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-controlengineering', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: ['제어공학 지도', 'PID 제어 지도'],
+  },
+  'professor-optics': {
+    label: '교수(광학공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-optics', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: ['광학공학 지도', '레이저공학 지도'],
+  },
+  'professor-biomedengineering': {
+    label: '교수(의공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biomedengineering', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: ['의공학 지도', '의료영상 원리 지도'],
+  },
+  'professor-telecommunications': {
+    label: '교수(정보·통신공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-telecommunications', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: ['통신공학 지도', '네트워크 프로토콜 지도'],
+  },
+  'professor-architecturalengineering': {
+    label: '교수(건축공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-architecturalengineering', needsMedicalSafety: false,
+    parentKey: 'professor-construction',
+    triggers: ['건축구조 지도', '건축시공학 지도'],
+  },
+  'professor-landscapearchitecture': {
+    label: '교수(조경학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-landscapearchitecture', needsMedicalSafety: false,
+    parentKey: 'professor-construction',
+    triggers: ['조경학 지도', '조경설계 지도'],
+  },
+  'professor-civilengineering': {
+    label: '교수(토목공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-civilengineering', needsMedicalSafety: false,
+    parentKey: 'professor-construction',
+    triggers: ['토목공학 지도', '토질역학 지도'],
+  },
+  'professor-urbanengineering': {
+    label: '교수(도시공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-urbanengineering', needsMedicalSafety: false,
+    parentKey: 'professor-construction',
+    triggers: ['도시공학 지도', '도시계획 이론 지도'],
+  },
+  'professor-environmentalengineering': {
+    label: '교수(환경공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-environmentalengineering', needsMedicalSafety: false,
+    parentKey: 'professor-construction',
+    triggers: ['환경공학 지도', '수처리 공정 지도'],
+  },
+  'professor-industrialengineering': {
+    label: '교수(산업공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-industrialengineering', needsMedicalSafety: false,
+    parentKey: 'professor-industrial-safety-series',
+    triggers: ['산업공학 지도', '품질관리 지도'],
+  },
+  'professor-safetyengineering': {
+    label: '교수(안전공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-safetyengineering', needsMedicalSafety: false,
+    parentKey: 'professor-industrial-safety-series',
+    triggers: ['안전공학 지도', '산업안전기사 지도'],
+  },
+  'professor-disasterprevention': {
+    label: '교수(방재공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-disasterprevention', needsMedicalSafety: false,
+    parentKey: 'professor-industrial-safety-series',
+    triggers: ['방재공학 지도', '화재공학 지도'],
+  },
+  'professor-metallurgy': {
+    label: '교수(금속공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-metallurgy', needsMedicalSafety: false,
+    parentKey: 'professor-materials-series',
+    triggers: ['금속공학 지도', '금속조직학 지도'],
+  },
+  'professor-newmaterials': {
+    label: '교수(신소재공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-newmaterials', needsMedicalSafety: false,
+    parentKey: 'professor-materials-series',
+    triggers: ['신소재공학 지도', '나노소재 지도'],
+  },
+  'professor-ceramics': {
+    label: '교수(세라믹공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-ceramics', needsMedicalSafety: false,
+    parentKey: 'professor-materials-series',
+    triggers: ['세라믹공학 지도', '소결 이론 지도'],
+  },
+  'professor-materials': {
+    label: '교수(재료공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-materials', needsMedicalSafety: false,
+    parentKey: 'professor-materials-series',
+    triggers: ['재료공학 지도', '재료물성 지도'],
+  },
+  'professor-mechatronics': {
+    label: '교수(메카트로닉스공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-mechatronics', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: ['메카트로닉스 지도', '로봇공학 지도'],
+  },
+  'professor-navalengineering': {
+    label: '교수(조선·해양공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-navalengineering', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: ['조선해양공학 지도', '선박유체역학 지도'],
+  },
+  'professor-aerospace': {
+    label: '교수(항공·우주공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-aerospace', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: ['항공우주공학 지도', '항공역학 지도'],
+  },
+  'professor-railwayengineering': {
+    label: '교수(철도공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-railwayengineering', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: ['철도공학 지도', '철도차량 공학 지도'],
+  },
+  'professor-automotive': {
+    label: '교수(자동차공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-automotive', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: ['자동차공학 지도', '엔진공학 지도'],
+  },
+  'professor-chemicalengineering': {
+    label: '교수(화학공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-chemicalengineering', needsMedicalSafety: false,
+    parentKey: 'professor-chemeng-energy-series',
+    triggers: ['화학공학 지도', '반응공학 지도'],
+  },
+  'professor-energyengineering': {
+    label: '교수(에너지공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-energyengineering', needsMedicalSafety: false,
+    parentKey: 'professor-chemeng-energy-series',
+    triggers: ['에너지공학 지도', '신재생에너지 지도'],
+  },
+  'professor-polymerengineering': {
+    label: '교수(고분자공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-polymerengineering', needsMedicalSafety: false,
+    parentKey: 'professor-chemeng-energy-series',
+    triggers: ['고분자공학 지도', '고분자화학 지도'],
+  },
+  'professor-bioengineering': {
+    label: '교수(생명공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-bioengineering', needsMedicalSafety: false,
+    parentKey: 'professor-chemeng-energy-series',
+    triggers: ['생명공학 지도', '발효공학 지도'],
+  },
+  'professor-textileengineering': {
+    label: '교수(섬유공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-textileengineering', needsMedicalSafety: false,
+    parentKey: 'professor-chemeng-energy-series',
+    triggers: ['섬유공학 지도', '섬유 소재 지도'],
   },
 };
