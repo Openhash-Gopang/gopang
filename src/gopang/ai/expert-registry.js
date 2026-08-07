@@ -219,6 +219,132 @@ export const EXPERT_REGISTRY = {
     parentKey: 'lawyer',
     triggers: ['식품 의약 전문 변호사', '제조물책임 소송'],
   },
+  'lawyer-maritime': {
+    label: '변호사(해상)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-maritime', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['해상사고 상담', '선박 관련 계약분쟁'],
+  },
+  'lawyer-trade': {
+    label: '변호사(무역)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-trade', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['무역계약 분쟁', '수출입 대금 미지급'],
+  },
+  'lawyer-shipbuilding': {
+    label: '변호사(조선)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-shipbuilding', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['선박건조계약 분쟁', '인도지연 대응'],
+  },
+  'lawyer-arbitration': {
+    label: '변호사(중재)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-arbitration', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['상사중재 신청', '중재조항 해석'],
+  },
+  'lawyer-it': {
+    label: '변호사(IT)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-it', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['IT 개발계약 분쟁', '서비스 이용약관 검토'],
+  },
+  'lawyer-broadcasting': {
+    label: '변호사(방송통신)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-broadcasting', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['방송통신 인허가', '방송통신 제재처분'],
+  },
+  'lawyer-energy': {
+    label: '변호사(에너지)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-energy', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['에너지 사업 인허가', 'PPA 계약 분쟁'],
+  },
+  'lawyer-international-relations': {
+    label: '변호사(국제관계법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-international-relations', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['국제법 자문', '조약 해석'],
+  },
+  'lawyer-international-transactions': {
+    label: '변호사(국제거래)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-international-transactions', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['국제거래계약 검토', '크로스보더 계약 분쟁'],
+  },
+  'lawyer-international-arbitration': {
+    label: '변호사(국제중재)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-international-arbitration', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['국제중재 신청', '외국 중재판정 집행'],
+  },
+  'lawyer-immigration': {
+    label: '변호사(이주 및 비자)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-immigration', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['체류자격 신청', '강제퇴거 대응', '비자 상담'],
+  },
+  'lawyer-overseas-investment': {
+    label: '변호사(해외투자)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-overseas-investment', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['해외투자 구조 설계', '해외 M&A 자문'],
+  },
+  'lawyer-sports': {
+    label: '변호사(스포츠)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-sports', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['선수계약 검토', '스포츠 징계 불복'],
+  },
+  'lawyer-religious': {
+    label: '변호사(종교)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-religious', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['종교단체 재산분쟁', '종교단체 내부 징계'],
+  },
+  'lawyer-guardianship': {
+    label: '변호사(성년후견)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-guardianship', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['성년후견 개시 심판', '후견인 선임 상담'],
+  },
+  'lawyer-startup': {
+    label: '변호사(스타트업)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-startup', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['투자계약 검토', '스타트업 지분구조 설계'],
+  },
+  'lawyer-school-violence': {
+    label: '변호사(학교폭력)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-school-violence', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['학교폭력 심의 대응', '학폭 처분 불복'],
+  },
+  'lawyer-legislation': {
+    label: '변호사(입법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-legislation', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['법안 검토 자문', '입법영향평가'],
+  },
+  'lawyer-entertainment': {
+    label: '변호사(엔터테인먼트)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-entertainment', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['전속계약 검토', '연예인 수익배분 분쟁'],
+  },
+  'lawyer-construction': {
+    label: '변호사(건설)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-construction', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['건설공사계약 분쟁', '하자보수 청구', '지체상금 청구'],
+  },
+  'lawyer-redevelopment': {
+    label: '변호사(재개발·재건축)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-redevelopment', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치8, 변호사 배치4)
+    triggers: ['재개발 조합 분쟁', '관리처분계획 불복'],
+  },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
