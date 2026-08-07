@@ -1,0 +1,452 @@
+[
+  {
+    "no": 1,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 2,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 3,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 4,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 5,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 6,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 7,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 8,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 9,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 10,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 11,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 12,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 13,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 14,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 15,
+    "utterance": "돌아가신 분 재산을 받게 될 때 법적으로 몇 촌까지 세율이 다르게 적용되나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "재현성 확인(klaw 과잉흡수 — ktax)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktax)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 16,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 17,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 18,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 19,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 20,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 21,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 22,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 23,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 24,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 25,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 26,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 27,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 28,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 29,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 30,
+    "utterance": "직원을 해고할 때 법적으로 며칠 전에 미리 알려야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "재현성 확인(klaw 과잉흡수 — kbusiness)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(kbusiness)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 31,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 32,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 33,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 34,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 35,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 36,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 37,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 38,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 39,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 40,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 41,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 42,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 43,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 44,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  },
+  {
+    "no": 45,
+    "utterance": "무단횡단하면 법적으로 벌금이 얼마로 정해져 있나요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "재현성 확인(klaw 과잉흡수 — ktransport)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06/07 재현 배치의 확산범위 탐색 프로브에서 발견: '법적으로 ~ 어떻게 되나요' 패턴의 발화가 실제 도메인(ktransport)과 무관하게 klaw로 흡수되는 걸 1회 관찰. §CORE R1축('제도 정보 관점 → GWP 기본값')을 모델이 '법적'이라는 단어 자체에 반응해 klaw로 직행하는 방식으로 오적용하는 것으로 보이는데, §CORE 원문은 'trigger 단어 매칭이 아니라 그 GWP의 분야 칸에 개념적으로 속하는가'로 판단하라고 명시하므로 원 취지 위반. 1회 관찰이 체계적 버그인지 확인하기 위해 §0-2 방식으로 15회씩 반복한다."
+  }
+]
