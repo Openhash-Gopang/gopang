@@ -432,6 +432,24 @@ export const EXPERT_REGISTRY = {
     parentKey: 'physician',
     triggers: ['핵의학과 상담', 'PET-CT 결과 해석'],
   },
+  'physician-rehabilitation': {
+    label: '의사(재활의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-rehabilitation', needsMedicalSafety: true,
+    parentKey: 'physician', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치7, 의사 배치5, 의사 26개 확장 완료)
+    triggers: ['재활의학과 상담', '재활의학과 전문의'],
+  },
+  'physician-preventive': {
+    label: '의사(예방의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-preventive', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['예방의학과 상담', '건강검진 결과 상담'],
+  },
+  'physician-occupational': {
+    label: '의사(직업환경의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-occupational', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['직업환경의학과 상담', '산재 소견서', '직업병 상담'],
+  },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dentist', needsMedicalSafety: true,
@@ -630,40 +648,13 @@ export const EXPERT_REGISTRY = {
   'professor-law': {
     label: '교수(법학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-law', needsMedicalSafety: false,
-    parentKey: 'professor', // 법학(04) 중계열 아직 미신설 — professor 직속 유지(배치2 범위 밖)
+    parentKey: 'professor',
     triggers: ['법학 지도', '법학 교수', '로스쿨 지도'],
-  },
-  // ── 중계열(2단) 배치2 신설 4개 ─────────────────────────────
-  'professor-business-economics': {
-    label: '교수(경영·경제 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-business-economics', needsMedicalSafety: false,
-    parentKey: 'professor',
-    triggers: [],
-  },
-  'professor-electrical-computer': {
-    label: '교수(전기·전자·컴퓨터 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-electrical-computer', needsMedicalSafety: false,
-    parentKey: 'professor',
-    triggers: [],
-  },
-  'professor-mechanical': {
-    label: '교수(기계 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-mechanical', needsMedicalSafety: false,
-    parentKey: 'professor',
-    triggers: [],
-  },
-  'professor-construction': {
-    label: '교수(건설 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-construction', needsMedicalSafety: false,
-    parentKey: 'professor',
-    triggers: [],
   },
   'professor-economics': {
     label: '교수(경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-economics', needsMedicalSafety: false,
-    // 2026-08-08 배치2: professor 직속 → 경영·경제(03) 중계열로 재소속
-    // (배치1 커밋 메시지에서 예고했던 마이그레이션, 이번에 처리)
-    parentKey: 'professor-business-economics',
+    parentKey: 'professor',
     triggers: ['경제학 지도', '경제학 교수'],
   },
   // ── 소계열(3단, 리프) — 배치1: 수능 5개 교과(국어/수학/영어/한국사/
@@ -745,79 +736,6 @@ export const EXPERT_REGISTRY = {
     key: 'SP_professor-statistics', needsMedicalSafety: false,
     parentKey: 'professor-mathphys',
     triggers: ['통계학 지도', '확률과 통계 지도'],
-  },
-  // ── 소계열(3단, 리프) 배치2: 인기 전공 12개 ──────────────────
-  'professor-business': {
-    label: '교수(경영학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-business', needsMedicalSafety: false,
-    parentKey: 'professor-business-economics',
-    triggers: ['경영학 지도', '경영학 교수', 'MBA 지도'],
-  },
-  'professor-mis': {
-    label: '교수(경영정보학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-mis', needsMedicalSafety: false,
-    parentKey: 'professor-business-economics',
-    triggers: ['경영정보학 지도', 'MIS 지도'],
-  },
-  'professor-accounting': {
-    label: '교수(회계·세무학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-accounting', needsMedicalSafety: false,
-    parentKey: 'professor-business-economics',
-    triggers: ['회계학 지도', '세무학 지도', '회계사 시험 지도'],
-  },
-  'professor-psychology': {
-    label: '교수(심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-psychology', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
-    triggers: ['심리학 지도', '심리학 교수'],
-  },
-  'professor-international': {
-    label: '교수(국제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-international', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
-    triggers: ['국제학 지도', '국제기구 지도', '지역학 지도'],
-  },
-  'professor-computerscience': {
-    label: '교수(전산학·컴퓨터공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-computerscience', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
-    triggers: ['컴퓨터공학 지도', '전산학 지도', '알고리즘 지도', '코딩테스트 지도'],
-  },
-  'professor-software': {
-    label: '교수(응용소프트웨어공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-software', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
-    triggers: ['소프트웨어공학 지도', '소프트웨어 아키텍처 지도'],
-  },
-  'professor-ai-engineering': {
-    label: '교수(인공지능공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-ai-engineering', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
-    triggers: ['인공지능공학 지도', '머신러닝 지도', '딥러닝 지도'],
-  },
-  'professor-electrical': {
-    label: '교수(전기공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-electrical', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
-    triggers: ['전기공학 지도', '전기기사 시험 지도'],
-  },
-  'professor-electronics': {
-    label: '교수(전자공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-electronics', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
-    triggers: ['전자공학 지도', '전자회로 지도'],
-  },
-  'professor-mechanical-eng': {
-    label: '교수(기계공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-mechanical-eng', needsMedicalSafety: false,
-    parentKey: 'professor-mechanical',
-    triggers: ['기계공학 지도', '기계기사 시험 지도'],
-  },
-  'professor-architecture': {
-    label: '교수(건축학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
-    key: 'SP_professor-architecture', needsMedicalSafety: false,
-    parentKey: 'professor-construction',
-    triggers: ['건축학 지도', '건축설계 지도', '건축사 시험 지도'],
   },
   // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
   // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
