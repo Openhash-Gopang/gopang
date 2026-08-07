@@ -286,12 +286,40 @@ NEEDS-REVIEW 44건(71%)은 결함이 아니라 하네스 자체 한계(단일 �
 
 ---
 
-## 5. §5 세부분야 착수 (전체 배치 완료 후 또는 §6 완료 직후 별도 트랙)
+## 5. §5 세부분야 착수 — ✅ 완료(2026-08-07)
 
-physician(내과/외과/신경과)·professor(반도체/법학/경제학) 세부분야는 부모
-SP(배치 4-C, 5-A)가 완결되고 §6 코드가 실제로 3단 조립을 처리하는 것이
-회귀 테스트로 확인된 뒤에만 착수한다. 각 세부분야 1개당 최소 신설 기준
-(§5 H5 — "형제가 2개 이상 실제로 필요한가")을 먼저 재확인.
+physician(내과/외과/신경과)·professor(반도체/법학/경제학) 6개 세부분야
+SP를 신설했다. §5 원칙대로 각 자식 SP는 다음만 담는다: 정체성 경계
+문단, Tier 테이블, L2·L3(또는 상당) 심화 모듈, STEP R 3훅 — 부모의
+STEP 0~D(또는 §1~§4) 골격은 전혀 재서술하지 않았다.
+
+| 자식 SP | parentKey | 실제 결과 |
+|---|---|---|
+| physician-internal-medicine | physician | 신설(v1.0). 외과·신경과와의 경계 명시 |
+| physician-surgery | physician | 신설(v1.0). "수술 시행 자체는 절대 안 한다" 경계 강조, 수술후 급성악화 M1 문턱 강화 |
+| physician-neurology | physician | 신설(v1.0). 급성 뇌졸중 골든타임 관련 M1 최우선 강조 |
+| professor-semiconductor | professor | 신설(v1.0). 변리사 페르소나와의 경계(특허 출원은 별도) |
+| professor-law | professor | 신설(v1.0). **변호사 페르소나와의 경계가 핵심**(학문적 이해 vs 개인 사안 자문) |
+| professor-economics | professor | 신설(v1.0). 재무설계사·공인회계사 페르소나와의 경계(이론 vs 개인 자문/실무) |
+
+**코드 반영**: `expert-registry.js`에 6개 항목 신규 등록(`parentKey` 필드
+실사용 최초 사례), `sp-catalog.json` 6건 추가(파일 순서 보존 삽입).
+
+**검증(2단계)**:
+1. 하네스(Python) 재구현 조립 함수로 6건 전부 EXPERT_BASE·부모내용 포함
+   확인.
+2. **진짜 프로덕션 코드(`expert-session.js`의 실제 `_composeExpertPrompt()`)
+   + 실제 `EXPERT_REGISTRY`로 6건 전부 재검증** — 모킹 없이 실제 파일을
+   읽어 EXPERT_BASE→부모SP→자식SP 순서로 정확히 조립됨을 콘솔 로그로
+   확인(예: `[SP] 의사(부모 SP) 로드 완료... → [SP] 의사(내과) 로드
+   완료...`). §6-4에서 만든 `parentKey` 재귀 로직의 첫 실사용 검증.
+3. 기존 `expert-base-composition.test.mjs`(6개 테스트, 픽스처 기반)도
+   재실행해 회귀 없음 확인.
+
+**미검증**: 실제 사용자 발화로 이 6개 세부분야가 부모(physician/
+professor)나 서로 간에 올바르게 라우팅되는지는 별도 확인이 필요하다 —
+`triggers` 배열만 좁게 등록해뒀을 뿐, router.js 통합 테스트는
+이번 작업 범위 밖이다.
 
 ---
 

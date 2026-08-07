@@ -160,6 +160,26 @@ export const EXPERT_REGISTRY = {
     // 전부 khealth가 우선이어야 하므로, physician은 '주치의'처럼 khealth 트리거에 없는 좁은 표현만 남긴다.
     triggers: ['의사와 직접 상담', '주치의'],
   },
+  'physician-internal-medicine': {
+    label: '의사(내과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-internal-medicine', needsMedicalSafety: true,
+    parentKey: 'physician', // 2026-08-07 신설(SP_EXPERT_BASE §5 세부분야 착수) —
+    // §6-4 parentKey 재귀 조립의 첫 실사용 사례. EXPERT_BASE → physician(부모)
+    // → 이 자식 순서로 조립된다.
+    triggers: ['내과 상담', '내과 전문의'],
+  },
+  'physician-surgery': {
+    label: '의사(외과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-surgery', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['외과 상담', '외과 전문의', '수술 상담'],
+  },
+  'physician-neurology': {
+    label: '의사(신경과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-neurology', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['신경과 상담', '신경과 전문의'],
+  },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dentist', needsMedicalSafety: true,
@@ -306,6 +326,24 @@ export const EXPERT_REGISTRY = {
     // 바로 그 1:1 개인 맞춤 교육 역할을 정식으로 담당한다 — teacher(학교
     // 정교사, 생활지도 관점)와는 범위가 다르다.
     triggers: ['1:1 교습', '개인 교사', '맞춤 교육', 'AI 교수', '과외'],
+  },
+  'professor-semiconductor': {
+    label: '교수(반도체공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-semiconductor', needsMedicalSafety: false,
+    parentKey: 'professor', // 2026-08-07 신설(SP_EXPERT_BASE §5 세부분야 착수)
+    triggers: ['반도체공학 지도', '반도체 교수'],
+  },
+  'professor-law': {
+    label: '교수(법학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-law', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: ['법학 지도', '법학 교수', '로스쿨 지도'],
+  },
+  'professor-economics': {
+    label: '교수(경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-economics', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: ['경제학 지도', '경제학 교수'],
   },
   // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
   // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
