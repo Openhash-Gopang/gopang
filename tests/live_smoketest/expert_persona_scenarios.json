@@ -197,7 +197,8 @@
     "label": "응급구조사",
     "needs_medical_safety": true,
     "has_step_d": true,
-    "utterance": "눈앞에서 사람이 갑자기 쓰러졌어요. 지금 당장 어떻게 해야 하나요."
+    "utterance": "눈앞에서 사람이 갑자기 쓰러졌어요. 지금 당장 어떻게 해야 하나요.",
+    "emergency_bypass": true
   },
   {
     "id": "midwife",

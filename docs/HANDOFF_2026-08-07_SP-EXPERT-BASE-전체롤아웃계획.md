@@ -287,3 +287,17 @@ SP(배치 4-C, 5-A)가 완결되고 §6 코드가 실제로 3단 조립을 처�
 - v1.0 (2026-08-07, 주피터님 지시): 최초 제정. `SP_EXPERT_BASE_v1_0.md` §6·
   §7을 실행 단위로 구체화하고, 남은 58개 페르소나를 카테고리·위험도 기준
   6개 배치로 편성.
+- v1.1 (2026-08-07, 58개 배치 전체 완료 + 라이브 스모크테스트 하네스
+  정비): §6 코드 + 배치1~6 전부 완료(총괄 요약은 배치6 절 참조).
+  `tests/live_smoketest/expert_persona_smoketest.py`가 SP_EXPERT_BASE
+  신설 이후 갱신되지 않아 실제 조립 순서와 어긋나 있던 것을 발견·수정
+  (`compose_expert_prompt()`에 EXPERT_BASE 결합 반영, `parent_key` 선반영).
+  `[NEXT_STEP:]` 채점 로직 신설 — has_step_d 무관 전 시나리오 적용,
+  professor·advisor는 기존에 통째로 SKIP 처리돼 NEXT_STEP 검증이 전혀
+  안 되고 있었던 것도 함께 발견·수정. paramedic 기존 시나리오가
+  "실제 응급" 상황을 다루면서도 이원구조(평시/응급) 구분이 없어 정상
+  동작(즉시 119 안내)을 결함으로 오채점할 뻔한 것 발견 — `emergency_bypass`
+  플래그 신설로 해결. `scenarios_next_step_rollout_20260807.json` 신설
+  (12건) — physician 위험도 등급별 NEXT_STEP 3종, paramedic 평시/응급
+  이원구조 재확인 2종, advisor·professor §3-8/§3-9 재확인 2종, 이번
+  롤아웃에서 위험고지가 실제로 새로 추가된 5개 페르소나 재확인 5종.
