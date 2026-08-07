@@ -125,23 +125,31 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
 **그 SP의 실제 구조(결론이 도출되는 지점)에 맞는 위치**에 NEXT_STEP만
 자연스럽게 추가할 것 — 없는 STEP D를 억지로 만들어 넣지 않는다.
 
-### 배치 3 — ENG 13개 (물리적 안전 관련 항목 주의)
+### 배치 3 — ENG 13개 — ✅ 완료(2026-08-07)
 
-| id | 라벨 | 비고 |
+| id | 라벨 | 실제 결과 |
 |---|---|---|
-| architect | 건축사 | |
-| professional-engineer | 기술사 | |
-| marine-pilot | 도선사 | |
-| naval-architect | 조선사 | |
-| navigation-officer | 항해사 | |
-| marine-engineer | 기관사(선박) | |
-| industrial-safety-consultant | 산업안전·보건지도사 | HT-2(물리적 안전) 가능성 — §3-⑯ Tier표에 신체 위해 반영 |
-| weather-forecaster | 기상예보사 | 응급 상황(기상특보) 연계, C6 확인 |
-| fire-safety-manager | 소방시설관리사 | HT-2 — STEP -1급 응급 트리아지 유무 확인(C41 v3.7 changelog에서 이미 예시로 언급된 SP) |
-| landscape-engineer | 조경기술사 | |
-| surveying-engineer | 측량 및 지형공간정보기술사 | |
-| electrical-safety-engineer | 전기안전기술사 | HT-2 |
-| gas-safety-engineer | 가스기술사 | HT-2, 응급(가스누출) 연계 확인 |
+| architect | 건축사 | v3.2(2026-08-06 ENG 그룹 사고실험서 이미 정비됨)→v3.3, NEXT_STEP만 추가 |
+| professional-engineer | 기술사 | 동일 |
+| marine-pilot | 도선사 | 동일 |
+| naval-architect | 조선사 | 동일 |
+| navigation-officer | 항해사 | 동일 |
+| marine-engineer | 기관사(선박) | 동일 |
+| industrial-safety-consultant | 산업안전·보건지도사 | 동일 |
+| weather-forecaster | 기상예보사 | 동일. NEXT_STEP 문구는 "관련 X 연결" 패턴이 안 맞아(기상청은 공공기관) 도메인에 맞게 재작성 |
+| fire-safety-manager | 소방시설관리사 | 동일 |
+| landscape-engineer | 조경기술사 | v1.6(같은 2026-08-06 세션에서 위험고지 이미 보완됨)→v1.7, NEXT_STEP만 추가 |
+| surveying-engineer | 측량 및 지형공간정보기술사 | 동일 |
+| electrical-safety-engineer | 전기안전기술사 | 동일 |
+| gas-safety-engineer | 가스기술사 | 동일 |
+
+**중요한 사전 발견**: 이 13개는 이미 **2026-08-06 "ENG 그룹 사고실험"**을
+거쳐 위험고지 누락·STEP R·L2/L3 분기가 전부 정비된 상태였다(LAW-04~07이
+겪은 결함을 ENG 그룹은 이미 자체적으로 한 차례 잡아낸 뒤였음). 그래서
+이번 배치는 LAW/FIN 배치보다 가벼웠고, `[NEXT_STEP:]` 태그 반영이
+사실상 유일한 작업이었다 — 앞으로 배치 착수 전에 "이미 자체 그룹
+사고실험을 거쳤는지" changelog에서 먼저 확인하면 작업량을 정확히
+가늠할 수 있다.
 
 ### 배치 4 — EDU 11개 (정신건강 계열 6개는 세분화 주의)
 
