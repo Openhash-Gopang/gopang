@@ -43,6 +43,60 @@ export const CORE_REGISTRY = {
     // '회계감사를 의뢰하고 싶어'는 위임의도가 명확해 유지, 뒤에 '검토' 단독 대신 '의뢰'로 구체화
     triggers: ['공인회계사에게 의뢰', '공인회계사 상담', '회계감사를 의뢰'],
   },
+  'accountant-audit': {
+    label: '공인회계사(외부감사)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-audit', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['외부감사 절차 상담', '회계감사 문의'],
+  },
+  'accountant-valuation': {
+    label: '공인회계사(기업가치평가)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-valuation', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['기업가치평가 상담', '스톡옵션 행사가 산정'],
+  },
+  'accountant-internal-control': {
+    label: '공인회계사(내부통제·컴플라이언스)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-internal-control', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['내부통제 설계 상담', '내부회계관리제도'],
+  },
+  'accountant-ifrs': {
+    label: '공인회계사(IFRS·연결재무제표)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-ifrs', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['IFRS 적용 상담', '연결재무제표 작성'],
+  },
+  'accountant-due-diligence': {
+    label: '공인회계사(M&A 실사)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-due-diligence', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['M&A 재무실사 상담', 'Due Diligence'],
+  },
+  'accountant-ipo': {
+    label: '공인회계사(IPO·상장자문)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-ipo', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['IPO 준비 상담', '상장 재무자문'],
+  },
+  'accountant-restructuring': {
+    label: '공인회계사(구조조정·회생 회계자문)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-restructuring', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['구조조정 회계자문', '회생 재무구조 진단'],
+  },
+  'accountant-forensic': {
+    label: '공인회계사(포렌식회계)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-forensic', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['포렌식회계 상담', '회계부정 조사'],
+  },
+  'accountant-nonprofit-public': {
+    label: '공인회계사(비영리·공공기관회계)', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
+    key: 'SP_accountant-nonprofit-public', needsMedicalSafety: false,
+    parentKey: 'accountant', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['비영리법인 회계 상담', '공익법인 결산'],
+  },
   // 2026-07-17 신설(전문가 페르소나 누락 감사 후속) — 개별 금융상품 추천은
   // 하지 않음(자본시장법). kbank/kfinance/kinsurance와 격치는 실행
   // 영역은 해당 GWP로 안내.
@@ -84,6 +138,66 @@ export const CORE_REGISTRY = {
     key: 'SP_patent-attorney', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명. GWP와 충돌 없음
     triggers: ['변리사', '특허 출원', '상표 등록', '특허출원'],
+  },
+  'patent-attorney-mechanical-electrical': {
+    label: '변리사(기계·전기전자)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-mechanical-electrical', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['기계 전기전자 특허 상담', '회로 발명 출원'],
+  },
+  'patent-attorney-chemistry-materials': {
+    label: '변리사(화학·소재)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-chemistry-materials', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['화학 소재 특허 상담', '조성물 발명 출원'],
+  },
+  'patent-attorney-bio-pharma': {
+    label: '변리사(바이오·제약)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-bio-pharma', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['바이오 제약 특허 상담', '물질특허 출원', '용도발명 출원'],
+  },
+  'patent-attorney-it-software': {
+    label: '변리사(IT·소프트웨어)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-it-software', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['소프트웨어 특허 상담', 'BM특허 출원'],
+  },
+  'patent-attorney-trademark': {
+    label: '변리사(상표)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-trademark', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['상표 출원 상담', '상표 유사조사'],
+  },
+  'patent-attorney-design': {
+    label: '변리사(디자인)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-design', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['디자인 출원 상담', '디자인 유사조사'],
+  },
+  'patent-attorney-trial-litigation': {
+    label: '변리사(심판·심결취소소송)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-trial-litigation', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['특허 무효심판', '거절결정불복심판', '심결취소소송'],
+  },
+  'patent-attorney-pct-international': {
+    label: '변리사(PCT·해외출원)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-pct-international', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['PCT 국제출원 상담', '해외 특허출원 전략'],
+  },
+  'patent-attorney-ip-strategy': {
+    label: '변리사(IP전략·특허맵)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-ip-strategy', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['특허맵 분석', 'FTO 조사', 'IP전략 자문'],
+  },
+  'patent-attorney-licensing': {
+    label: '변리사(라이선싱·기술이전계약)', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_patent-attorney-licensing', needsMedicalSafety: false,
+    parentKey: 'patent-attorney', // 2026-08-07 신설(변리사·회계사 세부분야 신설 배치9)
+    triggers: ['특허 라이선싱 상담', '기술이전계약 검토'],
   },
   'customs-broker': {
     label: '관세사', icon: '🛃', category: 'LAW', ownerAgency: 'klaw',
