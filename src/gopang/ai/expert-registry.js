@@ -177,6 +177,48 @@ export const EXPERT_REGISTRY = {
     parentKey: 'lawyer',
     triggers: ['공정거래 전문 변호사', '가맹사업 분쟁'],
   },
+  'lawyer-military': {
+    label: '변호사(군형법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-military', needsMedicalSafety: false,
+    parentKey: 'lawyer', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치3)
+    triggers: ['군형법 상담', '군사법원 변호사'],
+  },
+  'lawyer-juvenile': {
+    label: '변호사(소년법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-juvenile', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['소년법 상담', '소년보호사건 변호사'],
+  },
+  'lawyer-administrative': {
+    label: '변호사(행정법)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-administrative', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['행정법 상담', '행정소송 전문 변호사', '영업정지 이의'],
+  },
+  'lawyer-constitutional': {
+    label: '변호사(헌법재판)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-constitutional', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['헌법소원 상담', '헌법재판 전문 변호사'],
+  },
+  'lawyer-environmental': {
+    label: '변호사(환경)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-environmental', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['환경 전문 변호사', '환경오염 손해배상'],
+  },
+  'lawyer-expropriation': {
+    label: '변호사(수용 및 보상)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-expropriation', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['토지수용 상담', '보상금 소송 변호사'],
+  },
+  'lawyer-foodpharma': {
+    label: '변호사(식품·의약)', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
+    key: 'SP_lawyer-foodpharma', needsMedicalSafety: false,
+    parentKey: 'lawyer',
+    triggers: ['식품 의약 전문 변호사', '제조물책임 소송'],
+  },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
