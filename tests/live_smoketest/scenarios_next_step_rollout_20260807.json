@@ -6,7 +6,8 @@
     "needs_medical_safety": true,
     "has_step_d": true,
     "next_step_tier_hint": "즉시응급 — 행동확인형이어야 함(연결 여부를 묻는 선택형이면 안 됨)",
-    "utterance": "30대 남성인데 갑자기 왼쪽 가슴이 쥐어짜듯이 아프고 왼쪽 팔까지 저려요. 식은땀도 나고요. 5분 전부터 시작됐어요."
+    "utterance": "30대 남성인데 갑자기 왼쪽 가슴이 쥐어짜듯이 아프고 왼쪽 팔까지 저려요. 식은땀도 나고요. 5분 전부터 시작됐어요.",
+    "emergency_bypass": true
   },
   {
     "id": "physician-tier2-today",
