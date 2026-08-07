@@ -123,3 +123,26 @@ python3 expert_persona_smoketest.py --resume
 사람 확인 필요) / `SKIP`(professor·advisor — STEP D 파이프라인 자체가
 없는 별종 페르소나) / `ERROR`(API 호출 실패).
 
+
+## 라우팅 분기 검증 전용 종합 세트 (scenarios_routing_branches_20260806.json)
+
+`scenarios_branch_coverage_20260806.json`(분기당 1건, 11건 — 빠른
+sanity check용)과 별개로, **오직 라우팅 분기 검증만을 목적으로 처음부터
+다시 쓴 34건짜리 세트**입니다. 차이점:
+
+- R1-AC(GWP vs EXPERT)와 확신도 게이트를, AC-PRO-CORE_v1_1.txt가 실사
+  회귀 사례로 명시한 **니치 전문가 7종 전부**(judicial-scrivener·
+  patent-attorney·customs-broker·labor-attorney·real-estate-agent·
+  security-engineer·appraiser)에 대해 "GWP 기본값" 발화와 "EXPERT
+  위임의도" 발화를 쌍으로 만들어 커버합니다 — 같은 도메인이 문맥에
+  따라 어느 쪽으로도 갈 수 있어야 한다는 걸 명시적으로 검증.
+- 확신도 게이트(EXPERT vs EXPERT 타이)도 AC-PRO-CORE 87~89행이 실사로
+  적시한 3개 경계(법무사/변호사, 임상병리사/의사, 치과기공사/
+  치과의사)를 그대로 시나리오화.
+- R2-AC(GWP끼리 충돌)는 kbusiness/ktax 외에 ktax/klogistics(관세)
+  충돌도 추가 — 이건 AC-PRO-CORE 자체가 "둘 다 못 이기면 되묻는다"고
+  명시한 케이스라 expected_id를 ambiguous-short로 잡음(단순 GWP
+  일치 비교가 아니라 되묻기가 정답인 채점).
+
+실행법은 위 branch-coverage 세트와 동일(`--scenarios
+scenarios_routing_branches_20260806.json`으로 파일명만 교체).
