@@ -263,17 +263,138 @@ export const PROFESSOR_REGISTRY = {
     parentKey: 'professor-construction',
     triggers: ['건축학 지도', '건축설계 지도', '건축사 시험 지도'],
   },
-  // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
-  // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
-  // 채운다"고 정해뒀던 것과 SP_civil의 별도 EXPERT 페르소나 구조가
-  // 어긋난다는 것을 재확인 — SP-10_kpublic(kgov) STEP D 상세(v3.14,
-  // "예비 의견 형성")로 흡수하고 이 엔트리는 제거했다. 상세 경위는
-  // prompts/DEPRECATED_SP_civil.txt 참조.
-  // ── advisor 정식 등록 (2026-07-26 결정) ─────────────────────
-  // K-Professor와 같은 구조(법령상 최종승인 강제 없음 — PROFESSIONAL-
-  // common_v2_0.md Q2 기준) — 구매자와 직접 대화하며 가격공정성·구매
-  // 필요성을 평가해 직접 조언한다. K-Market(SP-KMARKET, 라이브 —
-  // 검색·비교·중개만 담당)이 안 하는 평가 기능을 새로 맡는다.
-  // ⚠️ 가격비교용 실제 시장데이터 파이프라인 미구현 — prompts/
-  // SP_advisor_v1_0.md §5 정직 고지 참고.
+  // ── 중계열(2단) 배치3 신설 5개 (의료·보건계열) ──────────────
+  'professor-nursing-series': {
+    label: '교수(간호 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-nursing-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-publichealth-series': {
+    label: '교수(보건 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-publichealth-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-pharmacy-series': {
+    label: '교수(약학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-pharmacy-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-medicine-series': {
+    label: '교수(의료 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-medicine-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-premedical-series': {
+    label: '교수(의료예과 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-premedical-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  // ── 소계열(3단, 리프) 배치3: 의료·보건계열 17개 ──────────────
+  'professor-nursing': {
+    label: '교수(간호학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-nursing', needsMedicalSafety: false,
+    parentKey: 'professor-nursing-series',
+    triggers: ['간호학 지도', '간호사 국가고시 지도'],
+  },
+  'professor-publichealth': {
+    label: '교수(보건학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-publichealth', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['보건학 지도', '역학 지도'],
+  },
+  'professor-rehabilitation': {
+    label: '교수(재활치료)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-rehabilitation', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['물리치료학 지도', '작업치료학 지도'],
+  },
+  'professor-clinicalhealth': {
+    label: '교수(임상보건)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-clinicalhealth', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['임상병리학 지도', '방사선학 지도'],
+  },
+  'professor-healthmgmt': {
+    label: '교수(보건관리)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-healthmgmt', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['병원경영학 지도', '보건행정 지도'],
+  },
+  'professor-skincare': {
+    label: '교수(피부미용)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-skincare', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['피부미용학 지도', '화장품학 지도'],
+  },
+  'professor-animalhealth': {
+    label: '교수(동물보건)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-animalhealth', needsMedicalSafety: false,
+    parentKey: 'professor-publichealth-series',
+    triggers: ['동물보건사 지도', '동물간호학 지도'],
+  },
+  'professor-pharmacy': {
+    label: '교수(약학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-pharmacy', needsMedicalSafety: false,
+    parentKey: 'professor-pharmacy-series',
+    triggers: ['약학 지도', '약사 국가고시 지도'],
+  },
+  'professor-herbalpharmacy': {
+    label: '교수(한약학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-herbalpharmacy', needsMedicalSafety: false,
+    parentKey: 'professor-pharmacy-series',
+    triggers: ['한약학 지도', '본초학 지도'],
+  },
+  'professor-veterinary': {
+    label: '교수(수의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-veterinary', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: ['수의학 지도', '수의사 국가고시 지도'],
+  },
+  'professor-medicine': {
+    label: '교수(의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-medicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: ['의학 본과 지도', '의사 국가고시 지도'],
+  },
+  'professor-dentistry-academic': {
+    label: '교수(치의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dentistry-academic', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: ['치의학 본과 지도', '치과의사 국가고시 지도'],
+  },
+  'professor-koreanmedicine': {
+    label: '교수(한의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-koreanmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: ['한의학 본과 지도', '한의사 국가고시 지도'],
+  },
+  'professor-premed': {
+    label: '교수(의예과)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-premed', needsMedicalSafety: false,
+    parentKey: 'professor-premedical-series',
+    triggers: ['의예과 지도', '의대 편입 지도'],
+  },
+  'professor-predental': {
+    label: '교수(치의예과)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-predental', needsMedicalSafety: false,
+    parentKey: 'professor-premedical-series',
+    triggers: ['치의예과 지도', '치의학전문대학원 편입 지도'],
+  },
+  'professor-prekoreanmed': {
+    label: '교수(한의예과)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-prekoreanmed', needsMedicalSafety: false,
+    parentKey: 'professor-premedical-series',
+    triggers: ['한의예과 지도', '한의학전문대학원 편입 지도'],
+  },
+  'professor-prevet': {
+    label: '교수(수의예과)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-prevet', needsMedicalSafety: false,
+    parentKey: 'professor-premedical-series',
+    triggers: ['수의예과 지도', '수의학과 편입 지도'],
+  },
 };
