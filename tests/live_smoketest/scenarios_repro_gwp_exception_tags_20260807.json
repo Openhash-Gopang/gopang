@@ -1,0 +1,402 @@
+[
+  {
+    "no": 1,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 2,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 3,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 4,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 5,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 6,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 7,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 8,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 9,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 10,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 11,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 12,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 13,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 14,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 15,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 16,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 17,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 18,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 19,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 20,
+    "utterance": "제주도에 나온 원룸 매물 좀 찾아주세요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "재현성 확인(§TAGS kestate 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9115)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: kestate]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 21,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 22,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 23,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 24,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 25,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 26,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 27,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 28,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 29,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 30,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 31,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 32,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 33,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 34,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 35,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 36,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 37,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 38,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 39,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  },
+  {
+    "no": 40,
+    "utterance": "휴대폰 요금제를 좀 저렴한 걸로 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "재현성 확인(§TAGS ktelecom 예외 위반 반복 시행)",
+    "static_verdict": "PASS",
+    "basis": "2026-08-07 신설 — 2026-08-06 라이브런(scenarios_routing_branches_20260806.json no=9129)에서 §TAGS 680행 예외([CALL_KESTATE:]/[CALL_KTELECOM:] 대신 [GWP: ktelecom]로 새는 문제, 2026-08-01에 이미 한 번 발견·경고문 추가됐던 바로 그 실패 패턴)가 재발한 걸 1회 관찰. temperature=0에서 결정적으로 재현되는지, 아니면 이번 1회만의 변동이었는지 §0-2 방식으로 20회 반복해 확인한다. (live_smoketest.py는 이미 이 두 id에 대해 expected_type='GWP'인 채로 CALL_KESTATE_TAG_RE/CALL_KTELECOM_TAG_RE로 분기하는 로직을 2026-08-01부터 갖고 있어— 별도 하네스 수정 불필요, 기존 필드 그대로 재사용)"
+  }
+]
