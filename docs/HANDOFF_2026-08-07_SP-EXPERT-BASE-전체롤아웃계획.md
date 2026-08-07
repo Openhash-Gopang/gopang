@@ -213,12 +213,16 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
 | speech-language-pathologist | 언어재활사 | 동일(v1.4→v1.5) |
 | optician | 안경사 | 동일(v1.4→v1.5) |
 
-**5-C (needsMedicalSafety 아님)**
+**5-C (needsMedicalSafety 아님) — ✅ 완료(2026-08-07) — 배치5 전체 완료**
 
-| id | 라벨 |
-|---|---|
-| sanitarian | 위생사 |
-| health-educator | 보건교육사 |
+| id | 라벨 | 실제 결과 |
+|---|---|---|
+| sanitarian | 위생사 | 위험고지 기존 정상(v1.4), NEXT_STEP만 추가(→v1.5) |
+| health-educator | 보건교육사 | 동일(v1.4→v1.5) |
+
+**HEALTH 20개 총평**: physician(부모 SP, 등급별 NEXT_STEP)·paramedic(평시/
+응급 이원구조) 2건만 구조적으로 다르게 처리했고, 나머지 18개는 기존에
+위험고지·STEP R·L2/L3가 전부 정비돼 있어 NEXT_STEP 반영이 유일한 작업이었다.
 
 ### 배치 6 — 나머지 독립 자격 7개 (그룹핑은 편의상, 서로 무관)
 
