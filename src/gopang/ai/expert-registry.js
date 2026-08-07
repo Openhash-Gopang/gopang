@@ -378,6 +378,30 @@ export const EXPERT_REGISTRY = {
     parentKey: 'physician',
     triggers: ['마취통증의학과 상담', '통증클리닉 상담', '마취과 전문의'],
   },
+  'physician-ophthalmology': {
+    label: '의사(안과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-ophthalmology', needsMedicalSafety: true,
+    parentKey: 'physician', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치5, 의사 배치3)
+    triggers: ['안과 상담', '안과 전문의'],
+  },
+  'physician-ent': {
+    label: '의사(이비인후과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-ent', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['이비인후과 상담', '이비인후과 전문의'],
+  },
+  'physician-dermatology': {
+    label: '의사(피부과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-dermatology', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['피부과 상담', '피부과 전문의'],
+  },
+  'physician-urology': {
+    label: '의사(비뇨의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-urology', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['비뇨의학과 상담', '비뇨기과 상담', '비뇨의학과 전문의'],
+  },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dentist', needsMedicalSafety: true,

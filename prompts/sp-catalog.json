@@ -97,7 +97,7 @@
   "SP_patent-attorney": "SP_patent-attorney_v1_6.md",
   "SP_pharmacist": "SP_pharmacist_v1_9.md",
   "SP_physical-therapist": "SP_physical-therapist_v3_9.md",
-  "SP_physician": "SP_physician_v2_2.md",
+  "SP_physician": "SP_physician_v2_3.md",
   "SP_physician-internal-medicine": "SP_physician-internal-medicine_v1_0.md",
   "SP_physician-neurology": "SP_physician-neurology_v1_0.md",
   "SP_physician-obgyn": "SP_physician-obgyn_v1_0.md",
@@ -237,5 +237,9 @@
   "SP_physician-orthopedics": "SP_physician-orthopedics_v1_0.md",
   "SP_physician-cardiothoracic": "SP_physician-cardiothoracic_v1_0.md",
   "SP_physician-plastic": "SP_physician-plastic_v1_0.md",
-  "SP_physician-anesthesiology": "SP_physician-anesthesiology_v1_0.md"
+  "SP_physician-anesthesiology": "SP_physician-anesthesiology_v1_0.md",
+  "SP_physician-ophthalmology": "SP_physician-ophthalmology_v1_0.md",
+  "SP_physician-ent": "SP_physician-ent_v1_0.md",
+  "SP_physician-dermatology": "SP_physician-dermatology_v1_0.md",
+  "SP_physician-urology": "SP_physician-urology_v1_0.md"
 }
