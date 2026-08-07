@@ -354,6 +354,30 @@ export const EXPERT_REGISTRY = {
     parentKey: 'physician',
     triggers: ['응급의학과 상담', '응급실 전문의'],
   },
+  'physician-orthopedics': {
+    label: '의사(정형외과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-orthopedics', needsMedicalSafety: true,
+    parentKey: 'physician', // 2026-08-07 신설(의사·변호사 세부분야 대폭확장 배치4, 의사 배치2)
+    triggers: ['정형외과 상담', '정형외과 전문의'],
+  },
+  'physician-cardiothoracic': {
+    label: '의사(심장혈관흉부외과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-cardiothoracic', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['심장혈관흉부외과 상담', '흉부외과 전문의', '심장수술 상담'],
+  },
+  'physician-plastic': {
+    label: '의사(성형외과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-plastic', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['성형외과 상담', '성형외과 전문의'],
+  },
+  'physician-anesthesiology': {
+    label: '의사(마취통증의학과)', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
+    key: 'SP_physician-anesthesiology', needsMedicalSafety: true,
+    parentKey: 'physician',
+    triggers: ['마취통증의학과 상담', '통증클리닉 상담', '마취과 전문의'],
+  },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dentist', needsMedicalSafety: true,
