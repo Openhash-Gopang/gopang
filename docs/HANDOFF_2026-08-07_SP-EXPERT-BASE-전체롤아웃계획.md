@@ -224,17 +224,34 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
 응급 이원구조) 2건만 구조적으로 다르게 처리했고, 나머지 18개는 기존에
 위험고지·STEP R·L2/L3가 전부 정비돼 있어 NEXT_STEP 반영이 유일한 작업이었다.
 
-### 배치 6 — 나머지 독립 자격 7개 (그룹핑은 편의상, 서로 무관)
+### 배치 6 — 나머지 독립 자격 7개 — ✅ 완료(2026-08-07) — **58개 배치 전체 완료**
 
-| id | 라벨 | 카테고리 |
+| id | 라벨 | 실제 결과 |
 |---|---|---|
-| security-engineer | 정보보안전문가 | IT |
-| real-estate-agent | 공인중개사 | REAL_ESTATE — v1.x 이력에서 GWP:kestate와의 경계 문제로 트리거 재조정 이력 있음, 그 문맥 먼저 확인 |
-| sports-instructor | 생활스포츠지도사 | SPORTS, needsMedicalSafety |
-| tour-guide | 관광통역안내사 | TOURISM |
-| translator-interpreter | 통역사·번역사 | TRANSLATION |
-| hairdresser | 미용사 | BEAUTY |
-| chef | 조리사 | CULINARY |
+| security-engineer | 정보보안전문가 | STEP D·위험고지 기존 정상, NEXT_STEP만 추가(v1.6→v1.7) |
+| real-estate-agent | 공인중개사 | 구조 정상 확인(GWP:kestate 경계 문제는 이미 해소된 상태) — NEXT_STEP만 추가(v1.8→v1.9) |
+| sports-instructor | 생활스포츠지도사 | 동일(v1.5→v1.6) |
+| tour-guide | 관광통역안내사 | 동일(v1.6→v1.7) |
+| translator-interpreter | 통역사·번역사 | 동일(v1.7→v1.8) |
+| hairdresser | 미용사 | 동일(v1.6→v1.7) |
+| chef | 조리사 | 동일(v1.6→v1.7) |
+
+---
+
+## 총괄 — 62개 전체 롤아웃 완료 요약
+
+- **§6 코드**: `SP_EXPERT_BASE` 조립 로직 + `parentKey` 재귀 상속 + 3단초과
+  방어, 신규 테스트 6/6 통과, 기존 스위트 회귀 없음.
+- **58개 페르소나**: 전원 `[NEXT_STEP:]` 반영. 그 과정에서 실제로 발견·
+  수정한 구조적 결함: LAW-04~07·재무설계사(2026-07-17 동일 세션 생성분
+  5개) 위험고지 누락, professor의 낡은 미등록 문구, EDU-04 코드 중복
+  (미수정·기록만), paramedic의 평시/응급 이원구조 확인, physician의
+  위험도 등급별 NEXT_STEP 차등화.
+- **advisor·professor**: STEP D가 원래 없는 "K-Professor 계열"이라는
+  구조적 차이를 발견 — §5(세부분야 착수) 시 이 차이를 다시 참고할 것.
+- **미착수 잔여 작업**: §7 순서 3번(4개 소스 페르소나를 EXPERT_BASE
+  참조형으로 축약), §5 세부분야 실제 착수(physician→내과/외과/신경과,
+  professor→반도체/법학/경제학).
 
 ---
 
