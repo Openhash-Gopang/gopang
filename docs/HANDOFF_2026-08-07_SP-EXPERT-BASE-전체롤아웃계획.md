@@ -191,27 +191,27 @@ IDENTITY 본문에서 직접 "K-Advisor는 K-Professor와 같은 구조"라고 �
 |---|---|---|
 | physician | 의사 | v1.8(2026-08-06 HEALTH 그룹 사고실험서 "기능적 결함 없음" 확인됨)→v1.9. NEXT_STEP을 다른 배치처럼 획일화하지 않고 STEP A-3 위험도 층화 등급별(즉시응급=행동확인형/그 외=선택형)로 구분해 반영 — HT-3·미래 부모 SP라는 특수성 때문에 유일하게 이렇게 처리 |
 
-**5-B (의료 전문직, needsMedicalSafety 전원)**
+**5-B (의료 전문직, needsMedicalSafety 전원) — ✅ 완료(2026-08-07)**
 
-| id | 라벨 |
-|---|---|
-| dentist | 치과의사 |
-| traditional-medicine-doctor | 한의사 |
-| pharmacist | 약사 |
-| veterinarian | 수의사 |
-| nurse | 간호사 (v1.6 changelog에서 C44 두 번째 반영 사례로 이미 언급 — 검증도 확인) |
-| physical-therapist | 물리치료사 |
-| medical-lab-technologist | 임상병리사 |
-| radiologic-technologist | 방사선사 |
-| dental-hygienist | 치과위생사 |
-| occupational-therapist | 작업치료사 |
-| dental-technician | 치과기공사 |
-| advanced-practice-nurse | 전문간호사 |
-| dietitian | 영양사 |
-| paramedic | 응급구조사 — 응급 트리아지 게이트 유무 최우선 확인(C41 v3.7 changelog에서 예시로 이미 physician과 함께 언급됨) |
-| midwife | 조산사 |
-| speech-language-pathologist | 언어재활사 |
-| optician | 안경사 |
+| id | 라벨 | 실제 결과 |
+|---|---|---|
+| dentist | 치과의사 | STEP D·위험고지 기존 정상, NEXT_STEP만 추가(v1.8→v1.9) |
+| traditional-medicine-doctor | 한의사 | 동일(v1.8→v1.9) |
+| pharmacist | 약사 | 동일(v1.8→v1.9) |
+| veterinarian | 수의사 | 동일(v3.0→v3.1) |
+| nurse | 간호사 | 동일(v3.6→v3.7) |
+| physical-therapist | 물리치료사 | 동일(v3.8→v3.9) |
+| medical-lab-technologist | 임상병리사 | 동일(v3.8→v3.9) |
+| radiologic-technologist | 방사선사 | 동일(v3.8→v3.9) |
+| dental-hygienist | 치과위생사 | 동일(v3.8→v3.9) |
+| occupational-therapist | 작업치료사 | 동일(v3.8→v3.9) |
+| dental-technician | 치과기공사 | 동일(v3.8→v3.9) |
+| advanced-practice-nurse | 전문간호사 | 동일(v3.8→v3.9) |
+| dietitian | 영양사 | 동일(v3.8→v3.9) |
+| paramedic | 응급구조사 | **STEP D가 "평시 설명에 한함"으로 범위 한정된 특수 구조** — 실제 응급 시엔 STEP D 대신 즉시 `[ESCALATE_URGENT]`+119 안내로 전환. NEXT_STEP도 "응급처치교육기관 연결"로 그 범위에 맞게 작성(v1.4→v1.5) |
+| midwife | 조산사 | 동일(v1.4→v1.5) |
+| speech-language-pathologist | 언어재활사 | 동일(v1.4→v1.5) |
+| optician | 안경사 | 동일(v1.4→v1.5) |
 
 **5-C (needsMedicalSafety 아님)**
 
