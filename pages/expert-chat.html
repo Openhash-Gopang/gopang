@@ -77,7 +77,7 @@
 
 <script type="module">
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY,
-         COMMON_MEDICAL_SAFETY_KEY, resolveExpertId }
+         COMMON_MEDICAL_SAFETY_KEY, EXPERT_BASE_KEY, resolveExpertId }
   from '/src/gopang/ai/expert-registry.js';
 // 2026-07-09: fetch(하드코딩 URL) 직접 호출 -> _loadSpByKey(manifest 키)로
 // 전환. 이 페이지가 실제 EXPERT 페르소나 라이브 경로다.
@@ -216,6 +216,33 @@ async function composeExpertPrompt() {
   if (def.needsMedicalSafety) {
     parts.push(await _loadSpRawByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈')
       .catch(e => { throw new Error('의료 안전모듈 로드 실패: ' + e.message); }));
+  }
+
+  // 2026-08-07 신설(발견된 이원화 결함 보정) — expert-session.js의
+  // _composeExpertPrompt()가 SP_EXPERT_BASE 신설(§6-2) 이후로 EXPERT_BASE·
+  // parentKey 재귀 상속을 갖추게 됐는데, 이 페이지는 그 함수를 쓰지 않고
+  // 독립 구현을 유지해온 탓에(위 2026-08-06 주석 참조) 둘 다 반영되지
+  // 않은 채 몇 주간 방치돼 있었다 — 실제 사용자가 상담하는 라이브
+  // 페이지가 EXPERT_BASE 골격 없이 구동되고 있었다는 뜻이다. 아래 두
+  // 블록을 추가해 격차를 메운다. 이 함수 특유의 "실패 시 즉시 throw"
+  // 패턴(_composeExpertPrompt()의 "실패해도 console.warn만 남기고 계속
+  // 진행" 패턴과 의도적으로 다름 — 위 2026-08-06 주석이 그 이유를 이미
+  // 설명하고 있다)은 그대로 유지한다.
+  parts.push(await _loadSpRawByKey(EXPERT_BASE_KEY, 'EXPERT_BASE')
+    .catch(e => { throw new Error('EXPERT_BASE 로드 실패: ' + e.message); }));
+
+  if (def.parentKey) {
+    const parentDef = EXPERT_REGISTRY[def.parentKey];
+    if (!parentDef) {
+      throw new Error(`parentKey 미등록: ${def.parentKey} (${def.label})`);
+    }
+    if (parentDef.parentKey) {
+      console.warn(`[Expert] 부모 SP(${def.parentKey})가 또 parentKey를 가짐 — ` +
+        `SP_EXPERT_BASE §5는 3단(EXPERT_BASE→부모→자식)까지만 규정. 2단째 부모 로드는 건너뜀.`);
+    } else {
+      parts.push(await _loadSpRawByKey(parentDef.key, `${parentDef.label}(부모 SP)`)
+        .catch(e => { throw new Error(`부모 SP(${parentDef.label}) 로드 실패: ` + e.message); }));
+    }
   }
 
   parts.push(await _loadSpRawByKey(def.key, def.label)
