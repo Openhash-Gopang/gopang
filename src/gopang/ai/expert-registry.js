@@ -583,8 +583,50 @@ export const EXPERT_REGISTRY = {
     label: '교수(반도체공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-semiconductor', needsMedicalSafety: false,
     parentKey: 'professor', // 2026-08-07 신설(SP_EXPERT_BASE §5 세부분야 착수)
+    // 2026-08-08 참고: 정부 표준분류체계(공공데이터포털 API 원문)상
+    // 반도체공학(093)은 중계열 D-18 "재료" 소속이지만, 표준분류체계
+    // 3단 계층화 배치1(언어·문학/인문학/사회과학/화학생명과학환경/
+    // 수학물리천문지구)에 재료 중계열은 아직 없어 professor 직속으로
+    // 유지한다 — 재료 중계열 신설 시 재소속 검토.
     triggers: ['반도체공학 지도', '반도체 교수'],
   },
+  // ── 중계열(2단, professor의 자식이자 소계열의 부모) — 2026-08-08
+  // 신설(표준분류체계 3단 계층화 배치1, N단 재귀 조립 §6-4 개정 첫
+  // 실사용). 공공데이터포털 「한국대학교육협의회_대학 학과 정보」API
+  // 원문(2025년) 기준 대계열/중계열/소계열 코드를 그대로 따른다.
+  'professor-language-literature': {
+    label: '교수(언어·문학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-language-literature', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-humanities': {
+    label: '교수(인문학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-humanities', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-socialscience': {
+    label: '교수(사회과학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-socialscience', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-chembio': {
+    label: '교수(화학·생명과학·환경 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-chembio', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  'professor-mathphys': {
+    label: '교수(수학·물리·천문·지구 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-mathphys', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [],
+  },
+  // ── 경영·경제(03)/법학(04) 중계열은 배치1 범위 밖이라 아직 신설
+  // 안 함 — 그래서 law/economics는 잠정적으로 professor 직속 유지
+  // (배치에서 경영·경제/법학 중계열을 만들 때 재소속 예정).
   'professor-law': {
     label: '교수(법학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-law', needsMedicalSafety: false,
@@ -596,6 +638,86 @@ export const EXPERT_REGISTRY = {
     key: 'SP_professor-economics', needsMedicalSafety: false,
     parentKey: 'professor',
     triggers: ['경제학 지도', '경제학 교수'],
+  },
+  // ── 소계열(3단, 리프) — 배치1: 수능 5개 교과(국어/수학/영어/한국사/
+  // 탐구) 대응 핵심 13개. 표준분류체계 코드는 각 SP 파일 헤더 참고.
+  'professor-korean': {
+    label: '교수(국어·국문학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-korean', needsMedicalSafety: false,
+    parentKey: 'professor-language-literature',
+    triggers: ['국어 지도', '국문학 지도', '국어 교수'],
+  },
+  'professor-english': {
+    label: '교수(영어·영문학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-english', needsMedicalSafety: false,
+    parentKey: 'professor-language-literature',
+    triggers: ['영어 지도', '영문학 지도', '영어 교수', '토플 지도', '아이엘츠 지도'],
+  },
+  'professor-history': {
+    label: '교수(역사·고고학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-history', needsMedicalSafety: false,
+    parentKey: 'professor-humanities',
+    triggers: ['한국사 지도', '세계사 지도', '역사 교수', '고고학 지도'],
+  },
+  'professor-ethics': {
+    label: '교수(철학·윤리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-ethics', needsMedicalSafety: false,
+    parentKey: 'professor-humanities',
+    triggers: ['철학 지도', '윤리 지도', '생활과 윤리 지도', '윤리와 사상 지도'],
+  },
+  'professor-politics': {
+    label: '교수(정치외교학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-politics', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: ['정치와 법 지도', '정치외교학 지도', '국제관계 지도'],
+  },
+  'professor-sociology': {
+    label: '교수(사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-sociology', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: ['사회문화 지도', '사회학 지도'],
+  },
+  'professor-geography': {
+    label: '교수(도시·지역·지리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-geography', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: ['한국지리 지도', '세계지리 지도', '지리학 지도', '도시지리 지도'],
+  },
+  'professor-physics': {
+    label: '교수(물리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-physics', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: ['물리학 지도', '물리 교수'],
+  },
+  'professor-chemistry': {
+    label: '교수(화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-chemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chembio',
+    triggers: ['화학 지도', '화학 교수'],
+  },
+  'professor-biology': {
+    label: '교수(생명과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biology', needsMedicalSafety: false,
+    parentKey: 'professor-chembio',
+    triggers: ['생명과학 지도', '생물 교수'],
+  },
+  'professor-earthscience': {
+    label: '교수(지구·지질학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-earthscience', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: ['지구과학 지도', '지질학 지도'],
+  },
+  'professor-math': {
+    label: '교수(수학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-math', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: ['수학 지도', '수학 교수'],
+  },
+  'professor-statistics': {
+    label: '교수(통계학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-statistics', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: ['통계학 지도', '확률과 통계 지도'],
   },
   // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
   // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
