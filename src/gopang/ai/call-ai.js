@@ -3312,13 +3312,23 @@ function _setSendBtnGenerating(active) {
 // 인자를 스레딩할 필요가 없다. bubble.js의 setBubbleTarget 주석 참고.
 export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null, bubbleTarget = null) {
   if (bubbleTarget) setBubbleTarget(bubbleTarget);
-  _currentAbort = new AbortController();
+  // 2026-08-07 신설 — 지역 변수로 스냅샷을 잡아둔다. kestate/ktelecom
+  // switch-type 자동복구(4262행 근처 fire-and-forget IIFE)처럼 이 callAI
+  // 실행 도중 또 다른 callAI()가 재귀 호출되면, 바깥쪽의 이 finally가
+  // 안쪽 호출이 막 세팅한 _currentAbort를 지워버릴 수 있다 — 코드 자체에
+  // 이미 "미검증 잔여 리스크"로 남겨져 있던 문제(주석 참고). 아래
+  // compare-and-clear로 막는다: 자신이 만든 AbortController가 아직도
+  // 현재 값일 때만 정리한다.
+  const myAbort = new AbortController();
+  _currentAbort = myAbort;
   _setSendBtnGenerating(true);
   try {
     await _callAIInner(userText, imageFile, _preTab, modelTier, onFailure);
   } finally {
     _setSendBtnGenerating(false);
-    _currentAbort = null;
+    if (_currentAbort === myAbort) {
+      _currentAbort = null;
+    }
   }
 }
 
@@ -4235,16 +4245,21 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         // 모듈 스코프에 이미 있어(callAI는 함수 선언이라 호이스팅됨,
         // history는 20행에서 import) 별도 인자 전달 없이 참조 가능하다.
         //
-        // ⚠ 미검증 잔여 리스크(실제 브라우저에서 확인 필요) — 이 IIFE 안의
-        // await callAI(...)는 지금 이 _parseAgentTags를 호출한 "바깥"
-        // callAI()가 아직 finally에서 _currentAbort/전송버튼 상태를
-        // 정리하기 전에 시작될 수도, 그 이후에 시작될 수도 있다(await
-        // _forwardSwitchSP 지연에 따라 달라짐). 최악의 경우 두 callAI
-        // 실행이 짧게 겹치며 _currentAbort를 서로 덮어써 "정지" 버튼이
-        // 잘못된 스트림을 가리킬 수 있다 — 데이터 손상은 아니고 UX
-        // 엣지케이스이지만, 라이브(실제 배포 환경 또는 Claude Code)에서
-        // "[GWP: ktelecom]" 같은 구문법 오출력을 실제로 유도해 정지
-        // 버튼/스트리밍 상태가 꼬이지 않는지 반드시 확인할 것.
+        // ✅ 2026-08-07 해소 — 아래 이 IIFE 안의 await callAI(...)는
+        // 지금 이 _parseAgentTags를 호출한 "바깥" callAI()가 아직
+        // finally에서 _currentAbort/전송버튼 상태를 정리하기 전에
+        // 시작될 수도, 그 이후에 시작될 수도 있어(await _forwardSwitchSP
+        // 지연에 따라 달라짐) 두 callAI 실행이 짧게 겹치며 _currentAbort를
+        // 서로 덮어쓸 리스크가 있었다 — "정지" 버튼이 잘못된 스트림을
+        // 가리킬 수 있는 UX 엣지케이스. live_smoketest 재현 배치
+        // (scenarios_repro_gwp_exception_tags_20260807.json, kestate/
+        // ktelecom 각 20회 반복해서 이 자동복구 분기가 100% 결정론적으로
+        // 타는 걸 확인)를 계기로 재검토, callAI() 자체를 compare-and-clear
+        // 패턴(3313행 근처, myAbort 지역변수)으로 고쳐 정적으로 해소했다
+        // — 각 callAI 호출이 "자신이 만든" AbortController일 때만 정리해
+        // 서로 덮어쓸 수 없다. 그래도 실제 스트리밍/정지 버튼 UX가 기대대로
+        // 되는지는 실배포 환경에서 한 번은 수동 확인 권장(이 하네스는
+        // DOM/fetch가 최소 스텁이라 실제 스트림 타이밍까지는 검증 못 함).
         const label = { ktelecom: 'K-Telecom', kestate: 'K-Estate', kbank: 'K-Bank' }[svcId];
         const loader = SWITCH_SP_LOADERS[svcId];
         if (_gwpSwitchRecoveryInFlight) {
