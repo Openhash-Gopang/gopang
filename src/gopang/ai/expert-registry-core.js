@@ -235,6 +235,19 @@ export const CORE_REGISTRY = {
   // 설계했다(2026-07-26 확정). 세션 데이터는 동의 하에 K-School의 이중
   // PDV 소스 중 두 번째 소스(교수 페르소나 실제 평가)로 집계에 쓰일 수
   // 있다 — school/docs/K_SCHOOL_PUBLIC_EDUCATION_DATA_SYSTEM_v1_0.md §2.2 참고.
+  // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
+  // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
+  // 채운다"고 정해뒀던 것과 SP_civil의 별도 EXPERT 페르소나 구조가
+  // 어긋난다는 것을 재확인 — SP-10_kpublic(kgov) STEP D 상세(v3.14,
+  // "예비 의견 형성")로 흡수하고 이 엔트리는 제거했다. 상세 경위는
+  // prompts/DEPRECATED_SP_civil.txt 참조.
+  // ── advisor 정식 등록 (2026-07-26 결정) ─────────────────────
+  // K-Professor와 같은 구조(법령상 최종승인 강제 없음 — PROFESSIONAL-
+  // common_v2_0.md Q2 기준) — 구매자와 직접 대화하며 가격공정성·구매
+  // 필요성을 평가해 직접 조언한다. K-Market(SP-KMARKET, 라이브 —
+  // 검색·비교·중개만 담당)이 안 하는 평가 기능을 새로 맡는다.
+  // ⚠️ 가격비교용 실제 시장데이터 파이프라인 미구현 — prompts/
+  // SP_advisor_v1_0.md §5 정직 고지 참고.
   advisor: {
     label: '구매자문(K-Advisor)', icon: '🔍', category: 'FIN', ownerAgency: 'kcommerce',
     key: 'SP_advisor', needsMedicalSafety: false,
