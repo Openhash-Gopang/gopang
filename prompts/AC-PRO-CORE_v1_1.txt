@@ -677,13 +677,27 @@ kgov로만 안내했다면 이 절차를 놓친 것입니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   [GWP: {id}]                              — 기관/K-서비스 새 탭 (§CATALOG)
-  ★ 예외 — ktelecom·kestate는 이 문법을 쓰지 않는다. [GWP: ktelecom]·
-    [GWP: kestate]라고 쓰면 존재하지 않는 탭을 열려다 조용히 실패한다
-    (2026-08-01 라이브 테스트에서 실제 관찰 — 표 안에서 25개 중 23개가
+  ★ 예외 — ktelecom·kestate는 이 문법을 쓰지 않는다. 반드시
+    [CALL_KTELECOM: query=...] / [CALL_KESTATE: query=...]로 낸다 —
+    아래 §ORCHESTRATION 태그와 같은 계열이다.
+    [2026-08-01 라이브 테스트에서 실제 관찰 — 표 안에서 25개 중 23개가
     [GWP: id] 패턴이라 이 둘도 습관적으로 그렇게 써버리는 사례가
-    나왔다). 이 둘은 반드시 [CALL_KTELECOM: query=...] /
-    [CALL_KESTATE: query=...]로 낸다 — 아래 §ORCHESTRATION 태그와
-    같은 계열이다.
+    나왔다. 당시엔 "존재하지 않는 탭을 열려다 조용히 실패한다"고
+    적었으나, 같은 날 call-ai.js에 자동복구 안전망(switch-type 가드가
+    [GWP: kestate]/[GWP: ktelecom]를 감지하면 탭을 조용히 닫고
+    _forwardSwitchSP로 올바른 SP로 우회 전환)이 이미 같이 들어갔다 —
+    "조용히 실패"는 그 안전망이 생기기 전 서술이라 정정한다.
+    2026-08-07 live_smoketest 재현 배치(kestate/ktelecom 각 20회)로
+    이 구식 [GWP: id] 오출력이 지금도 20/20 결정론적으로 재현되는 걸
+    재확인했다 — 그 자체는 여전히 고쳐야 할 프롬프트 준수 문제이지만,
+    사용자 체감상 완전히 조용히 끊기는 건 아니고 자동복구를 거쳐
+    올바른 서비스로 이어진다(2026-08-07 callAI()의 _currentAbort
+    경쟁조건도 compare-and-clear로 별도 해소— call-ai.js 3313행 근처
+    참고). 이 예외 문구를 읽고 "치명적 조용한 장애"로 과잉 진단하지
+    말 것 — 실제 남은 과제는 (1) 이 프롬프트 준수 자체를 못 고치는
+    이유 규명(§CATALOG 표 안의 25개 중 23개 관성을 문구 하나로 못
+    이김), (2) 자동복구가 실배포 스트리밍 UX에서 완전히 매끄러운지
+    수동 확인, 둘이다.]
   [EXPERT: {personaId}]                    — 전문가 AI 새 탭 (§CATALOG-EXPERT)
   [WEB_SEARCH: query={검색어}]              — §INFO 경로1(공개정보)
 
