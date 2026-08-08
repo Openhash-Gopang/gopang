@@ -1,0 +1,78 @@
+name: Subject Gate Live Smoketest (DeepSeek, 2단계 과목 게이트)
+
+# 2026-08-08 신설 — 기존 live-smoketest.yml은 live_smoketest.py 하나만
+# 돌리는데, 이 스크립트가 기대하는 시나리오 스키마는
+# {no, utterance, expected_type, expected_id}다. subject-gate.js의
+# 2단계 리프 정밀화 시나리오(scenarios_subject_gate_stage2_*.json)는
+# 스키마가 {id, root_id, utterance, expected_leaf_id}로 완전히 다르고
+# 별도 하네스(subject_gate_live_smoketest.py)가 필요해서, 기존
+# 워크플로에 얹으면 KeyError('no')로 죽는다 — 실제로 발생 확인됨.
+# 그래서 별도 워크플로로 분리한다. 1단계(상위 EXPERT id 라우팅)
+# 시나리오는 기존 live-smoketest.yml에서 그대로 돌리면 된다(스키마 호환).
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Debug: only run first N scenarios (blank = all in file)"
+        required: false
+        default: ""
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_subject_gate_stage2_20260808.json)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-subject-gate-live-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run subject gate live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_subject_gate_stage2_20260808.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "scenarios=$SCEN out=$OUT"
+          ARGS="--scenarios $SCEN --out $OUT --resume"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python3 subject_gate_live_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: subject gate live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest
+
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: subject-gate-live-smoketest-results
+          path: results/
