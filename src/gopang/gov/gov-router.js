@@ -38,8 +38,28 @@
  * 어려워진다.
  */
 
-const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/';
-const _RAW_ROOT = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
+// ── 2026-08-08 신설 — province별 SP 콘텐츠 저장소 분리 대비(하이브리드
+// 구조: 허브(gopang)=공용 템플릿·스키마·매니페스트, 위성(도별 저장소)=
+// 그 도의 institution-tier SP 본문). ★ 순서 주의 — 이 함수/헬퍼들은
+// "능력"만 추가한다. 실제로 어떤 도가 위성 저장소를 쓰는지는
+// PROVINCE_TABLES[도코드].repo 필드로만 결정되고, 아래 어떤 도 항목에도
+// 아직 이 필드를 채우지 않았다(2026-08-08 기준). 채우는 순간 그 도의
+// institution 파일 fetch가 즉시 해당 저장소로 넘어가므로, 데이터 이관
+// (prompts/gov-tree/** 실제 파일 이동)이 끝나기 *전에* 채우면 프로덕션에서
+// 조용히 404가 난다 — repo 필드를 채우는 커밋과 데이터 이관 완료 확인은
+// 반드시 순서를 맞출 것(마이그레이션 계획서 Phase 4 참조).
+const _DEFAULT_REPO = 'Openhash-Gopang/gopang';
+function _rawBase(repo) {
+  return `https://raw.githubusercontent.com/${repo || _DEFAULT_REPO}/main`;
+}
+// 지금 발화가 귀속된 도의 위성 저장소(있으면)를 반환 — 없으면 null이라
+// _fetchText()가 자동으로 허브(gopang)로 폴백한다.
+function _currentProvinceRepo() {
+  return PROVINCE_TABLES[_currentResolvedProvinceCode]?.repo || null;
+}
+
+const _RAW = _rawBase(_DEFAULT_REPO) + '/prompts/gov-tree/';
+const _RAW_ROOT = _rawBase(_DEFAULT_REPO) + '/prompts/';
 
 // ── 과/팀(division) 단위 키워드 테이블 (2026-08-02 재구현) ────────────
 // 국(局)/부서까지는 특정됐는데 그 산하 몇 개 과/팀 중 어디인지 애매한
@@ -58,8 +78,11 @@ const _govCommonByProvince = new Map();
 const _doSpCacheByProvince = new Map();
 const _nationalSpCacheByProvince = new Map();
 
-async function _fetchText(path) {
-  const r = await fetch(_RAW + path + '?t=' + Math.floor(Date.now() / 3600000)); // 1시간 캐시 버스팅
+// repo(예: 'Openhash-Gopang/jejudo')를 넘기면 그 저장소의 prompts/gov-tree/
+// 에서, 안 넘기면(대부분의 호출부) 기존처럼 허브(gopang)에서 읽는다.
+async function _fetchText(path, repo = null) {
+  const base = repo ? _rawBase(repo) + '/prompts/gov-tree/' : _RAW;
+  const r = await fetch(base + path + '?t=' + Math.floor(Date.now() / 3600000)); // 1시간 캐시 버스팅
   if (!r.ok) throw new Error(`fetch 실패: ${path} (${r.status})`);
   return r.text();
 }
@@ -1702,7 +1725,15 @@ function _makePoliceEntry(도코드) {
 }
 
 const PROVINCE_TABLES = {
-  jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE,
+  jeju: {
+    // ★ repo 필드는 아직 비워둔다 — prompts/gov-tree/01-do,
+    // 02-do-dept(+divisions), 03-do-agency(+divisions), 04-city,
+    // 07-org(+divisions)의 제주 267건이 Openhash-Gopang/jejudo로 실제
+    // 이관 완료된 뒤, 아래 한 줄을 추가하는 PR로 전환한다(마이그레이션
+    // 계획서 Phase 4). 지금 추가하면 파일이 아직 gopang에만 있으므로
+    // 프로덕션에서 404가 난다.
+    // repo: 'Openhash-Gopang/jejudo',
+    l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE,
     // 2026-08-02 추가 — 직속기관(03-do-agency)/출자출연기관(07-org)은
     // 지금까지 _resolveProvinceCode() === 'jeju' 문자열 비교로 가드를
     // 걸었었다(임시방편). l2/city/national과 동일하게 PROVINCE_TABLES에
@@ -2227,10 +2258,10 @@ async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn
   return _classifyDivisionFallback(text, tied, classifyFn);
 }
 async function _fetchAgencyText(match) {
-  return _fetchText(match.file);
+  return _fetchText(match.file, _currentProvinceRepo());
 }
 async function _fetchOrgText(match) {
-  return _fetchText(match.file);
+  return _fetchText(match.file, _currentProvinceRepo());
 }
 async function _resolveDoAgencyDivision(text, agyMatch, classifyFn) {
   if (!agyMatch) return null;
@@ -3198,7 +3229,7 @@ async function _appendPermitProtocolIfNeeded(text, rec) {
 }
 
 async function _fetchDeptText(entry) {
-  if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file), permitCodes: [] };
+  if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file, _currentProvinceRepo()), permitCodes: [] };
   const records = await _loadDeptMasterData();
   const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드) || {};
   const templateRelPath = rec.template
@@ -3217,7 +3248,7 @@ async function _fetchDeptText(entry) {
     return _appendPermitProtocolIfNeeded(_renderDeptTemplate(template, rec, entry.domain), rec);
   } catch (e) {
     console.warn(`[Jeju] 부서 템플릿 로드 실패(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백: ${e.message}`);
-    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
+    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file, _currentProvinceRepo()), rec);
   }
 }
 
@@ -3250,14 +3281,14 @@ const _NAT_NO_INFO_FALLBACK = (code) =>
 async function _fetchNatText(entry) {
   if (!entry.domain || !entry.도코드) {
     if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
-    return { text: await _fetchText(entry.file), permitCodes: [] };
+    return { text: await _fetchText(entry.file, _currentProvinceRepo()), permitCodes: [] };
   }
   const records = await _loadNatMasterData();
   const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
   if (!rec || !rec.template) {
     console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드})`);
     if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
-    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
+    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file, _currentProvinceRepo()), rec);
   }
   // ★ 2026-07-21 수정(버그4) — rec.template 필드값은 있는데 그 파일이
   // 실제로 저장소에 없는 경우(예: SP-NAT-TAX-TEMPLATE_v1.0.md 404)를
@@ -3278,7 +3309,7 @@ async function _fetchNatText(entry) {
     console.warn(`[gov-router] 국가기관 템플릿 파일 없음(${rec.template}): ${e.message}`);
     if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
     try {
-      return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
+      return _appendPermitProtocolIfNeeded(await _fetchText(entry.file, _currentProvinceRepo()), rec);
     } catch (e2) {
       console.warn(`[gov-router] static 폴백도 실패(${entry.file}): ${e2.message} — 정직한 정보없음으로 대체`);
       return {
@@ -3316,12 +3347,12 @@ function _renderCityTemplate(template, rec) {
 }
 
 async function _fetchCityText(entry) {
-  if (!entry.도코드 || !entry.시코드) return _fetchText(entry.file);
+  if (!entry.도코드 || !entry.시코드) return _fetchText(entry.file, _currentProvinceRepo());
   const records = await _loadCityMasterData();
   const rec = records.find(r => r.도코드 === entry.도코드 && r.시코드 === entry.시코드);
   if (!rec) {
     console.warn(`[Jeju] 시 데이터 레코드 없음(도코드=${entry.도코드}, 시코드=${entry.시코드}) — static file로 폴백`);
-    return _fetchText(entry.file);
+    return _fetchText(entry.file, _currentProvinceRepo());
   }
   const template = await _fetchText('04-city/templates/SP-CITY-TEMPLATE_v1.0.md');
   return _renderCityTemplate(template, rec);
@@ -3617,7 +3648,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const parentText = await _fetchDeptText(parentEntry);
           parts.push(parentText.text);
           trace.push(parentEntry.code);
-          parts.push(await _fetchText(divEntry.file));
+          parts.push(await _fetchText(divEntry.file, _currentProvinceRepo()));
           trace.push(`${divEntry.code}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
         }
@@ -3652,7 +3683,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const agencyText = await _fetchAgencyText(parentEntry);
           parts.push(agencyText);
           trace.push(parentEntry.code);
-          parts.push(await _fetchText(divEntry.file));
+          parts.push(await _fetchText(divEntry.file, _currentProvinceRepo()));
           trace.push(`${divEntry.code}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
         }
@@ -3685,7 +3716,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const orgText = await _fetchOrgText(parentEntry);
           parts.push(orgText);
           trace.push(parentEntry.code);
-          parts.push(await _fetchText(divEntry.file));
+          parts.push(await _fetchText(divEntry.file, _currentProvinceRepo()));
           trace.push(`${divEntry.code}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
         }
@@ -3725,7 +3756,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
               if (permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${permitCodes.join(',')})`);
             }
           }
-          parts.push(await _fetchText(divEntry.file));
+          parts.push(await _fetchText(divEntry.file, _currentProvinceRepo()));
           trace.push(`${divEntry.code}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
         }
@@ -4032,7 +4063,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       trace.push(agyMatch.code);
       const agyDivisionMatch = await _resolveDoAgencyDivision(text, agyMatch, classifyFn);
       if (agyDivisionMatch) {
-        parts.push(await _fetchText(agyDivisionMatch.file));
+        parts.push(await _fetchText(agyDivisionMatch.file, _currentProvinceRepo()));
         trace.push(`${agyDivisionMatch.code}(과 특정)`);
       }
       await _appendExpertIfMatched();
@@ -4045,7 +4076,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       trace.push(orgMatch.code);
       const orgDivisionMatch = await _resolveOrgDivision(text, orgMatch, classifyFn);
       if (orgDivisionMatch) {
-        parts.push(await _fetchText(orgDivisionMatch.file));
+        parts.push(await _fetchText(orgDivisionMatch.file, _currentProvinceRepo()));
         trace.push(`${orgDivisionMatch.code}(팀 특정)`);
       }
       await _appendExpertIfMatched();
@@ -4083,7 +4114,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
           const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
           if (divisionMatch) {
-            parts.push(await _fetchText(divisionMatch.file));
+            parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
@@ -4156,7 +4187,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
         const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
         if (divisionMatch) {
-          parts.push(await _fetchText(divisionMatch.file));
+          parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
           trace.push(`${divisionMatch.code}(과/팀 특정)`);
         }
       }
@@ -4228,7 +4259,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
       const doDeptDivisionMatch = await _resolveDoDeptDivision(text, divMatch, classifyFn);
       if (doDeptDivisionMatch) {
-        parts.push(await _fetchText(doDeptDivisionMatch.file));
+        parts.push(await _fetchText(doDeptDivisionMatch.file, _currentProvinceRepo()));
         trace.push(`${doDeptDivisionMatch.code}(과 특정)`);
       }
       await _appendExpertIfMatched();
