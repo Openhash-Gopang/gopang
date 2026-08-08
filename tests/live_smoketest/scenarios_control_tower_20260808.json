@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ktelecom-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "SP-23_ktelecom"],
+    "utterance": "휴대폰 요금제를 바꾸고 싶은데 어떻게 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "요금제 종류·조건을 한꺼번에 나열하기 쉬운 질문 — 관제탑 원칙대로면 먼저 되묻거나 다음 한 걸음만 제시해야 함"
+  },
+  {
+    "id": "kestate-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "SP-24_kestate"],
+    "utterance": "전세 계약할 때 뭘 확인해야 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "확인사항 체크리스트로 답하기 쉬운 전형적 질문"
+  },
+  {
+    "id": "kbusiness-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "k-business", "business-kr"],
+    "utterance": "사업자 등록을 하려는데 뭐부터 해야 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "worker.js handleBusinessRelay 방금 고친 대상 — 창업 절차는 단계가 많아 나열 유혹이 큼"
+  },
+  {
+    "id": "ksearch-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "SP-18_ksearch"],
+    "utterance": "이 근처에 갈만한 카페 있어?",
+    "category": "예외후보",
+    "note": "검색 결과 나열이 ksearch의 본질적 기능일 수 있음 — FAIL이 나와도 바로 결함으로 단정하지 말 것"
+  },
+  {
+    "id": "agent-supplier-restaurant-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "AGENT-SUPPLIER-COMMON", "AGENT-SUPPLIER-56"],
+    "utterance": "오늘 저녁에 4명 예약하고 싶은데요",
+    "category": "정상(예약 실행형 — 나열 아닌 진행이 정답)",
+    "note": "오늘 처음 UNIVERSAL 3종을 상속받게 된 AGENT-SUPPLIER 대표 — 예약 처리는 목록이 아니라 시간·인원 확인 등 단계별 진행이 맞음"
+  },
+  {
+    "id": "agent-supplier-restaurant-02",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "AGENT-SUPPLIER-COMMON", "AGENT-SUPPLIER-56"],
+    "utterance": "메뉴가 뭐가 있어요?",
+    "category": "예외후보",
+    "note": "메뉴 안내는 목록형 정보 자체가 정당한 응답 형태일 수 있음 — ksearch와 같은 이유로 예외 후보"
+  },
+  {
+    "id": "lawyer-expert-01",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "PROFESSIONAL-common", "SP_common_guardrails", "CONTROL-TOWER-PRINCIPLE", "SP_lawyer"],
+    "utterance": "이혼하고 싶은데 어떻게 해야 하나요",
+    "category": "비교군(EXPERT — 이미 감사된 경로)",
+    "note": "expert-session.js가 실제로 쓰는 조립 순서와 완전히 동일하진 않지만(SP_EXPERT_BASE 등 생략) 근사치 — 이미 오늘 이전에 감사된 경로라 PASS 기대"
+  },
+  {
+    "id": "ktelecom-02",
+    "sp_keys": ["UNIVERSAL-INTEGRITY", "UNIVERSAL-common", "CONTROL-TOWER-PRINCIPLE", "SP-23_ktelecom"],
+    "utterance": "인터넷 결합할인 상품 종류를 전부 알려줘",
+    "category": "하드(명시적으로 '전부' 요청)",
+    "note": "사용자가 명시적으로 목록을 요청 — 이 경우까지 원칙이 목록을 막아야 하는지는 원문 §예외 조항에 명시 안 됨, 경계 케이스로 사람 검토 필요"
+  }
+]
