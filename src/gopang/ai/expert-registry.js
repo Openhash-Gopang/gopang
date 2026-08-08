@@ -37,6 +37,17 @@ export const UNIVERSAL_INTEGRITY_KEY   = 'UNIVERSAL-INTEGRITY'; // 2026-07-09: �
 // 실제로 로드된다.
 export const COMMON_GUARDRAILS_KEY     = 'SP_common_guardrails'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
 export const COMMON_MEDICAL_SAFETY_KEY = 'SP_common_medical_safety'; // 2026-07-09: 상동
+export const CONTROL_TOWER_PRINCIPLE_KEY = 'CONTROL-TOWER-PRINCIPLE'; // 2026-08-08 신설
+// (실사로 발견된 버그 수정) — CONTROL-TOWER-PRINCIPLE_v1_1.md 자신은
+// "manifest-loader.js(_loadSpByKey)를 통해 로드되는 모든 SP 앞에 자동
+// 결합된다"고 명시하지만, 실제로는 EXPERT 페르소나 조립(_composeExpertPrompt)
+// 안에서 그 문서를 직접 fetch하는 경로가 어디에도 없었다 — 이 함수는
+// UNIVERSAL-INTEGRITY를 로드할 때 self-concat 방지 분기(_loadSpByKey 내부)
+// 때문에 자동 결합이 걸리지 않고, 나머지 문서는 전부 _loadSpRawByKey(자동
+// 결합 없음)로 로드하기 때문. 결과적으로 professor·physician·lawyer 등
+// 158개+ EXPERT 페르소나 전부가 관제탑 원칙 문서를 한 번도 못 받고 있었다
+// (SP_common_guardrails 자체 내장 C50 절만 받고 있었음 — 별도 CONTROL-
+// TOWER-PRINCIPLE.md와는 무관). 이 상수로 명시적으로 한 번 로드해 고친다.
 export const EXPERT_BASE_KEY           = 'SP_EXPERT_BASE'; // 2026-08-07 신설(HANDOFF
 // SP-EXPERT-BASE-전체롤아웃계획 §6-1) — SP_EXPERT_BASE_v1_0.md(SP-COMMON-06,
 // 법무사·변호사·감정평가사·세무사 4개 실사검증 페르소나에서 추출한 STEP 골격
