@@ -1,0 +1,128 @@
+[
+  {
+    "id": "professor-01-easy",
+    "root_id": "professor",
+    "utterance": "국어 문법이랑 고전문학을 체계적으로 배우고 싶어요",
+    "expected_leaf_id": "professor-korean",
+    "category": "정상경로(단일 과목 명시)"
+  },
+  {
+    "id": "professor-02-easy",
+    "root_id": "professor",
+    "utterance": "미적분학 개념이 헷갈려서 그러는데 수학을 1:1로 배우고 싶어요",
+    "expected_leaf_id": "professor-math",
+    "category": "정상경로(단일 과목 명시)"
+  },
+  {
+    "id": "professor-03-easy",
+    "root_id": "professor",
+    "utterance": "반도체공학 전공인데 소자 설계 쪽 논문 지도를 받고 싶어요",
+    "expected_leaf_id": "professor-semiconductor",
+    "category": "정상경로(3단 트리 리프 — professor→materials-series→semiconductor)"
+  },
+  {
+    "id": "professor-04-hard-adjacent",
+    "root_id": "professor",
+    "utterance": "반도체 소자의 전기적 특성과 회로 설계를 연구하는 전자공학 전공이에요",
+    "expected_leaf_id": "professor-electronics",
+    "category": "인접쌍(전기공학 vs 전자공학) — '전자공학' 명시로 판정"
+  },
+  {
+    "id": "professor-05-hard-adjacent",
+    "root_id": "professor",
+    "utterance": "공인회계사 준비하는데 회계학 전공 지도를 받고 싶어요",
+    "expected_leaf_id": "professor-accounting",
+    "category": "인접쌍(회계·세무학 vs 경영학) — '회계학' 명시로 판정"
+  },
+  {
+    "id": "professor-06-hard-adjacent",
+    "root_id": "professor",
+    "utterance": "수의사가 되려고 수의학과 진학을 준비 중인데 전공 상담을 받고 싶어요",
+    "expected_leaf_id": "professor-veterinary",
+    "category": "인접쌍(수의학 vs 동물보건) — '수의사·수의학과' 명시로 판정"
+  },
+  {
+    "id": "physician-01-easy",
+    "root_id": "physician",
+    "utterance": "소화가 잘 안 되고 속이 쓰려서 내과 진료 상담을 받고 싶어요",
+    "expected_leaf_id": "physician-internal-medicine",
+    "category": "정상경로(단일 진료과 명시)"
+  },
+  {
+    "id": "physician-02-easy",
+    "root_id": "physician",
+    "utterance": "무릎 인대가 다친 것 같아서 정형외과 의사 선생님한테 여쭤보고 싶어요",
+    "expected_leaf_id": "physician-orthopedics",
+    "category": "정상경로(단일 진료과 명시)"
+  },
+  {
+    "id": "physician-03-easy",
+    "root_id": "physician",
+    "utterance": "얼굴에 여드름이 심해서 피부과 전문의한테 물어보고 싶어요",
+    "expected_leaf_id": "physician-dermatology",
+    "category": "정상경로(단일 진료과 명시)"
+  },
+  {
+    "id": "physician-04-hard-adjacent",
+    "root_id": "physician",
+    "utterance": "가슴 통증이 있어서 심장 수술이 필요한지 흉부외과 쪽으로 상담받고 싶어요",
+    "expected_leaf_id": "physician-cardiothoracic",
+    "category": "인접쌍(심장혈관흉부외과 vs 내과) — '흉부외과·수술' 명시로 판정"
+  },
+  {
+    "id": "physician-05-hard-adjacent",
+    "root_id": "physician",
+    "utterance": "요즘 불안하고 우울한 감정이 심해서 정신건강의학과 상담을 받고 싶어요",
+    "expected_leaf_id": "physician-psychiatry",
+    "category": "인접쌍(정신건강의학과 vs 신경과) — '정신건강의학과' 명시로 판정"
+  },
+  {
+    "id": "physician-06-easy",
+    "root_id": "physician",
+    "utterance": "당장 응급 상황은 아니지만 응급의학과 전문의한테 상황을 설명하고 조언을 구하고 싶어요",
+    "expected_leaf_id": "physician-emergency",
+    "category": "정상경로(단일 진료과 명시, 비응급 문의)"
+  },
+  {
+    "id": "lawyer-01-easy",
+    "root_id": "lawyer",
+    "utterance": "폭행 사건으로 고소를 당해서 형사 전문 변호사가 필요해요",
+    "expected_leaf_id": "lawyer-criminal",
+    "category": "정상경로(단일 분야 명시)"
+  },
+  {
+    "id": "lawyer-02-easy",
+    "root_id": "lawyer",
+    "utterance": "아버지가 돌아가시고 나서 상속 재산 분배 문제로 변호사 상담받고 싶어요",
+    "expected_leaf_id": "lawyer-inheritance",
+    "category": "정상경로(단일 분야 명시)"
+  },
+  {
+    "id": "lawyer-03-easy",
+    "root_id": "lawyer",
+    "utterance": "아파트 매매 계약 관련 분쟁이 생겨서 부동산 전문 변호사가 필요합니다",
+    "expected_leaf_id": "lawyer-realestate",
+    "category": "정상경로(단일 분야 명시)"
+  },
+  {
+    "id": "lawyer-04-hard-adjacent",
+    "root_id": "lawyer",
+    "utterance": "교통사고를 당해서 그 사고 자체에 대한 처리와 대응을 도와줄 변호사가 필요해요",
+    "expected_leaf_id": "lawyer-traffic",
+    "category": "인접쌍(교통사고 vs 손해배상) — 사고 처리 자체가 초점이라 '교통사고'로 판정"
+  },
+  {
+    "id": "lawyer-05-hard-adjacent",
+    "root_id": "lawyer",
+    "utterance": "스타트업을 창업하면서 투자 유치 계약서 검토가 필요해요",
+    "expected_leaf_id": "lawyer-startup",
+    "category": "인접쌍(스타트업 vs 기업법무) — '스타트업·투자 유치' 명시로 판정"
+  },
+  {
+    "id": "lawyer-06-easy",
+    "root_id": "lawyer",
+    "utterance": "외국인 배우자의 비자 신청 절차 때문에 변호사 도움이 필요해요",
+    "expected_leaf_id": "lawyer-immigration",
+    "category": "정상경로(단일 분야 명시)"
+  }
+]

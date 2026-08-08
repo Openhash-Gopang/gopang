@@ -1,0 +1,102 @@
+[
+  {
+    "no": 1,
+    "utterance": "국어 문법이랑 고전문학을 체계적으로 배우고 싶은데 1:1로 지도해 줄 교수님 연결해줘",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "professor축(세부과목 언급, 리프 아닌 상위 id로만 라우팅돼야 함)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_2.txt §CATALOG-EXPERT professor 행 — 세부 전공은 이 표만 보고는 안 나온다고 명시, professor로만 판단하면 과목 게이트가 코드로 리프를 정함"
+  },
+  {
+    "no": 2,
+    "utterance": "반도체공학 전공인데 논문 지도받을 교수 AI 하나 붙여줄 수 있어?",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "professor축(세부과목 언급)",
+    "static_verdict": "PASS",
+    "basis": "동일 — professor 상위 id로만 라우팅"
+  },
+  {
+    "no": 3,
+    "utterance": "미적분학 개념이 헷갈려서 그러는데 수학 교수님한테 1:1로 물어보고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "professor축(세부과목+자격 명시 언급)",
+    "static_verdict": "PASS",
+    "basis": "동일 — '수학 교수님'이라고 자격 명시해도 표에 세부 리프가 없으므로 상위 professor로 라우팅"
+  },
+  {
+    "no": 4,
+    "utterance": "심장 쪽이 요즘 이상해서 그러는데 순환기 전문 의사 선생님 좀 연결해 주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician",
+    "expected_name": "의사",
+    "category": "physician축(세부진료과 언급)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_2.txt §CATALOG-EXPERT physician 행 — 세부분야는 표에 없으므로 physician 상위 id로 라우팅"
+  },
+  {
+    "no": 5,
+    "utterance": "아이가 최근에 잠을 잘 못 자고 예민한데 소아과 의사한테 물어보고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician",
+    "expected_name": "의사",
+    "category": "physician축(세부진료과 언급)",
+    "static_verdict": "PASS",
+    "basis": "동일 — physician 상위 id로만 라우팅"
+  },
+  {
+    "no": 6,
+    "utterance": "이혼 절차 진행 중인데 가사 전문 변호사한테 자문받고 싶습니다",
+    "expected_type": "EXPERT",
+    "expected_id": "lawyer",
+    "expected_name": "변호사",
+    "category": "lawyer축(세부분야 언급)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_2.txt §CATALOG-EXPERT lawyer 행 — 세부분야(형사·이혼·조세 등)는 표에 없으므로 lawyer 상위 id로 라우팅"
+  },
+  {
+    "no": 7,
+    "utterance": "회사 인수합병 계약서 검토를 받고 싶은데 기업법무 쪽 변호사 있나요",
+    "expected_type": "EXPERT",
+    "expected_id": "lawyer",
+    "expected_name": "변호사",
+    "category": "lawyer축(세부분야 언급)",
+    "static_verdict": "PASS",
+    "basis": "동일 — lawyer 상위 id로만 라우팅"
+  },
+  {
+    "no": 8,
+    "utterance": "교통사고 손해배상 관련해서 변호사 상담받고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "lawyer",
+    "expected_name": "변호사",
+    "category": "lawyer축(인접 세부분야 2개 동시 언급 — 교통사고/손해배상)",
+    "static_verdict": "PASS",
+    "basis": "인접 리프(lawyer-traffic/lawyer-damages) 둘 다 말이 되는 경우에도 1단계는 여전히 lawyer 상위 id까지만 — 어느 리프인지는 2단계(과목 게이트) 몫"
+  },
+  {
+    "no": 9,
+    "utterance": "등기 이전이랑 경매 절차를 같이 진행해야 하는데 변호사가 필요할까요, 법무사가 필요할까요",
+    "expected_type": "EXPERT",
+    "expected_id": "judicial-scrivener",
+    "expected_name": "법무사",
+    "category": "회귀 확인(lawyer와 인접 자격직 오분류 방지, professor/physician/lawyer 게이트 신설과 무관 — v1.1 동작 유지 확인용)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_2.txt에서 lawyer/professor/physician 세 행만 갱신했고 judicial-scrivener 행은 손대지 않았으므로 회귀 없어야 함"
+  },
+  {
+    "no": 10,
+    "utterance": "1:1 개인 과외처럼 초등학생 수학을 봐줄 선생님을 구하는 거예요, 학교 정교사 말고요",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "professor축(teacher와의 경계 회귀 확인)",
+    "static_verdict": "PASS",
+    "basis": "teacher(학교 정교사)와 professor(1:1 맞춤교육) 구분은 v1.1부터 있던 기존 로직 — 이번 갱신으로 흔들리지 않아야 함"
+  }
+]
