@@ -601,6 +601,35 @@ body {
 .sidebar:hover .sb-cta-row .sb-cta { padding: 0 10px; justify-content: center; }
 .sidebar:hover .sb-cta-row .sb-cta .sb-cta-label { white-space: nowrap; }
 
+/* ── 페이지 탭 (2026-08-09 신설) — overview 페이지를 6개 탭으로 분할 ── */
+.page-tabs-wrap {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.page-tabs {
+  max-width: 860px; margin: 0 auto;
+  display: flex; gap: 4px; overflow-x: auto;
+  padding: 0 8%;
+}
+.page-tabs::-webkit-scrollbar { display: none; }
+.page-tab {
+  appearance: none; border: none; background: none; cursor: pointer;
+  padding: 14px 12px; font-size: 14px; font-weight: 500;
+  font-family: 'Pretendard', sans-serif;
+  color: var(--text3); white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.page-tab:hover { color: var(--text); }
+.page-tab.active { color: var(--brand-dk); border-bottom-color: var(--brand); }
+section.section[data-tab] { display: none; }
+section.section[data-tab].tab-active { display: block; }
+@media (max-width: 680px) {
+  .page-tabs-wrap { top: 52px; }
+  .page-tabs { padding: 0 16px; }
+}
+
 /* ── CONTENT AREA ── */
 #content {
   min-height: 100vh;
@@ -1274,8 +1303,52 @@ body {
 
 <hr class="sep">
 
+<!-- ── 페이지 탭 (2026-08-09 신설) ── -->
+<div class="page-tabs-wrap">
+  <nav class="page-tabs" id="page-tabs" role="tablist" aria-label="혼디 소개 탭">
+    <button type="button" class="page-tab" data-tab-target="intro" role="tab" aria-selected="false">소개</button>
+    <button type="button" class="page-tab" data-tab-target="parallel" role="tab" aria-selected="false">평행세계 비교</button>
+    <button type="button" class="page-tab" data-tab-target="features" role="tab" aria-selected="false">핵심 기능</button>
+    <button type="button" class="page-tab" data-tab-target="pdv-ac" role="tab" aria-selected="false">데이터·AI비서</button>
+    <button type="button" class="page-tab" data-tab-target="usage" role="tab" aria-selected="false">직업별 활용</button>
+    <button type="button" class="page-tab" data-tab-target="structure" role="tab" aria-selected="false">혼디의 구조</button>
+  </nav>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var TABS = ["intro", "parallel", "features", "pdv-ac", "usage", "structure"];
+  var tabButtons = document.querySelectorAll(".page-tab");
+  var tabSections = document.querySelectorAll("section.section[data-tab]");
+  function activateTab(key, opts) {
+    opts = opts || {};
+    tabButtons.forEach(function (btn) {
+      var active = btn.getAttribute("data-tab-target") === key;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    tabSections.forEach(function (sec) {
+      sec.classList.toggle("tab-active", sec.getAttribute("data-tab") === key);
+    });
+    if (history.replaceState) history.replaceState(null, "", "#tab-" + key);
+    if (opts.scroll) {
+      var bar = document.getElementById("page-tabs");
+      if (bar) bar.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      activateTab(btn.getAttribute("data-tab-target"), { scroll: true });
+    });
+  });
+  var initial = "intro";
+  var hash = location.hash.replace("#tab-", "");
+  if (TABS.indexOf(hash) !== -1) initial = hash;
+  activateTab(initial, { scroll: false });
+});
+</script>
+
 <!-- ── OVERVIEW ── -->
-<section class="section" id="overview">
+<section class="section" id="overview" data-tab="intro">
   <div class="section-inner">
     <p style="font-size:14px;color:var(--text2);line-height:1.8;margin-bottom:28px;font-weight:400">혼디는 AI 메신저 플랫폼입니다. 카카오톡과 비슷한 외형과 달리 혼디의 대화 당사자는 사람 뿐 아니라, 사물, 기관 및 개념을 포함하며, 사람과 사람, 사람과 사물, 사람과 개념이 소통하고, 사물과 사물, 사물과 개념이 소통합니다. 예로써, 사람과 자율주행차량이 소통하고, 민법과 헌법이 소통하며,  차량과 교통법규가 소통합니다.</p>
 
@@ -1314,7 +1387,7 @@ body {
 </section>
 
 <!-- ── 현실 세계 vs 혼디 AI 평행세계 ── -->
-<section class="section" id="parallel-world" style="background:var(--bg-alt)">
+<section class="section" id="parallel-world" style="background:var(--bg-alt)" data-tab="parallel">
   <div class="section-inner">
     <div class="section-tag reveal">AI Parallel World</div>
     <h2 class="section-title reveal">현실 세계와 <strong>혼디의 AI 평행세계</strong></h2>
@@ -1379,7 +1452,7 @@ body {
 </section>
 
 <!-- ── 혼디의 기능 ── -->
-<section class="section" id="features" style="background:var(--bg-alt)">
+<section class="section" id="features" style="background:var(--bg-alt)" data-tab="features">
   <div class="section-inner">
     <div class="section-tag reveal">Core Features</div>
     <h2 class="section-title reveal"><strong>혼디</strong>의 기능</h2>
@@ -1450,7 +1523,7 @@ body {
 <!-- ══════════════════════════════════════════════════════════ -->
 <!-- ── PDV & AC: 나만의 데이터 금고, 나만의 AI 비서 ── -->
 <!-- ══════════════════════════════════════════════════════════ -->
-<section class="section" id="pdv-ac" style="background:var(--bg-alt)">
+<section class="section" id="pdv-ac" style="background:var(--bg-alt)" data-tab="pdv-ac">
   <div class="section-inner">
     <div class="section-tag reveal">PDV &amp; Agent Common</div>
     <h2 class="section-title reveal">혼디의 두 기둥 — <strong>나만의 데이터 금고</strong>와 <strong>나만의 AI 비서</strong></h2>
@@ -1515,7 +1588,7 @@ body {
 <!-- ══════════════════════════════════════════════════════════ -->
 <!-- ── 직업별 시나리오 갤러리 ── -->
 <!-- ══════════════════════════════════════════════════════════ -->
-<section class="section" id="job-scenarios">
+<section class="section" id="job-scenarios" data-tab="usage">
   <div class="section-inner">
     <div class="section-tag reveal">Scenarios by Role</div>
     <h2 class="section-title reveal">직업별로 보는 <strong>혼디</strong></h2>
@@ -1661,7 +1734,7 @@ body {
   </div>
 </section>
 
-<section class="section" id="overview-continued">
+<section class="section" id="overview-continued" data-tab="usage">
   <div class="section-inner">
 
     <!-- ── 새로운 삶과 일의 양상 ── -->
@@ -2219,7 +2292,7 @@ body {
 <hr class="sep">
 
 <!-- ── 백설공주와 일곱 난장이 ── -->
-<section class="section" id="snow-white">
+<section class="section" id="snow-white" data-tab="structure">
   <div class="section-inner">
     <div class="section-tag reveal">Architecture</div>
     <h2 class="section-title reveal"><strong>백설공주</strong>와 일곱 난장이</h2>
@@ -2240,6 +2313,7 @@ body {
     </div>
   </div>
 </footer>
+</section>
 
 <!-- ── Phone Frame Modal ──────────────────────────────────────── -->
 <div id="webapp-modal">
