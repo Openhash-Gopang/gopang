@@ -153,18 +153,31 @@ const GWP_REGISTRY = [
     url: 'https://school.hondi.net/webapp.html',
     sp_key: 'SP-09_kschool',
     status: 'active', priority: 4, threshold: 0.70,
-    description: 'AI 교수. 유치원~대학원 166개 과목.',
+    // 2026-08-08 정정 — K-School은 더 이상 "AI가 직접 유치원~대학원까지
+    // 가르치는 개인 교수" 서비스가 아니다(school 저장소
+    // docs/K_SCHOOL_PUBLIC_EDUCATION_DATA_SYSTEM_v1_0.md의 범위 정정 반영,
+    // prompts/system_prompt.txt를 v2.0→v3.0으로 전면 교체). 개별 학생 1:1
+    // 지도는 이제 professor(EXPERT, gopang expert-registry-professor.js)
+    // 전담이고, K-School은 다수 PDV를 집계하는 공공 교육정책 데이터
+    // 시스템(정책결정자·연구자용 통계 조회)으로 축소됐다. description을
+    // 그에 맞춰 정정 — 아래 '과외' 트리거 자체는 유지한다(§CORE R1축이
+    // 위임의도로 GWP/EXPERT를 가르지, trigger 존재 여부로 안 가른다 — R1
+    // 문서 자체가 "trigger 표는 검색 편의를 위한 색인일 뿐"이라고 명시).
+    description: '공공 교육정책 데이터 시스템 — 다수 학습자 PDV 집계(정책결정자·연구자용). 개별 학생 1:1 지도는 담당하지 않음(→ professor).',
     triggers: [
       '공부','학습','교육','과목','진로','시험','강의','자격증',
       '논문','입학','졸업','취업','숙제','과제','수능','학점',
       // 2026-07-25 추가(주피터 지시) — 300건 사고실험 A범주("과외 선생님을
-      // 구해줘")에서 확인된 불일치: K-School은 실제로는 "AI가 직접
-      // 유치원~대학원까지 가르치는 개인 교수" 서비스이지 사람 과외
-      // 선생님을 매칭해주는 서비스가 아니다(school/prompts/system_prompt.txt
-      // §1 정체성 확인됨). '과외'를 트리거로 연결하되, 실제 SP가 "저는
-      // 사람 과외 선생님을 구해드리는 게 아니라 제가 직접 가르칩니다"라고
-      // 정직하게 밝히는지는 이 저장소(gopang)에서 확인 불가 — school
-      // 저장소 쪽 SP 원문 점검이 별도로 필요하다(후속 조치로 남김).
+      // 구해줘")에서 확인된 불일치: 당시 K-School은 "AI가 직접
+      // 유치원~대학원까지 가르치는 개인 교수" 서비스였으나, 2026-08-08
+      // 범위 정정으로 이 역할 자체가 professor(EXPERT)로 이관됐다(위 주석
+      // 참고) — 그래서 지금은 이 trigger가 붙어 있어도, 위임의도가 있는
+      // 발화는 R1축에 따라 EXPERT(professor)로 가는 게 정상이고, kedu는
+      // 그 발화가 진로상담·시험제도처럼 실제로 제도·집계 성격일 때만
+      // 맞는 후보다. '과외' 자체를 trigger에서 빼지 않은 이유: 후보 축소
+      // 단계(0단계 prefilter)에서는 recall을 넓게 잡아 kedu·professor·
+      // teacher를 다 후보에 올리는 게 목적이고, GWP/EXPERT 최종 판정은
+      // 다음 단계(R1축)가 한다.
       '과외',
     ],
   },
