@@ -95,7 +95,18 @@ def call_deepseek(api_key, system_prompt, user_utterance):
         # max_tokens=60이라 이 문제가 안 드러났을 수 있다. 원인을 확정
         # 하기 위해 finish_reason·usage·raw json 전체를 결과에 같이
         # 남긴다.
-        "max_tokens": 2000,
+        # 2026-08-08 재조정 — 첫 시도(800)·2차 시도(2000) 둘 다 8건 중 절반
+        # 가량이 finish_reason=length(추론 토큰이 예산을 다 써버리고 최종
+        # content를 못 냄, reasoning_content가 3200~3400자에 달했음)로
+        # 실패한 게 라이브로 확인됐다. deepseek-v4-flash가 추론형 모델이라
+        # 추론 토�큰도 이 예산에 포함되는 것으로 보인다 — 충분히 넉넉하게
+        # 잡는다(6000). ★ 이 값이 실제 프로덕션 K서비스 클라이언트들이
+        # 보내는 값과 같다는 보장은 없다 — worker.js의 relay들은 max_tokens를
+        # 서버가 강제하지 않고 클라이언트가 보낸 값을 그대로 통과시키므로,
+        # 실제 운영값은 각 K서비스 프론트엔드 저장소를 봐야 확인된다(이번
+        # 범위 밖, 후속 조사 필요 — 낮은 값을 쓰고 있다면 실사용자도 종종
+        # 빈 응답을 받고 있을 실질적 위험이 있다).
+        "max_tokens": 6000,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance},
