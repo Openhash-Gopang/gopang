@@ -2741,8 +2741,8 @@ function _provinceCodeToName(code) {
 const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   tax: ['세무서', '국세', '부가세', '소득세', '법인세', '세무', '종합소득세', '부가가치세', '홈택스'],
   court: ['법원', '재판', '소송', '판결', '민사', '형사', '지방법원', '등기소', '나의사건검색', '전자소송', '등기부등본'],
-  prosecution: ['검찰', '기소', '공소', '수사', '검찰청', '고소장', '고발', '검사실'],
-  police: ['지방경찰청', '경찰청', '국가경찰', '112', '고소장', '지구대', '파출소', '경찰서'],
+  prosecution: ['검찰', '공소', '수사', '검찰청', '고소장', '고발', '검사실'],
+  police: ['지방경찰청', '경찰청', '국가경찰', '112', '고소장', '지구대', '파출소'],
   labor: ['근로복지공단', '산재', '산업재해', '산재보험'],
   laborimprove: ['근로개선', '고용노동청', '근로감독', '임금체불', '근로개선지도'],
   laborrel: ['노동위원회', '부당해고'],
@@ -2755,7 +2755,7 @@ const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   veterans: ['보훈청', '국가유공자', '보훈', '보훈급여'],
   weather: ['지방기상청', '기상특보', '기상청', '태풍정보', '태풍 정보', '실시간 기상'],
   coastguard: ['해양경찰', '해경', '122', '해양사고', '해양레저 안전'],
-  port: ['해양수산청', '항만', '선박등록', '해상교통관제'],
+  port: ['해양수산청', '항만', '선박등록'],
   probation: ['준법지원센터', '보호관찰', '사회봉사명령'],
   bok: ['한국은행', '화폐교환', '화폐 교환'],
   stat: ['통계청'],
@@ -2779,6 +2779,45 @@ function _guessNatAgencyDomainFromText(text) {
     if (kws.some(k => text.includes(k))) return domain;
   }
   return null;
+}
+
+// ── 2026-08-08 신설 — 제주 외 15개 도 전체에 국가기관 지사 34개 도메인
+// 키워드 매칭 일반화 ──────────────────────────────────────────────
+// 지금까지는 police(그것도 경기·전남광주통합 제외)만 _makePoliceEntry로
+// 등록돼 있어서, 나머지 33개 도메인은 이 도들의 PROVINCE_TABLES.national에
+// 아예 항목이 없었다 — _guessNatAgencyDomainFromText가 도메인을 알아채도
+// alreadyCovered=false라 매번 resolveNationalAgencyLazy(Serper 실시간
+// 검색)로 넘어갔고, 그 결과가 종종 틀렸다(예: 대전·세종·경북·경기·대구의
+// coastguard 질의가 전부 무관한 "완도해양경찰서"로 잘못 매칭된 사례
+// 실측 확인, 2026-08-08). _NAT_AGENCY_DOMAIN_KEYWORDS(위, 34개 도메인 —
+// JEJU_NATIONAL_TABLE과 완전히 동일한 도메인 커버리지)를 그대로 재사용해
+// 도 전체에 매칭 항목을 채운다.
+//
+// ★ 중요 — 이 항목들은 라우팅(매칭)만 담당하고 실제 응답 콘텐츠는
+// 담당하지 않는다. _fetchNatText()가 national-agency-master-data.json에서
+// domain+도코드로 레코드를 찾는데, 지금은 제주 34건만 있고 나머지 도는
+// 레코드가 없다 — 그러면 _NAT_NO_INFO_FALLBACK의 정직한 "[정보 없음] ...
+// 정부24(gov.kr) 또는 110" 문구로 안전하게 폴백한다. 즉 이 커밋은
+// "틀린 추측이 나갈 가능성을 원천 차단"하는 안전조치이지, 아직 실제
+// 지사명을 채우는 작업(별도 후속 커밋)이 아니다.
+//
+// police는 경기·전남광주통합에서 의도적으로 제외돼 있었다(2026-07
+// 실사 — 이 두 도는 지방경찰청이 도 전체 1곳이 아니라 경기남부/경기
+// 북부처럼 하위 분할돼 있어 "도 1곳" 모델이 안 맞음). 그 제외 이유는
+// 이 정적 경로에는 적용되지 않는다 — 레코드가 없으면 어차피 정직한
+// 정보없음으로 가지, 틀린 특정 지사를 찍어 말하지 않는다(라이브서치가
+// 정확히 이 실수를 했다 — 실측 로그에서 경기가 "경기남부경찰청"으로
+// 단정적으로 나왔는데 북부 사용자에게는 틀린 답이다). 그래서 34개
+// 도메인 전부를 예외 없이 균일하게 적용한다.
+function _makeGenericNationalEntries(도코드) {
+  return Object.entries(_NAT_AGENCY_DOMAIN_KEYWORDS).map(([domain, kw]) => ({
+    code: `SP-NAT-${domain.toUpperCase()}`, domain, 도코드, kw,
+  }));
+}
+for (const _genCode of ['busan', 'seoul', 'incheon', 'daejeon', 'ulsan', 'sejong',
+  'chungbuk', 'chungnam', 'jeonbuk', 'gyeongbuk', 'gyeongnam', 'gyeonggi',
+  'gangwon', 'daegu', 'jeonnam-gwangju']) {
+  PROVINCE_TABLES[_genCode].national = _makeGenericNationalEntries(_genCode);
 }
 
 // ── 중앙부처 정책기관(policy-bodies) 지연 초기화 (2026-08-02 신설) ──
