@@ -312,7 +312,7 @@ body {
 .sb-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
 .sb-section:last-child { border-bottom: none; margin-top: auto; }
 .sb-section-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  font-size: 14px; font-weight: 600; letter-spacing: 1px;
   color: var(--text3); text-transform: uppercase;
   padding: 4px 14px 6px;
   white-space: nowrap; opacity: 0;
@@ -529,7 +529,7 @@ body {
 .sb-section.bottom { border-bottom: none; margin-top: auto; padding-bottom: 12px; }
 
 .sb-section-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  font-size: 14px; font-weight: 600; letter-spacing: 1px;
   color: var(--text3); text-transform: uppercase;
   padding: 4px 14px 4px;
   white-space: nowrap; opacity: 0;
@@ -556,6 +556,30 @@ body {
   white-space: nowrap; overflow: hidden;
 }
 .sidebar:hover .sb-item-label { opacity: 1; }
+
+/* 2단 메뉴 — "개발자 문서"·"주의"처럼 하위 항목이 많은 섹션을
+   접었다 펼치는 부모/서브메뉴 구조 (2026-08-09 신설) */
+.sb-item-parent {
+  justify-content: space-between;
+}
+.sb-item-parent .sb-item-main {
+  display: flex; align-items: center; gap: 11px;
+  overflow: hidden;
+}
+.sb-chevron {
+  flex-shrink: 0; opacity: 0; transition: opacity 0.12s 0.04s, transform 0.15s;
+}
+.sidebar:hover .sb-chevron { opacity: 1; }
+.sb-item-parent[aria-expanded="true"] .sb-chevron { transform: rotate(90deg); }
+.sb-submenu {
+  display: none;
+  flex-direction: column;
+}
+.sb-submenu.open { display: flex; }
+.sb-subitem {
+  padding-left: 34px;
+  font-size: 14px;
+}
 
 .sb-cta {
   display: flex; align-items: center;
@@ -771,8 +795,20 @@ body {
        빼고 나머지 그대로 이동. 파일 경로는 전혀 안 바꿨다(MANUAL_
        SEPARATION_PLAN_v1.0 원칙 3 — 링크만 재배치, 파일은 이동 안 함). -->
   <div class="sb-section">
-    <div class="sb-section-label">🛠 개발자 문서</div>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_UNIVERSAL_AUDIT_ROUTING_20260808_v1_0.html" target="_blank">
+    <button type="button" class="sb-item sb-item-parent" aria-expanded="false"
+            onclick="toggleSubmenu('submenu-dev-docs', this)">
+      <span class="sb-item-main">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <span class="sb-item-label">🛠 개발자 문서</span>
+      </span>
+      <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+    <div class="sb-submenu" id="submenu-dev-docs">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_UNIVERSAL_AUDIT_ROUTING_20260808_v1_0.html" target="_blank">
       <!-- 2026-08-08 신설 — subject-gate 2단계 라우팅 통합, CALL_KINTENT
            과적합 재발견, 미성년자 안전 설계 신설, 저장소 전수조사(300건
            스모크테스트), "전체 SP 공통 원칙"(UNIVERSAL-INTEGRITY 등)의
@@ -785,7 +821,7 @@ body {
       </svg>
       <span class="sb-item-label">라우팅 통합 + UNIVERSAL 원칙 전수감사 실전 교훈 매뉴얼(§0808) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_ROUTING_FIXES_20260807_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_ROUTING_FIXES_20260807_v1_0.html" target="_blank">
       <!-- 2026-08-07 신설 — 5분기 라이브 스모크테스트 실행 후 FAIL 3건
            원인 규명·수정 세션(kestate/ktelecom _currentAbort 경쟁조건,
            klaw 과잉흡수 일반 규칙, §INFO/§CORE 경합 해소)에서 확인된
@@ -796,7 +832,7 @@ body {
       </svg>
       <span class="sb-item-label">라우팅 수정 3건 + 인프라 실전 교훈 매뉴얼(§0807) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_ROUTING_ARCHITECTURE_20260806_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_ROUTING_ARCHITECTURE_20260806_v1_0.html" target="_blank">
       <!-- 2026-08-06 신설 — AC 라우팅 아키텍처 심층 분석 세션(죽은 코드
            정리, GWP↔EXPERT 편향 방지책 4종, R1/R2 판정축 신설, 도메인
            키워드 충돌 검사기)에서 확인된 설계 원리·실패 패턴 정리.
@@ -806,7 +842,7 @@ body {
       </svg>
       <span class="sb-item-label">라우팅 아키텍처 실전 교훈 매뉴얼(R1/R2·하이브리드 검증) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/AC_SP_COMMUNICATION_ARCHITECTURE_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/AC_SP_COMMUNICATION_ARCHITECTURE_MANUAL_v1_0.md" target="_blank">
       <!-- 2026-08-06 신설 — AC가 언제 혼자 응답하고(①), 언제 K-Intent
            시리즈를 호출해 결과만 이어붙이고(②), 언제 새 탭을 열어
            사용자를 다른 SP와 직접 연결하는지(③) 세 시나리오를 코드
@@ -816,7 +852,7 @@ body {
       </svg>
       <span class="sb-item-label">AC↔SP 통신 아키텍처(3대 시나리오) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_EXPERT_PERSONA_KLAW_UPGRADE_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_EXPERT_PERSONA_KLAW_UPGRADE_v1_0.html" target="_blank">
       <!-- 2026-08-05 신설 — 전문가 페르소나 63종을 K-Law v15.1 수준으로
            끌어올리는 세션(SP-COMMON-02 C1~C49, STEP R 승격, PDV 태그
            신설, lawyer 사고실험을 통한 자기모순 발견)에서 확인된 실전
@@ -826,50 +862,50 @@ body {
       </svg>
       <span class="sb-item-label">전문가 페르소나 K-Law 업그레이드 실전 교훈 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/MANUAL_INDEX.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/MANUAL_INDEX.html" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
       </svg>
       <span class="sb-item-label">개발 문서 전체 지도 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/API_REFERENCE_worker_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/API_REFERENCE_worker_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
       </svg>
       <span class="sb-item-label">Worker API 레퍼런스 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/AUTO_REFRESH_MANUAL_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/AUTO_REFRESH_MANUAL_v1_0.html" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
       </svg>
       <span class="sb-item-label">자동 갱신 매뉴얼(SP tier·미등록태그·피드백취합) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/L1_POCKETBASE_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/L1_POCKETBASE_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
       </svg>
       <span class="sb-item-label">L1 PocketBase 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/DEVICE_LINK_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/DEVICE_LINK_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
       </svg>
       <span class="sb-item-label">기기 간 지갑 이전(PC 로그인) 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>
       </svg>
       <span class="sb-item-label">K-서비스·페르소나 거버넌스(owner_pdv) 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/GOV_REGIONAL_AC_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/GOV_REGIONAL_AC_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>
       </svg>
       <span class="sb-item-label">전국 지방행정 AC(도청·시청·읍면동·국가기관) 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_VECTORIZE_GOVTREE_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_VECTORIZE_GOVTREE_v1_0.html" target="_blank">
       <!-- 2026-08-04 신설 — Vectorize 의미검색 전환 + gov-tree SP 품질감사
            세션에서 확인된 실전 함정·교훈 정리. 개별 기능 매뉴얼이 아니라
            "다음에 비슷한 작업할 때 반복하지 말아야 할 시행착오" 모음. -->
@@ -878,7 +914,7 @@ body {
       </svg>
       <span class="sb-item-label">Vectorize·gov-tree 실전 교훈 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_GOVTREE_LAZY_INSTANCING_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_GOVTREE_LAZY_INSTANCING_v1_0.html" target="_blank">
       <!-- 2026-08-05 신설 — gov-tree 지연 인스턴스화(SP-Author 실시간 저작)
            설계·구현·PocketBase 배포 세션에서 확인된 실전 함정·교훈 정리.
            §1 원칙(모든 SP는 독립적 사용자) 미비점 발견, PocketBase 필드명
@@ -889,7 +925,7 @@ body {
       </svg>
       <span class="sb-item-label">gov-tree 지연 인스턴스화·배포 실전 교훈 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/GOVTREE_NATIONWIDE_EXPANSION_LESSONS_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/GOVTREE_NATIONWIDE_EXPANSION_LESSONS_v1_0.html" target="_blank">
       <!-- 2026-08-04 신설 — 부산 파일럿·전국 확대 세션에서 확인된 gov-tree
            추상 클래스(템플릿) 구현 상태와 K-Search/gov-router 3갈래 라우팅
            경계(SP-18 RULE-07 [7-D]) 정리. 위 Vectorize·gov-tree 매뉴얼의
@@ -899,7 +935,7 @@ body {
       </svg>
       <span class="sb-item-label">gov-tree 전국 확대 실전 교훈 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SESSION_LESSONS_LIVE_SMOKETEST_LATENCY_v1_0.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_LIVE_SMOKETEST_LATENCY_v1_0.html" target="_blank">
       <!-- 2026-08-05 저녁 신설 — hondi.net 라이브 계정으로 개인파산·안심상속
            시나리오 스모크테스트 중 발견한 응답 지연·빈 응답 원인 규명
            세션의 디버깅 함정 정리(SSE 청크 수 오인, wrangler tail vs
@@ -912,39 +948,39 @@ body {
       </svg>
       <span class="sb-item-label">라이브 스모크테스트 디버깅 실전 교훈 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/GDC_CHARGE_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/GDC_CHARGE_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5a2.5 2.5 0 0 1 2.5-1h.5a2 2 0 1 1 0 4h-1a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-1"/>
       </svg>
       <span class="sb-item-label">GDC 가입충전·차감·저잔액 알림 매뉴얼 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/K_SERVICE_MONETIZATION_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/K_SERVICE_MONETIZATION_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
       </svg>
       <span class="sb-item-label">K-Law·K-School 개별 유료화 가격정책 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="4" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="6" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/>
         <path d="M12 6v3M12 9l-6 5M12 9l6 5M6 16v3M18 16v3"/>
       </svg>
       <span class="sb-item-label">SP-TREE 거버넌스(상속·CI가드·SP-TREE-GUARDIAN) ↗</span>
     </a>
-    <a class="sb-item" href="/docs/gopang_whitepaper.html" target="_blank">
+    <a class="sb-item sb-subitem" href="/docs/gopang_whitepaper.html" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
       </svg>
       <span class="sb-item-label">기술 백서 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/openhash_whitepaper.html" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/openhash_whitepaper.html" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
       <span class="sb-item-label">OpenHash 백서 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/ofp_standard.html">
+    <a class="sb-item sb-subitem" href="./docs/ofp_standard.html">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="4 7 4 4 20 4 20 7"/>
         <line x1="9" y1="20" x2="15" y2="20"/>
@@ -952,42 +988,43 @@ body {
       </svg>
       <span class="sb-item-label">OFP 표준</span>
     </a>
-    <a class="sb-item" href="./docs/bizplan.html">
+    <a class="sb-item sb-subitem" href="./docs/bizplan.html">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="1" x2="12" y2="23"/>
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
       </svg>
       <span class="sb-item-label">사업화</span>
     </a>
-    <a class="sb-item" href="./docs/business-plan/BUSINESS-PLAN.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/business-plan/BUSINESS-PLAN.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/>
       </svg>
       <span class="sb-item-label">비즈니스 플랜(원가·수익 모델) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/business-plan/PRICING_TIER_MARKETING_PLAN_v1_0_2026-07-25.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/business-plan/PRICING_TIER_MARKETING_PLAN_v1_0_2026-07-25.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
       </svg>
       <span class="sb-item-label">요금제 다단계화·마케팅 플랜 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/gopang-id-auth-guide.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/gopang-id-auth-guide.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         <path d="M9 12l2 2 4-4"/>
       </svg>
       <span class="sb-item-label">ID·인증 안내 ↗</span>
     </a>
-    <a class="sb-item" href="./docs/WORKLOG_INDEX.md" target="_blank">
+    <a class="sb-item sb-subitem" href="./docs/WORKLOG_INDEX.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
       </svg>
       <span class="sb-item-label">작업 이력 (전체) ↗</span>
     </a>
-    <a class="sb-item" href="https://github.com/Openhash-Gopang/gopang" target="_blank">
+    <a class="sb-item sb-subitem" href="https://github.com/Openhash-Gopang/gopang" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
       <span class="sb-item-label">GitHub ↗</span>
     </a>
+    </div>
   </div>
 
   <!-- 주의 — 2026-07-21 신설. 문서화만으로는 재발을 못 막는다는 게
@@ -1000,79 +1037,92 @@ body {
        의도(상시 노출이 핵심)와 정면으로 충돌해 그대로 최상위 섹션으로
        유지하기로 변경 — 실행 중 발견한 사실을 계획보다 우선했다. -->
   <div class="sb-section" id="sb-caution-section">
-    <div class="sb-section-label" style="color:#c0392b">⚠ 주의</div>
-    <a class="sb-item" href="./docs/DEVICE_LINK_FULL_CHAIN_INCIDENT_2026_07_28.md" target="_blank" style="color:#c0392b">
+    <button type="button" class="sb-item sb-item-parent" aria-expanded="false"
+            style="color:#c0392b" onclick="toggleSubmenu('submenu-caution', this)">
+      <span class="sb-item-main">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        </svg>
+        <span class="sb-item-label">⚠ 주의</span>
+      </span>
+      <svg class="sb-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+    <div class="sb-submenu" id="submenu-caution">
+    <a class="sb-item sb-subitem" href="./docs/DEVICE_LINK_FULL_CHAIN_INCIDENT_2026_07_28.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">PC 로그인(device-link) 전체 체인 — 도메인·지갑암호화·KV일관성·15초폴링 등 근본원인 8건 (2026-07-28) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">device-link 알림이 PC로 가는 문제 — 기기별 구독 배열로 근본 수정 (2026-07-23) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">gdc 저장소 wrangler 배포 시 .git 폴더 전체 공개 노출 (2026-07-23) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/CHAT_SHELL_UNIFICATION_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/CHAT_SHELL_UNIFICATION_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">GWP 채팅 탭 3곳이 입력창을 각자 새로 만들던 문제 — chat-shell 공용화 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/DEVICELINK_KV_TTL_MINIMUM_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/DEVICELINK_KV_TTL_MINIMUM_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">device-link 승인 Failed to fetch — KV TTL 30초가 60초 미만이라 매번 확정적 실패 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/PUSH_SUBSCRIBE_RACE_CONDITION_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/PUSH_SUBSCRIBE_RACE_CONDITION_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">재가입 직후 push 구독이 곧바로 410 — 두 경로 동시 호출 경쟁 상태 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/JEJU_SVC_ID_ALIAS_REGRESSION_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/JEJU_SVC_ID_ALIAS_REGRESSION_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">"제주도청" 탭 안 열림 진짜 원인 — 오리진 이전 커밋이 안전망 별칭 삭제 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/STALE_VAPID_PUSH_SUBSCRIPTION_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/STALE_VAPID_PUSH_SUBSCRIPTION_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">device-link 웹푸시 조용히 안 옴 — 옛 VAPID 키 구독 미검증 재사용 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/LEGACY_L1_DOMAIN_CORS_INCIDENT_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/LEGACY_L1_DOMAIN_CORS_INCIDENT_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">등록 화면 네트워크 오류 — state.js/p2p-chat.js가 폐기된 구 도메인 참조 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/MOBILE_GWP_POPUP_GEO_RACE_2026_07_22.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/MOBILE_GWP_POPUP_GEO_RACE_2026_07_22.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">모바일 GWP 새 탭 안 열림 — GPS 권한 프롬프트가 window.open 가로챔 (2026-07-22) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">device-link 알림이 PC로 옴 — 지갑 키 없는 기기 push 가로채기 (2026-07-21) ↗</span>
     </a>
-    <a class="sb-item" href="./docs/L1_ADMIN_AUTH_INCIDENT_2026_07_21.md" target="_blank" style="color:#c0392b">
+    <a class="sb-item sb-subitem" href="./docs/L1_ADMIN_AUTH_INCIDENT_2026_07_21.md" target="_blank" style="color:#c0392b">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       </svg>
       <span class="sb-item-label">wrangler secret put — 파이프(|) 절대 금지, &lt;로 리다이렉션 (2026-07-21) ↗</span>
     </a>
+    </div>
   </div>
 
   <!-- 관리자 -->
@@ -4103,6 +4153,14 @@ function applyFontScale() {
 function changeFontSize(delta) {
   fsScale = Math.min(FS_MAX, Math.max(FS_MIN, fsScale + delta));
   applyFontScale();
+}
+
+// ── 좌측 메뉴 2단 서브메뉴 토글 ──────────────────────────────
+function toggleSubmenu(id, btnEl) {
+  const submenu = document.getElementById(id);
+  if (!submenu) return;
+  const open = submenu.classList.toggle('open');
+  if (btnEl) btnEl.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 // ── SPA 라우터 ────────────────────────────────────────────
