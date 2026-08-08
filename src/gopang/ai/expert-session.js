@@ -21,6 +21,7 @@ import { appendBubble } from '../ui/bubble.js';
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
          EXPERT_BASE_KEY, CONTROL_TOWER_PRINCIPLE_KEY, getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
+import { refineToLeaf } from './subject-gate.js';
 import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { _buildRoutingFacts } from '../services/location.js';
@@ -289,7 +290,7 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
     return false;
   }
 
-  const personaId = resolveExpertId(raw);
+  let personaId = resolveExpertId(raw);
   if (!personaId) {
     console.warn('[Expert] 알 수 없는 전문가 ID:', raw);
     // 2026-07-14 신설(구조적 취약점 보완 #2) — 이전에는 여기서 그냥 return
@@ -301,6 +302,17 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
     _reportUnresolvedTag('expert', raw, userText);
     return false;
   }
+
+  // ── 2026-08-08 신설(과목 게이트) ──────────────────────────────────
+  // 1단계 라우팅이 professor/physician/lawyer처럼 리프 아닌 상위
+  // personaId를 냈으면(§CATALOG-EXPERT 표엔 이들이 한 줄로만 있어 라우팅
+  // LLM이 애초에 세부 리프 ID를 낼 수 없다 — subject-gate.js 헤더 참조),
+  // 여기서 실제 리프로 정밀화한다. gwpDef는 반드시 이 정밀화 *이후*
+  // personaId로 다시 조회한다 — 정밀화 전 gwpDef를 재사용하면 personaId만
+  // professor-math로 바뀌고 실제 launch는 여전히 professor(범용) SP로
+  // 나가는 stale-def 버그가 재발한다.
+  personaId = await refineToLeaf(personaId, userText);
+
   const gwpDef = getExpertGwpDef(personaId);
   if (!gwpDef) {
     console.warn('[Expert] personaId는 해석됐으나 GWP 정의 없음:', personaId);

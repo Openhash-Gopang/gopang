@@ -101,6 +101,39 @@ export function isConsultableChild(parentId, childId) {
   return !!(childDef && childDef.parentKey === parentId);
 }
 
+// ── 2026-08-08 신설(과목 게이트/subject-gate.js 지원) ──────────────────
+// §CATALOG-EXPERT 표에는 라우팅 후보 절약을 위해 professor/physician/
+// lawyer 세 상위 직업군이 각각 "한 줄"로만 올라가 있다(예: professor |
+// 교수(1:1 맞춤교육)). 그런데 실제 등록된 리프(중계열·소계열이 아닌,
+// 실제로 세션이 열리는 말단 페르소나)는 이 세 직업군 아래 158개+가
+// parentKey 체인으로 걸려 있다 — 라우팅 LLM은 이 리프들의 존재 자체를
+// 모른 채 [EXPERT: professor]까지만 낼 수 있다("교수(범용)"로 뭉뚱그려
+// 라우팅됨, 세부 리프에는 자연어 라우팅으로 도달 불가 — 사고실험 코드
+// 추적으로 사전 확인된 구조적 결함). 이 함수는 주어진 상위 노드
+// (professor/physician/lawyer 등) 아래의 모든 리프(자신을 자식으로 둔
+// 노드가 하나도 없는 노드)를 재귀적으로 수집한다 — subject-gate.js가
+// 2단계 분류(사용자 발화 → 리프 후보 목록 중 하나)를 할 때 그 후보
+// 목록을 만드는 데 쓴다. 중계열(중간 노드, triggers: []로 표시되는
+// 직접 호출 대상 아닌 노드)은 결과에서 제외되고, 상위 노드 자신도
+// 자식이 하나라도 있으면 제외된다(자식이 없으면 자기 자신이 곧 유일한
+// 리프이므로 포함 — 예: physician 세부분야가 없는 상태로 물으면 그냥
+// physician 자신).
+export function getLeafDescendants(rootId) {
+  const children = Object.entries(EXPERT_REGISTRY).filter(
+    ([, def]) => def && def.parentKey === rootId
+  );
+  if (children.length === 0) {
+    // rootId 자신이 등록돼 있으면 자기 자신을 유일한 리프로 반환
+    const selfDef = EXPERT_REGISTRY[rootId];
+    return selfDef ? [{ id: rootId, label: selfDef.label }] : [];
+  }
+  const leaves = [];
+  for (const [childId] of children) {
+    leaves.push(...getLeafDescendants(childId));
+  }
+  return leaves;
+}
+
 // BUG-FIX(2026-07-03): GWP_REGISTRY와 동일한 문제 — AGENT-COMMON SP는
 // [EXPERT: SP-LAW-01] 같은 형식을 예시로 가르쳤지만 실제 키는 'lawyer'
 // 같은 kebab-case 직업군 슬러그다. SP는 이제 정답 표를 갖도록 고쳤지만
