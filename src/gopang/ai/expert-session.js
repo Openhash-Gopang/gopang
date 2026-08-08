@@ -19,7 +19,7 @@ import { CFG } from '../core/config.js';
 import { history } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
-         EXPERT_BASE_KEY, getExpertGwpDef, resolveExpertId }
+         EXPERT_BASE_KEY, CONTROL_TOWER_PRINCIPLE_KEY, getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
 import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
@@ -108,6 +108,16 @@ export async function _composeExpertPrompt(def) {
   try {
     parts.push(await _loadSpByKey(UNIVERSAL_INTEGRITY_KEY, 'UNIVERSAL-INTEGRITY'));
   } catch (e) { console.warn('[Expert] UNIVERSAL-INTEGRITY 로드 실패:', e.message); }
+
+  // 2026-08-08 신설(버그 수정) — CONTROL-TOWER-PRINCIPLE(관제탑 원칙)이
+  // 지금까지 이 조립 경로에서 한 번도 로드된 적이 없었다(실사로 발견,
+  // CONTROL_TOWER_PRINCIPLE_KEY 정의부 주석 참고). UNIVERSAL-INTEGRITY와
+  // 같은 이유(self-concat 방지)로 _loadSpByKey를 그대로 써도 안전하다 —
+  // manifest-loader.js가 manifestKey==='CONTROL-TOWER-PRINCIPLE'일 때도
+  // 동일한 조기 반환 분기를 타므로 원문만 정확히 한 번 실린다.
+  try {
+    parts.push(await _loadSpByKey(CONTROL_TOWER_PRINCIPLE_KEY, 'CONTROL-TOWER-PRINCIPLE'));
+  } catch (e) { console.warn('[Expert] CONTROL-TOWER-PRINCIPLE 로드 실패:', e.message); }
 
   try {
     parts.push(await _loadSpRawByKey('UNIVERSAL-common', 'UNIVERSAL-common'));
