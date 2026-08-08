@@ -86,7 +86,16 @@ def call_deepseek(api_key, system_prompt, user_utterance):
     payload = {
         "model": MODEL,
         "temperature": 0,
-        "max_tokens": 800,
+        # 2026-08-08 신설(디버그) — 8/8 라이브 실행 결과 7건이 완전히 빈
+        # content로 돌아와, 정규식 채점기가 "위반 없음"으로 트리비얼하게
+        # 오탐 PASS를 낸 게 실사로 확인됐다(빈 문자열은 헤더도 목록도
+        # 없으니까). 유력 원인: deepseek-v4-flash가 추론형 모델이라면
+        # max_tokens=800이 추론(reasoning) 토큰에 다 소진되고 최종 답변
+        # (content)이 비었을 가능성 — 다른 하네스들(subject-gate 등)은
+        # max_tokens=60이라 이 문제가 안 드러났을 수 있다. 원인을 확정
+        # 하기 위해 finish_reason·usage·raw json 전체를 결과에 같이
+        # 남긴다.
+        "max_tokens": 2000,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance},
@@ -99,22 +108,39 @@ def call_deepseek(api_key, system_prompt, user_utterance):
             resp = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=60)
             if resp.status_code == 200:
                 data = resp.json()
-                return data["choices"][0]["message"]["content"], None
+                choice = data.get("choices", [{}])[0]
+                content = choice.get("message", {}).get("content", "")
+                debug = {
+                    "finish_reason": choice.get("finish_reason"),
+                    "usage": data.get("usage"),
+                    "has_reasoning_content": bool(choice.get("message", {}).get("reasoning_content")),
+                    "reasoning_content_len": len(choice.get("message", {}).get("reasoning_content") or ""),
+                    "message_keys": list(choice.get("message", {}).keys()),
+                }
+                return content, None, debug
             last_err = f"HTTP {resp.status_code}: {resp.text[:300]}"
         except requests.RequestException as e:
             last_err = f"request_exception: {e}"
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_BASE_SLEEP * attempt)
-    return None, last_err
+    return None, last_err, None
 
 
 def grade(raw_text):
+    # 2026-08-08 신설 — 빈 응답은 "위반 없음"이 아니라 별도 실패다.
+    # 이전 버전은 이 체크가 없어서 빈 문자열이 헤더/목록 정규식에
+    # 전부 안 걸린다는 이유만으로 트리비얼하게 LIVE-PASS를 냈다(라이브
+    # 실행 8건 중 7건이 이 상태였음에도 8/8 PASS로 나온 원인).
+    if not raw_text or not raw_text.strip():
+        return "LIVE-FAIL", "응답이 비어 있음 — 관제탑 원칙 준수 여부를 검증하지 못했다(트리비얼 PASS 방지)"
     if HEADER_RE.search(raw_text):
         return "LIVE-FAIL", "마크다운 헤더(#/##/###) 사용 — 원칙이 명시적으로 금지"
     if NUMBERED_LIST_RE.search(raw_text):
         return "LIVE-FAIL", "번호 매김 목록(3개+ 연속) — 백과사전식 나열 의심"
     if BULLET_LIST_RE.search(raw_text):
         return "LIVE-FAIL", "불릿 목록(3개+ 연속) — 백과사전식 나열 의심"
+    if re.search(r"<<<STATE>>>.*?<<<END>>>", raw_text, re.S):
+        return "LIVE-NEEDS-REVIEW", "내부 상태 태그(<<<STATE>>>...)가 응답에 그대로 노출됨 — 실제 앱은 클라이언트가 이 블록을 제거하는지 별도 확인 필요, 원칙 위반과는 무관"
     if len(raw_text) > LONG_RESPONSE_THRESHOLD:
         return "LIVE-NEEDS-REVIEW", f"목록 형태는 아니지만 응답이 김({len(raw_text)}자) — 산문형 설명일 가능성, 사람 확인 필요"
     return "LIVE-PASS", "목록·헤더 없음, 길이 적정"
@@ -122,11 +148,11 @@ def grade(raw_text):
 
 def process_one(api_key, manifest, scenario):
     system_prompt = build_system_prompt(manifest, scenario["sp_keys"])
-    raw_text, err = call_deepseek(api_key, system_prompt, scenario["utterance"])
+    raw_text, err, debug = call_deepseek(api_key, system_prompt, scenario["utterance"])
     if err:
-        return {**scenario, "raw_response": None, "live_verdict": "LIVE-ERROR", "live_note": err}
+        return {**scenario, "raw_response": None, "live_verdict": "LIVE-ERROR", "live_note": err, "debug": None}
     verdict, note = grade(raw_text)
-    return {**scenario, "raw_response": raw_text, "live_verdict": verdict, "live_note": note}
+    return {**scenario, "raw_response": raw_text, "live_verdict": verdict, "live_note": note, "debug": debug}
 
 
 def main():
@@ -159,7 +185,9 @@ def main():
                 results.append(r)
                 out_f.write(json.dumps(r, ensure_ascii=False) + "\n")
                 out_f.flush()
-                print(f"[{i}/{len(scenarios)}] {r['id']:20s} {r['live_verdict']:16s} {r['live_note']}")
+                dbg = r.get("debug") or {}
+                dbg_str = f" [finish={dbg.get('finish_reason')}, reasoning_len={dbg.get('reasoning_content_len', '-')}]" if dbg else ""
+                print(f"[{i}/{len(scenarios)}] {r['id']:20s} {r['live_verdict']:16s} {r['live_note']}{dbg_str}")
 
     counts = {}
     for r in results:
