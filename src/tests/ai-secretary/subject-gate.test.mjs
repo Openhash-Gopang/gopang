@@ -98,4 +98,20 @@ describe('refineToLeaf — 2단계 과목 게이트', () => {
     assert.equal(result, 'professor');
     mock.restoreAll();
   });
+
+  test('초등 수준 동의어(산수)로 물어도 게이트 메뉴에 실려 professor-math로 정밀화된다', async () => {
+    let capturedSystemPrompt = null;
+    mock.method(globalThis, 'fetch', async (url, opts) => {
+      capturedSystemPrompt = JSON.parse(opts.body).messages[0].content;
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"id": "professor-math"}' } }] }),
+      };
+    });
+    const { refineToLeaf } = await import('../../gopang/ai/subject-gate.js?t=' + Date.now());
+    const result = await refineToLeaf('professor', '초등학생인데 구구단 산수 좀 가르쳐 주세요');
+    assert.equal(result, 'professor-math');
+    assert.ok(capturedSystemPrompt.includes('구구단'), '게이트 메뉴에 초등 동의어(구구단)가 포함돼야 함');
+    mock.restoreAll();
+  });
 });

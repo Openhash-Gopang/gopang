@@ -26,6 +26,37 @@ const GATE_SYS_PROMPT_HEAD =
   '응답하세요: {"id": "<후보 id>"}. 확신이 없거나 후보 중 뚜렷이 맞는 ' +
   '것이 없으면 {"id": null}로 응답하세요(지어내지 않습니다).\n\n후보 목록:\n';
 
+// ── 2026-08-08 신설(초중고 학년대 어휘 보강) ────────────────────────
+// 배경(주피터 지시): 초등 산수와 대학 수학을 별도 페르소나로 안 쪼갠다
+// — SP_professor_v1_5.md §3-1(학습자 프로파일 확정)이 이미 학습자
+// 수준에 맞춰 교수법을 조정하도록 설계돼 있어, professor-math 하나가
+// 초등학생부터 대학원생까지 다 받는다(persona 정체성은 그대로,
+// 교수법만 상대에 맞춤). 다만 이 게이트의 후보 메뉴는 EXPERT_REGISTRY의
+// label(예: "교수(수학)")을 그대로 보여주는데, 이 라벨은 학과 명칭
+// 위주라 "산수"·"구구단"처럼 초등 수준 발화에 쓰이는 실제 어휘와
+// 문자열이 안 겹칠 수 있다 — 그러면 분류 LLM이 후보 중 뚜렷이 맞는
+// 게 없다고 보고 null을 낼 위험이 있다. EXPERT_REGISTRY.label 자체는
+// 건드리지 않는다(그 필드는 새 탭 제목 등 다른 곳에도 쓰임) — 이 게이트
+// 전용으로 리프 id별 저학년 동의어를 별도로 매핑해 메뉴에만 덧붙인다.
+// 커버 범위는 초중고 정규 교과 중 대응되는 대학 학과가 명확한 것만
+// (국어/수학/영어/과학/사회/체육/미술) — 음악처럼 리프가 세부장르별로만
+// 쪼개져 있어 마땅한 초등 catch-all 리프가 없는 과목은 일단 제외했다
+// (필요해지면 그때 재검토).
+const LEAF_SYNONYMS = {
+  'professor-korean':             ['국어', '받아쓰기', '맞춤법', '한글', '초등 국어', '글쓰기 기초'],
+  'professor-math':               ['수학', '산수', '구구단', '덧셈', '뺄셈', '곱셈', '나눗셈', '초등 수학'],
+  'professor-english':            ['영어', '알파벳', '파닉스', '영어 기초', '초등 영어'],
+  'professor-generalscience':     ['과학', '초등 과학', '과학 실험'],
+  'professor-generalsocialscience': ['사회', '초등 사회'],
+  'professor-physicaleducation':  ['체육', '초등 체육'],
+  'professor-finearts':           ['미술', '초등 미술', '그리기'],
+};
+
+function _leafMenuLine(leaf) {
+  const syn = LEAF_SYNONYMS[leaf.id];
+  return syn ? `- ${leaf.id}: ${leaf.label} (${syn.join('·')} 포함)` : `- ${leaf.id}: ${leaf.label}`;
+}
+
 /**
  * personaId 아래에 실제 리프가 둘 이상 있으면(=1단계 라우팅이 뭉뚱그린
  * 상위 직업군일 가능성) 그 발화를 리프 하나로 재분류해 personaId를
@@ -45,7 +76,7 @@ export async function refineToLeaf(personaId, userText) {
 
   try {
     const menu = leaves
-      .map(l => `- ${l.id}: ${l.label}`)
+      .map(_leafMenuLine)
       .join('\n');
     const res = await fetch(CFG.endpoint + '/chat/completions', {
       method: 'POST',
