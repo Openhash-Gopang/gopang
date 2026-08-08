@@ -1,0 +1,233 @@
+[
+  {
+    "id": "physician-leaf-01",
+    "root_id": "physician",
+    "utterance": "임신 중인데 태동이 좀 줄어든 것 같아서 걱정되는 상황을 봐줄 분 있을까요",
+    "expected_leaf_id": "physician-obgyn",
+    "category": "정상경로(임신 관련 서술 — 산부인과 암시)"
+  },
+  {
+    "id": "physician-leaf-02",
+    "root_id": "physician",
+    "utterance": "아이가 열이 계속 나고 보채는데 소아 전문으로 봐주실 분 계신가요",
+    "expected_leaf_id": "physician-pediatrics",
+    "category": "정상경로(소아 명시 — 소아청소년과 암시)"
+  },
+  {
+    "id": "physician-leaf-03",
+    "root_id": "physician",
+    "utterance": "요즘 잠도 안 오고 불안한 게 계속돼서 약물치료까지 고려해서 상담받고 싶어요",
+    "expected_leaf_id": "physician-psychiatry",
+    "category": "정상경로(정신과적 약물치료 언급 — 정신건강의학과 암시)"
+  },
+  {
+    "id": "physician-leaf-04",
+    "root_id": "physician",
+    "utterance": "무릎을 심하게 다쳤는데 뼈에 문제가 있는지 봐주실 분이 필요해요",
+    "expected_leaf_id": "physician-orthopedics",
+    "category": "정상경로(근골격계 손상 — 정형외과 암시, '뼈'라는 표현만 사용)"
+  },
+  {
+    "id": "physician-leaf-05",
+    "root_id": "physician",
+    "utterance": "건강검진 결과 여러 수치가 애매하게 나왔는데 전체적으로 위험도를 평가해주실 분 있나요",
+    "expected_leaf_id": "physician-preventive",
+    "category": "정상경로(건강검진 종합평가 — 예방의학과 암시, 세부분야명 미사용)"
+  },
+  {
+    "id": "physician-leaf-06",
+    "root_id": "physician",
+    "utterance": "조직검사한 결과가 실제로 악성인지 정확히 판독해주실 분을 찾고 있어요",
+    "expected_leaf_id": "physician-pathology",
+    "category": "정상경로(조직검사 결과 확진 — 병리과 암시)"
+  },
+  {
+    "id": "physician-leaf-07",
+    "root_id": "physician",
+    "utterance": "수술 예정인데 마취가 안전할지 위험도를 미리 봐주실 분 계신가요",
+    "expected_leaf_id": "physician-anesthesiology",
+    "category": "정상경로(마취 위험도 평가 — 마취통증의학과 암시)"
+  },
+  {
+    "id": "physician-leaf-08",
+    "root_id": "physician",
+    "utterance": "직장에서 다친 게 업무 때문인지 소견서 받으려는데 봐주실 분이 필요해요",
+    "expected_leaf_id": "physician-occupational",
+    "category": "정상경로(업무 관련성 소견 — 직업환경의학과 암시)"
+  },
+  {
+    "id": "physician-leaf-09",
+    "root_id": "physician",
+    "utterance": "몸이 좀 안 좋은 것 같은데 전반적으로 봐주실 의사 선생님 있을까요",
+    "expected_leaf_id": "physician",
+    "category": "부정테스트(세부분야 특정 불가 — 상위 physician에 남아야 함)"
+  },
+  {
+    "id": "physician-leaf-10",
+    "root_id": "physician",
+    "utterance": "최근 피곤함이 계속되는데 어떤 과를 가야 할지도 모르겠어서 그냥 상담받고 싶어요",
+    "expected_leaf_id": "physician",
+    "category": "부정테스트(세부분야 미특정 + 명시적으로 '어떤 과인지 모르겠다' — 상위 유지)"
+  },
+  {
+    "id": "lawyer-leaf-11",
+    "root_id": "lawyer",
+    "utterance": "이혼하면서 재산을 어떻게 나눠야 할지 제 상황에 맞춰 봐주실 분이 필요해요",
+    "expected_leaf_id": "lawyer-family",
+    "category": "정상경로(이혼·재산분할 — 가사법 암시)"
+  },
+  {
+    "id": "lawyer-leaf-12",
+    "root_id": "lawyer",
+    "utterance": "아버지가 돌아가셨는데 유산을 어떻게 나눠야 하는지 제 사정 봐주실 분 있을까요",
+    "expected_leaf_id": "lawyer-inheritance",
+    "category": "정상경로(상속 서술 — 상속 세부분야 암시)"
+  },
+  {
+    "id": "lawyer-leaf-13",
+    "root_id": "lawyer",
+    "utterance": "빌려준 돈을 계속 안 갚는 사람한테서 어떻게 받아낼 수 있을지 직접 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-collection",
+    "category": "정상경로(채권추심 서술 — trigger 문자열 미사용)"
+  },
+  {
+    "id": "lawyer-leaf-14",
+    "root_id": "lawyer",
+    "utterance": "회사가 감당 못할 빚더미에 앉았는데 정리할 방법을 같이 봐주실 분 계신가요",
+    "expected_leaf_id": "lawyer-insolvency",
+    "category": "정상경로(도산·회생 서술 — trigger 문자열 미사용)"
+  },
+  {
+    "id": "lawyer-leaf-15",
+    "root_id": "lawyer",
+    "utterance": "군대에서 상관을 때렸다는 이유로 조사받고 있는데 이게 어떻게 되는 건지 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-military",
+    "category": "정상경로(군인 신분+군형법 위반 정황 — 군형법 세부분야 암시)"
+  },
+  {
+    "id": "lawyer-leaf-16",
+    "root_id": "lawyer",
+    "utterance": "중학생 아들이 친구를 다치게 해서 경찰 조사를 받는다는데 어떻게 되는지 봐주실 분 있나요",
+    "expected_leaf_id": "lawyer-juvenile",
+    "category": "정상경로(미성년자 형사사건 — 소년보호 암시, 연령 서술로 판단)"
+  },
+  {
+    "id": "lawyer-leaf-17",
+    "root_id": "lawyer",
+    "utterance": "구청에서 영업정지 처분을 내렸는데 이거 취소시킬 방법이 있는지 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-administrative",
+    "category": "정상경로(행정처분 불복 — 행정법 암시)"
+  },
+  {
+    "id": "lawyer-leaf-18",
+    "root_id": "lawyer",
+    "utterance": "제 발명품을 다른 회사가 그대로 베껴서 팔고 있는데 특허 침해로 다퉈볼 수 있을지 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-it",
+    "category": "부정테스트후보(특허소송은 lawyer-it이 아니라 patent-attorney 영역일 수 있음 — 실제로는 IT 특허인지 여부에 따라 갈림. 이 발화는 소프트웨어 맥락 없어 애매)"
+  },
+  {
+    "id": "lawyer-leaf-19",
+    "root_id": "lawyer",
+    "utterance": "외국인 배우자가 한국에 계속 살 수 있는 비자 문제를 봐주실 분이 필요해요",
+    "expected_leaf_id": "lawyer-immigration",
+    "category": "정상경로(체류자격 문제 — 이주 및 비자 암시)"
+  },
+  {
+    "id": "lawyer-leaf-20",
+    "root_id": "lawyer",
+    "utterance": "다니던 회사에서 인턴이 상사한테 지속적으로 괴롭힘을 당했다는데 회사 상대로 다퉈볼 수 있을지 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-corporate",
+    "category": "부정테스트후보(직장내괴롭힘은 lawyer-labor 영역에 가까울 수 있음 — 기업법무 vs 노동 경계 애매)"
+  },
+  {
+    "id": "lawyer-leaf-21",
+    "root_id": "lawyer",
+    "utterance": "재건축 조합에서 저희 집 보상금을 너무 적게 책정했는데 이의를 제기해볼 수 있을지 봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer-redevelopment",
+    "category": "정상경로(정비사업 보상금 다툼 — 재개발재건축 암시)"
+  },
+  {
+    "id": "lawyer-leaf-22",
+    "root_id": "lawyer",
+    "utterance": "법적으로 문제가 될 수 있는 상황인지 그냥 전반적으로 한번 봐주실 변호사님이 필요해요",
+    "expected_leaf_id": "lawyer",
+    "category": "부정테스트(세부분야 특정 불가 — 상위 lawyer에 남아야 함)"
+  },
+  {
+    "id": "lawyer-leaf-23",
+    "root_id": "lawyer",
+    "utterance": "복잡한 사정이 있는데 어떤 분야인지도 잘 모르겠어서 일단 얘기부터 들어봐주실 분 필요해요",
+    "expected_leaf_id": "lawyer",
+    "category": "부정테스트(세부분야 미특정 명시 — 상위 유지)"
+  },
+  {
+    "id": "patent-attorney-leaf-24",
+    "root_id": "patent-attorney",
+    "utterance": "새로 만든 로고와 브랜드명이 다른 회사 것과 겹치는지 미리 봐주실 분이 필요해요",
+    "expected_leaf_id": "patent-attorney-trademark",
+    "category": "정상경로(로고·브랜드명 — 상표 암시)"
+  },
+  {
+    "id": "patent-attorney-leaf-25",
+    "root_id": "patent-attorney",
+    "utterance": "제 발명이 이미 등록된 특허와 겹치는지 실제로 조사해서 판단해주실 분 필요해요",
+    "expected_leaf_id": "patent-attorney-ip-strategy",
+    "category": "정상경로(기존 권리 침해 위험 조사 — IP전략·특허맵 암시)"
+  },
+  {
+    "id": "patent-attorney-leaf-26",
+    "root_id": "patent-attorney",
+    "utterance": "제품 디자인이 특이해서 이것도 따로 보호받을 방법이 있는지 봐주실 분 있을까요",
+    "expected_leaf_id": "patent-attorney-design",
+    "category": "정상경로(제품 외관 보호 — 디자인 세부분야 암시)"
+  },
+  {
+    "id": "patent-attorney-leaf-27",
+    "root_id": "patent-attorney",
+    "utterance": "특허청에서 제 출원을 거절했는데 이의를 제기해볼 수 있을지 봐주실 분 필요해요",
+    "expected_leaf_id": "patent-attorney-trial-litigation",
+    "category": "정상경로(거절결정불복 — 심판 세부분야 암시)"
+  },
+  {
+    "id": "patent-attorney-leaf-28",
+    "root_id": "patent-attorney",
+    "utterance": "특허 출원이라는 게 정확히 어떤 절차인지 일반적으로 궁금해요",
+    "expected_leaf_id": "patent-attorney",
+    "category": "부정테스트(일반적 절차 문의, 위임의도 약함 — 상위 유지 또는 GWP 후보)"
+  },
+  {
+    "id": "accountant-leaf-29",
+    "root_id": "accountant",
+    "utterance": "저희 회사를 인수하겠다는 곳이 있는데 재무 상태를 실제로 점검해주실 분이 필요해요",
+    "expected_leaf_id": "accountant-due-diligence",
+    "category": "정상경로(인수 전 재무 점검 — M&A실사 암시)"
+  },
+  {
+    "id": "accountant-leaf-30",
+    "root_id": "accountant",
+    "utterance": "직원들한테 스톡옵션을 주려는데 행사가격을 어떻게 정해야 할지 봐주실 분 필요해요",
+    "expected_leaf_id": "accountant-valuation",
+    "category": "정상경로(스톡옵션 행사가 산정 — 기업가치평가 암시)"
+  },
+  {
+    "id": "accountant-leaf-31",
+    "root_id": "accountant",
+    "utterance": "회사에서 돈이 이상하게 빠져나간 정황이 있는데 실제로 조사해주실 분이 필요해요",
+    "expected_leaf_id": "accountant-forensic",
+    "category": "정상경로(횡령 의심 조사 — 포렌식회계 암시)"
+  },
+  {
+    "id": "accountant-leaf-32",
+    "root_id": "accountant",
+    "utterance": "상장을 준비 중인데 재무제표랑 내부 시스템을 미리 점검해주실 분 필요해요",
+    "expected_leaf_id": "accountant-ipo",
+    "category": "정상경로(상장 준비 재무점검 — IPO상장자문 암시)"
+  },
+  {
+    "id": "accountant-leaf-33",
+    "root_id": "accountant",
+    "utterance": "회계라는 게 정확히 어떤 일을 하는 직업인지 궁금해요",
+    "expected_leaf_id": "accountant",
+    "category": "부정테스트(직업 자체에 대한 일반 질문, 위임의도 없음 — 상위 유지 또는 GWP)"
+  }
+]

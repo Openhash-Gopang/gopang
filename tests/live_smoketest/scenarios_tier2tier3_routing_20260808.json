@@ -1,0 +1,382 @@
+[
+  {
+    "no": 1,
+    "utterance": "임신 초기인데 산전관리를 어떻게 준비해야 할지 순서대로 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "midwife",
+    "expected_name": "조산사",
+    "category": "정상경로(암묵적 의도 — 산전관리 순서 요청, 진단 아닌 관리 계획)",
+    "static_verdict": "PASS",
+    "basis": "expert-registry.js midwife.triggers 암시 매칭. STEP B-1 '산전관리 일정 단계별 제시'와 발화 의도 일치. 진단·이상소견 판정이 아니라 관리 계획 요청이라 physician-obgyn이 아님"
+  },
+  {
+    "no": 2,
+    "utterance": "시력이 좀 떨어진 것 같은데 제 눈에 정확히 맞는 렌즈를 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "optician",
+    "expected_name": "안경사",
+    "category": "정상경로(암묵적 의도 — 굴절교정 목적 명확, 질환 의심 신호 없음)",
+    "static_verdict": "PASS",
+    "basis": "optician STEP B-1 '렌즈 종류별 장단점 비교'와 일치. 단순 시력저하+렌즈 요청으로 v1.6 강제전환 트리거(급격한 시력저하·섬광비문증 등)에는 해당 안 함"
+  },
+  {
+    "no": 3,
+    "utterance": "탈색을 자주 해서 머릿결이 많이 상했는데 관리 방법을 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "hairdresser",
+    "expected_name": "미용사",
+    "category": "정상경로(암묵적 의도 — 모발관리, 질환 신호 없음)",
+    "static_verdict": "PASS",
+    "basis": "hairdresser STEP B-1 '모발 상태별 관리 원칙'과 일치. 아나필락시스·두피궤양 등 v1.8 강제전환 트리거에는 해당 안 함"
+  },
+  {
+    "no": 4,
+    "utterance": "회사 내부망에 외부에서 침투할 만한 약점이 없는지 미리 점검해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "security-engineer",
+    "expected_name": "정보보안전문가",
+    "category": "정상경로(암묵적 의도 — 사전 점검, 진행중 침해사고 아님)",
+    "static_verdict": "PASS",
+    "basis": "security-engineer STEP B-1 '보안조치 우선순위 제시'와 일치. 진행중 랜섬웨어·유출 정황이 없어 v1.8 강제전환(시스템 격리)에는 해당 안 함"
+  },
+  {
+    "no": 5,
+    "utterance": "운동을 이제 막 시작하려는데 제 체력 수준에 맞는 프로그램을 짜주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "sports-instructor",
+    "expected_name": "생활스포츠지도사",
+    "category": "정상경로(암묵적 의도 — 운동 프로그램 설계, 증상 없음)",
+    "static_verdict": "PASS",
+    "basis": "sports-instructor STEP B-1 '준비운동-본운동-정리운동 단계별 제시'와 일치. 흉통·실신 등 v1.7 강제전환 트리거 신호 없음"
+  },
+  {
+    "no": 6,
+    "utterance": "냉장고에 있는 재료로 만들 수 있는 저녁 메뉴를 순서대로 알려주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "chef",
+    "expected_name": "조리사",
+    "category": "정상경로(암묵적 의도 — 레시피 요청, 위생사고 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "chef STEP B-1 '레시피 단계별 제시'와 일치. 집단 식중독·알레르기 미확인 등 v1.8 강제전환 트리거 해당 안 함"
+  },
+  {
+    "no": 7,
+    "utterance": "작은 식당을 새로 여는데 위생 기준을 다 갖췄는지 체크리스트로 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "sanitarian",
+    "expected_name": "위생사",
+    "category": "정상경로(암묵적 의도 — 사전 위생기준 점검, 감염 발생 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "sanitarian STEP B-1 '기준 충족 체크리스트 단계별 제시'와 일치. 집단감염·기준초과오염 등 v1.6 강제전환 해당 안 함"
+  },
+  {
+    "no": 8,
+    "utterance": "아이가 또래보다 말이 늦게 트이는 것 같은데 집에서 해볼 수 있는 훈련을 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "speech-language-pathologist",
+    "expected_name": "언어재활사",
+    "category": "정상경로(암묵적 의도 — 가정 내 언어자극 활동 요청, 급성 발병 아님)",
+    "static_verdict": "PASS",
+    "basis": "speech-language-pathologist STEP B-1 '가정 내 언어자극 활동 단계별 제시'와 일치. 성인 급성 발병·삼킴장애 등 v1.6 강제전환(뇌졸중 의심)과는 무관"
+  },
+  {
+    "no": 9,
+    "utterance": "옆집이랑 땅 경계가 애매한데 정확히 측량해서 결과를 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "surveying-engineer",
+    "expected_name": "측량 및 지형공간정보기술사",
+    "category": "정상경로(암묵적 의도 — 측량 요청, 형사화·안전위험 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "surveying-engineer STEP B-1 '분쟁해결 경로별 비교'와 일치. 실력행사·구조안전 직결 등 v1.8 강제전환 해당 안 함"
+  },
+  {
+    "no": 10,
+    "utterance": "외국 친구랑 서울 여행하는데 통역까지 포함해서 일정을 짜주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "tour-guide",
+    "expected_name": "관광통역안내사",
+    "category": "정상경로(암묵적 의도 — 일정 기획+통역, 응급상황 없음)",
+    "static_verdict": "PASS",
+    "basis": "tour-guide STEP B-1 '개장시간·요금 등 실제 정보로 일정 제시'와 일치. 사고·실종·범죄피해 등 v1.8 강제전환 해당 안 함"
+  },
+  {
+    "no": 11,
+    "utterance": "회사 직원들 대상으로 금연 프로그램을 기획해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "health-educator",
+    "expected_name": "보건교육사",
+    "category": "정상경로(암묵적 의도 — 프로그램 기획, 위기신호 없음)",
+    "static_verdict": "PASS",
+    "basis": "health-educator STEP B-1 '프로그램 기획 단계(요구도조사→목표설정→실행→평가)'와 일치. 자살·자해 등 v1.6 강제전환 해당 안 함"
+  },
+  {
+    "no": 12,
+    "utterance": "집을 산 뒤에 소유권을 제 앞으로 옮기는 서류 작업을 대신 처리해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "judicial-scrivener",
+    "expected_name": "법무사",
+    "category": "정상경로(암묵적 의도 — '등기' 단어 미사용, 소유권이전 서류대행으로 의미상 암시)",
+    "static_verdict": "PASS",
+    "basis": "judicial-scrivener 소관(서류 절차 대행) — lawyer(소송대리)와의 인접쌍 판별 기준(§CORE)상 서류작업 요청이라 judicial-scrivener"
+  },
+  {
+    "no": 13,
+    "utterance": "프리랜서로 일하는데 세금 신고할 때 뭘 공제받을 수 있는지 제 상황 봐서 알려주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "tax-accountant",
+    "expected_name": "세무사",
+    "category": "정상경로(암묵적 의도 — 개인 상황 기반 절세 상담, trigger 문자열 미사용)",
+    "static_verdict": "PASS",
+    "basis": "tax-accountant STEP B '절세전략확신도' 로직과 일치"
+  },
+  {
+    "no": 14,
+    "utterance": "은퇴 후에 쓸 자금을 지금부터 어떻게 모아야 할지 제 상황에 맞게 계획 세워주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "financial-planner",
+    "expected_name": "재무설계사",
+    "category": "정상경로(암묵적 의도 — 개인 맞춤 자금계획, 투자사기 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "financial-planner STEP B-1 '저축률·투자기간·목표금액 관계 구조적 제시'와 일치"
+  },
+  {
+    "no": 15,
+    "utterance": "상속받은 땅이 대략 얼마 정도 가치가 있는지 실제로 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "appraiser",
+    "expected_name": "감정평가사",
+    "category": "정상경로(암묵적 의도 — 가치 산정 요청, 소송용 정식평가서 요구 아님)",
+    "static_verdict": "PASS",
+    "basis": "appraiser STEP B-1 '실제 추정 가격 범위 제시'와 일치. 소송·과세 법적효력 요구 없어 v1.9 강제전환(정식감정평가서 구분)은 부가 설명 수준"
+  },
+  {
+    "no": 16,
+    "utterance": "보험사에서 제시한 보상금이 너무 적은 것 같은데 제대로 계산된 게 맞는지 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "loss-adjuster",
+    "expected_name": "손해사정사",
+    "category": "정상경로(암묵적 의도 — 보상금 재검토 요청)",
+    "static_verdict": "PASS",
+    "basis": "loss-adjuster STEP B-1 '실제 참고 손해액 범위 제시'와 일치"
+  },
+  {
+    "no": 17,
+    "utterance": "야근수당을 제대로 못 받은 것 같은데 얼마나 밀렸는지 계산해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "labor-attorney",
+    "expected_name": "공인노무사",
+    "category": "정상경로(암묵적 의도 — 체불임금 계산 요청)",
+    "static_verdict": "PASS",
+    "basis": "labor-attorney STEP B-1 '실제 체불임금·수당 추정액 제시'와 일치"
+  },
+  {
+    "no": 18,
+    "utterance": "해외에서 물건을 들여오려는데 통관 절차를 대신 처리해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "정상경로(암묵적 의도 — 통관 절차 대행 요청)",
+    "static_verdict": "PASS",
+    "basis": "customs-broker STEP B-1 '통관 경로·실제 참고 세율 제시'와 일치"
+  },
+  {
+    "no": 19,
+    "utterance": "몸이 냉하고 소화가 잘 안되는 체질을 한방으로 개선하고 싶은데 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "traditional-medicine-doctor",
+    "expected_name": "한의사",
+    "category": "정상경로(암묵적 의도 — 체질개선 상담, 중증신호 없음)",
+    "static_verdict": "PASS",
+    "basis": "traditional-medicine-doctor 소관. 마비·의식저하 등 v2.0 강제전환(양방 응급연계) 해당 안 함"
+  },
+  {
+    "no": 20,
+    "utterance": "형편이 많이 어려운데 저희 가족이 받을 수 있는 지원이 뭐가 있는지 제 상황 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "social-worker",
+    "expected_name": "사회복지사",
+    "category": "정상경로(암묵적 의도 — 개인 상황 기반 복지급여 산정 요청)",
+    "static_verdict": "PASS",
+    "basis": "social-worker STEP B '실제 소득인정액 계산 결과와 기준액 대비 비교'와 일치"
+  },
+  {
+    "no": 21,
+    "utterance": "전세집을 구하는데 계약서 검토랑 괜찮은 매물을 같이 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "real-estate-agent",
+    "expected_name": "공인중개사",
+    "category": "정상경로(암묵적 의도 — 매물+계약검토 결합 요청)",
+    "static_verdict": "PASS",
+    "basis": "real-estate-agent STEP B-1 '복수 경로 장단점 제시'와 일치. 전세사기 의심 정황 없어 v2.0 강제전환은 해당 안 함"
+  },
+  {
+    "no": 22,
+    "utterance": "해외 바이어랑 주고받을 계약서 초안을 영어로 옮겨주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "translator-interpreter",
+    "expected_name": "통역사·번역사",
+    "category": "정상경로(암묵적 의도 — 번역 요청, 법정·의료 고위험 통역 아님)",
+    "static_verdict": "PASS",
+    "basis": "translator-interpreter STEP B-1 '초벌 번역 초안 제공'과 일치. 법정·의료 실시간 통역 등 v1.9 강제전환은 해당 안 함"
+  },
+  {
+    "no": 23,
+    "utterance": "마당을 정원으로 꾸미고 싶은데 이 동네 기후에 어떤 나무가 어울릴지 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "landscape-engineer",
+    "expected_name": "조경기술사",
+    "category": "정상경로(암묵적 의도 — 수종 추천, 붕괴위험 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "landscape-engineer STEP B-1 '실제 적합한 수종·배치 제시'와 일치"
+  },
+  {
+    "no": 24,
+    "utterance": "심폐소생술을 제대로 배우고 싶은데 순서대로 알려주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "paramedic",
+    "expected_name": "응급구조사",
+    "category": "정상경로(암묵적 의도 — 평시 교육 목적, 실제 응급상황 아님)",
+    "static_verdict": "PASS",
+    "basis": "paramedic STEP B-2(평시 설명에 한함) 적용 — 실제 응급이면 B-1의 즉시행동지침 우선이나 이 발화는 사전 학습 목적"
+  },
+  {
+    "no": 25,
+    "utterance": "사춘기 아이가 대화를 거의 안 하려고 하는데 어떻게 다가가야 할지 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "youth-counselor",
+    "expected_name": "청소년상담사",
+    "category": "정상경로(암묵적 의도 — 평시 상담 접근법, 위기신호 없음)",
+    "static_verdict": "PASS",
+    "basis": "youth-counselor STEP B-1(평시) 적용. 자살·자해·가출·학대 등 v1.8 강제전환 신호 없음"
+  },
+  {
+    "no": 26,
+    "utterance": "18개월 된 아기 발달이 또래에 맞는 편인지 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "childcare-teacher",
+    "expected_name": "보육교사",
+    "category": "정상경로(암묵적 의도 — 발달 이정표 확인, 학대 정황 없음)",
+    "static_verdict": "PASS",
+    "basis": "childcare-teacher STEP B-1 '연령대별 발달 이정표 단계별 제시'와 일치. 원인불명 손상 등 v1.8 강제전환 해당 안 함"
+  },
+  {
+    "no": 27,
+    "utterance": "임신 중인데 초음파에서 이상 소견이 나왔다고 하는데 정확히 뭔지 진단해주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician-obgyn",
+    "expected_name": "의사(산부인과)",
+    "category": "부정테스트(EXPERT 오발동 방지 — midwife 아님, 진단은 산부인과 소관)",
+    "static_verdict": "PASS",
+    "basis": "midwife는 '산전관리 일정 제시'가 소관이고 이상소견 진단은 physician-obgyn 영역. 임신 관련 키워드만으로 midwife로 새면 오류"
+  },
+  {
+    "no": 28,
+    "utterance": "눈이 갑자기 잘 안 보이고 심하게 아픈데 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician-ophthalmology",
+    "expected_name": "의사(안과)",
+    "category": "부정테스트(EXPERT 오발동 방지 — optician 아님, 급성 안구질환 의심)",
+    "static_verdict": "PASS",
+    "basis": "optician v1.6 강제전환 트리거(급격한 시력저하) 자체가 안과 연계를 지시. '시력' 키워드만으로 optician 유지하면 안전장치 무력화"
+  },
+  {
+    "no": 29,
+    "utterance": "두피에 원인 모를 상처가 계속 생기는데 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician-dermatology",
+    "expected_name": "의사(피부과)",
+    "category": "부정테스트(EXPERT 오발동 방지 — hairdresser 아님, 두피 질환 의심)",
+    "static_verdict": "PASS",
+    "basis": "hairdresser v1.8 강제전환 트리거(두피 궤양·급속탈모)가 피부과 연계를 지시. '두피' 키워드만으로 hairdresser 유지하면 안전장치 무력화"
+  },
+  {
+    "no": 30,
+    "utterance": "운동하다가 무릎에서 뚝 소리가 나면서 아픈데 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician-orthopedics",
+    "expected_name": "의사(정형외과)",
+    "category": "부정테스트(EXPERT 오발동 방지 — sports-instructor 아님, 손상 진단 필요)",
+    "static_verdict": "PASS",
+    "basis": "'운동'이라는 문맥 단어에 낚여 sports-instructor로 가면 안 됨 — 통증·손상 서술은 진단 영역"
+  },
+  {
+    "no": 31,
+    "utterance": "음식을 먹고 나서 온몸에 두드러기가 나고 숨쉬기 힘든 상황이에요",
+    "expected_type": "GWP",
+    "expected_id": "kemergency",
+    "expected_name": "응급(K-Emergency 등 응급 GWP)",
+    "category": "부정테스트(EXPERT 오발동 방지 — chef 아님, 응급 알레르기 반응)",
+    "static_verdict": "PASS",
+    "basis": "'음식' 키워드로 chef EXPERT로 가면 심각한 오류 — 아나필락시스 의심 응급상황은 최우선 응급 경로로 가야 함"
+  },
+  {
+    "no": 32,
+    "utterance": "아이가 말을 거의 못 하고 다른 발달도 늦은 것 같은데 정확한 진단을 받고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician-pediatrics",
+    "expected_name": "의사(소아청소년과)",
+    "category": "부정테스트(EXPERT 오발동 방지 — speech-language-pathologist 아님, 진단 요청)",
+    "static_verdict": "PASS",
+    "basis": "'진단'을 명시적으로 요청 — speech-language-pathologist는 가정 내 자극활동(치료적 접근)이 소관이지 진단이 아님"
+  },
+  {
+    "no": 33,
+    "utterance": "옆집과 담장 문제로 몸싸움까지 났는데 어떻게 해야 할지 봐주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": "lawyer-criminal",
+    "expected_name": "변호사(형사법)",
+    "category": "부정테스트(EXPERT 오발동 방지 — surveying-engineer 아님, 폭행 형사사건)",
+    "static_verdict": "PASS",
+    "basis": "'경계' 관련 단어 없이 '몸싸움'이 핵심 — surveying-engineer v1.8 강제전환(경계분쟁 형사화)이 지시하는 대로 변호사 영역"
+  },
+  {
+    "no": 34,
+    "utterance": "다음 세금 신고 기간이 정확히 언제부터 언제까지인지 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "부정테스트(EXPERT 오발동 방지 — tax-accountant 아님, 위임의도 없는 단순 정보조회)",
+    "static_verdict": "PASS",
+    "basis": "개인 상황 판단·절세전략 요청이 아니라 일정 정보 조회 — R1축상 GWP가 기본값, tax-accountant EXPERT로 과발동하면 안 됨"
+  },
+  {
+    "no": 35,
+    "utterance": "전세사기가 정확히 어떤 걸 말하는 건지 개념이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "부정테스트(EXPERT 오발동 방지 — real-estate-agent 아님, 개념 설명 요청)",
+    "static_verdict": "PASS",
+    "basis": "개인 계약·매물에 대한 위임의도 없이 일반 개념 문의 — GWP가 기본값"
+  },
+  {
+    "no": 36,
+    "utterance": "해외여행 갈 때 필요한 서류가 일반적으로 뭐가 있는지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kgov",
+    "expected_name": "K-Gov(정부24 등)",
+    "category": "부정테스트(EXPERT 오발동 방지 — tour-guide 아님, 일반 정보 조회)",
+    "static_verdict": "PASS",
+    "basis": "특정 일정 기획·위임의도 없는 일반 서류 안내 요청 — GWP가 기본값"
+  },
+  {
+    "no": 37,
+    "utterance": "직장 상사가 스트레스를 너무 줘서 힘든데 그냥 좀 들어주실 분이 필요해요",
+    "expected_type": "EXPERT",
+    "expected_id": null,
+    "expected_name": "라우팅 불필요(정서적 지지 — 위임형 자문 아님)",
+    "category": "부정테스트(EXPERT 오발동 방지 — labor-attorney 아님, 정서적 지지 요청)",
+    "static_verdict": "WARN",
+    "basis": "체불임금 계산·구제신청 등 구체적 위임의도 없이 감정적 토로 — labor-attorney EXPERT로 과발동하면 사용자 의도와 불일치"
+  },
+  {
+    "no": 38,
+    "utterance": "고령이신 부모님을 요양시설에 모셔야 할 것 같은데 어떤 시설이 있는지 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "kwelfare",
+    "expected_name": "K-Welfare(복지 GWP)",
+    "category": "부정테스트(EXPERT 오발동 방지 — social-worker 아님, 개인 소득 산정 요청 없는 일반 정보)",
+    "static_verdict": "PASS",
+    "basis": "social-worker STEP B는 '실제 소득인정액 계산'이 핵심 가치 — 이 발화는 시설 종류 안내를 구하는 일반 정보 요청이라 GWP가 더 적합"
+  }
+]
