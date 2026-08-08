@@ -487,7 +487,18 @@ R1_20260801.json 재검증에서, judicial-scrivener 표적 트리거인 "경매
   translator-interpreter        | 통역사·번역사   | 번역
   youth-counselor               | 청소년상담사    | 상담
   professor                     | 교수(1:1 맞춤교육) | 교육 (K-School의 1:1 맞춤 교육 담당(teacher와 구분 — 학교 정교사 아님). 2026-08-08 추가 — 세부 전공(국어·수학·반도체공학 등 158개+)은 이 한 줄만 보고는 안 나온다. professor로만 판단하면 되고, 이후 과목 게이트가 코드로 세부 리프를 정한다. 2026-08-08 재추가 — "교수님 연결해줘"·"1:1로 지도해 줄 선생님을 구하는 거예요(학교 정교사 아님)"·"과외처럼 봐줄 사람 필요해요" 같은 표현도 이 표 안(professor)에 있는 요청이다 — CALL_KINTENT(§ORCHESTRATION)로 넘기지 않는다)
-  civil                         | 민원 심사(K-Civil)  | 행정 (K-Public 1차 상담·서류검증 이후의 심사의견 형성·공무원 제출 단계 담당. 실제 정부기관 전자제출은 미구현 — SP_civil.md(매니페스트 경유 최신본) "핵심 정정 — 제출의 실체" 절 참고. 2026-07-29 정정: v1_0의 §5를 가리키고 있었으나 현재 최신 v2_0은 §번호 구조 자체가 다름)
+[2026-08-08 갱신 — §CATALOG-EXPERT의 civil 행 제거. 배경: civil(민원
+심사, K-Civil)은 2026-07-?? 커밋(e1a092cc "K-Civil을 SP-10_kpublic
+STEP D로 흡수, expert-registry에서 제거")으로 이미 expert-registry.js
+에서 삭제됐고 SP_civil_*.md도 prompts/archive/로 옮겨졌는데, 이 표만
+그 갱신을 놓치고 계속 civil을 유효한 EXPERT 후보처럼 나열하고 있었다
+(2026-08-08 domain-taxonomy 작업 중 실사로 발견 — EXPERT_REGISTRY에
+'civil' 키가 없음을 코드로 직접 확인). 라우팅 LLM이 이 표만 보고
+[EXPERT: civil]을 냈다면 로드 실패로 이어졌을 상태 — 이 문서 §CORE가
+스스로 경고한 "표에 실제로 있는 직업을 없다고 잘못 답하지 않도록"의
+반대 방향 실패(표에 없는 걸 있다고 여전히 보여주는 경우)다. 민원
+심사는 이제 kgov(K-Public) STEP D가 담당하므로, 관련 요청은 [GWP:
+kgov]로 가면 된다 — 별도 EXPERT 대체 행 불필요.]
   advisor                       | 구매자문(K-Advisor) | 재무 (K-Market(SP-KMARKET — 검색·비교·중개만 담당)이 하지 않는 가격공정성·구매 필요성 직접 평가·조언 담당. 실제 시장데이터 파이프라인 미구현 — SP_advisor §5 정직 고지 참고(버전은 SP-TREE-REGISTRY 참조). 2026-07-26 정식 등록됐으나 이 표 미기재로 AI가 존재를 몰랐음 — 2026-07-31 스모크테스트에서 발견 후 등재)
 
 표에 없는 직업을 요청하면 "이름이 비슷하다"는 이유로 표에 있는 다른 직업
