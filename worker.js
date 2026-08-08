@@ -13390,10 +13390,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // 필드를 쓰는 클라이언트도 있어(client-shape 불일치), 두 형태 모두 지원한다.
   if (outboundBody && parsedBody?.service_id && UNIVERSAL_FORCED_K_SERVICES.has(parsedBody.service_id)) {
     delete outboundBody.service_id; // 벤더 API는 이 필드를 모름
-    const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
-      _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
-    ]);
-    const injected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
+    const injected = await _fetchUniversalLayers();
     if (injected) {
       if (Array.isArray(outboundBody.messages)) {
         outboundBody.messages = [{ role: 'system', content: injected }, ...outboundBody.messages];
@@ -13506,6 +13503,11 @@ const UNIVERSAL_FORCED_K_SERVICES = new Set([
   'kemergency', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
   'kfinance', 'kinsurance', 'ktax', 'kcommerce', 'ktransport',
   'klogistics', 'kdemocracy', 'fiil-kcleaner',
+  // 2026-08-08 추가(전수 감사로 발견) — 아래 6개는 전용 relay도 없고
+  // 이 화이트리스트에도 없어서 UNIVERSAL-INTEGRITY 등 3종 원칙이
+  // 전혀 상속되지 않고 있었다. kcommerce_seller는 kcommerce(이미
+  // 목록에 있음)의 판매자 등록 변형이라 원래도 있어야 했다.
+  'ktelecom', 'kestate', 'kcommerce_seller', 'ksearch', 'kqna', 'kusers',
 ]);
 
 async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
@@ -13525,10 +13527,7 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   // "모든 SP가 이 문서를 상속한다"는 원칙을 예외 없이 지키기 위함).
   let relayMessages = messages;
   if (service_id && UNIVERSAL_FORCED_K_SERVICES.has(service_id)) {
-    const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
-      _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
-    ]);
-    const injected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
+    const injected = await _fetchUniversalLayers();
     if (injected) relayMessages = [{ role: 'system', content: injected }, ...messages];
     _dlog(env, JSON.stringify({ tag: 'LLM_RELAY_UNIVERSAL_INJECTED', service_id, ts: new Date().toISOString(), ...meta }));
   }
@@ -13625,10 +13624,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // 제1원칙)도 동일한 이유로 누락돼 있었다 — K-Law가 놓친 문서 중
   // 하나였다는 게 두 번째로 재현된 셈이라, 아래 다른 릴레이들
   // (_callDelegationTarget 등)도 같은 실수가 없는지 이번에 전수 확인했다.
-  const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
-    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
-  ]);
-  const universalInjected = [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
+  const universalInjected = await _fetchUniversalLayers();
   let messagesWithIntegrity = universalInjected
     ? [{ role: 'system', content: universalInjected }, ...messages]
     : messages;
@@ -13923,6 +13919,35 @@ async function _fetchControlTowerPrinciple() {
   return _controlTowerPrincipleCache;
 }
 
+// ═══════════════════════════════════════════════════════════
+// _fetchUniversalLayers — 3종 공통 원칙(UNIVERSAL-INTEGRITY·
+// UNIVERSAL-common·CONTROL-TOWER-PRINCIPLE) 통합 헬퍼 (2026-08-08 신설)
+//
+// 배경: 이 세 문서는 "전체 SP 공통 최상위 원칙"이라고 스스로 선언하는데,
+// 지금까지 각 relay(handleKlawRelay·handleGovRelay·handleBusinessRelay·
+// handleLLMRelay)와 AGENT-SUPPLIER 합성 함수가 각자 개별적으로
+// `Promise.all([_fetchUniversalIntegrity(), _fetchUniversalCommon(),
+// _fetchControlTowerPrinciple()])`를 반복 작성해왔다. 이 반복 자체가
+// 누락의 근본 원인이었다 — 실사로 확인된 이력: UNIVERSAL-common이
+// handleKlawRelay에서 한동안 빠져 있었고(2026-07-20 발견), CONTROL-
+// TOWER-PRINCIPLE도 마찬가지였다(2026-08-06 발견). 오늘 재감사에서
+// AGENT-SUPPLIER 합성 함수(~17676행)는 UNIVERSAL-INTEGRITY만 부르고
+// 나머지 둘은 아예 호출조차 안 하고 있었던 것도 발견했다(3번째 재발).
+//
+// 이 헬퍼 하나로 통일하는 이유: 원칙 문서가 네 번째로 늘어나도(예:
+// 향후 새 공통 레이어 도입 시) 이 함수 안에만 추가하면 이미 이 헬퍼를
+// 쓰고 있는 모든 호출부에 자동 반영된다 — "N군데를 찾아서 각각 고치기"
+// 패턴 자체를 없앤다. 기존 개별 함수(_fetchUniversalIntegrity 등)는
+// 그대로 남겨둔다(self-concat 방지가 필요한 극소수 경우, 예: 이
+// 원칙 문서 자신을 로드하는 경로에서 여전히 개별 호출이 필요할 수
+// 있음) — 이 헬퍼는 "합쳐서 쓰는 다수 경우"를 위한 추가 계층이다.
+async function _fetchUniversalLayers() {
+  const [universalIntegrity, universalCommon, controlTowerPrinciple] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(),
+  ]);
+  return [universalIntegrity, universalCommon, controlTowerPrinciple].filter(Boolean).join('\n\n---\n\n');
+}
+
 // agency 식별자 허용 목록 — K-Law는 다음 개정 때 이 경로로 통합 예정(현재는 /klaw/relay 유지)
 // REGISTERED_SERVICES 키와 완전히 동일하게 통일(하이픈 접두어 제거) —
 // /pdv/report의 _getSvcRegistration()이 이 값을 그대로 svc 키로 쓰기 때문에
@@ -14053,10 +14078,10 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
   if (_gateBlocked) return _gateBlocked;
 
-  const [universalIntegrity, universalCommon, controlTowerPrinciple, kBusiness, businessKr] = await Promise.all([
-    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchControlTowerPrinciple(), _fetchKBusiness(), _fetchBusinessKr(),
+  const [universalLayers, kBusiness, businessKr] = await Promise.all([
+    _fetchUniversalLayers(), _fetchKBusiness(), _fetchBusinessKr(),
   ]);
-  const systemParts = [universalIntegrity, universalCommon, controlTowerPrinciple, kBusiness, businessKr, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
+  const systemParts = [universalLayers, kBusiness, businessKr, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || '');
@@ -17673,7 +17698,7 @@ ${JSON.stringify(iFields, null, 2)}
   //    → SP-INDUSTRY-TRANSFORM-{ksic}(automation_opt_in 있을 때만) →
   //    industry_fields. 개인은 안내문 없이 AC-SHADOW-CORE만(영업기밀 같은
   //    공개범위 구분 자체가 해당 없음).
-  const universalIntegrity = await _fetchUniversalIntegrity();
+  const universalIntegrity = await _fetchUniversalLayers();
   const parts = [universalIntegrity, ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, industryTransformSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 

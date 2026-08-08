@@ -1,0 +1,47 @@
+name: Check UNIVERSAL layers coverage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gwp-registry.js'
+      - 'worker.js'
+      - 'tools/check_universal_layers_coverage.py'
+  pull_request:
+    branches: [main]
+  schedule:
+    # 매일 1회 — gwp-registry.js/worker.js가 이 push에서 안 바뀌어도,
+    # 다른 이유로 UNIVERSAL_FORCED_K_SERVICES나 relay 함수 본문이 손상되면
+    # 여기서 잡는다(예: 병합 충돌 해소 중 실수로 목록 항목 삭제).
+    - cron: '0 21 * * *'  # 06:00 KST
+  workflow_dispatch:
+
+jobs:
+  check-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── UNIVERSAL-INTEGRITY(+UNIVERSAL-common+CONTROL-TOWER-PRINCIPLE)는
+      # "전체 SP 공통 최상위 원칙"이라고 스스로 선언하는데, 2026-08-08
+      # 전수 감사에서 GWP 27개 중 6개와 AGENT-SUPPLIER 78개 전체가 실제로는
+      # 이 원칙을 상속받지 못하고 있는 게 발견됐다(klaw/kgov도 각각 한 번씩
+      # 같은 클래스의 누락이 있었다가 나중에 발견돼 고쳐진 이력이 있음 —
+      # 새 K서비스가 추가될 때마다 반복되는 패턴으로 보인다). 이 워크플로는
+      # gwp-registry.js에 새 서비스가 추가되거나 worker.js의 relay 코드가
+      # 바뀔 때마다 자동으로 상속 경로를 재검증한다 — "이번엔 안 잊어야지"
+      # 라는 사람의 기억력에 의존하지 않기 위함.
+      - name: Run UNIVERSAL layers coverage check
+        run: python3 tools/check_universal_layers_coverage.py
