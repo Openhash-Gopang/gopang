@@ -140,7 +140,7 @@ export function narrowCandidates(utterance, candidates, opts = {}) {
 export function buildCandidateList(gwpRegistryArray, expertRegistryObject) {
   const gwpList = (gwpRegistryArray || [])
     .filter(e => e.status === 'active')
-    .map(e => ({ id: e.id, kind: 'gwp', label: e.name, description: e.description, triggers: e.triggers }));
+    .map(e => ({ id: e.id, kind: 'gwp', category: e.category, label: e.name, description: e.description, triggers: e.triggers }));
 
   const expertList = Object.entries(expertRegistryObject || {})
     // 리프가 아닌 루트만 0단계 후보에 올린다(예: professor 자체만,
@@ -148,7 +148,7 @@ export function buildCandidateList(gwpRegistryArray, expertRegistryObject) {
     // subject-gate.js(2단계) 몫이라 0단계에서 같이 다루면 다시 93개가
     // 아니라 250개+ 후보를 스코어링하게 돼 원래 목적(축소)에 어긋난다.
     .filter(([, def]) => !def.parentKey)
-    .map(([id, def]) => ({ id, kind: 'expert', label: def.label, description: def.label, triggers: def.triggers }));
+    .map(([id, def]) => ({ id, kind: 'expert', category: def.category, label: def.label, description: def.label, triggers: def.triggers }));
 
   return [...gwpList, ...expertList];
 }

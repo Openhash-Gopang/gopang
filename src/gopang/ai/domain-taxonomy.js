@@ -121,6 +121,27 @@ export function getDomainById(domainId) {
 }
 
 /**
+ * 통합 도메인 id 목록(예: classifyDomain()의 결과)을 받아, candidates
+ * (candidate-prefilter.js의 buildCandidateList() 출력 — {id, kind,
+ * category, ...} 배열) 중 그 도메인들에 속하는 것만 골라 id 배열로
+ * 반환한다. 여러 도메인이 주어지면 합집합.
+ *
+ * @param {string[]} domainIds
+ * @param {Array} candidates - {id, kind:'gwp'|'expert', category, ...}
+ * @returns {string[]} 해당 도메인에 속하는 candidate id 목록
+ */
+export function getCandidateIdsForDomains(domainIds, candidates) {
+  if (!domainIds || !domainIds.length) return [];
+  const domains = domainIds.map(getDomainById).filter(Boolean);
+  const gwpCats = new Set(domains.flatMap(d => d.gwpCategories));
+  const expertCats = new Set(domains.flatMap(d => d.expertCategories));
+
+  return (candidates || [])
+    .filter(c => (c.kind === 'gwp' && gwpCats.has(c.category)) || (c.kind === 'expert' && expertCats.has(c.category)))
+    .map(c => c.id);
+}
+
+/**
  * 실제 GWP_REGISTRY·EXPERT_REGISTRY 데이터로 taxonomy 커버리지를
  * 검증한다 — 두 레지스트리에 실제로 존재하는 모든 category 코드가
  * 정확히 하나의 도메인에만 속하는지 확인한다(빠짐·중복 방지).

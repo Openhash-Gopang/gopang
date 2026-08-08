@@ -30,8 +30,9 @@ import { inviteByHandle } from '../ui/p2p-chat.js';
 import { _openProfilePanel } from '../ui/settings.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { handleExpertTag, _composeExpertPrompt } from './expert-session.js';
-import { getExpertDef, resolveExpertId } from './expert-registry.js';
+import { getExpertDef, resolveExpertId, EXPERT_REGISTRY } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
+import { buildRoutingHintPart } from './routing-hint.js';
 import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate, _submitUserFeedback } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
@@ -3264,6 +3265,20 @@ async function _buildEnhancedUserContent(userContent) {
 
   // AC↔PA 실시간 채널(2026-07-27 신설) — PA 세션이 막 끝났을 때만 1회.
   const paHandoffBlock = _buildPaHandoffContext();
+
+  // 라우팅 힌트(2026-08-08 신설, routing-hint.js) — 0단계(prefilter)+
+  // 1단계(domain-classifier)로 좁힌 GWP/EXPERT 후보를 이번 턴의 parts에
+  // 얹는다. AC-PRO-CORE(system, 캐시 고정) 자체는 안 건드린다 — 위
+  // _buildEnhancedUserContent 헤더 주석의 캐싱 원칙과 동일하게, 매 턴
+  // 바뀌는 신호이므로 여기(user 메시지 앞 [ctx])에만 둔다. 실패해도
+  // routing-hint.js 자체가 빈 문자열로 안전 폴백하므로 여기선 그냥
+  // 있으면 push한다.
+  try {
+    const routingHint = await buildRoutingHintPart(plainText, window.GWP_REGISTRY, EXPERT_REGISTRY);
+    if (routingHint) parts.push(routingHint);
+  } catch (e) {
+    console.warn('[RoutingHint] 통합 지점에서 실패(무시):', e.message);
+  }
 
   if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock && !jobKscoReviewBlock && !paHandoffBlock) return userContent;
 
