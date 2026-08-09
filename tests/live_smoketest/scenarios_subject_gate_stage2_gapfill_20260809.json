@@ -2,77 +2,77 @@
   {
     "id": "accountant-gap-01-gapfill",
     "root_id": "accountant",
-    "utterance": "매년 하는 정기 외부감사 절차를 준비 중인데 회계사님과 미리 상담하고 싶어요",
+    "utterance": "매년 하는 정기 외부감사 절차를 준비 중인데 미리 상담받고 싶어요",
     "expected_leaf_id": "accountant-audit",
     "category": "정상경로(외부감사 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "accountant-gap-02-gapfill",
     "root_id": "accountant",
-    "utterance": "내부통제 체계랑 컴플라이언스 점검을 회계 전문가와 함께 정비하고 싶어요",
+    "utterance": "내부통제 체계랑 컴플라이언스 점검을 함께 정비하고 싶어요",
     "expected_leaf_id": "accountant-internal-control",
     "category": "정상경로(내부통제·컴플라이언스 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "accountant-gap-03-gapfill",
     "root_id": "accountant",
-    "utterance": "해외 자회사가 있어서 IFRS 기준 연결재무제표 작성을 도와줄 회계사가 필요해요",
+    "utterance": "해외 자회사가 있어서 IFRS 기준 연결재무제표 작성을 도와줄 분이 필요해요",
     "expected_leaf_id": "accountant-ifrs",
     "category": "정상경로(IFRS·연결재무제표 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "accountant-gap-04-gapfill",
     "root_id": "accountant",
-    "utterance": "회사가 회생절차에 들어가서 구조조정 관련 회계자문을 받고 싶어요",
+    "utterance": "회사가 회생절차에 들어가서 구조조정 관련 재무 자문을 받고 싶어요",
     "expected_leaf_id": "accountant-restructuring",
     "category": "정상경로(구조조정·회생 회계자문 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "accountant-gap-05-gapfill",
     "root_id": "accountant",
-    "utterance": "비영리재단 회계 처리 방식이 일반 기업이랑 달라서 전문 회계사한테 물어보고 싶어요",
+    "utterance": "비영리재단 회계 처리 방식이 일반 기업이랑 달라서 물어보고 싶어요",
     "expected_leaf_id": "accountant-nonprofit-public",
     "category": "정상경로(비영리·공공기관회계 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-01-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "제가 개발한 기계장치 부품 특허를 기계·전기전자 분야 변리사와 출원하고 싶어요",
+    "utterance": "제가 개발한 기계장치 부품을 특허로 보호받고 싶어요",
     "expected_leaf_id": "patent-attorney-mechanical-electrical",
     "category": "정상경로(기계·전기전자 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-02-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "새로운 화학 소재 조성물 특허 출원을 화학·소재 전문 변리사와 진행하고 싶어요",
+    "utterance": "새로운 화학 소재 조성물을 특허로 등록하고 싶어요",
     "expected_leaf_id": "patent-attorney-chemistry-materials",
     "category": "정상경로(화학·소재 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-03-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "신약 후보물질 특허를 바이오·제약 전문 변리사한테 맡기고 싶어요",
+    "utterance": "신약 후보물질에 대한 권리를 보호받고 싶어요",
     "expected_leaf_id": "patent-attorney-bio-pharma",
     "category": "정상경로(바이오·제약 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-04-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "제가 만든 소프트웨어 알고리즘 특허를 IT·소프트웨어 전문 변리사와 출원하고 싶어요",
+    "utterance": "제가 만든 소프트웨어 알고리즘을 지식재산으로 보호받고 싶어요",
     "expected_leaf_id": "patent-attorney-it-software",
     "category": "정상경로(IT·소프트웨어 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-05-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "국내 특허를 해외 여러 나라에도 PCT로 국제출원하고 싶은데 변리사 도움이 필요해요",
+    "utterance": "국내에 등록된 권리를 해외 여러 나라에서도 인정받고 싶어요",
     "expected_leaf_id": "patent-attorney-pct-international",
     "category": "정상경로(PCT·해외출원 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
   {
     "id": "patent-attorney-gap-06-gapfill",
     "root_id": "patent-attorney",
-    "utterance": "제 특허 기술을 다른 회사에 라이선싱하는 기술이전계약을 변리사와 검토하고 싶어요",
+    "utterance": "제 기술을 다른 회사가 쓸 수 있게 계약을 맺고 그 대가를 받고 싶어요",
     "expected_leaf_id": "patent-attorney-licensing",
     "category": "정상경로(라이선싱·기술이전계약 명시) [갭필 배치, 2026-08-09 커버리지 보강]"
   },
@@ -86,7 +86,7 @@
   {
     "id": "professor-gap-02-gapfill",
     "root_id": "professor",
-    "utterance": "거시경제학 이론을 체계적으로 배우고 싶은데 경제학 교수님께 1:1 지도를 받고 싶어요",
+    "utterance": "거시경제학 이론을 체계적으로, 경제학 관점에서 깊이 배우고 싶어요",
     "expected_leaf_id": "professor-economics",
     "category": "정상경로(3단 트리 리프 — business-economics→economics) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
@@ -100,7 +100,7 @@
   {
     "id": "professor-gap-04-gapfill",
     "root_id": "professor",
-    "utterance": "한국 근현대사를 깊이 있게 공부하고 싶은데 역사학 교수님과 1:1로 배우고 싶어요",
+    "utterance": "한국 근현대사를 깊이 있게, 역사학적 방법론으로 공부하고 싶어요",
     "expected_leaf_id": "professor-history",
     "category": "정상경로(3단 트리 리프 — humanities→history) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
@@ -114,21 +114,21 @@
   {
     "id": "professor-gap-06-gapfill",
     "root_id": "professor",
-    "utterance": "양자역학 개념이 너무 어려운데 물리학 전공 교수님께 배우고 싶어요",
+    "utterance": "양자역학 개념이 너무 어려운데 물리학 전공 수준으로 이해하고 싶어요",
     "expected_leaf_id": "professor-physics",
     "category": "정상경로(3단 트리 리프 — mathphys→physics) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
   {
     "id": "professor-gap-07-gapfill",
     "root_id": "professor",
-    "utterance": "분자생물학 실험 설계를 지도해주실 생명과학 교수님이 필요해요",
+    "utterance": "분자생물학 실험 설계를 생명과학 관점에서 지도받고 싶어요",
     "expected_leaf_id": "professor-biology",
     "category": "정상경로(3단 트리 리프 — chembio→biology) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
   {
     "id": "professor-gap-08-gapfill",
     "root_id": "professor",
-    "utterance": "자료구조랑 알고리즘을 체계적으로 배우고 싶은데 전산학 교수님께 1:1 지도를 받고 싶어요",
+    "utterance": "자료구조랑 알고리즘을 전산학 커리큘럼 수준으로 체계적으로 배우고 싶어요",
     "expected_leaf_id": "professor-computerscience",
     "category": "정상경로(3단 트리 리프 — electrical-computer→computerscience) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
@@ -149,7 +149,7 @@
   {
     "id": "professor-gap-11-gapfill",
     "root_id": "professor",
-    "utterance": "간호학과 학생인데 성인간호학 이론 공부를 도와주실 교수님이 필요해요",
+    "utterance": "간호학과 학생인데 성인간호학 이론 공부를 도와줄 분이 필요해요",
     "expected_leaf_id": "professor-nursing",
     "category": "정상경로(3단 트리 리프 — nursing-series→nursing) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
@@ -184,7 +184,7 @@
   {
     "id": "professor-gap-16-gapfill",
     "root_id": "professor",
-    "utterance": "현대무용 실기와 안무 구성을 지도해주실 무용 교수님이 필요해요",
+    "utterance": "현대무용 실기와 안무 구성을 배우고 싶어요",
     "expected_leaf_id": "professor-dance",
     "category": "정상경로(3단 트리 리프 — dance-pe-series→dance) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
@@ -212,7 +212,7 @@
   {
     "id": "professor-gap-20-gapfill",
     "root_id": "professor",
-    "utterance": "클래식 작곡 이론과 화성학을 배우고 싶은데 작곡 전공 교수님이 필요해요",
+    "utterance": "클래식 작곡 이론과 화성학을 체계적으로 배우고 싶어요",
     "expected_leaf_id": "professor-composition",
     "category": "정상경로(3단 트리 리프 — music-series→composition) [갭필 배치, 2026-08-09 커버리지 보강, series당 1개 대표 리프]"
   },
