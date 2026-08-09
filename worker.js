@@ -13745,7 +13745,18 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 // manifest 경로로 전환해 이 클래스의 버그를 근본적으로 없앤다.
 let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
+let _kPublicCommonFailedAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
+// ★ 2026-08-10 신설 — 아래 5개 매니페스트 캐시 함수(UniversalCommon·
+// ProfessionalCommon·UniversalIntegrity·KPublicCommon·ControlTowerPrinciple)가
+// 공유하는 "실패 시 재시도 주기". 기존엔 실패해도 TTL(10분) 만료 전까지
+// 재시도 자체를 안 했고, 첫 로드부터 실패하면 빈 문자열을 그대로 캐싱해
+// 10분 내내 원칙 없는 응답이 조용히 나갈 수 있었다(시나리오 ⑩로 확인됨).
+// 이제: (1) 실패해도 마지막으로 성공한 콘텐츠가 있으면 그걸 계속 서빙
+// (빈 문자열로 덮어쓰지 않음), (2) 다음 재시도는 10분이 아니라 이 주기
+// 후에 바로 시도, (3) console.error로 항상(LOG_LEVEL 무관) 로그를 남겨
+// Cloudflare 로그에서 추적 가능하게 한다.
+const _MANIFEST_FAIL_RETRY_MS = 30 * 1000;
 
 // ═══════════════════════════════════════════════════════════
 // UNIVERSAL-common — 정체성 무관 절차·원칙(U1~U8) (2026-07-05 신설)
@@ -13777,19 +13788,22 @@ const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반�
 // 로 전환해 이 클래스의 버그를 구조적으로 제거한다.
 let _universalCommonCache = null;
 let _universalCommonCacheAt = 0;
+let _universalCommonFailedAt = 0;
 const _UNIVERSAL_COMMON_TTL_MS = 10 * 60 * 1000;
 
 async function _fetchUniversalCommon() {
   const now = Date.now();
   if (_universalCommonCache && (now - _universalCommonCacheAt) < _UNIVERSAL_COMMON_TTL_MS) return _universalCommonCache;
+  if (_universalCommonFailedAt && (now - _universalCommonFailedAt) < _MANIFEST_FAIL_RETRY_MS) return _universalCommonCache || '';
   try {
     _universalCommonCache = await _fetchByManifestKeyFromGithub('UNIVERSAL-common');
     _universalCommonCacheAt = now;
+    _universalCommonFailedAt = 0;
   } catch (e) {
-    console.warn('[UniversalCommon] 로드 실패:', e.message);
-    if (!_universalCommonCache) _universalCommonCache = '';
+    _universalCommonFailedAt = now;
+    console.error(JSON.stringify({ tag: 'MANIFEST_FETCH_FAIL', key: 'UNIVERSAL-common', error: e.message, hadStaleCache: !!_universalCommonCache, ts: new Date().toISOString() }));
   }
-  return _universalCommonCache;
+  return _universalCommonCache || '';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -13800,19 +13814,22 @@ async function _fetchUniversalCommon() {
 // ═══════════════════════════════════════════════════════════
 let _professionalCommonCache = null;
 let _professionalCommonCacheAt = 0;
+let _professionalCommonFailedAt = 0;
 const _PROFESSIONAL_COMMON_TTL_MS = 10 * 60 * 1000;
 
 async function _fetchProfessionalCommon() {
   const now = Date.now();
   if (_professionalCommonCache && (now - _professionalCommonCacheAt) < _PROFESSIONAL_COMMON_TTL_MS) return _professionalCommonCache;
+  if (_professionalCommonFailedAt && (now - _professionalCommonFailedAt) < _MANIFEST_FAIL_RETRY_MS) return _professionalCommonCache || '';
   try {
     _professionalCommonCache = await _fetchByManifestKeyFromGithub('PROFESSIONAL-common');
     _professionalCommonCacheAt = now;
+    _professionalCommonFailedAt = 0;
   } catch (e) {
-    console.warn('[ProfessionalCommon] 로드 실패:', e.message);
-    if (!_professionalCommonCache) _professionalCommonCache = '';
+    _professionalCommonFailedAt = now;
+    console.error(JSON.stringify({ tag: 'MANIFEST_FETCH_FAIL', key: 'PROFESSIONAL-common', error: e.message, hadStaleCache: !!_professionalCommonCache, ts: new Date().toISOString() }));
   }
-  return _professionalCommonCache;
+  return _professionalCommonCache || '';
 }
 
 // agency별로 어떤 "정체성 레이어"를 상속하는지 — health는 국가기관이
@@ -13859,32 +13876,42 @@ async function _fetchByManifestKeyFromGithub(manifestKey) {
 
 let _universalIntegrityCache = null;
 let _universalIntegrityCacheAt = 0;
+let _universalIntegrityFailedAt = 0;
 const _UNIVERSAL_INTEGRITY_TTL_MS = 10 * 60 * 1000;
 
 async function _fetchUniversalIntegrity() {
   const now = Date.now();
   if (_universalIntegrityCache && (now - _universalIntegrityCacheAt) < _UNIVERSAL_INTEGRITY_TTL_MS) return _universalIntegrityCache;
+  if (_universalIntegrityFailedAt && (now - _universalIntegrityFailedAt) < _MANIFEST_FAIL_RETRY_MS) return _universalIntegrityCache || '';
   try {
     _universalIntegrityCache = await _fetchByManifestKeyFromGithub('UNIVERSAL-INTEGRITY');
     _universalIntegrityCacheAt = now;
+    _universalIntegrityFailedAt = 0;
   } catch (e) {
-    console.warn('[UniversalIntegrity] 로드 실패:', e.message);
-    if (!_universalIntegrityCache) _universalIntegrityCache = '';
+    _universalIntegrityFailedAt = now;
+    console.error(JSON.stringify({ tag: 'MANIFEST_FETCH_FAIL', key: 'UNIVERSAL-INTEGRITY', error: e.message, hadStaleCache: !!_universalIntegrityCache, ts: new Date().toISOString() }));
   }
-  return _universalIntegrityCache;
+  return _universalIntegrityCache || '';
 }
 
 async function _fetchKPublicCommon() {
   const now = Date.now();
   if (_kPublicCommonCache && (now - _kPublicCommonCacheAt) < _K_PUBLIC_COMMON_TTL_MS) return _kPublicCommonCache;
+  // ★ 빈 문자열은 JS에서 falsy라 "실패했지만 캐시는 있음(빈 문자열)" 상태와
+  // "캐시 자체가 없음" 상태가 이 조건에서 구별이 안 됐다(오프라인 유닛테스트
+  // 케이스4에서 실사로 발견 — 재시도 스로틀이 자기 자신을 무력화하는 버그였음).
+  // 그래서 _kPublicCommonCache에는 성공한 콘텐츠만 담고, 실패 시엔 절대 빈
+  // 문자열을 대입하지 않는다 — "캐시 있음/없음" 판정은 이제 _kPublicCommonFailedAt만 본다.
+  if (_kPublicCommonFailedAt && (now - _kPublicCommonFailedAt) < _MANIFEST_FAIL_RETRY_MS) return _kPublicCommonCache || '';
   try {
     _kPublicCommonCache = await _fetchByManifestKeyFromGithub('K-Public_common');
     _kPublicCommonCacheAt = now;
+    _kPublicCommonFailedAt = 0;
   } catch (e) {
-    console.warn('[GovRelay] K-Public 공통 규칙 로드 실패:', e.message);
-    if (!_kPublicCommonCache) _kPublicCommonCache = ''; // 완전 실패해도 서비스 자체는 지속(경고만)
+    _kPublicCommonFailedAt = now;
+    console.error(JSON.stringify({ tag: 'MANIFEST_FETCH_FAIL', key: 'K-Public_common', error: e.message, hadStaleCache: !!_kPublicCommonCache, ts: new Date().toISOString() }));
   }
-  return _kPublicCommonCache;
+  return _kPublicCommonCache || '';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -13906,19 +13933,22 @@ async function _fetchKPublicCommon() {
 // 참조가 0건). 이 함수와 아래 두 systemParts 삽입이 그 공백을 메운다.
 let _controlTowerPrincipleCache = null;
 let _controlTowerPrincipleCacheAt = 0;
+let _controlTowerPrincipleFailedAt = 0;
 const _CONTROL_TOWER_PRINCIPLE_TTL_MS = 10 * 60 * 1000;
 
 async function _fetchControlTowerPrinciple() {
   const now = Date.now();
   if (_controlTowerPrincipleCache && (now - _controlTowerPrincipleCacheAt) < _CONTROL_TOWER_PRINCIPLE_TTL_MS) return _controlTowerPrincipleCache;
+  if (_controlTowerPrincipleFailedAt && (now - _controlTowerPrincipleFailedAt) < _MANIFEST_FAIL_RETRY_MS) return _controlTowerPrincipleCache || '';
   try {
     _controlTowerPrincipleCache = await _fetchByManifestKeyFromGithub('CONTROL-TOWER-PRINCIPLE');
     _controlTowerPrincipleCacheAt = now;
+    _controlTowerPrincipleFailedAt = 0;
   } catch (e) {
-    console.warn('[ControlTowerPrinciple] 로드 실패:', e.message);
-    if (!_controlTowerPrincipleCache) _controlTowerPrincipleCache = ''; // 완전 실패해도 서비스 자체는 지속(경고만)
+    _controlTowerPrincipleFailedAt = now;
+    console.error(JSON.stringify({ tag: 'MANIFEST_FETCH_FAIL', key: 'CONTROL-TOWER-PRINCIPLE', error: e.message, hadStaleCache: !!_controlTowerPrincipleCache, ts: new Date().toISOString() }));
   }
-  return _controlTowerPrincipleCache;
+  return _controlTowerPrincipleCache || '';
 }
 
 // ═══════════════════════════════════════════════════════════
