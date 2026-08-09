@@ -3317,13 +3317,36 @@ const _NAT_NO_INFO_FALLBACK = (code) =>
   `[정보 없음] ${code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
   `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
 
-async function _fetchNatText(entry) {
+// ── 2026-08-09 신설 — 도 하나에 지사가 여럿인 국가기관 도메인(tax·court의
+// seoul/gyeonggi 등) 대응. 지금까지는 domain+도코드로 .find()해 항상 첫
+// 레코드만 반환했는데, 그러면 도 하나에 지사가 여럿 있을 때 실제로는
+// 틀릴 수 있는 지사 하나를 임의로 확정해 말하는 위험이 있었다(2026-08-08
+// 완도해양경찰서 오매칭 사례로 실측 확인된 바로 그 실수). 레코드가 도
+// 하나에 2건 이상이면 각 레코드의 선택 필드 `시코드목록`으로 좁히고,
+// 시/군 정보가 없거나 매칭이 안 되면 틀린 확신 대신 정직하게 "어느
+// 시/군/구인지" 되묻는다 — 도코드당 1건뿐인 기존 도메인은 동작 변화 없음.
+function _NAT_MULTI_BRANCH_PROMPT(entry, branches) {
+  const names = [...new Set(branches.map(r => r.지사명))];
+  return `[관할 확인 필요] 이 지역에는 관련 기관이 ${names.length}곳 있습니다(${names.join(', ')}). ` +
+    `정확한 안내를 위해 거주(또는 문의 대상) 시/군/구를 알려주세요.`;
+}
+
+async function _fetchNatText(entry, 시코드 = null) {
   if (!entry.domain || !entry.도코드) {
     if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
     return { text: await _fetchText(entry.file, _currentProvinceRepo()), permitCodes: [] };
   }
   const records = await _loadNatMasterData();
-  const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
+  const domainProvinceRecords = records.filter(r => r.domain === entry.domain && r.도코드 === entry.도코드);
+  let rec = domainProvinceRecords[0];
+  if (domainProvinceRecords.length > 1) {
+    rec = 시코드
+      ? domainProvinceRecords.find(r => Array.isArray(r.시코드목록) && r.시코드목록.includes(시코드))
+      : null;
+    if (!rec) {
+      return { text: _NAT_MULTI_BRANCH_PROMPT(entry, domainProvinceRecords), permitCodes: [] };
+    }
+  }
   if (!rec || !rec.template) {
     console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드})`);
     if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
@@ -4020,7 +4043,11 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
     trace.push('JEJU-NATIONAL-SP');
-    const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(natMatch);
+    // 도 하나에 지사가 여럿인 도메인(tax·court 등) 대응 — 시/군구까지
+    // 잡히면 _fetchNatText()가 그걸로 정확한 지사를 좁힌다. 못 잡아도
+    // 기존처럼 도코드만으로 동작(도코드당 1건인 도메인은 영향 없음).
+    const natCityHint = _matchCity(text, pdvLocationHint);
+    const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(natMatch, natCityHint?.시코드 || null);
     parts.push(agencyText);
     trace.push(natMatch.code);
     if (agencyPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
@@ -4399,7 +4426,8 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       const nationalSp = await _loadNationalSp();
       nationalOnlyParts.push(nationalSp);
       const entry = _findTableEntry(classified);
-      const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(entry);
+      const natCityHint2 = _matchCity(text, pdvLocationHint);
+      const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(entry, natCityHint2?.시코드 || null);
       nationalOnlyParts.push(agencyText);
       const natTrace = ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', classified, '(LLM 분류 폴백)'];
       if (agencyPermitCodes.length) natTrace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
