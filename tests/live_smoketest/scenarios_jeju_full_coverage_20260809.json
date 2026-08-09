@@ -1,0 +1,1102 @@
+[
+  {
+    "no": 1,
+    "utterance": "친환경 인증 관련해서 국립농산물품질관리원 제주지원에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:agroquality) — 국립농산물품질관리원 제주지원"
+  },
+  {
+    "no": 2,
+    "utterance": "제주공항 주차장 요금이 궁금해서 한국공항공사 제주공항에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:airport) — 한국공항공사 제주공항"
+  },
+  {
+    "no": 3,
+    "utterance": "반려동물 데리고 육지 나가는데 농림축산검역본부 제주지역본부에 확인하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:animalquarantine) — 농림축산검역본부 제주지역본부"
+  },
+  {
+    "no": 4,
+    "utterance": "손상화폐 교환 때문에 한국은행 제주본부에 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:bok) — 한국은행 제주본부"
+  },
+  {
+    "no": 5,
+    "utterance": "바다에서 사고가 나서 제주해양경찰서에 신고하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:coastguard) — 제주해양경찰서"
+  },
+  {
+    "no": 6,
+    "utterance": "소송 접수 때문에 제주지방법원에 가야 하는데요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:court) — 제주지방법원"
+  },
+  {
+    "no": 7,
+    "utterance": "해외직구 통관 문의로 제주세관에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:customs) — 제주세관"
+  },
+  {
+    "no": 8,
+    "utterance": "공공데이터 활용 문의로 호남지방데이터청 제주사무소에 연락하려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:data) — 호남지방데이터청 제주사무소"
+  },
+  {
+    "no": 9,
+    "utterance": "환경영향평가 문의로 영산강유역환경청 제주주재사무실에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:env) — 영산강유역환경청 제주주재사무실"
+  },
+  {
+    "no": 10,
+    "utterance": "수산물 원산지 검사 때문에 국립수산물품질관리원 제주지원에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:fishquality) — 국립수산물품질관리원 제주지원"
+  },
+  {
+    "no": 11,
+    "utterance": "수입식품 검사 관련 광주지방식품의약품안전청 제주수입식품검사소에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:foodimport) — 광주지방식품의약품안전청 제주수입식품검사소"
+  },
+  {
+    "no": 12,
+    "utterance": "산림조합중앙회 제주지역본부에 조합원 가입 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:forestcoop) — 산림조합중앙회 제주지역본부"
+  },
+  {
+    "no": 13,
+    "utterance": "난대·아열대산림연구소에 임업연구 관련 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:forestresearch) — 난대·아열대산림연구소"
+  },
+  {
+    "no": 14,
+    "utterance": "산림용 종자 검사 때문에 국립산림품종관리센터 제주지소에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:forestseed) — 국립산림품종관리센터 제주지소"
+  },
+  {
+    "no": 15,
+    "utterance": "해외 출국 전 예방접종 때문에 국립제주검역소에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:humanquarantine) — 국립제주검역소"
+  },
+  {
+    "no": 16,
+    "utterance": "외국인 체류자격 연장 때문에 제주출입국·외국인청에 가야 해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:immigration) — 제주출입국·외국인청"
+  },
+  {
+    "no": 17,
+    "utterance": "아이 스마트폰 과의존 상담 때문에 제주스마트쉼센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:internet) — 한국지능정보사회진흥원 제주스마트쉼센터"
+  },
+  {
+    "no": 18,
+    "utterance": "산재 신청 때문에 근로복지공단 제주지사에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:labor) — 근로복지공단 제주지사"
+  },
+  {
+    "no": 19,
+    "utterance": "임금체불 신고로 제주근로개선지도센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:laborimprove) — 광주지방고용노동청 제주근로개선지도센터"
+  },
+  {
+    "no": 20,
+    "utterance": "부당해고 구제신청 때문에 제주지방노동위원회에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:laborrel) — 제주지방노동위원회"
+  },
+  {
+    "no": 21,
+    "utterance": "병역 신체검사 일정 때문에 제주지방병무청에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:mma) — 제주지방병무청"
+  },
+  {
+    "no": 22,
+    "utterance": "건강보험료 조정 신청 때문에 국민건강보험공단 제주지사에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:nhis) — 국민건강보험공단 제주지사"
+  },
+  {
+    "no": 23,
+    "utterance": "국민연금 수령액 상담 때문에 국민연금공단 제주지역본부에 가고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:nps) — 국민연금공단 제주지역본부"
+  },
+  {
+    "no": 24,
+    "utterance": "교통사고 신고 때문에 제주지방경찰청에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:police) — 제주지방경찰청"
+  },
+  {
+    "no": 25,
+    "utterance": "선박 등록 문의로 제주지방해양수산청에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:port) — 제주지방해양수산청"
+  },
+  {
+    "no": 26,
+    "utterance": "등기우편 관련해서 제주지방우정청에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:post) — 제주지방우정청"
+  },
+  {
+    "no": 27,
+    "utterance": "나라장터 입찰 문의로 제주지방조달청에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:pps) — 제주지방조달청"
+  },
+  {
+    "no": 28,
+    "utterance": "보호관찰 관련해서 제주준법지원센터에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:probation) — 제주준법지원센터"
+  },
+  {
+    "no": 29,
+    "utterance": "고소장 접수 때문에 제주지방검찰청에 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:prosecution) — 제주지방검찰청"
+  },
+  {
+    "no": 30,
+    "utterance": "무선국 등록 문의로 제주전파관리소에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:radio) — 제주전파관리소"
+  },
+  {
+    "no": 31,
+    "utterance": "인구총조사 관련해서 통계청 제주사무소에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:stat) — 통계청 제주사무소"
+  },
+  {
+    "no": 32,
+    "utterance": "종합소득세 신고 때문에 제주세무서에 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:tax) — 제주세무서"
+  },
+  {
+    "no": 33,
+    "utterance": "국가유공자 등록 때문에 제주보훈청에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:veterans) — 제주보훈청"
+  },
+  {
+    "no": 34,
+    "utterance": "태풍 특보 확인하려고 제주지방기상청에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "국가기관 지사(nat-agency:weather) — 제주지방기상청"
+  },
+  {
+    "no": 35,
+    "utterance": "장애인복지 지원 문의로 제주도청 복지가족국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:welfare) — 복지가족국"
+  },
+  {
+    "no": 36,
+    "utterance": "중장기계획 관련해서 제주도청 기획조정실에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:plan) — 기획조정실"
+  },
+  {
+    "no": 37,
+    "utterance": "재난안전 관련해서 제주도청 도민안전건강실에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:safety) — 도민안전건강실"
+  },
+  {
+    "no": 38,
+    "utterance": "자치분권 관련해서 제주도청 특별자치행정국에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:jachi) — 특별자치행정국"
+  },
+  {
+    "no": 39,
+    "utterance": "소상공인 지원 정책 때문에 제주도청 경제활력국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:econ) — 경제활력국"
+  },
+  {
+    "no": 40,
+    "utterance": "스타트업 지원 문의로 제주도청 혁신산업국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:innov) — 혁신산업국"
+  },
+  {
+    "no": 41,
+    "utterance": "탄소중립 정책 문의로 제주도청 기후환경국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:climate) — 기후환경국"
+  },
+  {
+    "no": 42,
+    "utterance": "공공주택 청약 문의로 제주도청 건설주택국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:housing) — 건설주택국"
+  },
+  {
+    "no": 43,
+    "utterance": "대중교통 노선 문의로 제주도청 교통항공국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:transport) — 교통항공국"
+  },
+  {
+    "no": 44,
+    "utterance": "생활체육 지원 문의로 제주도청 문화체육교육국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:culture) — 문화체육교육국"
+  },
+  {
+    "no": 45,
+    "utterance": "관광 숙박업 등록 문의로 제주도청 관광교류국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:tourism) — 관광교류국"
+  },
+  {
+    "no": 46,
+    "utterance": "축산 관련 지원 문의로 제주도청 농축산식품국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:agri) — 농축산식품국"
+  },
+  {
+    "no": 47,
+    "utterance": "어업 지원 문의로 제주도청 해양수산국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:ocean) — 해양수산국"
+  },
+  {
+    "no": 48,
+    "utterance": "신재생에너지 지원 문의로 제주도청 기후에너지국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:climate-energy) — 기후에너지국"
+  },
+  {
+    "no": 49,
+    "utterance": "민원 소통 관련해서 제주도청 소통청렴담당관에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:comm) — 소통청렴담당관"
+  },
+  {
+    "no": 50,
+    "utterance": "직원 인사 관련해서 제주도청 총무과에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:general) — 총무과"
+  },
+  {
+    "no": 51,
+    "utterance": "중앙부처 협력 사업 문의로 제주도청 중앙협력본부에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:liaison) — 중앙협력본부"
+  },
+  {
+    "no": 52,
+    "utterance": "보도자료 문의로 제주도청 대변인실에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "도청 L2(do-dept:spokes) — 대변인"
+  },
+  {
+    "no": 53,
+    "utterance": "인감증명서 발급 때문에 제주시청 자치행정국에 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-jachi) — 제주시 자치행정국"
+  },
+  {
+    "no": 54,
+    "utterance": "주정차 단속 이의신청 때문에 제주시청 안전교통국에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-safety) — 제주시 안전교통국"
+  },
+  {
+    "no": 55,
+    "utterance": "기초생활수급 문의로 제주시청 복지위생국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-welfare) — 제주시 복지위생국"
+  },
+  {
+    "no": 56,
+    "utterance": "일자리 지원 문의로 제주시청 경제일자리국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-econ) — 제주시 경제일자리국"
+  },
+  {
+    "no": 57,
+    "utterance": "생활체육 시설 문의로 제주시청 문화관광체육국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-culture) — 제주시 문화관광체육국"
+  },
+  {
+    "no": 58,
+    "utterance": "쓰레기 분리배출 문의로 제주시청 청정환경국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-climate) — 제주시 청정환경국"
+  },
+  {
+    "no": 59,
+    "utterance": "건축허가 신청하려고 제주시청 도시건설국에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:jejusi-housing) — 제주시 도시건설국"
+  },
+  {
+    "no": 60,
+    "utterance": "주민등록등본 발급 때문에 서귀포시청 자치행정국에 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-jachi) — 서귀포시 자치행정국"
+  },
+  {
+    "no": 61,
+    "utterance": "장애인복지 문의로 서귀포시청 복지위생국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-welfare) — 서귀포시 복지위생국"
+  },
+  {
+    "no": 62,
+    "utterance": "도서관 이용 문의로 서귀포시청 문화관광체육국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-culture) — 서귀포시 문화관광체육국"
+  },
+  {
+    "no": 63,
+    "utterance": "농산물 지원 정책 문의로 서귀포시청 농수축산경제국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-agrieconomy) — 서귀포시 농수축산경제국"
+  },
+  {
+    "no": 64,
+    "utterance": "환경오염 신고 때문에 서귀포시청 청정환경국에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-climate) — 서귀포시 청정환경국"
+  },
+  {
+    "no": 65,
+    "utterance": "건축허가 신청하려고 서귀포시청 안전도시건설국에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-housing) — 서귀포시 안전도시건설국"
+  },
+  {
+    "no": 66,
+    "utterance": "예방접종 문의로 서귀포보건소에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "시청 국(city-dept:seogwipo-health) — 서귀포보건소"
+  },
+  {
+    "no": 67,
+    "utterance": "상하수도 요금 문의로 제주시청에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "행정시(city:jejusi)"
+  },
+  {
+    "no": 68,
+    "utterance": "건축허가 신청하고 싶어서 서귀포시청에 연락하려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "행정시(city:seogwipo)"
+  },
+  {
+    "no": 69,
+    "utterance": "재배기술 지도 받고 싶어서 제주도청 농업기술원에 문의하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 농업기술원"
+  },
+  {
+    "no": 70,
+    "utterance": "전시 관람 문의로 제주특별자치도립미술관에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 제주특별자치도립미술관"
+  },
+  {
+    "no": 71,
+    "utterance": "수질 검사 의뢰 때문에 제주도청 보건환경연구원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 보건환경연구원"
+  },
+  {
+    "no": 72,
+    "utterance": "가축전염병 검사 문의로 제주도청 축산생명연구원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 축산생명연구원"
+  },
+  {
+    "no": 73,
+    "utterance": "소방시설 인허가 문의로 제주도청 소방안전본부에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 소방안전본부"
+  },
+  {
+    "no": 74,
+    "utterance": "제주 민속문화 자료 열람 문의로 제주특별자치도민속자연사박물관에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 제주특별자치도민속자연사박물관"
+  },
+  {
+    "no": 75,
+    "utterance": "한라산 탐방로 이용 문의로 제주도청 세계유산본부에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 세계유산본부"
+  },
+  {
+    "no": 76,
+    "utterance": "도서 대출 문의로 제주특별자치도 공공도서관에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 제주특별자치도 공공도서관"
+  },
+  {
+    "no": 77,
+    "utterance": "관광경찰 문의로 제주도청 자치경찰단에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 자치경찰단"
+  },
+  {
+    "no": 78,
+    "utterance": "누수 민원 때문에 제주도청 상하수도본부에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "직속기관(agency) — 상하수도본부"
+  },
+  {
+    "no": 79,
+    "utterance": "아이돌봄서비스 신청 때문에 제주특별자치도 아이돌봄광역지원센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도 아이돌봄광역지원센터"
+  },
+  {
+    "no": 80,
+    "utterance": "어린이집 급식 위생 점검 문의로 제주 어린이급식관리지원센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주 어린이급식관리지원센터"
+  },
+  {
+    "no": 81,
+    "utterance": "행사 대관 문의로 제주국제컨벤션센터(ICC JEJU)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주국제컨벤션센터"
+  },
+  {
+    "no": 82,
+    "utterance": "제주포럼 참가 문의로 국제평화재단에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 국제평화재단"
+  },
+  {
+    "no": 83,
+    "utterance": "창업 지원 문의로 제주창조경제혁신센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주창조경제혁신센터"
+  },
+  {
+    "no": 84,
+    "utterance": "소상공인 신용보증서 발급 문의로 제주신용보증재단에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주신용보증재단"
+  },
+  {
+    "no": 85,
+    "utterance": "촬영지 지원 문의로 제주영상문화산업진흥원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주영상문화산업진흥원"
+  },
+  {
+    "no": 86,
+    "utterance": "태양광 발전 사업 문의로 제주에너지공사(JEA)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주에너지공사"
+  },
+  {
+    "no": 87,
+    "utterance": "소상공인경영지원센터 상담 받고 싶어서 제주경제통상진흥원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주경제통상진흥원"
+  },
+  {
+    "no": 88,
+    "utterance": "희생자 신고 지원 문의로 제주4·3평화재단에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주4·3평화재단"
+  },
+  {
+    "no": 89,
+    "utterance": "진료 예약 때문에 제주의료원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주의료원"
+  },
+  {
+    "no": 90,
+    "utterance": "지역 정책연구 자료 문의로 제주연구원(JRI)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주연구원"
+  },
+  {
+    "no": 91,
+    "utterance": "문화예술 공모사업 지원 문의로 제주문화예술재단에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주문화예술재단"
+  },
+  {
+    "no": 92,
+    "utterance": "장학금 신청 문의로 제주평생교육장학진흥원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주평생교육장학진흥원"
+  },
+  {
+    "no": 93,
+    "utterance": "국공립 어린이집 위탁 운영 문의로 제주특별자치도사회서비스원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도사회서비스원"
+  },
+  {
+    "no": 94,
+    "utterance": "삼다수 관련 문의로 제주특별자치도개발공사(JPDC)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도개발공사"
+  },
+  {
+    "no": 95,
+    "utterance": "장애인 체육대회 문의로 제주특별자치도장애인체육회에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도장애인체육회"
+  },
+  {
+    "no": 96,
+    "utterance": "생활체육 대회 문의로 제주특별자치도체육회에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도체육회"
+  },
+  {
+    "no": 97,
+    "utterance": "관광 업계 등록 문의로 제주특별자치도관광협회에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도관광협회"
+  },
+  {
+    "no": 98,
+    "utterance": "관광 상품 개발 문의로 제주관광공사(JTO)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주관광공사"
+  },
+  {
+    "no": 99,
+    "utterance": "중소기업 기술지원 문의로 제주테크노파크(JTP)에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주테크노파크"
+  },
+  {
+    "no": 100,
+    "utterance": "여성정책 연구자료 문의로 제주여성가족연구원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주여성가족연구원"
+  },
+  {
+    "no": 101,
+    "utterance": "마을공동체 사업 문의로 제주마을만들기종합지원센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주마을만들기종합지원센터"
+  },
+  {
+    "no": 102,
+    "utterance": "입원 문의 때문에 서귀포의료원에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 서귀포의료원"
+  },
+  {
+    "no": 103,
+    "utterance": "장애인 콜택시 이용 문의로 제주특별자치도 교통약자이동지원센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도 교통약자이동지원센터"
+  },
+  {
+    "no": 104,
+    "utterance": "도시재생 사업 문의로 제주특별자치도 도시재생지원센터에 연락하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관(org) — 제주특별자치도 도시재생지원센터"
+  },
+  {
+    "no": 105,
+    "utterance": "일도1동 행정복지센터에서 인감증명서 발급받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  },
+  {
+    "no": 106,
+    "utterance": "노형동 주민센터에 전입신고 하러 가려고요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  },
+  {
+    "no": 107,
+    "utterance": "애월읍 행정복지센터 위치가 어디예요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  },
+  {
+    "no": 108,
+    "utterance": "한림읍 사무소에 문의드리고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  },
+  {
+    "no": 109,
+    "utterance": "우도면 사무소 전화번호 알려주세요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  },
+  {
+    "no": 110,
+    "utterance": "동홍동 행정복지센터에 민원 넣고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 전수 커버리지(2026-08-09, 주피터=제주 거주 가정)",
+    "static_verdict": "N/A",
+    "basis": "읍면동(emd) 대표 샘플"
+  }
+]
