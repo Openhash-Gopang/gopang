@@ -94,10 +94,10 @@ def call_deepseek(api_key, system_prompt, user_utterance):
     payload = {
         "model": MODEL,
         "temperature": 0,
-        "max_tokens": 500,  # 2026-08-09 진단용 임시 상향(원래 60) — reasoning
-        # 모델이 사고 과정(reasoning_content)만으로 60토큰을 다 써서 최종
-        # content가 빈 문자열로 오는지 확인하기 위함. subject-gate.js 프로덕션
-        # 코드도 원래 60을 쓰고 있어, 이 가설이 맞으면 그쪽도 같은 결함일 수 있음.
+        "max_tokens": 1000,  # 2026-08-09 재상향(500→1000) — 500으로도 여전히 실패한
+        # professor-gap-01/17 실사 확인(reasoning_content 1700~1800자, finish_reason=length,
+        # 500 전량 소진). 프로덕션 subject-gate.js도 이번에 60→1000으로 맞춰 패치함 —
+        # 이 스크립트도 동일 값으로 맞춰 재검증.
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance[:2000]},
