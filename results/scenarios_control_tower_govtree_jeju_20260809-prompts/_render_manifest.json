@@ -1,0 +1,110 @@
+[
+  {
+    "id": "govtree-nat-tax-01",
+    "directCode": "nat-agency:tax",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "JEJU-NATIONAL-SP",
+      "SP-NATIONAL-LAZY(tax/live_search, directCode)"
+    ],
+    "promptLength": 154396,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-nat-tax-01.txt"
+  },
+  {
+    "id": "govtree-nat-court-01",
+    "directCode": "nat-agency:court",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "JEJU-NATIONAL-SP",
+      "SP-NATIONAL-LAZY(court/live_search, directCode)"
+    ],
+    "promptLength": 154397,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-nat-court-01.txt"
+  },
+  {
+    "id": "govtree-nat-prosecution-01",
+    "directCode": "nat-agency:prosecution",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "JEJU-NATIONAL-SP",
+      "SP-NATIONAL-LAZY(prosecution/live_search, directCode)"
+    ],
+    "promptLength": 154398,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-nat-prosecution-01.txt"
+  },
+  {
+    "id": "govtree-citydept-housing-01",
+    "directCode": "city-dept:jejusi-housing",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-CITY-JEJU",
+      "SP-CITYDEPT-jejusi-housing(directCode)",
+      "PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)"
+    ],
+    "promptLength": 153717,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-citydept-housing-01.txt"
+  },
+  {
+    "id": "govtree-citydept-welfare-01",
+    "directCode": "city-dept:jejusi-welfare",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-CITY-JEJU",
+      "SP-CITYDEPT-jejusi-welfare(directCode)"
+    ],
+    "promptLength": 149447,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-citydept-welfare-01.txt"
+  },
+  {
+    "id": "govtree-dodept-plan-01",
+    "directCode": "do-dept:SP-DO-PLAN",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-DO-000",
+      "SP-DO-PLAN(directCode)"
+    ],
+    "promptLength": 151598,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-dodept-plan-01.txt"
+  },
+  {
+    "id": "govtree-doagency-agritech-01",
+    "directCode": "do-agency:SP-AGY-AGRITECH",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-DO-000",
+      "SP-AGY-AGRITECH(directCode)"
+    ],
+    "promptLength": 150412,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-doagency-agritech-01.txt"
+  },
+  {
+    "id": "govtree-org-jeju43-01",
+    "directCode": "org:SP-ORG-JEJU43",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-DO-000",
+      "SP-ORG-JEJU43(directCode)"
+    ],
+    "promptLength": 151136,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-org-jeju43-01.txt"
+  },
+  {
+    "id": "govtree-province-jeju-01",
+    "directCode": "province:jeju",
+    "trace": [
+      "JEJU-GOV-COMMON",
+      "SP-DO-000(jeju, directCode)"
+    ],
+    "promptLength": 147616,
+    "renderStatus": "OK",
+    "systemPromptFile": "govtree-province-jeju-01.txt"
+  }
+]
