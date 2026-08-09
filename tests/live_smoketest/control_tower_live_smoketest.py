@@ -94,6 +94,33 @@ BULLET_LIST_RE = re.compile(r"^\s*[-*•]\s+\S.*(?:\n\s*[-*•]\s+\S.*){2,}", re
 _ASCII_WORD = r"A-Za-z0-9_"
 BOLD_RE = re.compile(rf"(?<![{_ASCII_WORD}*])\*\*[^*\n]+?\*\*(?![{_ASCII_WORD}*])")
 
+# 2026-08-09 2차 신설 — 48건 확장 배치 실사에서 ct-wide-lawyer-corporate가
+# 발견됨: "**① 주식회사이신가요?** ... **② 정기주주총회인가요...** ...
+# **③ 사업연도가...**" — 원문자(①②③)로 세 개 질문을 동시에 던지는 형태.
+# 이번엔 볼드가 같이 있어서 BOLD_RE가 잡았지만, 볼드 없이 원문자만 썼다면
+# NUMBERED_LIST_RE(ASCII "1." "2." 패턴만 매칭)도 BULLET_LIST_RE도 전혀
+# 못 잡는 사각지대였다 — 원문자는 유니코드 전용 문자라 "1." "2)" 같은
+# ASCII 숫자+구두점 패턴과 문자 클래스가 아예 다르다. 내용상으로도 "한
+# 번에 하나씩" 원칙을 여러 질문 동시 제시로 어긴 사례(dance 사례와 동일
+# 유형)라 형식(목록)과 내용(다중 질문) 위반이 겹쳐 있다.
+# 임계값은 ASCII 목록(3개+ 연속)보다 낮은 2개 이상으로 잡는다 — 원문자는
+# 산문 중 우연히 단독으로 쓰이는 경우가 실질적으로 없고(예: "①번 문항"
+# 같은 단발 참조 정도), 2개만 나와도 이미 "동시에 여러 항목 나열"이라는
+# 신호가 확실하기 때문이다(ASCII "-"·숫자는 단독으로도 문장부호·소수점
+# 등 정상 용법이 흔해 3개 임계값을 유지해야 하는 것과 대비된다).
+CIRCLED_NUM_RE = re.compile(r"[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf]")
+# ★ 오탐 방지(오프라인 유닛테스트로 실사 전 발견) — ct-wide-physician-
+# internal-medicine이 "① G3aA2 ② G3bA3 ③ G4A3 ④ G4A2 ⑤ G5A3"처럼 국시
+# 5지선다 보기를 원문자로 나열한다. 이건 학생에게 여러 질문을 동시에
+# 던진 게 아니라 하나의 문제에 대한 답안 선택지 나열(정상 시험 형식)이라
+# 위반이 아니다. lawyer-corporate·accountant-valuation(진짜 위반, 각
+# 원문자가 독립된 질문/절)과 구분하는 신호: 시험 보기는 항목 하나당
+# 텍스트가 극히 짧고(측정 결과 평균 4.4자), 진짜 다중 질문 위반은 각
+# 항목이 문장 단위로 길다(측정 결과 48.7자·52.0자). 두 그룹 사이 간극이
+# 커서 15자를 경계로 잡는다 — 이 미만이면 "보기 나열"로 보고 위반에서
+# 제외한다.
+CIRCLED_NUM_ITEM_MIN_LEN = 15
+
 
 def load_sp_file(manifest, key):
     fname = manifest.get(key)
@@ -166,7 +193,17 @@ def call_deepseek(api_key, system_prompt, user_utterance):
         # 실제 운영값은 각 K서비스 프론트엔드 저장소를 봐야 확인된다(이번
         # 범위 밖, 후속 조사 필요 — 낮은 값을 쓰고 있다면 실사용자도 종종
         # 빈 응답을 받고 있을 실질적 위험이 있다).
-        "max_tokens": 6000,
+        # 2026-08-09 재조정(2차) — 48건 확장 배치 실사에서 ct-wide-
+        # physician-radiology가 다시 finish_reason=length로 빈 응답을 냈다
+        # (reasoning_content_len=9266). 다만 같은 배치에서 reasoning_len이
+        # 더 큰 사례(physician-psychiatry, 11513자)는 정상 완료(stop)됐다 —
+        # 즉 reasoning 문자 수와 실제 토큰 소비량이 깔끔하게 비례하지
+        # 않는다(콘텐츠 종류에 따라 문자당 토큰 비율이 달라지는 것으로
+        # 추정, 확정 원인은 후속조사 필요). 정확한 안전선을 계산하기보다
+        # 여유를 넉넉히 두는 쪽으로 6000→12000(2배)으로 상향한다 — 이걸로도
+        # 재발하면 리프별 가변 예산 또는 재시도 시 max_tokens 자동 증량
+        # 전략을 검토해야 한다.
+        "max_tokens": 12000,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance},
@@ -210,6 +247,16 @@ def grade(raw_text):
         return "LIVE-FAIL", "번호 매김 목록(3개+ 연속) — 백과사전식 나열 의심"
     if BULLET_LIST_RE.search(raw_text):
         return "LIVE-FAIL", "불릿 목록(3개+ 연속) — 백과사전식 나열 의심"
+    circled_positions = [m.start() for m in CIRCLED_NUM_RE.finditer(raw_text)]
+    if len(set(raw_text[p] for p in circled_positions)) >= 2:
+        segs = []
+        for i, p in enumerate(circled_positions):
+            end = circled_positions[i + 1] if i + 1 < len(circled_positions) else len(raw_text)
+            segs.append(raw_text[p + 1:end].strip())
+        avg_len = sum(len(s) for s in segs) / len(segs)
+        if avg_len > CIRCLED_NUM_ITEM_MIN_LEN:
+            chars = "".join(sorted(set(raw_text[p] for p in circled_positions)))
+            return "LIVE-FAIL", f"원문자 다중 목록({chars}, 항목당 평균 {avg_len:.0f}자) — 여러 질문/항목 동시 제시 의심(형식+한번에하나씩 이중 위반)"
     m = BOLD_RE.search(raw_text)
     if m:
         return "LIVE-FAIL", f"마크다운 볼드({m.group(0)[:20]}...) 사용 — 원칙이 금지하는 문서 서식"
