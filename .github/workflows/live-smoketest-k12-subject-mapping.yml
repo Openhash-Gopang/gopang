@@ -1,0 +1,105 @@
+name: Live Smoketest — K-12 Subject → Professor Major Mapping
+
+# docs/K12-SUBJECT-PROFESSOR-MAJOR-MAPPING_2026-08-09.md §검증 방법 이행.
+# teacher를 과목별로 세분화하지 않기로 한 결정(옵션 A) 이후, 초중고
+# 교과목 발화가 실제로 professor 전공 리프까지 연결되는지 STEP-1(라우팅)
+# + STEP-2(리프 정밀화) 두 단계를 순서대로 실사 검증한다.
+#
+# ★ 이름 주의(§2-5 재확인 필요) — "Live Smoketest (DeepSeek, 300
+# scenarios)", "Subject Gate Live Smoketest (DeepSeek, 2단계 과목 게이트)"
+# 와 사이드바에 나란히 뜬다. 이 워크플로는 K-12 매핑 검증 전용
+# 시나리오 파일(scenarios_k12_*_20260809.json) 두 개만 돌린다 — 실행
+# 전 이름을 한 번 더 확인할 것.
+# ★ 결과 브랜치 경쟁조건 주의(§2-5) — 기존 두 워크플로는 둘 다
+# results/live-smoketest(공용 브랜치)로 force-push한다. 이 워크플로는
+# 겹치지 않도록 전용 브랜치(results/live-smoketest-k12-subject-mapping)를
+# 쓴다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage1_scenarios_file:
+        description: "STEP-1(professor vs teacher 라우팅) 시나리오 파일명 (blank = scenarios_k12_professor_vs_teacher_20260809.json)"
+        required: false
+        default: ""
+      stage2_scenarios_file:
+        description: "STEP-2(리프 정밀화) 시나리오 파일명 (blank = scenarios_k12_subject_gate_20260809.json)"
+        required: false
+        default: ""
+      limit:
+        description: "Debug: 각 단계 앞 N건만 실행 (blank = 전체)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-k12-subject-mapping-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install requests
+
+      - name: "STEP-1 — professor vs teacher 라우팅 검증 (live_smoketest.py)"
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.stage1_scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_k12_professor_vs_teacher_20260809.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "[STEP-1] scenarios=$SCEN out=$OUT"
+          ARGS="--scenarios $SCEN --system-prompt ../../prompts/AC-PRO-CORE_v1_6.txt --out $OUT --resume"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python3 live_smoketest.py $ARGS
+
+      - name: "STEP-2 — 리프 정밀화 검증 (subject_gate_live_smoketest.py)"
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.stage2_scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_k12_subject_gate_20260809.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "[STEP-2] scenarios=$SCEN out=$OUT"
+          ARGS="--scenarios $SCEN --out $OUT --resume"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python3 subject_gate_live_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-k12-subject-mapping
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: k12 subject-professor mapping live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-k12-subject-mapping
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-k12-subject-mapping-results
+          path: results/
