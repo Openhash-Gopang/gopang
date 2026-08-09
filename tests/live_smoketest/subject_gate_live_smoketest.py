@@ -94,7 +94,10 @@ def call_deepseek(api_key, system_prompt, user_utterance):
     payload = {
         "model": MODEL,
         "temperature": 0,
-        "max_tokens": 60,  # subject-gate.js와 동일
+        "max_tokens": 500,  # 2026-08-09 진단용 임시 상향(원래 60) — reasoning
+        # 모델이 사고 과정(reasoning_content)만으로 60토큰을 다 써서 최종
+        # content가 빈 문자열로 오는지 확인하기 위함. subject-gate.js 프로덕션
+        # 코드도 원래 60을 쓰고 있어, 이 가설이 맞으면 그쪽도 같은 결함일 수 있음.
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance[:2000]},
@@ -106,7 +109,17 @@ def call_deepseek(api_key, system_prompt, user_utterance):
             resp = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=60)
             if resp.status_code == 200:
                 data = resp.json()
-                text = data["choices"][0]["message"]["content"]
+                msg = data["choices"][0]["message"]
+                text = msg.get("content") or ""
+                if not text:
+                    # 2026-08-09 진단 로그 — content가 비어 있을 때 reasoning_content가
+                    # 실제로 토큰을 다 먹었는지, finish_reason이 length인지 확인.
+                    print(
+                        f"[DEBUG-EMPTY] finish_reason={data['choices'][0].get('finish_reason')} "
+                        f"reasoning_content_len={len(msg.get('reasoning_content') or '')} "
+                        f"usage={data.get('usage')}",
+                        flush=True,
+                    )
                 return text, data.get("usage", {}), None
             last_err = f"HTTP {resp.status_code}: {resp.text[:300]}"
         except requests.RequestException as e:
