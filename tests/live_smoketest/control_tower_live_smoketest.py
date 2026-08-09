@@ -81,6 +81,33 @@ def build_system_prompt(manifest, sp_keys):
     return "\n\n---\n\n".join(parts)
 
 
+# ── 2026-08-09 신설 — gov-tree 기관 SP 지원 ─────────────────────────
+# 이 하네스는 원래 sp-catalog.json 매니페스트의 고정 sp_keys 목록만
+# 조립할 수 있었다(static K서비스/EXPERT SP 전용). gov-tree 기관 SP는
+# province master data + 위성 저장소 콘텐츠를 gov-router.js의
+# assembleGovSystemPrompt(directCode)가 런타임에 동적으로 조립해야 해서
+# 이 파이썬 스크립트가 직접 재구현할 수 없다 — 그래서 별도 Node 스크립트
+# (render_govtree_prompts.mjs)가 먼저 각 시나리오의 directCode를 실제
+# 텍스트로 풀어 파일로 저장해두면, 여기서는 그 파일을 읽기만 한다.
+# 우선순위: scenario["system_prompt_file"](명시 경로) >
+#          --prompts-dir/{scenario["id"]}.txt(자동 매칭) > sp_keys(기존).
+def resolve_system_prompt(manifest, scenario, prompts_dir):
+    explicit = scenario.get("system_prompt_file")
+    if explicit:
+        with open(explicit, encoding="utf-8") as f:
+            return f.read()
+    if prompts_dir:
+        candidate = os.path.join(prompts_dir, f"{scenario['id']}.txt")
+        if os.path.exists(candidate):
+            with open(candidate, encoding="utf-8") as f:
+                return f.read()
+        raise FileNotFoundError(
+            f"--prompts-dir 지정됐지만 {candidate} 없음 — render_govtree_prompts.mjs를 "
+            f"먼저 실행했는지, id가 일치하는지 확인할 것"
+        )
+    return build_system_prompt(manifest, scenario["sp_keys"])
+
+
 def call_deepseek(api_key, system_prompt, user_utterance):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
@@ -157,8 +184,8 @@ def grade(raw_text):
     return "LIVE-PASS", "목록·헤더 없음, 길이 적정"
 
 
-def process_one(api_key, manifest, scenario):
-    system_prompt = build_system_prompt(manifest, scenario["sp_keys"])
+def process_one(api_key, manifest, scenario, prompts_dir=None):
+    system_prompt = resolve_system_prompt(manifest, scenario, prompts_dir)
     raw_text, err, debug = call_deepseek(api_key, system_prompt, scenario["utterance"])
     if err:
         return {**scenario, "raw_response": None, "live_verdict": "LIVE-ERROR", "live_note": err, "debug": None}
@@ -170,6 +197,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenarios", default="scenarios_control_tower_20260808.json")
     ap.add_argument("--out", default="../../results/control-tower")
+    ap.add_argument("--prompts-dir", default=None,
+                     help="render_govtree_prompts.mjs가 만든 <id>.txt 디렉터리 — 지정하면 "
+                          "sp_keys 대신 이 디렉터리에서 system prompt를 읽는다(gov-tree 시나리오용)")
     args = ap.parse_args()
 
     api_key = os.environ.get("DEEPSEEK_API_KEY")
@@ -190,9 +220,13 @@ def main():
     results = []
     with open(out_path, "w", encoding="utf-8") as out_f:
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-            futures = {pool.submit(process_one, api_key, manifest, s): s for s in scenarios}
+            futures = {pool.submit(process_one, api_key, manifest, s, args.prompts_dir): s for s in scenarios}
             for i, fut in enumerate(as_completed(futures), 1):
-                r = fut.result()
+                try:
+                    r = fut.result()
+                except FileNotFoundError as e:
+                    s = futures[fut]
+                    r = {**s, "raw_response": None, "live_verdict": "LIVE-ERROR", "live_note": str(e), "debug": None}
                 results.append(r)
                 out_f.write(json.dumps(r, ensure_ascii=False) + "\n")
                 out_f.flush()

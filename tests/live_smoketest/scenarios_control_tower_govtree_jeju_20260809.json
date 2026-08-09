@@ -1,0 +1,83 @@
+[
+  {
+    "id": "govtree-nat-tax-01",
+    "directCode": "nat-agency:tax",
+    "renderText": "종합소득세 신고 절차가 궁금해요",
+    "pdvLocationHint": "제주시",
+    "utterance": "종합소득세 신고 절차가 어떻게 되나요",
+    "category": "정상(나열 유도형, 최고위험)",
+    "note": "인계서 §2-3에서 '백과사전식 나열 위험이 큰' 최우선 검증 대상으로 지목된 사례. 세무서 SP가 신고 절차를 통째로 나열하는지, 아니면 사용자 상황(예: 어떤 소득 종류인지)을 먼저 좁히는지 확인."
+  },
+  {
+    "id": "govtree-nat-court-01",
+    "directCode": "nat-agency:court",
+    "renderText": "소송 절차가 궁금해요",
+    "pdvLocationHint": "제주시",
+    "utterance": "소송 절차가 궁금해요",
+    "category": "정상(나열 유도형, 최고위험)",
+    "note": "인계서 §2-3에서 지목된 두 번째 최우선 검증 대상. '민사/형사 어느 쪽인지'조차 불분명한 첫 발화 — STEP A(쟁점추출) 조기전개 위반 패턴(CONTROL-TOWER-PRINCIPLE §STEP A류) 발생 가능성이 가장 큰 시나리오."
+  },
+  {
+    "id": "govtree-nat-prosecution-01",
+    "directCode": "nat-agency:prosecution",
+    "renderText": "고소장 접수하려고 하는데요",
+    "pdvLocationHint": "제주시",
+    "utterance": "고소장 접수는 어떻게 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "미해결 항목 #1(kpolice 지사명 즉석추측)과 인접한 검찰청 사례 — 여긴 라우팅이 아니라 검찰청 SP 자체의 응답 형식(제출서류 나열 여부)만 본다."
+  },
+  {
+    "id": "govtree-citydept-housing-01",
+    "directCode": "city-dept:jejusi-housing",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "무허가 건축물 신고하고 싶은데 뭐부터 해야 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "제주시 주택과 — PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14) 태그가 붙는 도메인, 허가요건을 한번에 나열하기 쉬움."
+  },
+  {
+    "id": "govtree-citydept-welfare-01",
+    "directCode": "city-dept:jejusi-welfare",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "기초생활수급 신청하고 싶은데 어떻게 하나요",
+    "category": "정상(나열 유도형)",
+    "note": "제주시 복지과 — 수급 신청은 소득/재산/가구 조건 등 나열 유혹이 큰 전형적 질문."
+  },
+  {
+    "id": "govtree-dodept-plan-01",
+    "directCode": "do-dept:SP-DO-PLAN",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "고향사랑기부금 어떻게 내나요",
+    "category": "정상(나열 유도형)",
+    "note": "제주도청 기획조정실 — 렌더 시 코드 충돌 경고 있음(아래 KNOWN_ISSUES 참고), 렌더 매니페스트에서 실제로 jeju SP가 로드됐는지 trace로 재확인 필요."
+  },
+  {
+    "id": "govtree-doagency-agritech-01",
+    "directCode": "do-agency:SP-AGY-AGRITECH",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "귀농하려는데 지원받을 수 있는 게 있나요",
+    "category": "정상(나열 유도형)",
+    "note": "제주 농업기술원 — 지원사업이 여러 개라 목록형 응답 유혹이 큼."
+  },
+  {
+    "id": "govtree-org-jeju43-01",
+    "directCode": "org:SP-ORG-JEJU43",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "제주4·3 관련 자료를 요청하고 싶은데 어떻게 하면 되나요",
+    "category": "정상(나열 유도형)",
+    "note": "제주4·3평화재단 — 자료 유형·절차가 다양해 나열 위험."
+  },
+  {
+    "id": "govtree-province-jeju-01",
+    "directCode": "province:jeju",
+    "renderText": "",
+    "pdvLocationHint": null,
+    "utterance": "제주도청에 민원을 넣고 싶은데 어떻게 하면 되나요",
+    "category": "정상(나열 유도형, 공통레이어)",
+    "note": "도청 자체(L2 미특정) — 공통 레이어(SP-DO-000)만으로 응답할 때도 관제탑 원칙을 지키는지. 부서를 특정하지 못했다면 '어떤 종류의 민원이신가요' 되묻기가 정답에 가까움(예외 조항 적용 대상)."
+  }
+]

@@ -1,0 +1,71 @@
+name: Live Smoketest — Control Tower (gov-tree, directCode)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_control_tower_govtree_jeju_20260809.json)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-govtree-control-tower-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install requests
+
+      - name: Render gov-tree institution system prompts (directCode → real SP text)
+        working-directory: tests/live_smoketest
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_control_tower_govtree_jeju_20260809.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          echo "scenarios=$SCEN base=$BASE"
+          echo "SCEN=$SCEN" >> "$GITHUB_ENV"
+          echo "BASE=$BASE" >> "$GITHUB_ENV"
+          node render_govtree_prompts.mjs --scenarios "$SCEN" --out "../../results/${BASE}-prompts"
+
+      - name: Run control-tower format-compliance smoketest against DeepSeek
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          python3 control_tower_live_smoketest.py \
+            --scenarios "$SCEN" \
+            --prompts-dir "../../results/${BASE}-prompts" \
+            --out "../../results/${BASE}"
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-control-tower-govtree
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: control-tower gov-tree live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-control-tower-govtree
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-control-tower-govtree-results
+          path: results/
