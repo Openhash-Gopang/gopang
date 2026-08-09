@@ -902,6 +902,23 @@ section.section[data-tab].tab-active { display: block; }
       </svg>
     </button>
     <div class="sb-submenu" id="submenu-dev-docs">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_SUBJECT_GATE_MAX_TOKENS_20260809_v1_0.html" target="_blank">
+      <!-- 2026-08-09 신설 — subject-gate 2단계 리프 정밀화 gapfill
+           시나리오 38건 작성 중 기존 검증 파일까지 전량 실패하는 걸
+           발견, deepseek-v4-flash가 reasoning_content에 토큰을 먼저
+           소진해 content가 빈 문자열로 오는 결함을 실사로 규명(subject-
+           gate.js/domain-classifier.js/report-utils.js max_tokens
+           60~240→1000 패치, 37/38 PASS로 회복). 부수적으로 CI가
+           실패한 실행의 결과를 저장 안 하는 사각지대, 결과 브랜치
+           force-push 경쟁조건, 이름이 비슷한 워크플로 혼동, 샌드박스
+           에이전트의 Azure Blob 접근 한계, main 직접 푸시 관례 위반까지
+           함께 정리. 2026-08-08 문서(바로 아래)의 직접 후속편. 새 항목은
+           이 섹션 맨 위(최신)에 넣을 것. -->
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+      <span class="sb-item-label">subject-gate max_tokens 결함 규명 실전 교훈 매뉴얼(§0809) ↗</span>
+    </a>
     <a class="sb-item sb-subitem" href="./docs/SESSION_LESSONS_UNIVERSAL_AUDIT_ROUTING_20260808_v1_0.html" target="_blank">
       <!-- 2026-08-08 신설 — subject-gate 2단계 라우팅 통합, CALL_KINTENT
            과적합 재발견, 미성년자 안전 설계 신설, 저장소 전수조사(300건
