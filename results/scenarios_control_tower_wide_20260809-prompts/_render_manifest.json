@@ -1,0 +1,642 @@
+[
+  {
+    "id": "ct-wide-mechanical-eng",
+    "expert_key": "professor-mechanical-eng",
+    "label": "교수(기계공학)",
+    "ancestorChain": [
+      "professor-mechanical",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160724,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-mechanical-eng.txt"
+  },
+  {
+    "id": "ct-wide-aerospace",
+    "expert_key": "professor-aerospace",
+    "label": "교수(항공·우주공학)",
+    "ancestorChain": [
+      "professor-mechanical",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160760,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-aerospace.txt"
+  },
+  {
+    "id": "ct-wide-electronics",
+    "expert_key": "professor-electronics",
+    "label": "교수(전자공학)",
+    "ancestorChain": [
+      "professor-electrical-computer",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161314,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-electronics.txt"
+  },
+  {
+    "id": "ct-wide-ai-engineering",
+    "expert_key": "professor-ai-engineering",
+    "label": "교수(인공지능공학)",
+    "ancestorChain": [
+      "professor-electrical-computer",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161296,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-ai-engineering.txt"
+  },
+  {
+    "id": "ct-wide-chemicalengineering",
+    "expert_key": "professor-chemicalengineering",
+    "label": "교수(화학공학)",
+    "ancestorChain": [
+      "professor-chemeng-energy-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160883,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-chemicalengineering.txt"
+  },
+  {
+    "id": "ct-wide-civilengineering",
+    "expert_key": "professor-civilengineering",
+    "label": "교수(토목공학)",
+    "ancestorChain": [
+      "professor-construction",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160693,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-civilengineering.txt"
+  },
+  {
+    "id": "ct-wide-safetyengineering",
+    "expert_key": "professor-safetyengineering",
+    "label": "교수(안전공학)",
+    "ancestorChain": [
+      "professor-industrial-safety-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160997,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-safetyengineering.txt"
+  },
+  {
+    "id": "ct-wide-metallurgy",
+    "expert_key": "professor-metallurgy",
+    "label": "교수(금속공학)",
+    "ancestorChain": [
+      "professor-materials-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161040,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-metallurgy.txt"
+  },
+  {
+    "id": "ct-wide-controlengineering",
+    "expert_key": "professor-controlengineering",
+    "label": "교수(제어계측공학)",
+    "ancestorChain": [
+      "professor-electrical-computer",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161131,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-controlengineering.txt"
+  },
+  {
+    "id": "ct-wide-industrialengineering",
+    "expert_key": "professor-industrialengineering",
+    "label": "교수(산업공학)",
+    "ancestorChain": [
+      "professor-industrial-safety-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160764,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-industrialengineering.txt"
+  },
+  {
+    "id": "ct-wide-energyengineering",
+    "expert_key": "professor-energyengineering",
+    "label": "교수(에너지공학)",
+    "ancestorChain": [
+      "professor-chemeng-energy-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160945,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-energyengineering.txt"
+  },
+  {
+    "id": "ct-wide-biomedengineering",
+    "expert_key": "professor-biomedengineering",
+    "label": "교수(의공학)",
+    "ancestorChain": [
+      "professor-electrical-computer",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161228,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-biomedengineering.txt"
+  },
+  {
+    "id": "ct-wide-architect",
+    "expert_key": "architect",
+    "label": "건축사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 159521,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-architect.txt"
+  },
+  {
+    "id": "ct-wide-professional-engineer",
+    "expert_key": "professional-engineer",
+    "label": "기술사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 159757,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-professional-engineer.txt"
+  },
+  {
+    "id": "ct-wide-fire-safety-manager",
+    "expert_key": "fire-safety-manager",
+    "label": "소방시설관리사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 159278,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-fire-safety-manager.txt"
+  },
+  {
+    "id": "ct-wide-security-engineer",
+    "expert_key": "security-engineer",
+    "label": "정보보안전문가",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 156295,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-security-engineer.txt"
+  },
+  {
+    "id": "ct-wide-accountant-valuation",
+    "expert_key": "accountant-valuation",
+    "label": "공인회계사(기업가치평가)",
+    "ancestorChain": [
+      "accountant"
+    ],
+    "treeDepth": 2,
+    "promptLength": 162011,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-accountant-valuation.txt"
+  },
+  {
+    "id": "ct-wide-tax-accountant",
+    "expert_key": "tax-accountant",
+    "label": "세무사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 161208,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-tax-accountant.txt"
+  },
+  {
+    "id": "ct-wide-surveying-engineer",
+    "expert_key": "surveying-engineer",
+    "label": "측량 및 지형공간정보기술사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 155384,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-surveying-engineer.txt"
+  },
+  {
+    "id": "ct-wide-naval-architect",
+    "expert_key": "naval-architect",
+    "label": "조선사",
+    "ancestorChain": [],
+    "treeDepth": 1,
+    "promptLength": 158937,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-naval-architect.txt"
+  },
+  {
+    "id": "ct-wide-physician-internal-medicine",
+    "expert_key": "physician-internal-medicine",
+    "label": "의사(내과)",
+    "ancestorChain": [
+      "physician"
+    ],
+    "treeDepth": 2,
+    "promptLength": 170562,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-physician-internal-medicine.txt"
+  },
+  {
+    "id": "ct-wide-physician-psychiatry",
+    "expert_key": "physician-psychiatry",
+    "label": "의사(정신건강의학과)",
+    "ancestorChain": [
+      "physician"
+    ],
+    "treeDepth": 2,
+    "promptLength": 170484,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-physician-psychiatry.txt"
+  },
+  {
+    "id": "ct-wide-physician-radiology",
+    "expert_key": "physician-radiology",
+    "label": "의사(영상의학과)",
+    "ancestorChain": [
+      "physician"
+    ],
+    "treeDepth": 2,
+    "promptLength": 170641,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-physician-radiology.txt"
+  },
+  {
+    "id": "ct-wide-physician-surgery",
+    "expert_key": "physician-surgery",
+    "label": "의사(외과)",
+    "ancestorChain": [
+      "physician"
+    ],
+    "treeDepth": 2,
+    "promptLength": 170484,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-physician-surgery.txt"
+  },
+  {
+    "id": "ct-wide-pharmacy",
+    "expert_key": "professor-pharmacy",
+    "label": "교수(약학)",
+    "ancestorChain": [
+      "professor-pharmacy-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160714,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-pharmacy.txt"
+  },
+  {
+    "id": "ct-wide-veterinary",
+    "expert_key": "professor-veterinary",
+    "label": "교수(수의학)",
+    "ancestorChain": [
+      "professor-medicine-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161168,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-veterinary.txt"
+  },
+  {
+    "id": "ct-wide-lawyer-criminal",
+    "expert_key": "lawyer-criminal",
+    "label": "변호사(형사법)",
+    "ancestorChain": [
+      "lawyer"
+    ],
+    "treeDepth": 2,
+    "promptLength": 176480,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-lawyer-criminal.txt"
+  },
+  {
+    "id": "ct-wide-lawyer-corporate",
+    "expert_key": "lawyer-corporate",
+    "label": "변호사(기업법무)",
+    "ancestorChain": [
+      "lawyer"
+    ],
+    "treeDepth": 2,
+    "promptLength": 176578,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-lawyer-corporate.txt"
+  },
+  {
+    "id": "ct-wide-lawyer-it",
+    "expert_key": "lawyer-it",
+    "label": "변호사(IT)",
+    "ancestorChain": [
+      "lawyer"
+    ],
+    "treeDepth": 2,
+    "promptLength": 176460,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-lawyer-it.txt"
+  },
+  {
+    "id": "ct-wide-patent-attorney-it-software",
+    "expert_key": "patent-attorney-it-software",
+    "label": "변리사(IT·소프트웨어)",
+    "ancestorChain": [
+      "patent-attorney"
+    ],
+    "treeDepth": 2,
+    "promptLength": 158726,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-patent-attorney-it-software.txt"
+  },
+  {
+    "id": "ct-wide-patent-attorney-mechanical-electrical",
+    "expert_key": "patent-attorney-mechanical-electrical",
+    "label": "변리사(기계·전기전자)",
+    "ancestorChain": [
+      "patent-attorney"
+    ],
+    "treeDepth": 2,
+    "promptLength": 158687,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-patent-attorney-mechanical-electrical.txt"
+  },
+  {
+    "id": "ct-wide-lawyer-construction",
+    "expert_key": "lawyer-construction",
+    "label": "변호사(건설)",
+    "ancestorChain": [
+      "lawyer"
+    ],
+    "treeDepth": 2,
+    "promptLength": 176393,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-lawyer-construction.txt"
+  },
+  {
+    "id": "ct-wide-ethics",
+    "expert_key": "professor-ethics",
+    "label": "교수(철학·윤리학)",
+    "ancestorChain": [
+      "professor-humanities",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161215,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-ethics.txt"
+  },
+  {
+    "id": "ct-wide-history",
+    "expert_key": "professor-history",
+    "label": "교수(역사·고고학)",
+    "ancestorChain": [
+      "professor-humanities",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161169,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-history.txt"
+  },
+  {
+    "id": "ct-wide-sociology",
+    "expert_key": "professor-sociology",
+    "label": "교수(사회학)",
+    "ancestorChain": [
+      "professor-socialscience",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161226,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-sociology.txt"
+  },
+  {
+    "id": "ct-wide-design",
+    "expert_key": "professor-design",
+    "label": "교수(디자인)",
+    "ancestorChain": [
+      "professor-finearts-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160845,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-design.txt"
+  },
+  {
+    "id": "ct-wide-craft",
+    "expert_key": "professor-craft",
+    "label": "교수(공예)",
+    "ancestorChain": [
+      "professor-finearts-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160758,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-craft.txt"
+  },
+  {
+    "id": "ct-wide-creativewriting",
+    "expert_key": "professor-creativewriting",
+    "label": "교수(문예창작학)",
+    "ancestorChain": [
+      "professor-language-literature",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161303,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-creativewriting.txt"
+  },
+  {
+    "id": "ct-wide-game",
+    "expert_key": "professor-game",
+    "label": "교수(게임)",
+    "ancestorChain": [
+      "professor-appliedarts-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160963,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-game.txt"
+  },
+  {
+    "id": "ct-wide-culinaryscience",
+    "expert_key": "professor-culinaryscience",
+    "label": "교수(조리과학)",
+    "ancestorChain": [
+      "professor-homeeconomics-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160849,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-culinaryscience.txt"
+  },
+  {
+    "id": "ct-wide-cropscience",
+    "expert_key": "professor-cropscience",
+    "label": "교수(작물·원예학)",
+    "ancestorChain": [
+      "professor-agriculture-fishery-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160947,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-cropscience.txt"
+  },
+  {
+    "id": "ct-wide-fisheries",
+    "expert_key": "professor-fisheries",
+    "label": "교수(수산학)",
+    "ancestorChain": [
+      "professor-agriculture-fishery-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160973,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-fisheries.txt"
+  },
+  {
+    "id": "ct-wide-forestry",
+    "expert_key": "professor-forestry",
+    "label": "교수(산림학)",
+    "ancestorChain": [
+      "professor-agriculture-fishery-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160883,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-forestry.txt"
+  },
+  {
+    "id": "ct-wide-foodengineering",
+    "expert_key": "professor-foodengineering",
+    "label": "교수(식품공학)",
+    "ancestorChain": [
+      "professor-agriculture-fishery-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160995,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-foodengineering.txt"
+  },
+  {
+    "id": "ct-wide-korean",
+    "expert_key": "professor-korean",
+    "label": "교수(국어·국문학)",
+    "ancestorChain": [
+      "professor-language-literature",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161470,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-korean.txt"
+  },
+  {
+    "id": "ct-wide-nutrition",
+    "expert_key": "professor-nutrition",
+    "label": "교수(식품영양학)",
+    "ancestorChain": [
+      "professor-homeeconomics-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160912,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-nutrition.txt"
+  },
+  {
+    "id": "ct-wide-housingstudies",
+    "expert_key": "professor-housingstudies",
+    "label": "교수(주거학)",
+    "ancestorChain": [
+      "professor-homeeconomics-series",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 160833,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-housingstudies.txt"
+  },
+  {
+    "id": "ct-wide-anthropology",
+    "expert_key": "professor-anthropology",
+    "label": "교수(인류학)",
+    "ancestorChain": [
+      "professor-socialscience",
+      "professor"
+    ],
+    "treeDepth": 3,
+    "promptLength": 161132,
+    "hasControlTowerPrinciple": true,
+    "renderStatus": "OK",
+    "systemPromptFile": "ct-wide-anthropology.txt"
+  }
+]
