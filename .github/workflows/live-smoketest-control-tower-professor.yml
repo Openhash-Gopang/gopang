@@ -1,0 +1,88 @@
+name: Live Smoketest — Control Tower (professor EXPERT personas)
+
+# NEXT_SESSION_HANDOFF_20260809_v2.md §2 이행. render_expert_prompts.mjs가
+# expert-session.js._composeExpertPrompt()를 실제 프로덕션 코드 그대로
+# 호출해 professor 리프별 system prompt를 렌더링하고(§2-1: CONTROL-TOWER-
+# PRINCIPLE 누락·조상 체인 1단 한계를 파이썬 재구현이 아니라 프로덕션 코드
+# 재사용으로 해결), control_tower_live_smoketest.py(2026-08-08 신설,
+# gov-tree 스레드에서 --prompts-dir 옵션 추가)가 그 결과로 DeepSeek을 실사
+# 호출해 형식 위반 여부를 채점한다.
+#
+# ★ 이름 주의(§2-5) — "Live Smoketest (DeepSeek, 300 scenarios)",
+# "Subject Gate Live Smoketest", "Live Smoketest — Control Tower (gov-tree,
+# directCode)"와 사이드바에 나란히 뜬다. 이 워크플로는 professor EXPERT
+# 페르소나 전용이니 실행 전 이름을 한 번 더 확인할 것.
+# ★ 결과 브랜치 경쟁조건 주의(§2-5) — 다른 control-tower 계열 워크플로와
+# 겹치지 않도록 이 워크플로 전용 브랜치(results/live-smoketest-control-
+# tower-professor)를 쓴다. results/live-smoketest(공용 브랜치)는 건드리지
+# 않는다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_control_tower_professor_20260809.json)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-professor-control-tower-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install requests
+
+      - name: Render professor EXPERT system prompts (real _composeExpertPrompt() → 파일)
+        working-directory: tests/live_smoketest
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_control_tower_professor_20260809.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          echo "scenarios=$SCEN base=$BASE"
+          echo "SCEN=$SCEN" >> "$GITHUB_ENV"
+          echo "BASE=$BASE" >> "$GITHUB_ENV"
+          node render_expert_prompts.mjs --scenarios "$SCEN" --out "../../results/${BASE}-prompts"
+
+      - name: Run control-tower format-compliance smoketest against DeepSeek
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          python3 control_tower_live_smoketest.py \
+            --scenarios "$SCEN" \
+            --prompts-dir "../../results/${BASE}-prompts" \
+            --out "../../results/${BASE}"
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-control-tower-professor
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: control-tower professor live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-control-tower-professor
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-control-tower-professor-results
+          path: results/
