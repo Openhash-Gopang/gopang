@@ -1,0 +1,122 @@
+[
+  {
+    "no": 1,
+    "utterance": "초등학교 2학년인데 받아쓰기 시험에서 자꾸 틀려서 연습 좀 도와주세요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "안전군(교사 트리거 단어 없음, 매칭O·동의어O 과목)",
+    "static_verdict": "PASS",
+    "basis": "§CATALOG-EXPERT professor 행 — 세부 전공은 표만 보고는 안 나옴, professor로만 판단하면 과목 게이트가 리프를 정함"
+  },
+  {
+    "no": 2,
+    "utterance": "중학교 역사 수행평가로 고려에서 조선으로 넘어가는 과정을 정리해야 해요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "안전군(교사 트리거 단어 없음, 매칭O·동의어X 과목)",
+    "static_verdict": "PASS",
+    "basis": "동일"
+  },
+  {
+    "no": 3,
+    "utterance": "고등학교 화학1 몰농도 계산 문제를 같이 풀어봤으면 해요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "안전군(교사 트리거 단어 없음, 매칭O·동의어X 과목)",
+    "static_verdict": "PASS",
+    "basis": "동일"
+  },
+  {
+    "no": 4,
+    "utterance": "중학교 음악 수행평가로 리코더 운지법 시험을 봐야 하는데 연습 좀 도와주세요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "안전군(교사 트리거 단어 없음, 완전공백 과목 — STEP-1은 professor로 가고, 리프 공백 여부는 STEP-2 문제)",
+    "static_verdict": "PASS",
+    "basis": "동일 — 리프가 없다는 사실이 STEP-1 태깅 자체를 바꾸면 안 됨"
+  },
+  {
+    "no": 5,
+    "utterance": "초등학교 3학년 아이 수학 숙제를 봐줄 선생님이 필요해요, 나눗셈 부분이요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군(선생님 단어 포함, teacher 트리거 근접)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_6.txt §CATALOG-EXPERT professor 행 — '1:1로 지도해 줄 선생님을 구하는 거예요(학교 정교사 아님)' 같은 표현도 professor 안이라고 명시"
+  },
+  {
+    "no": 6,
+    "utterance": "학교 다녀와서 국어 받아쓰기를 봐줄 선생님을 구하고 있어요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군(교사 트리거 '학교 선생님'과 문구가 거의 겹침 — 핵심 함정 케이스)",
+    "static_verdict": "PASS",
+    "basis": "동일 — 다만 teacher triggers=['정교사','학교 선생님','담임']의 '학교 선생님'과 표면 문자열이 거의 겹쳐 오분류 위험이 이 세트 중 가장 큼, 실사 결과를 특히 주의 깊게 볼 것"
+  },
+  {
+    "no": 7,
+    "utterance": "담임 선생님이 내주신 사회 숙제(우리 고장 지도)를 도와줄 사람이 필요해요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군('담임' 트리거 단어 포함, 단 배경 설명일 뿐 요청 대상 아님)",
+    "static_verdict": "PASS",
+    "basis": "동일 — '담임 선생님'은 숙제를 낸 주체를 설명할 뿐, 실제 도움을 요청하는 대상은 아님. 이 구분을 모델이 실제로 하는지가 관건"
+  },
+  {
+    "no": 8,
+    "utterance": "1:1로 봐주실 수학 선생님을 구해요, 고등학교 물리1도요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군('선생님' 단어 + '1:1' 명시 — professor triggers와 정확히 겹치는 대조군)",
+    "static_verdict": "PASS",
+    "basis": "AC-PRO-CORE_v1_6.txt professor triggers에 '1:1 교습' 포함 — 이 조합이면 professor가 명백해야 함"
+  },
+  {
+    "no": 9,
+    "utterance": "과외 선생님처럼 저희 아이 영어 파닉스를 봐주실 분 있나요?",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군('선생님' + '과외' 단어 — professor triggers의 '과외'와 정확히 겹침)",
+    "static_verdict": "PASS",
+    "basis": "professor triggers에 '과외' 포함, teacher 항목 주석은 오히려 '과외 선생님은 안 넣음'이라고 명시(teacher가 아님을 뒷받침)"
+  },
+  {
+    "no": 10,
+    "utterance": "학교 선생님한테 물어보기 어려운 화학 문제가 있어서 대신 봐주실 분을 찾아요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군(문자열 '학교 선생님'이 그대로 등장하지만 의미상 '그 사람이 아닌 다른 사람'을 요청 — 이 세트 중 가장 어려운 함정)",
+    "static_verdict": "PASS",
+    "basis": "문맥상 요청 대상은 학교 선생님이 아니라 대체 조력자 — 트리거 문자열 매칭이 아니라 의미 파악이 필요한 사례. 실패하면 트리거 목록이 아니라 §CORE의 문맥 판단 지시 자체가 문제"
+  },
+  {
+    "no": 11,
+    "utterance": "정교사 자격증 준비랑 무관하게, 그냥 중학교 도덕 수행평가를 도와줄 사람이 필요해요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군(teacher 정식 트리거 단어 '정교사'가 문장에 있지만 화자 본인과 무관한 맥락 — 최고난도 함정)",
+    "static_verdict": "PASS",
+    "basis": "'정교사'는 자격증 이름으로만 언급됐고 실제 요청은 수행평가 지도 — 트리거 문자열 존재 자체가 아니라 그 단어가 실제로 무엇을 가리키는지 판단해야 하는 사례"
+  },
+  {
+    "no": 12,
+    "utterance": "담임 선생님을 대신할 순 없겠지만, 아이 미술 숙제(수채화)를 봐줄 분을 찾고 있어요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "위험군('담임' 트리거 단어 + 명시적 대체재 요청 맥락)",
+    "static_verdict": "PASS",
+    "basis": "발화 자체가 '담임 선생님을 대신할 순 없지만'이라고 명시 — teacher가 아니라는 게 문장에 이미 드러남"
+  }
+]
