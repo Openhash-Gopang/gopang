@@ -1,472 +1,490 @@
 <!DOCTYPE html>
-<!--
-  이 문서가 다루는 범위: 혼디(Hondi) 공식 소개 팜플렛의 HTML판(광고 전단 버전).
-  2026-07-26 v2 전면 재설계(사용자 지시) — 이전 버전은 K-서비스 지도·60개
-  페르소나 전체 목록·공공기관 상세·철학 2단 설명 등 매뉴얼급 정보를 팜플렛에
-  욱여넣고 있었다. 팜플렛은 광고 전단이지 매뉴얼이 아니므로, 핵심 후킹
-  문구 + 최소한의 신뢰 근거 + hondi.net으로의 강한 CTA(URL+QR)만 남기고
-  나머지 상세는 전부 hondi.net으로 유도하도록 재설계했다. 흑백 인쇄,
-  A4 양면 각 1장 유지, 폰트 크기는 광고 전단답게 크고 여유 있게.
--->
 <html lang="ko">
 <head>
-<link rel="icon" href="data:,">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>혼디(Hondi) — 소개 전단</title>
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 Hondi — 쓸수록 똑똑해지는 나만의 AI 비서</title>
 <style>
-:root{
-  --ink:#1A1A1A; --ink-soft:#595959; --ink-faint:#8C8C8C;
-  --line:#CCCCCC;
-  --serif:'Pretendard','Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif;
-  --sans:'Pretendard','Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif;
-  --mono:'Pretendard','Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-@page{size:A4;margin:10mm}
-body{
-  background:#fff;font-family:var(--sans);color:var(--ink);line-height:1.5;
-  -webkit-font-smoothing:antialiased;padding:16px 10px;
-}
-.sheet{max-width:210mm;margin:0 auto;background:#fff;border:1px solid var(--line);}
-@media print{ body{padding:0} .sheet{max-width:none;border:none;min-height:277mm}
-  .back-sheet,.appendix-sheet{page-break-before:always;break-before:page} }
-@media screen{ .back-sheet,.appendix-sheet{margin-top:24px} }
+  :root {
+    --accent: #1a4fb3;
+    --accent-bg: #f2f6ff;
+    --ink: #1a1a1a;
+    --muted: #666;
+    --line: #ddd;
+    --line-light: #eee;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Noto Sans CJK KR", "Noto Sans KR", sans-serif;
+    color: var(--ink);
+    margin: 0;
+    background: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+  }
 
-.page-tag{display:inline-block;margin:14px 34px 0;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.4px;padding:4px 12px;border-radius:4px}
+  /* ---- top bar / tabs ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20; background: #fff;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  .topbar-inner {
+    max-width: 900px; margin: 0 auto; padding: 14px 20px 0 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  .brand { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.3px; padding-bottom: 12px; }
+  .brand span { font-weight: 500; font-size: 0.7rem; color: var(--muted); margin-left: 6px; }
+  .tabs {
+    display: flex; gap: 4px; max-width: 900px; margin: 0 auto; padding: 0 20px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .tab-btn {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 0.92rem; font-weight: 700; color: var(--muted);
+    padding: 10px 14px 12px 14px; border-bottom: 3px solid transparent; white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-/* 헤더 */
-.top{padding:28px 34px 20px;border-bottom:3px solid var(--ink);display:flex;justify-content:space-between;align-items:flex-start}
-.tagline-strip{padding:12px 34px;border-bottom:1px solid var(--line);font-size:15px;font-weight:700;color:var(--ink-soft)}
-.tagline-strip b{font-weight:900;color:var(--ink)}
-.wordmark{font-family:var(--serif);font-weight:900;font-size:27px;letter-spacing:-.3px;line-height:1.3}
-.badge{font-family:var(--mono);font-size:16px;font-weight:700;border:1px solid var(--ink);padding:5px 11px;border-radius:5px;white-space:nowrap}
+  .container { max-width: 900px; margin: 0 auto; padding: 30px 20px 70px 20px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
-/* 히어로 후킹 문구 */
-.hook{padding:30px 34px 22px;border-bottom:1px solid var(--line)}
-.hook .line1{font-family:var(--serif);font-size:17px;font-weight:700;line-height:1.5}
-.hook .line2{font-family:var(--serif);font-size:17px;font-weight:900;line-height:1.5;margin-top:2px}
-.hook .line2 u{text-decoration:underline;text-underline-offset:3px}
-.hook .sub{margin-top:12px;font-size:16px;color:var(--ink-soft)}
+  h1 { font-size: 1.65rem; font-weight: 800; margin: 0 0 10px 0; line-height: 1.28; }
+  h2 { font-size: 1.25rem; font-weight: 800; margin: 34px 0 14px 0; color: var(--accent); border-bottom: 1.5px solid var(--line-light); padding-bottom: 8px; }
+  h3 { font-size: 1.05rem; font-weight: 700; margin: 20px 0 8px 0; }
+  p { margin: 0 0 14px 0; }
+  .lede { font-size: 1.02rem; color: #444; margin-bottom: 16px; }
+  ul { margin: 8px 0 16px 0; padding-left: 22px; }
+  li { margin-bottom: 4px; }
 
-/* 정체성 한 줄 */
-.identity{padding:20px 34px;border-bottom:1px solid var(--line)}
-.identity p{font-size:16.5px;color:var(--ink-soft)}
-.identity b{color:var(--ink);font-weight:700}
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px 0; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: none; font-weight: 700; border-bottom: 2px solid var(--ink); }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .note { font-size: 0.84rem; color: #777; margin-top: 6px; }
 
-/* 8대 영역 — 아이콘+이름만, 설명 없음 */
-.domains{padding:22px 34px;border-bottom:1px solid var(--line)}
-.domains .d-title{font-family:var(--serif);font-weight:900;font-size:16px;margin-bottom:14px}
-.d-grid{display:flex;flex-wrap:wrap;margin:0 -5px}
-.d-item{width:25%;box-sizing:border-box;padding:0 5px 14px;text-align:center}
-.d-item .g{font-family:var(--serif);font-size:22px;font-weight:900;display:block}
-.d-item .t{font-size:14.83px;font-weight:700;margin-top:4px}
+  .callout { border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 14px 18px; font-size: 0.96rem; margin: 18px 0; border-radius: 0 8px 8px 0; }
+  .two-col { display: flex; gap: 28px; }
+  .two-col > div { flex: 1; min-width: 0; }
+  .three-col { display: flex; gap: 20px; }
+  .three-col > div { flex: 1; min-width: 0; }
 
-/* 직종별 타깃 설득 문구 */
-.audience{padding:22px 34px;border-bottom:1px solid var(--line)}
-.audience .d-title{font-family:var(--serif);font-weight:900;font-size:16px;margin-bottom:14px}
-.a-grid{display:flex;flex-wrap:wrap;margin:0 -8px}
-.a-item{width:50%;box-sizing:border-box;padding:0 8px 16px}
-.a-item .role{font-size:14.5px;font-weight:800;color:var(--ink)}
-.a-item .pitch{font-size:14.83px;color:var(--ink-soft);margin-top:3px;line-height:1.45}
+  .stats4 { display: flex; gap: 14px; margin: 14px 0 18px 0; flex-wrap: wrap; }
+  .stat { flex: 1; min-width: 140px; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .stat .num { font-size: 1.4rem; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+  .stat .lbl { font-size: 0.82rem; color: #555; line-height: 1.4; }
 
-/* CTA — hondi.net + QR */
-.cta-block{padding:34px 34px;margin-top:26px;border-top:3px solid var(--ink)}
-.cta-text{flex:1}
-.cta-text .ct{font-family:var(--serif);font-size:17px;font-weight:900}
-.cta-text .cd{margin-top:6px;font-size:15px;color:var(--ink-soft)}
-.cta-text .curl{margin-top:12px;font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.3px}
+  .hero {
+    border: 1.5px solid var(--accent); border-radius: 12px; padding: 26px 28px; margin-bottom: 22px;
+  }
+  .hero .kicker { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .hero h1 { color: var(--accent); font-size: 1.9rem; margin-bottom: 10px; }
+  .hero p { color: var(--ink); font-size: 1.05rem; margin-bottom: 0; }
 
-.legal-strip{padding:12px 34px;border-top:1px solid var(--line);font-size:16px;color:var(--ink-faint)}
+  .vs-row { display: flex; gap: 16px; margin: 18px 0; flex-wrap: wrap; }
+  .vs-card { flex: 1; min-width: 220px; border-radius: 10px; padding: 16px 18px; }
+  .vs-card.bad { border: 1px solid var(--line); }
+  .vs-card.good { border: 1.5px solid var(--accent); }
+  .vs-card .tag { font-size: 0.88rem; font-weight: 800; margin-bottom: 6px; display: block; }
+  .vs-card.bad .tag { color: #888; }
+  .vs-card.good .tag { color: var(--accent); }
+  .vs-card p { font-size: 0.95rem; margin-bottom: 0; }
 
-/* 뒷면 전용 */
-.trust-title{padding:22px 34px 8px;font-family:var(--serif);font-weight:900;font-size:19px;white-space:nowrap}
-.trust-sub{padding:0 34px 16px;font-size:16px;color:var(--ink-soft)}
-.trust-list{padding:0 34px}
-.trust-item{display:flex;gap:18px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
-.trust-item:first-child{border-top:none}
-.trust-item .tn{font-family:var(--serif);font-size:26px;font-weight:900;flex-shrink:0;width:56px}
-.trust-item .tt{flex:1}
-.trust-item .tt .h{font-weight:800;font-size:16.5px}
-.trust-item .tt .d{font-size:16px;color:var(--ink-soft);margin-top:3px}
+  .domain-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0 18px 0; }
+  .domain-tile { border: 1px solid var(--line); border-radius: 10px; padding: 16px 8px; text-align: center; width: calc(25% - 9px); box-sizing: border-box; }
+  .domain-tile .glyph { font-size: 1.7rem; font-weight: 800; color: var(--accent); display: block; margin-bottom: 6px; }
+  .domain-tile .name { font-size: 0.88rem; font-weight: 600; }
 
-.klaw-block{margin:0 34px 8px;border:2px solid var(--ink);border-radius:8px;padding:11px 18px;position:relative}
-.klaw-block .kb-tag{font-family:var(--mono);font-weight:700;font-size:14.83px;letter-spacing:.2px;color:var(--ink-soft);margin-bottom:7px}
-.klaw-block p{font-family:var(--serif);font-size:16px;font-weight:700;line-height:1.5}
-.klaw-block .kb-foot{margin-top:8px;font-size:16px;font-weight:700;color:var(--ink-soft)}
-.klaw-block .kb-link{margin-top:5px;font-family:var(--mono);font-size:13px;color:var(--ink-soft)}
+  .persona-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0 18px 0; }
+  .persona-card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; width: calc(33.333% - 8px); box-sizing: border-box; }
+  .persona-card .role { font-size: 1.02rem; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+  .persona-card p { font-size: 0.9rem; margin-bottom: 0; line-height: 1.42; }
 
-/* 별첨 — 기관·산업 커버리지 */
-.gov-intro{padding:0 34px 20px;font-size:15px;color:var(--ink-soft);line-height:1.55}
-.gov-cat{padding:20px 34px;border-bottom:1px solid var(--line)}
-.gov-cat:last-of-type{border-bottom:none}
-.gov-cat .cat-title{font-family:var(--serif);font-weight:900;font-size:18px}
-.gov-cat .cat-desc{margin-top:5px;font-size:14.5px;color:var(--ink-soft);line-height:1.5}
-.gov-cat .cat-example{margin-top:9px;font-size:13px;color:var(--ink-faint);font-family:var(--mono);line-height:1.6}
-.sub-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
-.sub-block:first-of-type{margin-top:16px}
-.sub-block .sub-title{font-weight:800;font-size:15px;color:var(--ink)}
-.sub-block .sub-desc{margin-top:3px;font-size:13.5px;color:var(--ink-soft)}
-.sub-block .sub-list{margin-top:6px;font-size:14px;line-height:1.65;color:var(--ink)}
-.gov-footnote{margin-top:10px;font-size:12px;color:var(--ink-faint);line-height:1.55}
+  .feature-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0 18px 0; }
+  .feature-card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; width: calc(33.333% - 8px); box-sizing: border-box; }
+  .feature-card .glyph { font-size: 1.8rem; font-weight: 800; color: var(--accent); display: block; margin-bottom: 6px; }
+  .feature-card .ftitle { font-size: 0.92rem; font-weight: 800; margin-bottom: 4px; display: block; }
+  .feature-card p { font-size: 0.85rem; color: #555; margin-bottom: 0; line-height: 1.4; }
+
+  .service-grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 14px 0 18px 0; }
+  .service-card { border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; width: calc(50% - 8px); box-sizing: border-box; }
+  .service-card .stitle { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin-bottom: 8px; display: block; }
+  .service-card p { font-size: 0.95rem; margin-bottom: 0; line-height: 1.45; }
+
+  .signup-row { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .signup-item { font-size: 0.94rem; border-left: 3px solid var(--accent); padding-left: 12px; }
+
+  .org-block { margin-bottom: 16px; }
+  .org-block .exq { font-size: 0.86rem; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+  .org-table th, .org-table td { font-size: 0.87rem; padding: 8px 10px; }
+  .org-list-text { font-size: 0.9rem; line-height: 1.6; }
+  .org-list-text b { color: var(--accent); }
+
+  /* ---- responsive ---- */
+  @media (max-width: 720px) {
+    .two-col, .three-col, .stats4 { flex-direction: column; }
+    .domain-tile { width: calc(50% - 6px); }
+    .persona-card, .feature-card { width: calc(50% - 6px); }
+    .service-card { width: 100%; }
+    .hero h1 { font-size: 1.5rem; }
+  }
+  @media (max-width: 460px) {
+    .domain-tile, .persona-card, .feature-card { width: 100%; }
+    h1 { font-size: 1.4rem; }
+    .hero { padding: 20px; }
+  }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════ 앞면 ══════════════════ -->
-<div class="sheet">
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">혼디 Hondi<span>쓸수록 똑똑해지는 나만의 AI 비서</span></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="tab1">소개</button>
+    <button class="tab-btn" data-tab="tab2">연동기관</button>
+    <button class="tab-btn" data-tab="tab3">경제효과</button>
+    <button class="tab-btn" data-tab="tab4">10년전망·신뢰경제</button>
+  </nav>
+</div>
 
-  <div class="page-tag">앞면 · 1 / 3</div>
+<div class="container">
 
-  <header class="top">
-    <span class="wordmark">쓸수록 똑똑해지는 나만의 AI 비서, 혼디</span>
-    <span class="badge">8월 1일부터 베타 테스트 시작</span>
-  </header>
+  <!-- ============ TAB 1 — 소개 (구 1~3p) ============ -->
+  <div class="tab-content active" id="tab1">
 
-  <div class="tagline-strip">1년 간 사용하면, 나보다 더 나를 잘 알고, "세상의 모든 지식을 갖춘" 오직 나만의 <b>수호 천사</b>로 성장합니다.</div>
+    <div class="hero">
+      <div class="kicker">8월 1일부터 베타 테스트 시작</div>
+      <h1>쓸수록 똑똑해지는 나만의 AI 비서, 혼디</h1>
+      <p>1년 간 사용하면, 나보다 더 나를 잘 알고 "세상의 모든 지식을 갖춘" 오직 나만의 수호천사로 성장합니다.</p>
+    </div>
 
-  <section class="hook">
-    <div class="line1">카톡은 무료가 아닙니다. 사용자는 막대한 사적 데이터를 그 대가로 지불해야 합니다.</div>
-    <div class="line2">혼디는 유료 메신저이며(기본 <u>월 990원</u>), 내 데이터를 나만 저장하고, 열람합니다.</div>
-  </section>
+    <div class="vs-row">
+      <div class="vs-card bad">
+        <span class="tag">카카오톡</span>
+        <p>무료가 아닙니다. 사용자는 막대한 사적 데이터를 그 대가로 지불해야 합니다.</p>
+      </div>
+      <div class="vs-card good">
+        <span class="tag">혼디 Hondi</span>
+        <p>유료 메신저이며(기본 월 990원), 내 데이터를 나만 저장하고 나만 열람합니다.</p>
+      </div>
+    </div>
 
-  <section class="identity">
-    <p>'혼디'는 제주 토속어로 <b>"함께"</b>라는 뜻이며, <b>오픈소스(Open Source)</b>란 모든 소스 코드를 공개하여, 누구나 개발에 참여할 수 있는 열린 커뮤니티를 뜻합니다.</p>
-  </section>
+    <p><b>'혼디'</b>는 제주 토속어로 <b>"함께"</b>라는 뜻이며, <b>오픈소스(Open Source)</b>란 모든 소스코드를 공개하여 누구나 개발에 참여할 수 있는 열린 커뮤니티를 뜻합니다.</p>
 
-  <div class="klaw-block">
-    <div class="kb-tag">기존 메신저엔 없는 개념</div>
-    <p>카톡·텔레그램은 사람과 사람의 대화창입니다. 혼디는 다릅니다 — 자율주행차량(사물), 국세청(기관), 법학·의학(개념)과도 같은 대화창에서 소통하며, 그 중심엔 <u>나만의 AI 비서</u>가 있습니다.</p>
+    <div class="callout">
+    <b>이 페이지의 구성</b> — 소개(지금 이 탭) 혼디가 <b>무엇을</b> 하는지, 연동기관 탭은 <b>어디까지</b> 연동되는지(중앙정부부터 읍면동, 의료·교육·금융·교통물류·시장·산업 전 기관 목록), 경제효과·10년전망 탭은 그것이 <b>왜 경제적으로 중요한지</b>를 데이터로 답합니다.
+    </div>
+
+    <h2>기존 메신저엔 없는 개념</h2>
+    <p>카톡·텔레그램은 사람과 사람의 대화창입니다. 혼디는 다릅니다 — 자율주행차량(사물), 국세청(기관), 법학·의학(개념)과도 같은 대화창에서 소통하며, 그 중심엔 나만의 AI 비서가 있습니다. 카톡은 대화만 하지만, 혼디는 대화 외에도 한국 사회의 전 영역(대표 8개)을 AI와 데이터 보안 기술로 재창조합니다. 2030년 완성을 목표로, 2026년 8월 1일부터 우리 사회 전 영역에서 성능 실험(필드 테스트)을 시작합니다.</p>
+
+    <div class="domain-grid">
+      <div class="domain-tile"><span class="glyph">法</span><span class="name">사법 AI</span></div>
+      <div class="domain-tile"><span class="glyph">政</span><span class="name">행정 AI</span></div>
+      <div class="domain-tile"><span class="glyph">立</span><span class="name">입법 AI</span></div>
+      <div class="domain-tile"><span class="glyph">敎</span><span class="name">교육 AI</span></div>
+      <div class="domain-tile"><span class="glyph">醫</span><span class="name">의료 AI</span></div>
+      <div class="domain-tile"><span class="glyph">金</span><span class="name">금융 AI</span></div>
+      <div class="domain-tile"><span class="glyph">運</span><span class="name">교통·물류 AI</span></div>
+      <div class="domain-tile"><span class="glyph">市</span><span class="name">시장 AI</span></div>
+    </div>
+    <p class="note">각 영역 안에서도 기관·업무별로 세분화된 전문 AI가 응답합니다(예시와 전체 연동 기관 목록은 연동기관 탭 참고).</p>
+    <p class="note">모든 사용자에게 AI 상담 기능을 갖춘 웹사이트 자동 생성, 상권 분석, 경영 분석, 위생 관리, 세무, 법무, 고객 관리, 고객 피드백 대응, 재무 계획까지 지원합니다. 전체 기능·요금·참여 방법은 hondi.net에서 확인하십시오.</p>
+
+    <h2>혼디의 압도적 기능</h2>
+    <p class="lede">아래 6개 그룹부터 순차적으로 필드 테스트가 개방됩니다.</p>
+
+    <h3>이런 분들이 이미 혼디를 기다리고 있습니다</h3>
+    <div class="persona-grid">
+      <div class="persona-card"><div class="role">자영업자</div><p>에스크로·사기 탐지로 안전한 거래, 세무 신고까지 AI가 함께 챙깁니다</p></div>
+      <div class="persona-card"><div class="role">공무원</div><p>쌓인 민원 응대와 서류 검토, 행정 AI가 초안부터 도와드립니다</p></div>
+      <div class="persona-card"><div class="role">학부모</div><p>K-EDU로 내 아이 맞춤 학습을 시작합니다</p></div>
+      <div class="persona-card"><div class="role">학생</div><p>시험 전날 새벽에도, 막힌 문제를 바로 물어봅니다</p></div>
+      <div class="persona-card"><div class="role">교사</div><p>수업 준비와 평가 업무 부담을 AI와 나눠 짊어집니다</p></div>
+      <div class="persona-card"><div class="role">시민 누구나</div><p>국세청부터 읍면동사무소까지, 민원을 메신저 안에서 끝냅니다</p></div>
+    </div>
+
+    <h3>5대 핵심 기능</h3>
+    <div class="feature-grid">
+      <div class="feature-card"><span class="glyph">60</span><span class="ftitle">전문가 AI</span><p>60개 전문가 AI가 실제 업무를 보조합니다 — 의사·변호사·세무사·건축사 등 각 분야 전문가의 의사결정을 돕는 AI</p></div>
+      <div class="feature-card"><span class="glyph">全</span><span class="ftitle">전 기관 연동</span><p>국세청·경찰청 등 중앙정부기관부터 전국 도청·시청·읍면동사무소까지 업무 보조(현재)·향후 대행 지원. 제주는 가장 상세히 구현된 시범지역</p></div>
+      <div class="feature-card"><span class="glyph">私</span><span class="ftitle">탈중앙 저장</span><p>2022년 카톡 데이터센터 화재로 국민 메신저가 멈췄던 것 기억하십니까. 혼디는 한 곳이 멈춰도 전체가 멈추지 않으며, 원본 데이터는 항상 내 기기에만 저장됩니다</p></div>
+      <div class="feature-card"><span class="glyph">認</span><span class="ftitle">단계별 인증</span><p>거래 위험도에 따라 자동으로 올라가는 인증 — 조회는 기기인식, 소액결제는 얼굴, 금융거래는 지문, 고액·불가역 행위는 얼굴+지문+4단어</p></div>
+      <div class="feature-card"><span class="glyph">鎖</span><span class="ftitle">분산 원장</span><p>위변조가 불가능한 분산 원장 — GDC 잔액과 거래기록은 중앙서버 하나가 아닌 분산 원장에 기록되어, 특정 서버가 뚫려도 잔액을 조작할 수 없습니다</p></div>
+    </div>
+
+    <div class="callout">
+    혼디의 5대 기능(60·全·私·認·鎖)은 우연히 나열된 스펙이 아니라, "전문성을 세분화하고(60), 사회 전 영역과 연동하되(全), 데이터는 각자가 쥐고(私), 위험도에 비례해 인증하며(認), 기록은 위변조 불가능하게(鎖)"라는 하나의 설계 원칙에서 나온 다섯 갈래입니다.
+    </div>
+    <p class="note">이 중 60(전문성 세분화)은 MoTE라는 기술로, 鎖(위변조 불가능한 기록)는 Openhash라는 기술로 구현됩니다. 두 기술이 왜 비용·에너지 측면에서 유리한지는 경제효과 탭에서 다룹니다.</p>
+
+    <div class="signup-row">
+      <div class="signup-item">📱 전화번호만으로 가입 · 가입 즉시 테스트용 GDC 무료 충전 · 친구 초대 시 GDC 추가 지급</div>
+      <div class="signup-item">📱 스마트폰으로 접속하면 실사용 화면, 💻 PC로 접속하면 기능 설명 화면입니다</div>
+    </div>
+
+    <h2>혼디의 60개 전문 AI 중 일부 예시</h2>
+    <p>60개 전문가 AI 각각은 단일 모델이 아니라, 세부 전문분야별로 다시 나뉜 소형 특화 모델(MoTE) 여럿으로 구성됩니다 — 합산 262개의 초소형 전문 모듈입니다(세부 분야별 구성은 경제효과 탭 참고).</p>
+    <div class="service-grid">
+      <div class="service-card">
+        <span class="stitle">法 K-LAW</span>
+        <p>소송을 시작하기도 전에, 수년 뒤 대법원 판결문을 미리 읽어볼 수 있다면 어떨까요. 그것도 단돈 몇 천 원에 정교한 예상 판결문을 5분 내에 제공합니다. 과연 인간의 두뇌로 그 법리를 깰 수 있을지 직접 확인해 보십시오.</p>
+      </div>
+      <div class="service-card">
+        <span class="stitle">敎 K-EDU</span>
+        <p>자녀에게 최고의 개인 교수를 제공하십시오. 막힘없고, 친절하며, 개개인의 적성과 능력에 맞춰 지도합니다.</p>
+      </div>
+      <div class="service-card">
+        <span class="stitle">金 K-GDC</span>
+        <p>글로벌 전자동 무인 은행·보험·증권 통합 시스템의 필드 테스트를 시작합니다. 예금·대출·신용평가·주식과 채권 발행·외환·공과금 납부·신용카드 등을 완전 자동화합니다. 금융권 종사자에 한해 필드 테스트 참여 가능.</p>
+      </div>
+      <div class="service-card">
+        <span class="stitle">政 K-Gov</span>
+        <p>중앙정부, 지방자치단체(광역시도·시군구·읍면동) 부서 각각의 AI 버전 성능을 지금 확인해 보십시오. 청와대부터 읍면동사무소까지 반복적 일상 업무를 완전 자동화합니다. 현직 공무원에 한해 필드 테스트 참여 가능.</p>
+      </div>
+      <div class="service-card">
+        <span class="stitle">敎 K-Teacher</span>
+        <p>학생 개개인의 학습 지도를 맞춤형으로 제공하십시오. 현직 교사·교수에 한해 필드 테스트에 참여하실 수 있습니다.</p>
+      </div>
+      <div class="service-card">
+        <span class="stitle">💡 더 궁금하다면</span>
+        <p>60개 전문가 AI 전체 목록과 각 페르소나별 세부 상담 범위, 요금 체계는 hondi.net 접속 후 바로 확인하실 수 있습니다. 지금 로그인하면 첫 상담은 무료 GDC로 진행됩니다.</p>
+      </div>
+    </div>
+
+    <p class="note">※ 법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.</p>
   </div>
 
-  <section class="domains">
-    <div class="d-title">카톡은 대화만 하지만, 혼디는 대화 외에도 한국 사회의 전 영역(대표 8개)을 AI와 데이터 보안 기술로 재창조합니다. 2030년 완성을 목표로, 2026년 8월 1일부터 우리 사회 전 영역에서 성능 실험을 시작합니다(필드 테스트).</div>
-    <div class="d-grid">
-      <div class="d-item"><span class="g">法</span><span class="t">사법 AI</span></div>
-      <div class="d-item"><span class="g">政</span><span class="t">행정 AI</span></div>
-      <div class="d-item"><span class="g">立</span><span class="t">입법 AI</span></div>
-      <div class="d-item"><span class="g">敎</span><span class="t">교육 AI</span></div>
-      <div class="d-item"><span class="g">醫</span><span class="t">의료 AI</span></div>
-      <div class="d-item"><span class="g">金</span><span class="t">금융 AI</span></div>
-      <div class="d-item"><span class="g">運</span><span class="t">교통·물류 AI</span></div>
-      <div class="d-item"><span class="g">市</span><span class="t">시장 AI</span></div>
-    </div>
-  </section>
+  <!-- ============ TAB 2 — 연동기관 (구 4~5p) ============ -->
+  <div class="tab-content" id="tab2">
 
-  <section class="audience">
-    <div class="d-title">이런 분들이 이미 혼디를 기다리고 있습니다</div>
-    <div class="a-grid">
-      <div class="a-item">
-        <div class="role">자영업자</div>
-        <div class="pitch">에스크로·사기 탐지로 안전한 거래, 세무 신고까지 AI가 함께 챙깁니다</div>
+    <h1>HONDI · K-GOV COVERAGE — 혼디가 연동하는 기관·산업 목록</h1>
+    <p class="lede">중앙정부, 지방정부, 의료, 교육, 금융, 교통/물류, 시장, 산업 순으로 정리. 각 기관의 AI 모델 필드 테스트를 시작합니다.</p>
+
+    <h2>중앙정부 — 입법·사법·행정</h2>
+    <div class="org-block">
+      <div class="exq">예시 지시 · "국세청에 종합소득세 신고 도와줘" · "여권 재발급 절차 알려줘" · "예비군 훈련 일정 확인해줘"</div>
+      <p class="org-list-text">대한민국 헌법상 국가기관은 입법부·사법부·행정부 3부로 나뉩니다. 행정부는 정부조직법에 따라 부·처·청(중앙행정기관)과 대통령·국무총리 직속 기관으로 구성됩니다.</p>
+    </div>
+
+    <table class="org-table">
+      <tr><th style="width:22%;">구분</th><th>소속·구성</th></tr>
+      <tr><td><b>입법부 · 국회</b></td><td>법률 제정·예산 심의·국정감사를 담당하는 헌법기관 — 국회 본회의·상임위원회, 국회사무처, 국회도서관, 국회예산정책처, 국회입법조사처</td></tr>
+      <tr><td><b>사법부 · 법원·헌재</b></td><td>재판을 통한 분쟁 해결과 위헌 심사를 담당하는 헌법기관 — 대법원, 법원행정처, 고등법원, 지방법원, 가정법원, 행정법원, 특허법원, 회생법원, 헌법재판소</td></tr>
+      <tr><td><b>대통령 소속</b></td><td>대통령비서실, 국가안보실, 대통령경호처, 감사원, 국가정보원, 방송통신위원회, 국가교육위원회, 국가인권위원회</td></tr>
+      <tr><td><b>국무총리 소속</b></td><td>국무조정실, 국무총리비서실, 고위공직자범죄수사처, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</td></tr>
+      <tr><td><b>행정부 19부</b></td><td>기획재정부, 교육부, 과학기술정보통신부, 외교부, 통일부, 법무부, 국방부, 행정안전부, 국가보훈부, 문화체육관광부, 농림축산식품부, 산업통상자원부, 보건복지부, 환경부, 고용노동부, 여성가족부, 국토교통부, 해양수산부, 중소벤처기업부</td></tr>
+      <tr><td><b>3처</b></td><td>인사혁신처, 법제처, 식품의약품안전처</td></tr>
+      <tr><td><b>20청</b></td><td>국세청, 관세청, 조달청, 통계청, 우주항공청, 재외동포청, 검찰청, 병무청, 방위사업청, 경찰청, 소방청, 국가유산청, 농촌진흥청, 산림청, 특허청, 질병관리청, 기상청, 행정중심복합도시건설청, 새만금개발청, 해양경찰청</td></tr>
+      <tr><td><b>6위원회</b></td><td>방송통신위원회, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</td></tr>
+    </table>
+    <p class="note">※ e-나라지표 기준(2024.12), 정부조직은 개편에 따라 수시 변경. 방송통신위·공정위·금융위는 소속체계상 중복 표기될 수 있음.</p>
+
+    <h2>지방정부 — 광역·기초·읍면동</h2>
+    <div class="org-block">
+      <div class="exq">예시 지시 · "우리 동 주민센터에 등본 발급 신청해줘" · "재산세 납부 기한 확인해줘" · "종량제 봉투 파는 곳 알려줘"</div>
+    </div>
+    <table class="org-table">
+      <tr><th style="width:22%;">구분</th><th>내용</th></tr>
+      <tr><td><b>광역자치단체(16)</b></td><td>서울특별시, 전남광주통합특별시, 부산·대구·인천·대전·울산광역시, 세종특별자치시, 경기도, 충북·충남·경북·경남, 강원특별자치도, 전북특별자치도, 제주특별자치도</td></tr>
+      <tr><td><b>기초자치단체(227)</b></td><td>시(75)·군(82)·자치구(70) — 수원시, 고양시, 화성시, 청주시, 천안시, 포항시, 김해시, 제주시, 서귀포시, 강남구 등(통합·개편 진행 중이라 숫자 유동적)</td></tr>
+      <tr><td><b>최일선 읍·면·동</b></td><td>읍사무소, 면사무소, 동 행정복지센터(주민센터) — 주민등록·인감·각종 증명서 발급 창구</td></tr>
+    </table>
+    <p class="note">※ 2026.7.1 광주광역시·전라남도 통합(전남광주통합특별시 출범), 인천 중구·동구 개편 등 최신 행정구역 개편 반영. 정확한 최신 현황은 행정안전부·정부24에서 확인.</p>
+
+    <div class="two-col">
+      <div>
+        <h2>의료 — 감독·의료기관·직역단체</h2>
+        <div class="exq">예시 지시 · "가까운 이비인후과 예약하고 증상 전달해줘" · "건강검진 결과 쉽게 설명해줘" · "복용 중인 약 상호작용 확인해줘"</div>
+        <p class="org-list-text"><b>감독·공공</b> — 보건복지부, 질병관리청, 국민건강보험공단, 건강보험심사평가원, 식품의약품안전처, 국립중앙의료원, 국립암센터, 대한적십자사<br>
+        <b>의료기관 유형</b> — 상급종합병원, 종합병원, 병원, 의원, 치과의원, 한의원, 약국, 보건소, 응급의료센터<br>
+        <b>직역별 협회</b> — 대한의사협회, 대한치과의사협회, 대한한의사협회, 대한간호협회, 대한약사회, 대한병원협회</p>
+
+        <h2>교육 — 행정·학교급·평생교육</h2>
+        <div class="exq">예시 지시 · "우리 아이 수학 진도에 맞는 문제 만들어줘" · "학자금 대출 조건 알려줘" · "방과후 프로그램 신청해줘"</div>
+        <p class="org-list-text"><b>교육행정</b> — 교육부, 국가교육위원회, 시·도교육청(17), 교육지원청, 한국교육과정평가원, 한국교육개발원, 한국장학재단<br>
+        <b>유아·초중등·고등</b> — 유치원·어린이집, 초·중·고교, 특수학교, 전문대학, 일반대학, 대학원<br>
+        <b>평생·직업</b> — 평생교육원, 직업훈련기관, 사설 학원</p>
+
+        <h2>금융 — 감독·업권·시장</h2>
+        <div class="exq">예시 지시 · "이번 달 카드값 분석하고 저축 계획 짜줘" · "적금 금리 비교해줘" · "연말정산 환급액 미리 계산해줘"</div>
+        <p class="org-list-text"><b>감독·중앙</b> — 금융위원회, 금융감독원, 한국은행, 예금보험공사, 신용보증기금<br>
+        <b>업권별</b> — 은행, 증권사, 보험사, 카드사, 저축은행, 캐피탈, 농협·수협·신협·새마을금고, 핀테크<br>
+        <b>자본시장</b> — 한국거래소, 코스피, 코스닥, 코넥스</p>
       </div>
-      <div class="a-item">
-        <div class="role">공무원</div>
-        <div class="pitch">쌓인 민원 응대와 서류 검토, 행정 AI가 초안부터 도와드립니다</div>
-      </div>
-      <div class="a-item">
-        <div class="role">학부모</div>
-        <div class="pitch">K-EDU로 내 아이 맞춤 학습을 시작합니다</div>
-      </div>
-      <div class="a-item">
-        <div class="role">학생</div>
-        <div class="pitch">시험 전날 새벽에도, 막힌 문제를 바로 물어봅니다</div>
-      </div>
-      <div class="a-item">
-        <div class="role">교사</div>
-        <div class="pitch">수업 준비와 평가 업무 부담을 AI와 나눠 짊어집니다</div>
-      </div>
-      <div class="a-item">
-        <div class="role">시민 누구나</div>
-        <div class="pitch">국세청부터 읍면동사무소까지, 민원을 메신저 안에서 끝냅니다</div>
+      <div>
+        <h2>교통/물류 — 육상·항공·해운</h2>
+        <div class="exq">예시 지시 · "내일 아침 KTX 예매하고 환승 동선 알려줘" · "이삿짐 업체 견적 비교해줘" · "국제택배 통관 절차 알려줘"</div>
+        <p class="org-list-text"><b>공공기관</b> — 국토교통부, 해양수산부, 한국교통안전공단, 한국도로공사, 국가철도공단, 코레일, 한국공항공사, 인천국제공항공사, 해양경찰청<br>
+        <b>대중교통·화물</b> — 시내·시외버스, 지하철·도시철도, KTX·SRT, 항공, 해운·연안여객, 택배·화물운송, 항만(부산항·인천항 등)</p>
+
+        <h2>시장 — 유통·상권</h2>
+        <div class="exq">예시 지시 · "우리 가게 근처 상권 분석해줘" · "경쟁업체 리뷰 요약해줘" · "온라인몰 입점 절차 알려줘"</div>
+        <p class="org-list-text"><b>공공기관</b> — 공정거래위원회, 소상공인시장진흥공단, 중소벤처기업부, 한국소비자원<br>
+        <b>유통업태</b> — 대형마트, 백화점, 편의점, 전통시장, 온라인쇼핑몰, 프랜차이즈</p>
+
+        <h2>산업 — 제조·에너지·첨단</h2>
+        <div class="exq">예시 지시 · "특허 출원 초안 작성해줘" · "수출 인증 절차 확인해줘" · "정부 R&D 지원사업 찾아줘"</div>
+        <p class="org-list-text"><b>공공기관</b> — 산업통상자원부, 한국산업기술진흥원, KOTRA, 한국전력공사, 중소벤처기업부, 특허청<br>
+        <b>주요 업종</b> — 제조업, 반도체·IT, 자동차, 조선, 화학, 에너지, 바이오, 콘텐츠</p>
       </div>
     </div>
-  </section>
 
-  <div class="klaw-block">
-    <p>모든 사용자에게 AI 상담 기능을 갖춘 웹사이트 자동 생성, 상권 분석, 경영 분석, 위생 관리, 세무, 법무, 고객 관리, 고객 피드백 대응, 재무 계획까지 지원합니다.</p>
+    <h2>8개 영역을 관통하는 하나의 구조</h2>
+    <p>8개 영역 모두에서 반복되는 구조: 시민은 예시 지시 한 줄을 던지고, 혼디의 도메인별 AI가 관할 기관·업권 데이터를 통해 절차를 대행합니다. 이 "예시 지시→기관 매핑" 구조 자체가 경제효과·10년전망 탭의 절차자동화·MoTE 세분화 추정치가 적용되는 실제 단위입니다.</p>
   </div>
 
-  <div class="cta-block">
-    <div class="cta-text">
-      <div class="ct">전체 기능·요금·참여 방법은 hondi.net에서</div>
-      <div class="cd" style="margin-top:4px">📱 전화번호만으로 가입 · 가입 즉시 테스트용 GDC 무료 충전 · 친구 초대 시 GDC 추가 지급</div>
-      <div class="cd" style="margin-top:8px">📱 스마트폰으로 접속하면 실사용 화면, 💻 PC로 접속하면 기능 설명 화면입니다</div>
+  <!-- ============ TAB 3 — 경제효과 (구 6~7p) ============ -->
+  <div class="tab-content" id="tab3">
+
+    <h1>MoTE·Openhash 기술이 만드는 경제효과</h1>
+    <p class="lede">한국은 이미 세계에서 AI를 가장 적극적으로 쓰는 나라입니다. 그 사용 강도를 그대로 옮기되 훨씬 적은 비용으로 돌리는 구조를 만들면 절감분은 조 단위가 됩니다.</p>
+
+    <div class="stats4">
+      <div class="stat"><div class="num">세계 2위</div><div class="lbl">ChatGPT 유료 구독자 수 국가 순위(美 다음), 아시아태평양 1위</div></div>
+      <div class="stat"><div class="num">14→41조원</div><div class="lbl">한국 AI 시장 규모, 2026→2032년 전망(Statista Market Insights)</div></div>
+      <div class="stat"><div class="num">최대 60배</div><div class="lbl">MoTE 방식이 이론상 낮출 수 있는 동일작업당 컴퓨팅비용(자체추정)</div></div>
+      <div class="stat"><div class="num">2.1조원/년</div><div class="lbl">보이스피싱·대형 유출사고 관련 사회적 비용(보수적 합산)</div></div>
     </div>
+
+    <p><b>MoTE(Mixture of Tiny Experts)</b> — 거대 모델 1개 대신 특화된 소형 모델 여럿. 지금의 AI 서비스는 의사에게 갈 질문이든 변호사에게 갈 질문이든 똑같이 거대한 범용 모델이 응답하지만, 혼디의 MoTE는 짧은 Gate 모델이 먼저 분야를 분류하고 그 분야만 맡는 소형 특화 모델이 응답합니다 — 의사 페르소나 하나만 봐도 내과·외과·소아청소년과 등 26개 전문과목으로 세분화되는 구조입니다.</p>
+
+    <div class="two-col">
+      <div>
+        <table>
+          <tr><th>구분</th><th class="num">건당 처리비용(추정)</th></tr>
+          <tr><td>거대 범용 모델 1건</td><td class="num">$0.0328</td></tr>
+          <tr><td>MoTE(Gate+특화모델) 1건</td><td class="num">$0.0010</td></tr>
+          <tr><td><b>절감률</b></td><td class="num"><b>약 97% (약 33배)</b></td></tr>
+        </table>
+        <p class="note">대형/소형 모델 공개 API 단가 격차(약 16.7배)×시스템프롬프트 토큰량 격차의 자체 추정치. 실측 프로덕션 지표 아님. Gate 오분류로 인한 재처리비용 미반영.</p>
+      </div>
+      <div>
+        <h3 style="color:var(--accent);">시장 — 이미 커지는 시장의 성장 방향을 바꾼다</h3>
+        <p>한국 AI 시장은 2026년 약 14조원에서 2032년 약 41조원으로 3배 성장 전망. 국내 이용자가 해외 AI 플랫폼에 내는 구독료도 연간 수천억원 규모로, 카드사 결제데이터 기준 반기 만에 전년 연간치에 육박할 만큼 급증 중. 이 성장을 막을 이유는 없으나, 그 상당 부분이 MoTE 국산 인프라로 재편되면 같은 사용량에서 훨씬 적은 비용으로 같은 효용을 얻습니다.</p>
+      </div>
+    </div>
+
+    <h2>Openhash — 데이터가 한 곳에 모이지 않으면 유출도 없다</h2>
+    <div class="three-col">
+      <div class="stat"><div class="num">6,246억원</div><div class="lbl">2026년 국내 최대 개인정보 유출 과징금(단일 사건), 관련 분기 영업손실 8,350억원</div></div>
+      <div class="stat"><div class="num">1조 2,578억원</div><div class="lbl">2025년 보이스피싱 피해액(사상 최대), 51%가 공공기관 사칭형 — 즉시 검증 불가가 원인</div></div>
+      <div class="stat"><div class="num">0건</div><div class="lbl">원본 데이터가 중앙서버에 없을 때 대량유출로 이어질 수 있는 단일 표적의 수</div></div>
+    </div>
+    <p>Openhash 기반 데이터금고는 원본 데이터를 기업 중앙서버가 아닌 각자의 기기에 두고 필요할 때만 암호학적으로 검증합니다. 대량유출이 가능한 '단일 표적'이 구조적으로 사라지고, 기관사칭도 실시간 검증으로 무력화될 수 있습니다.</p>
+
+    <h2>규제비용 — 한국 경제가 이미 짊어지고 있는 GDP 11%</h2>
+    <div class="two-col">
+      <div>
+        <p>국내 규제비용 실증연구(2013년 기준)는 시장규제·행정조사·납세순응 비용을 합쳐 <b>GDP의 11.04%(158.3조원)</b>로 추산 — 오늘 GDP 규모 비례 적용시 <b>약 300조원</b>. 상당 부분이 서류작성·제출·대조·검증·대기 등 처리절차에서 발생. 별도 CGE 모델링 연구는 포괄적 규제개혁이 <b>10년 후 실질GDP를 8.6% 끌어올릴</b> 것으로 추정. 혼디 자동화 영역(서류·인증·절차)이 이 300조원 풀과 정확히 겹칩니다.</p>
+      </div>
+      <div>
+        <table>
+          <tr><th>절차자동화 실현률</th><th class="num">연간효과</th><th class="num">GDP대비</th></tr>
+          <tr><td>보수적 (30%)</td><td class="num">88조원</td><td class="num">3.3%</td></tr>
+          <tr><td>중간 (50%)</td><td class="num">147조원</td><td class="num">5.5%</td></tr>
+          <tr><td>공격적 (60%)</td><td class="num">176조원</td><td class="num">6.6%</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2>부록 — 카톡→혼디 전환 GDP 효과 / MoTE 세분화 실측</h2>
+
+    <h3>카톡→혼디 전환 GDP 효과</h3>
+    <p>카카오톡 국내 MAU 약 4,900만(전국민 95%, 월 24.6일·11.7시간 이용) / 톡비즈 연매출 약 2.3조원(2025). 절차자동화 중간값(147조원)을 카톡 대비 도달률로 스케일링:</p>
+    <table>
+      <tr><th>도달률</th><th class="num">연간효과</th><th class="num">GDP대비</th></tr>
+      <tr><td>30%(초기)</td><td class="num">44조원</td><td class="num">1.7%</td></tr>
+      <tr><td>60%(확산)</td><td class="num">88조원</td><td class="num">3.3%</td></tr>
+      <tr><td>100%(카톡수준)</td><td class="num">147조원</td><td class="num">5.5%</td></tr>
+    </table>
+    <p class="note">해외AI구독료 자국화·톡비즈 통행료 재배분 효과는 규모가 작거나(전자) 제로섬 상쇄(후자)되어 미포함. 기관사칭 보이스피싱(2.1조원/년)은 채널 구분 통계 부재로 중복계산 방지 위해 별도 미가산.</p>
+
+    <h3>MoTE 세분화 실측</h3>
+    <table>
+      <tr><th>구분</th><th class="num">세분화</th><th>비고</th></tr>
+      <tr><td>의사/변호사/교수/회계사</td><td class="num">23/46/184/9=262개</td><td>세부 전문과목·분야·전공 페르소나(한의사·세무사 별도)</td></tr>
+      <tr><td>법원(K-Law)</td><td class="num">16개 버킷</td><td>대법원판례 중심, 쟁점유형 축(2026.8 v15.2: 가사·소년보호·지식재산·도산·행정 5개 신설)</td></tr>
+      <tr><td>헌법재판소(K-Const)</td><td class="num">별도 축</td><td>헌법기관 특성상 K-Law와 통합하지 않고 분리 설계(kconst_v1_0.md)</td></tr>
+    </table>
+  </div>
+
+  <!-- ============ TAB 4 — 10년전망·신뢰경제 (구 8~9p) ============ -->
+  <div class="tab-content" id="tab4">
+
+    <h1>오픈해시+MoTE 융합 효과 — 향후 10년(2026~2036)</h1>
+    <p>전 세계 데이터센터 전력소비는 AI최적화서버가 견인, 2025년 447TWh→2030년 약1,200TWh 급증(한국 전체전력소비 625TWh의 2배 규모). 국내 DC 전력수요는 기준전망 연7.2%/시나리오전망 연9.3% 증가해 2060년 65~135TWh 도달 전망(NKIS). "전력망 병목"이 한국 AI산업 성장잠재력을 제한하는 족쇄가 될 수 있다는 경고가 국내 전문가 사설에서도 제기됨.</p>
+
+    <div class="three-col">
+      <div class="stat"><div class="num" style="font-size:1.1rem;">벡터1 · 병목제거</div><div class="lbl">MoTE 연산·전력 97%절감=병목해소. MoTE없이는 한은범위 하단(4.2%대)에 머물지만, 적용시 상단(10~12%대)에 근접, 2050년보다 앞당겨(10년내) 도달 개연성↑</div></div>
+      <div class="stat"><div class="num" style="font-size:1.1rem;">벡터2 · 미시적용</div><div class="lbl">$0.033→$0.001 단가하락으로 자동화 임계비용 이하 영역(공장품질검사·소상공인세금계산서·농가센서해석)이 새로 경제성 확보. GDP +1~3%p 추가기여(비검증 유추)</div></div>
+      <div class="stat"><div class="num" style="font-size:1.1rem;">벡터3 · 오픈해시</div><div class="lbl">비트코인 PoW 연138~143TWh(폴란드·아르헨티나급) 없이 동일 무결성보장 제공하는 구조적 인에이블러. 산업전기화 목표와 신뢰인프라 확장이 충돌 안하게 함</div></div>
+    </div>
+
+    <table>
+      <tr><th>시나리오</th><th class="num">10년 후 GDP 수준효과</th><th class="num">2025 GDP(2,663조원) 환산</th></tr>
+      <tr><td>보수적(병목 부분해소, 미시적용 저조)</td><td class="num">+4~6%</td><td class="num">약 107조~160조원</td></tr>
+      <tr><td>중간(병목 상당해소, 미시적용 진행)</td><td class="num">+8~10%</td><td class="num">약 213조~266조원</td></tr>
+      <tr><td>공격적(병목 대부분해소+미시적용 광범위)</td><td class="num">+13~15%</td><td class="num">약 346조~400조원</td></tr>
+    </table>
+    <p class="note">핵심은 새 GDP항목 창출이 아니라 한은 4.2~12.6% 잠재력 범위 중 어디에, 2050년이 아닌 2036년에 도달하는지를 결정하는 변수라는 것. 모든 벡터가 이론적 자체추정치, 특히 벡터2는 참고범위로만 수용 필요.</p>
+
+    <h1>AI 기술 자체의 국가 GDP 영향 (2030년 전후)</h1>
+    <p><b>낙관적 추정</b>: 한국은행(2025.2, 'AI와 한국경제')은 AI 도입 성공시 생산성 1.1~3.2%, <b>GDP 4.2~12.6%</b> 상승 잠재력 제시. 고령화·노동공급 감소로 2023~2050년 GDP가 16.5% 감소할 전망인데 AI가 이를 5.9%까지 상쇄 가능(반도체수출 2030까지 2배 전망 포함). 정부·베인앤컴퍼니는 생성형AI 성공적 도입시 <b>연 310조원</b>(매출증대123조+비용절감187조) 경제효과·<b>GDP+1.8%p</b> 추정. 글로벌: PwC는 2030년까지 세계경제에 <b>15.7조달러</b>(중국+인도 GDP 합보다 큼) 기여 가능, McKinsey는 3.5~5.8조달러 추정.</p>
+    <p><b>회의적 반론(2026년 버블 논쟁)</b>: 2025년 미국 GDP성장에서 AI투자가 소비지출보다 크게 기여했다는 지적, 기술지표상 생산성은 높지만 실질 삶은 개선 안되는 "유령GDP" 우려, S&P500 상위10대기업(AI관련)이 시총 40%+ 차지하는 집중도 리스크. 반박: 증기기관·전력·인터넷처럼 모든 혁신기술은 S자형 곡선으로 서서히 확산되며 버블이 아니라 확산속도 문제라는 시각도 존재. <b>국가 목표</b>: 2025.9 출범 국가AI전략위원회 — 2030년까지 반도체수출 1700억달러, 산업AI활용률 60%(현재의 2배), 피지컬AI 1위, 4대 제조강국 목표.</p>
+
+    <h1>오픈해시의 "전례 없는 신뢰경제" — 정량화 가능/불가능 구분</h1>
+    <div class="two-col">
+      <div>
+        <h3>이론적 상한 근거</h3>
+        <p>Wallis-North(1986): 거래성사·감시·집행 활동("거래부문")이 미국 GNP에서 <b>1870년 25%→1970년 45%</b>로 성장. 후속연구: 네덜란드 1990년 총거래비용 <b>GDP 53%</b>, 선진 디지털경제 거래부문 <b>70%+</b>. 오픈해시는 거래비용 전체가 아닌 "기록 위변조 방지"라는 부분집합만 해결 — 협상·탐색·매칭·신용평가는 그대로 남아 과대추정 금지.</p>
+        <h3>바닥부터 집계 가능한 부분(한국 특정)</h3>
+        <table>
+          <tr><th>항목</th><th class="num">연간규모</th><th>출처</th></tr>
+          <tr><td>보험사기(적발+미적발 추정)</td><td class="num">약 9조원</td><td>금융위원회, 2025</td></tr>
+          <tr><td>보이스피싱 등 기관사칭형</td><td class="num">2.1조원</td><td>경찰청(본문)</td></tr>
+          <tr><td><b>최소 합계</b></td><td class="num"><b>약 11.1조원/년</b></td><td>문서위조 등 미포함 최소치</td></tr>
+        </table>
+        <div class="callout">방지 실현률 30~60% 가정시 <b>연 3.3조~6.6조원(GDP 0.1~0.25%)</b> 손실회피 — 10년 단순누적 33조~66조원.</div>
+        <p class="note">실현률을 100%가 아닌 30~60%로 잡은 이유: 조직적 공모형 범죄(허위사실 자체 조작)는 무결성검증만으로 못 잡기 때문. 참고로 세계무역 위조상품 비중은 2021년 최대 2.3%(4,670억달러, OECD/EUIPO) — 한국 특정 GTRIC 다르므로 정식 미포함, 정황 참고용.</p>
+      </div>
+      <div>
+        <h3>진짜 "전례 없는 현상" — 정량화 불가능</h3>
+        <p>위 3.3~6.6조원은 전부 "기존 거래에서 사기를 막는" 방어적 효과. 진짜 핵심은 <b>신뢰확보 비용이 너무 커서 아예 일어나지 않았던 거래가 새로 생기는 효과</b>:</p>
+        <ul>
+          <li>낯선 개인 간 P2P 거래(에스크로 없이)</li>
+          <li>AI 에이전트 간 자율거래(실시간 조달·결제)</li>
+          <li>국경 간 무역, 신용장·검품 없는 즉시결제</li>
+          <li>중고·재판매 시장, 진품의심으로 불성사되던 거래</li>
+        </ul>
+        <p>이런 거래는 정의상 과거 데이터가 없어, 어떤 방법론으로도 오늘 시점 책임있는 추산이 불가능합니다. Wallis-North의 역사적 팽창폭이 이론적 상한 감각만 줄 뿐, 오픈해시가 새로 여는 몫이 몇 %p인지는 어떤 데이터로도 뒷받침 불가.</p>
+        <div class="callout"><b>결론</b>: 정량화 가능한 범위는 연 3.3조~6.6조원(GDP 0.1~0.25%) — 데이터로 방어되는 보수적 숫자입니다. "역사에 없던 현상"이 만들 진짜 큰 효과는 이 숫자 밖, 현재 측정 불가능한 영역에 있습니다.</div>
+      </div>
+    </div>
+
+    <h2>종합 — 이 페이지가 답하는 질문</h2>
+    <p><b>소개·연동기관</b> 탭은 혼디가 <b>무엇을</b> 하는지 — 60개 전문가 AI, 8대 사회영역 연동, 5대 핵심기능(60·全·私·認·鎖)을 실제 서비스 형태로 보여줍니다. <b>경제효과·10년전망</b> 탭은 그것이 <b>왜 경제적으로 중요한지</b> — 절차자동화 88~176조원, 카톡전환 44~147조원, AI+오픈해시 융합 10년 107~400조원, 신뢰경제 3.3~6.6조원(데이터로 방어 가능한 범위)이라는 숫자로 답합니다. 모든 추정치는 이론적·자체 추정이며 실측 프로덕션 지표가 아닙니다.</p>
   </div>
 
 </div>
 
-<!-- ══════════════════ 뒷면 ══════════════════ -->
-<div class="sheet back-sheet">
-
-  <div class="page-tag">뒷면 · 2 / 3</div>
-
-  <h2 class="trust-title">혼디의 압도적 기능 — 2030년 완성 목표, 2026년 8월 1일부터 각 분야 별 필드 테스트 시작</h2>
-
-  <div class="trust-list">
-    <div class="trust-item">
-      <span class="tn">60</span>
-      <div class="tt"><div class="h">전문가 AI 60개가 실제 업무를 보조합니다</div>
-      <div class="d">의사·변호사·세무사·건축사 등 각 분야 전문가의 의사 결정을 돕는 AI</div></div>
-    </div>
-    <div class="trust-item">
-      <span class="tn">全</span>
-      <div class="tt"><div class="h">국세청·경찰청 등 중앙정부기관부터 전국 도청·시청·읍면동사무소까지 시민의 요구와 공무원의 업무를 보조(현재)하며, 향후 대행까지 지원할 것입니다(각급 기관의 데이터 통로 개방 시점, 현재 일부 기관만 개방)</div>
-      <div class="d">제주는 가장 상세한 구현이 완료된 시범 지역입니다</div></div>
-    </div>
-    <div class="trust-item">
-      <span class="tn">私</span>
-      <div class="tt"><div class="h">카톡이 통째로 먹통됐던 2022년, 기억하시나요</div>
-      <div class="d">데이터센터 화재 하나로 국민 메신저가 멈췄습니다. 혼디는 한 곳이 멈춰도 전체가 멈추지 않도록 설계됐고, 원본 데이터는 항상 여러분의 기기에만 저장됩니다</div></div>
-    </div>
-    <div class="trust-item">
-      <span class="tn">認</span>
-      <div class="tt"><div class="h">거래 위험도에 따라 자동으로 올라가는 인증 단계</div>
-      <div class="d">조회는 기기 인식만으로, 소액 결제는 얼굴, 금융 거래는 지문, 고액·불가역 행위는 얼굴+지문+4단어까지 요구합니다</div></div>
-    </div>
-    <div class="trust-item">
-      <span class="tn">鎖</span>
-      <div class="tt"><div class="h">위변조가 불가능한 분산 원장</div>
-      <div class="d">GDC 잔액과 거래 기록은 중앙 서버 하나가 아니라 분산 원장에 기록되어, 특정 서버가 뚫려도 잔액을 조작할 수 없습니다</div></div>
-    </div>
-  </div>
-
-  <div style="margin:12px 34px 4px;font-family:var(--serif);font-weight:900;font-size:16px;color:var(--ink-soft)">혼디의 60개 전문 AI 중 일부 예시</div>
-
-  <div class="klaw-block">
-    <div class="kb-tag">法 K-LAW</div>
-    <p>소송을 시작하기도 전에, 수년 뒤 대법원 판결문을 미리 읽어볼 수 있다면 어떨까요. 그것도 단돈 몇 천 원에 정교한 예상 판결문을 5분 내에 제공합니다. 과연 인간의 두뇌로 그 법리를 깰 수 있을 지 직접 확인해 보십시오.</p>
-  </div>
-
-  <div class="klaw-block">
-    <div class="kb-tag">敎 K-EDU</div>
-    <p>자녀에게 최고의 개인 교수를 제공하십시오. 막힘없고, 친절하며, 개개인의 적성과 능력에 맞춰 지도합니다.</p>
-  </div>
-
-  <div class="klaw-block">
-    <div class="kb-tag">金 K-GDC</div>
-    <p>글로벌 전자동 무인 은행·보험·증권 통합 시스템의 필드 테스트를 시작합니다.</p>
-    <div class="kb-foot">예금, 대출, 신용 평가, 주식과 채권의 발행, 외환과 환전, 공과금 납부, 신용카드 등을 완전 자동화합니다. 금융권 종사자에 한해 필드 테스트에 참여하실 수 있습니다.</div>
-  </div>
-
-  <div class="klaw-block">
-    <div class="kb-tag">政 K-Gov</div>
-    <p>중앙 정부, 지방자치단체(광역시도·시군구·읍면동) 부서 각각의 AI 버전 성능을 지금 확인해 보십시오.</p>
-    <div class="kb-foot">청와대부터 읍면동사무소까지 반복적 일상 업무를 완전 자동화합니다. 현직 공무원에 한해 필드 테스트에 참여하실 수 있습니다.</div>
-  </div>
-
-  <div class="klaw-block">
-    <div class="kb-tag">敎 K-Teacher</div>
-    <p>학생 개개인의 학습 지도를 맞춤형으로 제공하십시오.</p>
-    <div class="kb-foot">현직 교사·교수에 한해 필드 테스트에 참여하실 수 있습니다.</div>
-  </div>
-
-  <div class="cta-block">
-    <div class="cta-text">
-      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
-        <div class="ct">남보다 한 발 앞서 시작하십시오</div>
-        <div class="curl" style="margin-top:0">https://hondi.net</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="legal-strip">※ 법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.</div>
-
-  <div style="text-align:center;font-weight:900;font-size:18.67px;padding:10px 34px 20px">개발팀: 도 영민, 김 혜영 외· tensor.city@gmail.com, 제주시 한림읍</div>
-
-</div>
-
-<!-- ══════════════════ 별첨: 기관·산업 커버리지 ══════════════════ -->
-<div class="sheet appendix-sheet">
-
-  <div class="page-tag">별첨 · 3 / 3</div>
-
-  <h2 class="trust-title" style="white-space:normal">HONDI · K-GOV COVERAGE — 혼디가 연동하는 기관·산업 목록</h2>
-  <div class="gov-intro">중앙정부, 지방정부, 의료, 교육, 금융, 교통/물류, 시장, 산업 순으로 정리합니다. 2030년 완성을 목표로, 각 기관의 AI 모델 필드 테스트를 시작합니다. 지금 hondi.net에 접속하여, 무엇이든 지시해 보세요.</div>
-
-  <div class="gov-cat">
-    <div class="cat-title">중앙정부 — 입법·사법·행정</div>
-    <div class="cat-desc">대한민국 헌법상 국가기관은 입법부·사법부·행정부 3부로 나뉩니다. 행정부는 정부조직법에 따라 부·처·청(중앙행정기관)과, 대통령·국무총리 직속 기관으로 구성됩니다.</div>
-    <div class="cat-example">예시 지시 · "국세청에 종합소득세 신고 도와줘" · "여권 재발급 절차 알려줘" · "예비군 훈련 일정 확인해줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">입법부 · 국회</div>
-      <div class="sub-desc">법률 제정, 예산 심의, 국정감사를 담당하는 헌법기관</div>
-      <div class="sub-list">국회 본회의·상임위원회, 국회사무처, 국회도서관, 국회예산정책처, 국회입법조사처</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">사법부 · 법원 · 헌법재판소</div>
-      <div class="sub-desc">재판을 통한 분쟁 해결과 위헌 심사를 담당하는 헌법기관</div>
-      <div class="sub-list">대법원, 법원행정처, 고등법원, 지방법원, 가정법원, 행정법원, 특허법원, 회생법원, 헌법재판소</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">행정부 · 대통령·국무총리 직속기관</div>
-      <div class="sub-desc">중앙행정기관(부·처·청)은 아니지만 국정 운영의 핵심 축을 이루는 헌법·법률기관</div>
-      <div class="sub-list"><b>대통령 소속</b> — 대통령비서실, 국가안보실, 대통령경호처, 감사원, 국가정보원, 방송통신위원회, 국가교육위원회, 국가인권위원회</div>
-      <div class="sub-list"><b>국무총리 소속</b> — 국무조정실, 국무총리비서실, 고위공직자범죄수사처, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">행정부 19부 — 행정각부</div>
-      <div class="sub-desc">정부조직법상 중앙행정기관. 각 부 장관이 소관 정책을 총괄</div>
-      <div class="sub-list">기획재정부, 교육부, 과학기술정보통신부, 외교부, 통일부, 법무부, 국방부, 행정안전부, 국가보훈부, 문화체육관광부, 농림축산식품부, 산업통상자원부, 보건복지부, 환경부, 고용노동부, 여성가족부, 국토교통부, 해양수산부, 중소벤처기업부</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">행정부 3처 · 20청 · 6위원회</div>
-      <div class="sub-desc">부(部) 산하 또는 독립된 전문·집행 중앙행정기관</div>
-      <div class="sub-list"><b>처(3)</b> — 인사혁신처, 법제처, 식품의약품안전처</div>
-      <div class="sub-list"><b>청(20)</b> — 국세청, 관세청, 조달청, 통계청, 우주항공청, 재외동포청, 검찰청, 병무청, 방위사업청, 경찰청, 소방청, 국가유산청, 농촌진흥청, 산림청, 특허청, 질병관리청, 기상청, 행정중심복합도시건설청, 새만금개발청, 해양경찰청</div>
-      <div class="sub-list"><b>위원회(6)</b> — 방송통신위원회, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</div>
-    </div>
-
-    <div class="gov-footnote">※ 위 목록은 e-나라지표 기준(2024년 12월)이며, 정부 조직은 개편에 따라 수시로 변경됩니다. 최신 조직 현황은 정부24 또는 각 기관 공식 사이트에서 확인하십시오. 방송통신위원회·공정거래위원회·금융위원회는 소속 체계상 대통령/국무총리 직속과 중복 표기될 수 있습니다.</div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">지방정부 — 광역·기초·읍면동</div>
-    <div class="cat-desc">지방자치법상 지방자치단체는 광역자치단체와 기초자치단체로 나뉘며, 그 아래 읍·면·동 행정복지센터가 주민과 가장 가까운 접점입니다. (2026년 7월 광주광역시·전라남도 통합 등 최근 개편 반영)</div>
-    <div class="cat-example">예시 지시 · "우리 동 주민센터에 등본 발급 신청해줘" · "재산세 납부 기한 확인해줘" · "종량제 봉투 파는 곳 알려줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">광역자치단체 (16)</div>
-      <div class="sub-desc">특별시·통합특별시·광역시·특별자치시·도·특별자치도 — 도청·시청 소재</div>
-      <div class="sub-list">서울특별시, 전남광주통합특별시, 부산광역시, 대구광역시, 인천광역시, 대전광역시, 울산광역시, 세종특별자치시, 경기도, 충청북도, 충청남도, 경상북도, 경상남도, 강원특별자치도, 전북특별자치도, 제주특별자치도</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">기초자치단체 (227)</div>
-      <div class="sub-desc">시(75)·군(82)·자치구(70) — 시청·군청·구청 소재. 226~227개 사이에서 통합·개편이 진행 중이라 숫자는 유동적입니다</div>
-      <div class="sub-list">대표 예시 — 수원시, 고양시, 화성시, 청주시, 천안시, 포항시, 김해시, 제주시, 서귀포시, 강남구 등 자치구 70, 양평군 등 자치군 82</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">최일선 읍·면·동</div>
-      <div class="sub-desc">시·군·구 산하 최일선 행정 접점 — 주민등록, 인감, 각종 증명서 발급 창구</div>
-      <div class="sub-list">읍사무소, 면사무소, 동 행정복지센터(주민센터)</div>
-    </div>
-
-    <div class="gov-footnote">※ 2026년 7월 1일 광주광역시·전라남도 통합(전남광주통합특별시 출범), 인천 중구·동구 개편 등 최근 행정구역 개편이 반영돼 있습니다. 정확한 최신 현황은 행정안전부 또는 정부24에서 확인하십시오.</div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">의료 — 감독기관·의료기관·직역단체</div>
-    <div class="cat-desc">보건복지부를 중심으로 한 감독·심사 기관, 의료기관 유형, 직역별 협회로 구성됩니다.</div>
-    <div class="cat-example">예시 지시 · "가까운 이비인후과 예약하고 증상 전달해줘" · "건강검진 결과 쉽게 설명해줘" · "복용 중인 약 상호작용 확인해줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">감독·심사·공공기관</div>
-      <div class="sub-list">보건복지부, 질병관리청, 국민건강보험공단, 건강보험심사평가원, 식품의약품안전처, 국립중앙의료원, 국립암센터, 대한적십자사</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">의료기관 유형</div>
-      <div class="sub-list">상급종합병원, 종합병원, 병원, 의원, 치과의원, 한의원, 약국, 보건소, 응급의료센터</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">직역별 협회</div>
-      <div class="sub-list">대한의사협회, 대한치과의사협회, 대한한의사협회, 대한간호협회, 대한약사회, 대한병원협회</div>
-    </div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">교육 — 행정·학교급·평생교육</div>
-    <div class="cat-desc">교육부와 17개 시·도교육청을 중심으로 유아·초중등·고등교육 전 단계를 다룹니다.</div>
-    <div class="cat-example">예시 지시 · "우리 아이 수학 진도에 맞는 문제 만들어줘" · "학자금 대출 조건 알려줘" · "방과후 프로그램 신청해줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">교육행정기관</div>
-      <div class="sub-list">교육부, 국가교육위원회, 시·도교육청(17), 교육지원청, 한국교육과정평가원, 한국교육개발원, 한국장학재단</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">유아·초중등·고등교육</div>
-      <div class="sub-list">유치원·어린이집, 초등학교, 중학교, 고등학교, 특수학교, 전문대학, 일반대학, 대학원</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">평생·직업교육</div>
-      <div class="sub-list">평생교육원, 직업훈련기관, 사설 학원</div>
-    </div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">금융 — 감독·업권·시장</div>
-    <div class="cat-desc">금융위원회·금융감독원의 감독 체계 아래, 은행·증권·보험 등 업권과 거래소 시장으로 구성됩니다.</div>
-    <div class="cat-example">예시 지시 · "이번 달 카드값 분석하고 저축 계획 짜줘" · "적금 금리 비교해줘" · "연말정산 환급액 미리 계산해줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">감독·중앙기관</div>
-      <div class="sub-list">금융위원회, 금융감독원, 한국은행, 예금보험공사, 신용보증기금</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">업권별 분류</div>
-      <div class="sub-list">은행, 증권사, 보험사, 카드사, 저축은행, 캐피탈, 농협·수협·신협·새마을금고, 핀테크</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">자본시장</div>
-      <div class="sub-list">한국거래소, 코스피, 코스닥, 코넥스</div>
-    </div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">교통 / 물류 — 육상·항공·해운</div>
-    <div class="cat-desc">국토교통부·해양수산부 산하 공공기관을 중심으로 대중교통, 화물·물류, 항만·공항이 연결됩니다.</div>
-    <div class="cat-example">예시 지시 · "내일 아침 KTX 예매하고 환승 동선 알려줘" · "이삿짐 업체 견적 비교해줘" · "국제택배 통관 절차 알려줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">공공기관</div>
-      <div class="sub-list">국토교통부, 해양수산부, 한국교통안전공단, 한국도로공사, 국가철도공단, 한국철도공사(코레일), 한국공항공사, 인천국제공항공사, 해양경찰청</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">대중교통·화물</div>
-      <div class="sub-list">시내버스·시외버스, 지하철·도시철도, KTX·SRT, 항공, 해운·연안여객, 택배·화물운송, 항만(부산항·인천항 등)</div>
-    </div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">시장 — 유통·상권</div>
-    <div class="cat-desc">공정거래위원회의 시장 질서 관리와, 소상공인·유통업태별 상권 정보를 포괄합니다.</div>
-    <div class="cat-example">예시 지시 · "우리 가게 근처 상권 분석해줘" · "경쟁업체 리뷰 요약해줘" · "온라인몰 입점 절차 알려줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">공공기관</div>
-      <div class="sub-list">공정거래위원회, 소상공인시장진흥공단, 중소벤처기업부, 한국소비자원</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">유통업태</div>
-      <div class="sub-list">대형마트, 백화점, 편의점, 전통시장, 온라인쇼핑몰, 프랜차이즈</div>
-    </div>
-  </div>
-
-  <div class="gov-cat">
-    <div class="cat-title">산업 — 제조·에너지·첨단</div>
-    <div class="cat-desc">산업통상자원부·중소벤처기업부 산하 공공기관과, 주요 업종별 분류로 구성됩니다.</div>
-    <div class="cat-example">예시 지시 · "특허 출원 초안 작성해줘" · "수출 인증 절차 확인해줘" · "정부 R&amp;D 지원사업 찾아줘"</div>
-
-    <div class="sub-block">
-      <div class="sub-title">공공기관</div>
-      <div class="sub-list">산업통상자원부, 한국산업기술진흥원, 대한무역투자진흥공사(KOTRA), 한국전력공사, 중소벤처기업부, 특허청</div>
-    </div>
-
-    <div class="sub-block">
-      <div class="sub-title">주요 업종</div>
-      <div class="sub-list">제조업, 반도체·IT, 자동차, 조선, 화학, 에너지, 바이오, 콘텐츠</div>
-    </div>
-  </div>
-
-</div>
+<script>
+  const buttons = document.querySelectorAll('.tab-btn');
+  const contents = document.querySelectorAll('.tab-content');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+</script>
 
 </body>
 </html>
-
-
