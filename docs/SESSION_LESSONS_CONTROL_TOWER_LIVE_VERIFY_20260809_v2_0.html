@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-09 세션(professor EXPERT 관제탑 원칙
+  라이브 재검증 8건 → 그레이더 볼드체 미탐지·Tier 테이블 출력형식 오독
+  2건 발견·수정 → EXPERT_REGISTRY 334개 전수 덤프 후 층화추출 48건 확장
+  배치 → 원문자(①②③) 다중목록 회피 패턴 발견·수정(국시 MCQ 오탐 방지
+  포함) → max_tokens 6000→12000 → 재검증에서 새 결함(ASCII 번호 MCQ
+  비대칭, finish=stop인데 빈 응답) 발견 → 의도적으로 안 고치기로 결정)
+  에서 확인된 설계 원리와 실패 패턴을 다룹니다. 개별 기능 사용법이
+  아니라 "관제탑 원칙 라이브 검증 하네스와 그 그레이더를 다시 건드릴 때
+  반복하지 말아야 할 시행착오, 그리고 왜 어떤 발견은 일부러 안 고쳤는가"
+  모음입니다.
+  관련 문서: SESSION_LESSONS_SUBJECT_GATE_MAX_TOKENS_20260809_v1_0.html
+  (같은 날 병렬 세션 — subject-gate 2단계 라우팅의 동일 유형 max_tokens
+  결함)
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v2.0(2026-08-09): 신설(원문자 다중목록 발견·수정, 2차 배치 재검증,
+  ASCII 번호 MCQ 비대칭 의도적 미수정, biomedengineering 미해결 flaky
+  케이스까지 포함해 v1.0 초안에서 확장)
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관제탑 원칙 라이브 재검증 실전 교훈 매뉴얼 — Gopang</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink);
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--line); padding: 9px 13px;
+  text-align: left; line-height: 1.6;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+.gs-code {
+  font-family: var(--mono);
+  font-size: 12px; color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 17px; margin: 14px 0;
+  line-height: 1.7; overflow-x: auto;
+  white-space: pre;
+}
+.gs-code .c { color: var(--ink-4); }
+
+.doc-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 24px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  line-height: 1.4; margin-bottom: 13px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-4); font-family: var(--mono);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#symptom">① 출발점 — 8건 재검증에서 자동판정이 놓친 2건</a>
+    <a href="#bold">② 그레이더 결함 — 마크다운 볼드체 미탐지</a>
+    <a href="#tier">③ 프롬프트 결함 — Tier 테이블을 "설명 허가"로 오독</a>
+    <a href="#wide">④ 48건 층화추출 — semiconductor가 우연이 아님을 증명</a>
+    <a href="#circled">⑤ 새 회피 패턴 — 원문자(①②③) 다중목록과 MCQ 오탐 방지</a>
+    <a href="#tokens">⑥ max_tokens 6000→12000 — 그리고 문자수는 토큰수가 아니다</a>
+    <a href="#notfixed">⑦ 의도적으로 안 고친 것 — ASCII 번호 목록의 MCQ 비대칭</a>
+    <a href="#flaky">⑧ 미해결 — finish=stop인데 content가 빈 문자열</a>
+    <a href="#confusion">⑨ 반복된 워크플로 이름 혼동</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SITE MANUAL — 2026-08-09 세션 발견 정리</div>
+      <h1 class="doc-hero-title">자동판정 PASS 7/8 뒤에 숨어 있던 <em>진짜 위반 2건</em></h1>
+      <p class="doc-hero-desc">
+        professor EXPERT 관제탑 원칙 라이브 검증 8건이 7 PASS로 나왔지만,
+        <code>raw_response</code> 원문을 직접 읽자 그 중 2건이 실제로는
+        위반이었다 — 그레이더가 마크다운 볼드체를 못 잡았고(medicine),
+        Tier 테이블(환각 위험 등급)을 "설명해도 되는 근거"로 모델이
+        오독했다(semiconductor). 두 결함을 각각 고친 뒤 334개 EXPERT
+        페르소나를 층화추출한 48건 확장 배치로 일반화 여부를 검증했고,
+        그 과정에서 원문자(①②③) 다중목록이라는 <strong>세 번째</strong>
+        회피 패턴을 발견했다. 이 문서는 그 전체 과정과, "고칠 수 있었지만
+        일부러 안 고친 것"까지 포함해 정리한다 — 자동판정 결과를 그대로
+        믿지 않고 원문을 대조하는 방법론 자체가 이 세션의 핵심 교훈이다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>작성</strong> 2026-08-09</span>
+        <span><strong>대상 파일</strong> tests/live_smoketest/control_tower_live_smoketest.py</span>
+      </div>
+    </div>
+
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          PR #289에서 신설한 8건짜리 professor 관제탑 라이브 검증 하네스가
+          7 PASS / 1 NEEDS-REVIEW로 돌아왔다. 여기서 멈췄다면 "관제탑
+          원칙이 대체로 잘 지켜지고 있다"로 결론났을 것이다. 그런데
+          하네스 자신의 문서화된 한계("목록·헤더가 없어도 백과사전식
+          서술일 수 있다 — 이건 구조적 신호로 못 잡는다")를 진지하게
+          받아들여 8건 전부의 <code>raw_response</code> 원문을 직접
+          읽었더니, 자동판정이 완전히 놓친 위반이 하나(medicine, 볼드체),
+          자동판정은 "길어서 검토 필요" 정도로만 표시했지만 실제로는 훨씬
+          구조적인 문제였던 게 하나(semiconductor, Tier 테이블 오독)
+          나왔다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            이 문서를 읽어야 하는 상황
+          </div>
+          <code>control_tower_live_smoketest.py</code>의 <code>grade()</code>를
+          다시 건드릴 때 / 관제탑 원칙(CONTROL-TOWER-PRINCIPLE·
+          SP_common_guardrails C50 계열) 문구를 고칠 때 / "자동판정
+          결과가 이상하게 깨끗하다"는 느낌이 들 때 / 새 EXPERT 페르소나
+          계열의 라이브 검증 시나리오를 늘릴 때.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="symptom">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">① Symptom</div>
+          <div class="gs-title">8건 재검증에서 자동판정이 놓친 2건</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          자동판정: <strong>professor-ct-03-medicine → LIVE-PASS</strong>,
+          <strong>professor-ct-02-semiconductor → LIVE-NEEDS-REVIEW</strong>
+          ("목록 형태는 아니지만 응답이 김(459자)"). 원문 대조 결과:
+        </p>
+        <ul>
+          <li><strong>medicine</strong>: 응답에 <code>**문제 1**</code>
+            형태의 마크다운 볼드가 그대로 들어 있었다 — 원칙이 명시적으로
+            금지하는 서식인데 그레이더의 정규식 3종(헤더·번호목록·불릿목록)
+            중 어느 것도 볼드는 잡지 못했다.</li>
+          <li><strong>semiconductor</strong>: "MOSFET 문턱전압 유도는
+            게이트 전압이... 부터 시작합니다"로 이어지는 문단이 학생의
+            구체값(도핑 농도 등) 없이도 성립하는 일반 설명이었다 —
+            원칙이 정의하는 "백과사전식 나열"의 전형이었다. 자동판정은
+            "길어서 검토 필요"로만 표시해 진짜 원인(구조적 오독)을
+            놓쳤다.</li>
+        </ul>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            판별 신호
+          </div>
+          정규식 기반 그레이더는 "명백한 위반 형태"만 걸러내도록 설계돼
+          있다는 걸 하네스 자신이 문서 상단에 이미 밝히고 있다. 자동판정
+          결과가 유독 깨끗하면(예: 8/8·N/N PASS) 오히려 표본 몇 건이라도
+          원문을 직접 읽어야 한다 — 특히 NEEDS-REVIEW로 분류된 건은
+          "길다"는 표면 신호 뒤에 다른 근본 원인이 있을 수 있다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bold">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">② Grader Fix</div>
+          <div class="gs-title">마크다운 볼드체 미탐지 — 오탐·미탐 둘 다 사전에 잡고 보정</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>BOLD_RE</code>를 새로 추가하되, 적용 전 오프라인
+          유닛테스트에서 두 가지 결함을 미리 잡았다:
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          오탐 — 지수 표기(x**2)를 볼드로 오판
+        </h4>
+        <p>
+          단순한 <code>\*\*[^*]+\*\*</code> 패턴은 <code>"x**2 + y**2"</code>
+          같은 공학·수학 계열 텍스트에서 <code>"**2 + y**"</code>를 볼드로
+          잘못 잡았다. 마크다운 볼드는 여는/닫는 <code>**</code>가 통상
+          알파벳·숫자·밑줄에 바로 붙지 않는다는 점(앞뒤에 공백·문장부호가
+          옴)을 이용해 lookaround로 경계를 구분했다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          미탐 — 한국어 조사가 경계 문자 클래스에 걸림
+        </h4>
+        <p>
+          위 lookaround에 파이썬 정규식의 <code>\w</code>를 그대로 쓰면
+          한글도 word 문자로 포함돼, <code>"**핵심 포인트**는"</code>처럼
+          볼드 뒤에 조사가 바로 붙는 흔한 한국어 패턴을 볼드가 아니라고
+          놓친다 — <code>check_domain_keyword_collision.py</code>에서 이미
+          한 번 발견됐던 "한국어 조사에서 <code>\b</code> 경계 실패"와
+          동일 유형의 버그였다. 경계 판정을 ASCII 영숫자·밑줄로만
+          좁혀서 해결했다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            일반화 가능한 교훈
+          </div>
+          한국어 텍스트에 대한 정규식 경계 판정(<code>\b</code>·lookaround
+          둘 다)에서 <code>\w</code>를 그대로 쓰면 한글이 섞여 들어가
+          예상 밖의 방식으로 매칭 범위가 넓어지거나 좁아진다. 경계
+          조건이 필요하면 처음부터 <code>A-Za-z0-9_</code>로 명시적으로
+          좁히는 걸 기본값으로 삼을 것 — 이번 세션에서만 이 패턴이 두 번
+          (볼드체 lookaround, ⑤의 원문자 판정) 반복됐다.
+        </div>
+        <p>
+          <code>__밑줄볼드__</code>는 일부러 탐지 대상에서 뺐다 — 파이썬
+          dunder 표기(<code>__init__</code> 등)와 여는/닫는 경계가
+          원천적으로 구분 불가능하다는 게 오프라인 테스트로 확인됐고,
+          실사로 관측된 위반은 전부 <code>**</code>였다. 관측 근거 없는
+          패턴까지 욕심내다 오탐을 만들기보다 확인된 위반만 정확히
+          잡는 쪽을 택했다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="tier">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">③ Prompt Fix</div>
+          <div class="gs-title">Tier 테이블(환각 위험 등급)을 "설명해도 된다"로 오독</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>SP_professor-semiconductor_v1_0.md</code>의 Tier 테이블에
+          "Tier 1 | 반도체 소자 동작 원리(MOSFET 기본 원리 등)의 일반적
+          교육 설명"이라는 행이 있다. 이 Tier 개념은
+          <code>SP_EXPERT_BASE</code>가 정의하는 <strong>모든 EXPERT
+          페르소나 공통 템플릿</strong>이라, semiconductor 하나만의
+          문제가 아니라 구조적 함정이었다 — "Tier 1=안전"을 "그러니
+          설명해도 됨"으로 모델이 오독한 것으로 보인다.
+        </p>
+        <p>
+          이미 있던 "STEP A류 산출물(목록·표)은 내부 추론 구조이지 출력
+          형식이 아니다" 조항과 정확히 같은 패턴이라, 그 옆에 병렬로
+          <strong>"Tier 테이블도 출력 형식을 정하지 않는다"</strong> 조항을
+          신설했다 — <code>CONTROL-TOWER-PRINCIPLE_v1_1.md</code>(경량
+          사본)와 <code>SP_common_guardrails</code>(원본, C50-1++) 양쪽에
+          동기화(v3.29→v3.30, 기존 동기화 관례를 그대로 따름).
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            적용 전 구조 검증 — 라이브 호출 없이
+          </div>
+          DeepSeek API 도메인에 네트워크 접근이 안 되는 샌드박스에서
+          작업했기 때문에, 프롬프트 수정이 실제 모델 응답을 바꾸는지는
+          여기서 검증할 수 없었다. 대신 <code>render_expert_prompts.mjs</code>로
+          실제 프로덕션 <code>_composeExpertPrompt()</code>를 그대로
+          호출해 48개 시나리오 전부를 렌더링하고(실패 0건), Tier 조항이
+          semiconductor뿐 아니라 계열이 다른 리프(architect처럼
+          professor 계열조차 아닌 독립 자격직)에도 상속되는지 grep으로
+          확인한 뒤에야 라이브 재검증을 요청했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="wide">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">④ Scale-up</div>
+          <div class="gs-title">48건 층화추출 — semiconductor가 우연이 아님을 증명</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          8건은 표본이 너무 작아 "Tier 조항이 semiconductor 하나에만
+          우연히 먹힌 건 아닌가"를 배제할 수 없었다. Node로
+          <code>EXPERT_REGISTRY</code>(334개 페르소나) 전체를 직접 덤프해
+          정확한 키·계층·카테고리를 확보한 뒤 층화추출했다 — 추측으로
+          키 이름을 지어 넣지 않고, 48개 <code>expert_key</code> 전부
+          실존 확인 + 사전 렌더 성공(실패 0건)까지 거친 뒤 라이브
+          호출을 요청했다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>그룹</th><th>건수</th><th>목적</th></tr></thead>
+            <tbody>
+              <tr><td>이공계 공학 계열(개념형)</td><td>12</td><td>semiconductor Tier1 함정 재현 — 재료 계열 형제 리프(metallurgy) 포함</td></tr>
+              <tr><td>독립 자격직(architect·세무사 등, professor 계열 아님)</td><td>8</td><td>이전 배치에 전혀 없던 신규 카테고리</td></tr>
+              <tr><td>의료 인접</td><td>6</td><td>국시형 실전 패턴(기존 성공 사례) 재검증</td></tr>
+              <tr><td>법률/특허</td><td>6</td><td>절차형 고위험군 확장</td></tr>
+              <tr><td>인문/사회/예술(대조군)</td><td>8</td><td>dance의 "다중질문" 실패 패턴이 다른 실기·창작 리프에도 있는지</td></tr>
+              <tr><td>농림수산(신규 계열)</td><td>4</td><td>완전히 새로운 영역</td></tr>
+              <tr><td>언어/생활과학 등 잔여</td><td>4</td><td>균형 보정</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          결과(1차, 원문자 패치 전): <strong>38 PASS / 2 NEEDS-REVIEW / 8
+          FAIL</strong>. 원문 전수 대조 결과:
+        </p>
+        <ul>
+          <li><strong>metallurgy(semiconductor의 형제 리프) → 진짜 PASS</strong>.
+            "시효경화의 기본 개념은 아실 테니"라고 개념 자체는 한 마디로
+            짚기만 하고 곧장 실험 데이터를 요청했다 — Tier 조항이
+            semiconductor에 국한된 우연이 아니라 재료 계열 전체에
+            일반화됐다는 증거.</li>
+          <li>FAIL 8건 중 6건이 볼드 위반(surveying-engineer·
+            naval-architect·lawyer-corporate·patent-attorney 2건·
+            sociology·forestry) — patch 전이었다면 전부 조용히 PASS
+            처리됐을 사례들.</li>
+          <li>NEEDS-REVIEW 2건 중 physician-psychiatry는 재검토 결과 실제
+            PASS(437자로 400자 임계값을 살짝 넘겨서 자동판정이 보수적으로
+            걸렸을 뿐, medicine·nursing과 동일한 정상 패턴). accountant-
+            valuation은 경계선 부분위반(원문자 다중목록 — ⑤ 참고).</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="circled">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑤ New Pattern</div>
+          <div class="gs-title">원문자(①②③) 다중목록 — 국시 5지선다 오탐을 사전에 잡고 나서야 적용</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>ct-wide-lawyer-corporate</code> 원문에
+          <code>**① 주식회사이신가요?**</code> ...
+          <code>**② 정기주주총회인가요...**</code> ...
+          <code>**③ 사업연도가...**</code> 형태로 세 질문을 원문자로
+          동시에 던지는 응답이 나왔다. 볼드가 같이 있어서 <code>BOLD_RE</code>가
+          잡았지만, <strong>볼드 없이 원문자만 썼다면 완전한 사각지대</strong>였다
+          — 원문자는 유니코드 전용 문자라 <code>NUMBERED_LIST_RE</code>(ASCII
+          <code>"1."</code> <code>"2)"</code> 전용)도 <code>BULLET_LIST_RE</code>도
+          매칭 문자 클래스가 아예 다르다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            바로 적용하지 않은 이유 — 국시 MCQ 오탐 위험
+          </div>
+          같은 배치의 <code>ct-wide-physician-internal-medicine</code>이
+          <code>"① G3aA2  ② G3bA3  ③ G4A3  ④ G4A2  ⑤ G5A3"</code>처럼 국시
+          5지선다 보기를 원문자로 나열했다 — 이건 학생에게 여러 질문을
+          동시에 던진 게 아니라 <strong>하나의 문제에 대한 답안 선택지
+          나열(정상 시험 형식)</strong>이다. 정규식만 그대로 넣었으면
+          이 정상 사례를 위반으로 오탐할 뻔했다.
+        </div>
+        <p>
+          두 패턴을 구분하는 신호를 오프라인에서 먼저 측정했다 — 원문자
+          마커 사이 텍스트의 <strong>항목당 평균 길이</strong>:
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>사례</th><th>항목수</th><th>항목당 평균 길이</th><th>판정</th></tr></thead>
+            <tbody>
+              <tr><td>physician-internal-medicine(국시 보기)</td><td>5</td><td>4.4자</td><td>위반 아님</td></tr>
+              <tr><td>lawyer-corporate(진짜 위반)</td><td>3</td><td>48.7자</td><td>위반</td></tr>
+              <tr><td>accountant-valuation(진짜 위반)</td><td>2</td><td>52.0자</td><td>위반</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          두 그룹 사이 간극이 커서 <strong>15자</strong>를 경계로 잡았다
+          — 이 미만이면 "보기 나열"로 보고 위반에서 제외한다. 임계값은
+          원문자 2개 이상(ASCII 목록의 3개+ 기준보다 낮음 — 원문자는
+          산문 중 우연히 단독으로 쓰이는 경우가 실질적으로 없어 2개만
+          나와도 이미 "동시에 여러 항목 나열"이라는 신호가 확실하다).
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="tokens">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑥ Fix + Caveat</div>
+          <div class="gs-title">max_tokens 6000→12000 — 문자 수는 토큰 소비량을 예측 못 한다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>ct-wide-physician-radiology</code>가 <code>finish_reason=length</code>로
+          빈 응답을 냈다(<code>reasoning_content_len=9266</code>) — 이미
+          하네스 자신의 코드 주석에 기록된 "reasoning 토큰이 예산을 다
+          써버리는" 그 문제(800→2000→6000으로 이미 두 번 조정한 이력이
+          있음)의 재발이었다. 그런데 <strong>같은 배치에서 reasoning_len이
+          더 큰 사례(physician-psychiatry, 11513자)는 정상 완료(stop)</strong>됐다
+          — 문자 수와 실제 토큰 소비량이 깔끔하게 비례하지 않는다는 뜻.
+          정확한 안전선을 계산하는 대신 여유 있게 2배(12000)로 올렸다.
+        </p>
+        <p>
+          재검증(2차 배치)에서 <code>physician-radiology</code>는
+          <code>finish=stop</code>으로 정상 완료됐다(다만 이번엔 볼드
+          <code>**케이스 1**</code>로 별도 FAIL) — max_tokens 상향이
+          원래 목표(빈 응답 방지)는 확실히 달성했다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            일반화 가능한 교훈
+          </div>
+          reasoning 계열 모델에서 <code>reasoning_content</code> 문자 길이는
+          토큰 소비량의 신뢰할 만한 예측 변수가 아니다(콘텐츠 종류에 따라
+          문자당 토큰 비율이 달라지는 것으로 추정, 확정 원인은 미조사).
+          <code>max_tokens</code> 부족이 의심되면 특정 사례의 문자 길이를
+          보고 "이 정도면 충분하다"고 계산하지 말고, 여유를 넉넉히 두고
+          재발 시 <code>finish_reason</code>·<code>reasoning_content_len</code>·
+          <code>completion_tokens</code> 조합으로 실제 소비 패턴을 확인할 것.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="notfixed">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑦ Deliberately Not Fixed</div>
+          <div class="gs-title">ASCII 번호 목록(1. 2. 3.)의 MCQ 비대칭 — 왜 손대지 않았는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          2차 배치 재검증에서 <code>ct-wide-physician-internal-medicine</code>이
+          이번엔 원문자가 아니라 <strong>ASCII 번호</strong>
+          (<code>"1. G3a A2"</code> ~ <code>"5. G4 A3"</code>)로 같은 국시
+          5지선다 보기를 냈고, 기존 <code>NUMBERED_LIST_RE</code>(이번
+          세션이 새로 만든 게 아니라 원래부터 있던 정규식)가 이걸 위반으로
+          잡았다 — 같은 응답에 볼드(<code>**[문제 1]**</code>)도 있어서
+          최종 판정(FAIL) 자체는 결과적으로 맞았지만, ⑤에서 원문자에
+          준 것과 같은 "짧은 항목이면 MCQ 보기로 보고 예외" 로직을
+          <code>NUMBERED_LIST_RE</code>에도 대칭적으로 넣을지가 남은
+          질문이었다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            의도적 결정 — 왜 대칭으로 옮기지 않았는가
+          </div>
+          원문자(①②③)와 ASCII 번호(<code>1.</code> <code>2.</code>)는
+          겉보기엔 같은 문제 같지만 위험도가 다르다고 판단했다.
+          <strong>원문자는 한국어 실무 문서에서 거의 전적으로 "보기
+          나열"에만 쓰여</strong> 길이 기준 예외를 걸어도 다른 걸 놓칠
+          위험이 거의 없다. 반면 <strong><code>1.</code> <code>2.</code>
+          <code>3.</code>는 하네스가 애초에 잡으려던 진짜 위반의 전형적
+          형태</strong>다("필요 서류: 1) 신분증 2) 임대차계약서 3)
+          사업자등록증"). 그리고 이 문서 나열형 위반도 항목 하나하나는
+          짧다("신분증" 5자 안팎) — 원문자에 쓴 "항목당 평균 15자 미만이면
+          예외" 기준을 그대로 옮기면 MCQ 오탐은 막아도 <strong>바로 그
+          문서 나열 위반을 다시 못 잡는 구멍을 스스로 만드는 셈</strong>이다.
+          원문자 예외에서는 안전했던 기준이 ASCII 번호에서는 안전하지
+          않다. 게다가 지금까지 관측된 모든 MCQ 사례는 전부 볼드도 같이
+          써서 최종 판정 자체는 이미 맞게 나오고 있다 — 급하게 고쳐야 할
+          "실제로 틀린 판정"이 아직 한 건도 없다. 진짜 트리거는 "MCQ인데
+          볼드도 안 쓰고 번호만 써서 억울하게 FAIL나는 사례"가 실사로
+          나왔을 때이고, 그때는 길이가 아니라 <strong>"다음 중 가장
+          적절한 것은?" 같은 MCQ 문두 패턴 + 번호 목록의 조합</strong>으로
+          잡는 게 더 정확한 방향이라고 판단했다 — 근거 없이 선제적으로
+          구멍을 뚫지 않기로 했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="flaky">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑧ Known Issue</div>
+          <div class="gs-title">biomedengineering — finish=stop인데 content가 빈 문자열 (미해결)</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          2차 배치에서 <code>ct-wide-biomedengineering</code>이 빈 응답을
+          냈는데, <code>finish_reason</code>이 <code>length</code>가 아니라
+          <code>stop</code>이었다 — ⑥의 토큰 예산 소진과는 다른 종류다.
+          <code>completion_tokens=161</code>이 전부
+          <code>reasoning_tokens</code>로만 쓰였고(<code>reasoning_content_len=281</code>,
+          짧음), 모델이 추론을 짧게 마친 뒤 스스로 "끝났다"고 선언하며
+          답변을 한 글자도 안 냈다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            의도적으로 안 판 이유
+          </div>
+          max_tokens로는 못 고치는 종류의 실패이고, 아직 <strong>1회만
+          관측</strong>됐다 — 재현 여부부터 확인하는 게 먼저다. 같은
+          시나리오로 재실행해서 또 빈 응답이 나오면 해당 페르소나 조립
+          체인(<code>professor-electrical-computer</code>)의 실제 프롬프트
+          내용에 문제가 있는지 파고들고, 이번 한 번뿐이면 API 쪽 일시적
+          변동으로 보고 넘어간다. <code>SESSION_LESSONS_SUBJECT_GATE_
+          MAX_TOKENS_20260809_v1_0.html</code> ⑨의 <code>professor-gap-15</code>
+          flaky 케이스와 같은 판단 기준(재현 불안정한 소수 케이스에
+          더 파기보다 구조적 결함에 집중)을 그대로 적용했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="confusion">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑨ Process</div>
+          <div class="gs-title">같은 세션에서 워크플로 이름 혼동이 세 번 반복됨</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이번 세션에서만 워크플로를 잘못 실행한 시도가 여러 번 있었다 —
+          <code>Live Smoketest (DeepSeek, 300 scenarios)</code>(1단계
+          라우팅 검증, <code>live_smoketest.py</code>)와
+          <code>Live Smoketest — Control Tower (professor EXPERT
+          personas)</code>(형식 준수 검증, <code>control_tower_live_
+          smoketest.py</code>)는 스키마가 완전히 달라서, 후자용 시나리오
+          파일을 전자에 넣으면 <code>KeyError: 'no'</code>로 즉시
+          죽는다. 사이드바에 이름이 비슷한 워크플로가 여러 개 나란히
+          있는 게 근본 원인이다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            확실한 구분법
+          </div>
+          관제탑 워크플로의 "Run workflow" 입력 폼은 입력 필드가
+          <strong>정확히 1개</strong>이고, placeholder에 파일명 기본값만
+          있을 뿐 <strong>"300"이라는 숫자가 절대 나오지 않는다</strong>.
+          "Debug: only run first N scenarios"라는 별도 필드가 보이면
+          100% 잘못된(라우팅용) 워크플로다. 헷갈릴 때는 사이드바 클릭
+          대신 URL을 직접 입력하는 게 가장 확실하다:
+          <code>github.com/&lt;org&gt;/&lt;repo&gt;/actions/workflows/live-smoketest-control-tower-professor.yml</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li><a href="./SESSION_LESSONS_SUBJECT_GATE_MAX_TOKENS_20260809_v1_0.html" target="_blank">subject-gate max_tokens 결함 규명 실전 교훈 매뉴얼(§0809)</a> — 같은 날 병렬 세션의 동일 유형(reasoning 토큰 소진) 결함, ⑧의 flaky 케이스 판단 기준 선례</li>
+          <li>저장소 내 <code>tests/live_smoketest/control_tower_live_smoketest.py</code> — ②·⑤·⑥의 실제 수정 대상(<code>BOLD_RE</code>·<code>CIRCLED_NUM_RE</code>·<code>max_tokens</code>)</li>
+          <li>저장소 내 <code>prompts/CONTROL-TOWER-PRINCIPLE_v1_1.md</code>·<code>prompts/SP_common_guardrails_v3_30.md</code> — ③의 Tier 테이블 조항(50-1++) 실제 반영처</li>
+          <li>저장소 내 <code>tests/live_smoketest/scenarios_control_tower_wide_20260809.json</code> — ④의 48건 층화추출 시나리오, <code>EXPERT_REGISTRY</code> 334개 전수 덤프 기반</li>
+          <li>저장소 내 <code>tests/live_smoketest/render_expert_prompts.mjs</code> — 프로덕션 <code>_composeExpertPrompt()</code>를 그대로 호출해 라이브 호출 전 구조 검증하는 스크립트(③에서 활용)</li>
+          <li>저장소 내 <code>.github/workflows/live-smoketest-control-tower-professor.yml</code>·<code>live-smoketest.yml</code> — ⑨의 혼동 대상 워크플로 두 개</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
