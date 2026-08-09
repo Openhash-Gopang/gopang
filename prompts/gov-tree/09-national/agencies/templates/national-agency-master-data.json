@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것. 2026-07-13 추가: bok(한국은행 제주본부)·stat(통계청 제주사무소) 2개 domain 신규 등록 — JEJU-NATIONAL-AGENCIES-LIST 조사에서 기존 28건에 누락돼 있음을 발견해 추가함(총 30건). 2026-07-13 2차 추가: customs(제주세관)·forestresearch(난대·아열대산림연구소)·forestseed(국립산림품종관리센터 제주지소)·forestcoop(산림조합중앙회 제주지역본부) 4개 domain 신규 등록(총 34건). forestcoop은 협동조합(특수법인)이라 국가기관 트리 소속이 맞는지 재검토 대상으로 별도 표기. | 2026-07-23: 선택 필드 처리사무 신설 — do-dept-master-data.json과 동일 스펙(사무코드 배열). gov-router.js의 _fetchNatText()가 자동으로 PERMIT-CRITERIA-PROTOCOL_v1_0.md를 강제 삽입한다. 아직 어느 기관에도 실제 사무코드를 채우지 않았다 — 실제 데이터 채우기는 개별 기관별 소관 인허가 사무를 정확히 조사한 뒤 별도로 진행. | 2026-07-24: 국가기관 지사 확대(1차) — 관할구역이 도 경계와 명확히 일치하는 police(경찰청) 도메인만 13개 도에 추가(주피터 지시: 선별적 정적 확대). 경기는 남부/북부로 분리돼 있고 전남광주통합은 광주청/전남청이 아직 미통합이라 이번 배치에서 제외(2026-07 웹검색 확인). 명칭은 '경찰청'(2021년 자치경찰제 개편 후 '지방' 접두어 삭제) — 제주 기존 레코드('제주지방경찰청')는 구 명칭일 수 있으나 검증 없이 수정하지 않음(별도 확인 필요 항목으로 남김). | 2026-07-24(재해석, 주피터 지시): 이 파일은 \"국가기관 인스턴스 목록\"이 아니라 \"지사 디렉터리\"다 — SP-NAT-{DOMAIN}-TEMPLATE 자체가 전국 단일 싱글턴 인스턴스이고, 이 레코드들은 그 싱글턴이 §7 PDV_REQUEST 흐름에서 참조하는 조회용 데이터일 뿐이다. 자세한 내용은 09-national/NATIONAL-AGENCY-CLASS-INSTANCE-ARCHITECTURE_v1.0.md 참고. | 2026-08-09: jurisdiction-staging(PR #278) 통합 1차 — 도코드당 관할이 명확히 1건인 stat(15개 도 신규)·coastguard(15개 도 신규)·police(jeonnam-gwangju 1건 추가)·court+prosecution(13개 도 신규, 각급법원설치법 별표3 기준)을 반영. tax/customs와 court·police의 seoul/gyeonggi는 도 하나에 지사가 여럿이라 _fetchNatText()가 domain+도코드로만 조회하는 현재 구조에서는 .find()가 첫 레코드만 반환해 오답 위험이 있음 — 시/군 단위 분기 설계 후 별도 반영 예정(jurisdiction-staging/에 원자재 유지).",
+  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것. 2026-07-13 추가: bok(한국은행 제주본부)·stat(통계청 제주사무소) 2개 domain 신규 등록 — JEJU-NATIONAL-AGENCIES-LIST 조사에서 기존 28건에 누락돼 있음을 발견해 추가함(총 30건). 2026-07-13 2차 추가: customs(제주세관)·forestresearch(난대·아열대산림연구소)·forestseed(국립산림품종관리센터 제주지소)·forestcoop(산림조합중앙회 제주지역본부) 4개 domain 신규 등록(총 34건). forestcoop은 협동조합(특수법인)이라 국가기관 트리 소속이 맞는지 재검토 대상으로 별도 표기. | 2026-07-23: 선택 필드 처리사무 신설 — do-dept-master-data.json과 동일 스펙(사무코드 배열). gov-router.js의 _fetchNatText()가 자동으로 PERMIT-CRITERIA-PROTOCOL_v1_0.md를 강제 삽입한다. 아직 어느 기관에도 실제 사무코드를 채우지 않았다 — 실제 데이터 채우기는 개별 기관별 소관 인허가 사무를 정확히 조사한 뒤 별도로 진행. | 2026-07-24: 국가기관 지사 확대(1차) — 관할구역이 도 경계와 명확히 일치하는 police(경찰청) 도메인만 13개 도에 추가(주피터 지시: 선별적 정적 확대). 경기는 남부/북부로 분리돼 있고 전남광주통합은 광주청/전남청이 아직 미통합이라 이번 배치에서 제외(2026-07 웹검색 확인). 명칭은 '경찰청'(2021년 자치경찰제 개편 후 '지방' 접두어 삭제) — 제주 기존 레코드('제주지방경찰청')는 구 명칭일 수 있으나 검증 없이 수정하지 않음(별도 확인 필요 항목으로 남김). | 2026-07-24(재해석, 주피터 지시): 이 파일은 \"국가기관 인스턴스 목록\"이 아니라 \"지사 디렉터리\"다 — SP-NAT-{DOMAIN}-TEMPLATE 자체가 전국 단일 싱글턴 인스턴스이고, 이 레코드들은 그 싱글턴이 §7 PDV_REQUEST 흐름에서 참조하는 조회용 데이터일 뿐이다. 자세한 내용은 09-national/NATIONAL-AGENCY-CLASS-INSTANCE-ARCHITECTURE_v1.0.md 참고. | 2026-08-09: jurisdiction-staging(PR #278) 통합 1차 — 도코드당 관할이 명확히 1건인 stat(15개 도 신규)·coastguard(15개 도 신규)·police(jeonnam-gwangju 1건 추가)·court+prosecution(13개 도 신규, 각급법원설치법 별표3 기준)을 반영. tax/customs와 court·police의 seoul/gyeonggi는 도 하나에 지사가 여럿이라 _fetchNatText()가 domain+도코드로만 조회하는 현재 구조에서는 .find()가 첫 레코드만 반환해 오답 위험이 있음 — 시/군 단위 분기 설계 후 별도 반영 예정(jurisdiction-staging/에 원자재 유지). | 2026-08-09 2차: mma(병무청) 12개 도 신규 추가 — 나무위키 병무청 문서 §7.1 각 지방병무청 관할구역 서술 실제 fetch로 검증. gyeonggi(경인청/경기북부청 분할)·gangwon(영서/영동 분할)·sejong(원문에 명시적 커버 서술 없음)은 제외. | 2026-08-09 3차: veterans(국가보훈부) 6개 도 신규 추가 — 6지방청 21보훈지청 전체 시/군 단위 관할을 대조해, 도 전체가 지청 1곳으로만 커버되는 곳만(incheon/daejeon/sejong/daegu/busan/ulsan) 반영. 나머지 9개 도는 도 하나가 2~3개 지청으로 쪼개져 있어 제외. | 2026-08-09 4차: weather(기상청) 15개 도 신규 추가 — 나무위키 §10.1 관할구역 표 실제 fetch로 확인, 도코드당 1개 지방청/지청으로 전부 깔끔 매핑(모호성 없음). 기존 jurisdiction-staging의 '낮음' 신뢰도 추정 데이터를 이 표로 완전 교체. | 2026-08-09 5차(마지막): port(지방해양수산청) 10개 도 신규 추가 — 별표5(2025.11.18 개정) 원문 확인, 도 전체가 예외 없이 한 청 관할인 곳만(gangwon/jeonbuk/daegu/gyeongbuk/daejeon/sejong/chungbuk/busan/ulsan/incheon) 반영. gyeonggi·chungnam·gyeongnam·jeonnam-gwangju는 부분 관할(특정 항만·시군 단위 예외)이라 도 전역 대표값 불가로 제외, seoul은 내륙이라 관할 자체 없음.",
   "기관목록": [
     {
       "domain": "agroquality",
@@ -687,6 +687,307 @@
       "도코드": "gyeongnam",
       "지사명": "창원지방검찰청",
       "소속부처": "법무부(대검찰청)"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "seoul",
+      "지사명": "서울지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "incheon",
+      "지사명": "인천병무지청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "busan",
+      "지사명": "부산울산지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "ulsan",
+      "지사명": "부산울산지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "gyeongnam",
+      "지사명": "경남지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "daegu",
+      "지사명": "대구경북지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "gyeongbuk",
+      "지사명": "대구경북지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "daejeon",
+      "지사명": "대전충남지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "chungnam",
+      "지사명": "대전충남지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "chungbuk",
+      "지사명": "충북지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "jeonnam-gwangju",
+      "지사명": "광주전남지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "도코드": "jeonbuk",
+      "지사명": "전북지방병무청",
+      "소속부처": "병무청"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "incheon",
+      "지사명": "인천보훈지청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "daejeon",
+      "지사명": "대전지방보훈청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "sejong",
+      "지사명": "충남동부보훈지청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "daegu",
+      "지사명": "대구지방보훈청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "busan",
+      "지사명": "부산지방보훈청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "도코드": "ulsan",
+      "지사명": "울산보훈지청",
+      "소속부처": "국가보훈부"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "seoul",
+      "지사명": "수도권기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "incheon",
+      "지사명": "수도권기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "gyeonggi",
+      "지사명": "수도권기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "busan",
+      "지사명": "부산지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "ulsan",
+      "지사명": "부산지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "gyeongnam",
+      "지사명": "부산지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "daegu",
+      "지사명": "대구지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "gyeongbuk",
+      "지사명": "대구지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "jeonnam-gwangju",
+      "지사명": "전남광주지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "지사명": "전주기상지청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "gangwon",
+      "지사명": "강원지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "daejeon",
+      "지사명": "대전지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "지사명": "대전지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "chungnam",
+      "지사명": "대전지방기상청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "지사명": "청주기상지청",
+      "소속부처": "기상청"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "gangwon",
+      "지사명": "동해지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "지사명": "군산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "daegu",
+      "지사명": "포항지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "gyeongbuk",
+      "지사명": "포항지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "daejeon",
+      "지사명": "대산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "지사명": "대산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "지사명": "대산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "busan",
+      "지사명": "부산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "ulsan",
+      "지사명": "울산지방해양수산청",
+      "소속부처": "해양수산부"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "incheon",
+      "지사명": "인천지방해양수산청",
+      "소속부처": "해양수산부"
     }
   ]
 }
