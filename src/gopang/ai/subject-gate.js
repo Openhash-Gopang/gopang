@@ -83,7 +83,15 @@ export async function refineToLeaf(personaId, userText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model:       'deepseek-v4-flash',
-        max_tokens:  60,
+        // 2026-08-09 수정(60→1000, 실사로 발견된 결함) — subject_gate_live_smoketest.py
+        // 실사 검증 결과, deepseek-v4-flash가 reasoning_content(사고 과정)에
+        // 토큰을 먼저 쓰고 최종 답변(content)을 나중에 내는 방식이라 60으로는
+        // 사고 과정만으로 소진되어 content가 빈 문자열로 오는 경우가 대부분이었다
+        // (60에서 거의 전멸 → 500에서 35/38 PASS, 그중 2건은 500도 부족해 여전히
+        // 빈 응답). 기본이 non-thinking 계열 모델이라 매 호출이 이 상한까지
+        // 차는 게 아니라 실제 필요한 만큼만 쓰므로, 토큰 비용 증가는 크지 않다는
+        // 전제로 여유 있게 1000으로 올린다.
+        max_tokens:  1000,
         temperature: 0.0,
         stream:      false,
         messages: [

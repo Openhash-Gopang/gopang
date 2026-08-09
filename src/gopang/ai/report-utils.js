@@ -66,7 +66,11 @@ export async function summarizeHandoffContext6W(transcriptText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model:       'deepseek-v4-flash',
-        max_tokens:  200,
+        // 2026-08-09 수정(200→1000) — subject-gate.js·domain-classifier.js와
+        // 동일 결함(reasoning_content가 토큰을 먼저 소진해 content가 빈 문자열로
+        // 오는 케이스, 실사로 확인). 같은 모델·같은 .content만 읽는 패턴이라
+        // 함께 올린다.
+        max_tokens:  1000,
         temperature: 0.0,
         stream:      false,
         messages: [
@@ -98,7 +102,8 @@ export async function summarizeTranscript6W(transcriptText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model:       'deepseek-v4-flash',
-        max_tokens:  240,
+        // 2026-08-09 수정(240→1000) — 위 summarizeHandoffContext6W와 동일 사유.
+        max_tokens:  1000,
         temperature: 0.0,
         stream:      false,
         messages: [

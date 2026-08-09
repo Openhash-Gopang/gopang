@@ -65,7 +65,11 @@ export async function classifyDomain(userText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model:       'deepseek-v4-flash',
-        max_tokens:  60,
+        // 2026-08-09 수정(60→1000) — subject-gate.js와 동일 결함(deepseek-v4-flash가
+        // reasoning_content에 토큰을 먼저 쓰고 content가 빈 문자열로 오는 케이스,
+        // subject_gate_live_smoketest.py 실사로 확인). 이 파일도 같은 모델·같은
+        // 60 상한을 쓰고 있어 같은 방식으로 실패했을 가능성이 높아 함께 올린다.
+        max_tokens:  1000,
         temperature: 0.0,
         stream:      false,
         messages: [
