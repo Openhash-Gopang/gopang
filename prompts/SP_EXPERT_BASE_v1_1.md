@@ -18,7 +18,7 @@
 >
 > **적용 대상**: `EXPERT_REGISTRY`에 등록된 모든 페르소나. K-Intent/K-Compose/
 > K-Execute/K-Deliver/K-Report(K-시리즈 오케스트레이션)는 이미
-> `CONTROL-TOWER-PRINCIPLE_v1_0.md`로 별도 경량 상속을 받고 있어 이 문서의
+> `CONTROL-TOWER-PRINCIPLE`(SP-TREE-REGISTRY 참조)로 별도 경량 상속을 받고 있어 이 문서의
 > 대상이 아니다 — 이 문서는 `_composeExpertPrompt()` 경로(개별 전문가 페르소나
 > 모사)에만 결합된다.
 >
@@ -32,7 +32,7 @@
 
 ## 0. 이 문서의 성격 — 단일출처원칙의 연장
 
-`SP_hierarchy_inheritance_v1_0.md`(K-Public 계열용, H1~H8)와 동일한 원칙을
+`SP_hierarchy_inheritance`(SP-TREE-REGISTRY 참조; K-Public 계열용, H1~H8)와 동일한 원칙을
 공유하되 적용 대상이 다르다: K-Public 상속은 "제도 대변 AI 간 상속"이고,
 이 문서는 "개인 전문가 모사 AI 간 상속"이다(같은 문서 배경 문단 참조 —
 "K-Doctor는 K-Health를 상속하지 않는다"는 구분과 같은 성격). 하지만 캐시

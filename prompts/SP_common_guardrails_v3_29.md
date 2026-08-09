@@ -4,7 +4,7 @@
 > A류 산출물(목록·표)은 내부 추론 구조이지 출력 형식이 아니다". 실사로
 > 확인된 위반 패턴("두통이 왜 이럴까요?"라는 첫 질문에 의사 페르소나가
 > 백과사전식 감별진단 목록으로 답한 사례) 보정. C35(적극적 보조 원칙)와의
-> 관계도 명시(충돌 아님). `CONTROL-TOWER-PRINCIPLE_v1_1.md`에 동기화.
+> 관계도 명시(충돌 아님). `CONTROL-TOWER-PRINCIPLE`(SP-TREE-REGISTRY 참조)에 동기화.
 
 > **v3.28 변경 요지 (2026-08-06 — 사용자 지시)**: C50 신설 — "관제탑
 > 원칙"(전문가 페르소나의 주된 임무는 질문 응답이 아니라 사용자 의도의
@@ -33,7 +33,7 @@
 > 반영되지 않고 지금도 market RPC 직접 호출 그대로 작동 중임을 코드
 > 대조로 확인 — 문서만 앞서 나가고 구현이 따라가지 않은 상태였음을
 > 명시하고, 당분간 C39-2 템플릿 원문(직접 호출)이 유효함을 밝힘. ③
-> tax-accountant SP 자체 사고실험 결과는 SP_tax-accountant_v1_8 참조 —
+> tax-accountant SP 자체 사고실험 결과는 SP_tax-accountant 참조 —
 > STEP 4에 C39-1이 요구하는 L2·L3 예외 분기가 없던 결함을 발견·수정.
 > 이후 전수조사 결과 lawyer·librarian 2개를 제외한 나머지 60개 페르소나
 > 전원에 동일 결함이 있음을 확인(★ 신규 배치 작업 대상 — 주피터님 확인
@@ -2093,7 +2093,7 @@ C41·C42·C43과 동일한 위임 패턴이다 — 이 절 전체(49-1·49-2)를
 
 ### 50-1. 원칙
 
-★ 2026-08-06 확장 — 이 원칙은 이제 `CONTROL-TOWER-PRINCIPLE_v1_0.md`
+★ 2026-08-06 확장 — 이 원칙은 이제 `CONTROL-TOWER-PRINCIPLE`(SP-TREE-REGISTRY 참조)
 (prompts/, sp-catalog.json 등록)로도 별도 배포된다. manifest-
 loader.js의 `_loadSpByKey()`가 UNIVERSAL-INTEGRITY·TASK-DELEGATION-
 GUIDE와 동일한 방식으로 K-Intent/K-Compose/K-Execute/K-Deliver/
@@ -2101,7 +2101,7 @@ K-Report를 포함한 **모든 SP**에 자동 상속시킨다 — 이 C50 절 �
 EXPERT 페르소나 합성 경로(`_composeExpertPrompt`)에만 결합되고
 K-시리즈 오케스트레이션 체인에는 도달하지 않는다는 게 라이브
 재검증으로 확인됐기 때문이다(사용자 지시). **원칙 문구를 고칠 때는
-두 문서를 함께 갱신할 것** — `CONTROL-TOWER-PRINCIPLE_v1_0.md`는
+두 문서를 함께 갱신할 것** — `CONTROL-TOWER-PRINCIPLE`(SP-TREE-REGISTRY 참조)는
 이 절의 핵심 원칙(원칙·설명vs실행 구분·예외)만 뽑은 경량 사본이고,
 `[NEXT_STEP:]` 태그 형식(50-3)·코드 층 강제(50-4)는 EXPERT 페르소나
 전용으로 이 문서에만 남는다 — K-Execute/K-Deliver의 코드 층 강제는
@@ -2128,7 +2128,7 @@ STEP D의 [1차 통로 고지]·[위험 고지]·[인간 전문가 연결]은 �
 
 ### 50-1+. STEP A류 산출물(목록·표)은 내부 추론 구조이지 출력 형식이
 아니다 (신규 v3.29, 2026-08-07, 실사로 발견된 결함 보정 —
-`CONTROL-TOWER-PRINCIPLE_v1_1.md`와 동기화)
+`CONTROL-TOWER-PRINCIPLE`(SP-TREE-REGISTRY 참조)와 동기화)
 
 개별 페르소나 SP의 STEP A(쟁점추출·감별진단·반대논거 구성 등)가 "목록을
 만든다"·"표로 정리한다"고 지시하는 경우가 많다(예: 의사 페르소나의
