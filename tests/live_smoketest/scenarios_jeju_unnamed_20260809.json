@@ -1,0 +1,582 @@
+[
+  {
+    "no": 1,
+    "utterance": "종합소득세 신고 기간이 언제까지인지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주세무서",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주세무서 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 2,
+    "utterance": "이혼 소송을 준비하려고 하는데 어디서 접수하나요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주지방법원",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주지방법원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 3,
+    "utterance": "고소장을 접수하고 싶은데 어디로 가야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주지방검찰청",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주지방검찰청 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 4,
+    "utterance": "112 신고 대신 직접 방문 상담하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주지방경찰청",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주지방경찰청 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 5,
+    "utterance": "산재보험 처리가 되는지 확인하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 근로복지공단 제주지사",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 근로복지공단 제주지사 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 6,
+    "utterance": "건강검진 대상자인지 확인하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 국민건강보험공단 제주지사",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 국민건강보험공단 제주지사 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 7,
+    "utterance": "국민연금 보험료가 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 국민연금공단 제주지역본부",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 국민연금공단 제주지역본부 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 8,
+    "utterance": "병역 신체검사 일정이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주지방병무청",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주지방병무청 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 9,
+    "utterance": "해외직구 물건이 통관에 걸렸어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주세관",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주세관 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 10,
+    "utterance": "국가유공자 등록을 도와드리고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주보훈청",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주보훈청 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 11,
+    "utterance": "태풍 특보를 실시간으로 확인하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주지방기상청",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 제주지방기상청 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 12,
+    "utterance": "인구총조사 관련 문의드립니다",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 통계청 제주사무소",
+    "static_verdict": "N/A",
+    "basis": "국가기관 — 통계청 제주사무소 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 13,
+    "utterance": "이번 태풍 대비 재난안전 대책이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 도민안전건강실",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 도민안전건강실 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 14,
+    "utterance": "소상공인 지원 정책이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 경제활력국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 경제활력국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 15,
+    "utterance": "기초생활수급 신청 자격이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 복지가족국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 복지가족국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 16,
+    "utterance": "탄소중립 정책이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 기후환경국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 기후환경국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 17,
+    "utterance": "대중교통 노선 관련해서 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 교통항공국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 교통항공국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 18,
+    "utterance": "문화예술 지원사업이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 문화체육교육국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 문화체육교육국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 19,
+    "utterance": "숙박업 등록 절차가 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 관광교류국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 관광교류국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 20,
+    "utterance": "축산 관련 지원사업이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 농축산식품국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 농축산식품국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 21,
+    "utterance": "어업 지원 정책이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 해양수산국",
+    "static_verdict": "N/A",
+    "basis": "도청 L2 — 해양수산국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 22,
+    "utterance": "주정차 단속 이의신청 하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주시 안전교통국",
+    "static_verdict": "N/A",
+    "basis": "시청 국 — 제주시 안전교통국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 23,
+    "utterance": "장애인복지 지원이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주시 복지위생국",
+    "static_verdict": "N/A",
+    "basis": "시청 국 — 제주시 복지위생국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 24,
+    "utterance": "전통시장 활성화 지원사업이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주시 경제일자리국",
+    "static_verdict": "N/A",
+    "basis": "시청 국 — 제주시 경제일자리국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 25,
+    "utterance": "생활체육 시설 이용이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 서귀포시 문화관광체육국",
+    "static_verdict": "N/A",
+    "basis": "시청 국 — 서귀포시 문화관광체육국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 26,
+    "utterance": "쓰레기 분리배출 규정이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 서귀포시 청정환경국",
+    "static_verdict": "N/A",
+    "basis": "시청 국 — 서귀포시 청정환경국 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 27,
+    "utterance": "신품종 벼 시험재배 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 농업기술원",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 농업기술원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 28,
+    "utterance": "감염병 진단 검사를 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 보건환경연구원",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 보건환경연구원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 29,
+    "utterance": "가축전염병 방역 관련 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 축산생명연구원",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 축산생명연구원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 30,
+    "utterance": "구급차 출동 관련 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 소방안전본부",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 소방안전본부 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 31,
+    "utterance": "한라산 탐방로 특별 인허가가 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 세계유산본부",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 세계유산본부 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 32,
+    "utterance": "책 대출하고 열람실도 이용하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도 공공도서관",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 제주특별자치도 공공도서관 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 33,
+    "utterance": "생활안전 순찰 관련 문의드려요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 자치경찰단",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 자치경찰단 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 34,
+    "utterance": "우리 동네 급수가 중단됐어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 상하수도본부",
+    "static_verdict": "N/A",
+    "basis": "직속기관 — 상하수도본부 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 35,
+    "utterance": "아이돌보미를 구하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도 아이돌봄광역지원센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도 아이돌봄광역지원센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 36,
+    "utterance": "어린이집 급식 위생 점검을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주 어린이급식관리지원센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주 어린이급식관리지원센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 37,
+    "utterance": "국제회의 시설을 대관하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주국제컨벤션센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주국제컨벤션센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 38,
+    "utterance": "초기 창업기업 발굴 프로그램이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주창조경제혁신센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주창조경제혁신센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 39,
+    "utterance": "소상공인 신용보증서를 발급받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주신용보증재단",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주신용보증재단 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 40,
+    "utterance": "영화 촬영지 지원을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주영상문화산업진흥원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주영상문화산업진흥원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 41,
+    "utterance": "해상풍력발전단지 조성사업이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주에너지공사",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주에너지공사 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 42,
+    "utterance": "소상공인 경영 지원을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주경제통상진흥원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주경제통상진흥원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 43,
+    "utterance": "4·3 희생자 신고 지원을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주4·3평화재단",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주4·3평화재단 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 44,
+    "utterance": "고압산소치료를 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주의료원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주의료원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 45,
+    "utterance": "지역 정책연구 자료가 필요해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주연구원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주연구원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 46,
+    "utterance": "문화예술 공모사업에 지원하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주문화예술재단",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주문화예술재단 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 47,
+    "utterance": "외국어 학습비 지원을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주평생교육장학진흥원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주평생교육장학진흥원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 48,
+    "utterance": "국공립 어린이집 위탁 운영이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도사회서비스원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도사회서비스원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 49,
+    "utterance": "감귤 가공 관련 사업이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도개발공사",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도개발공사 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 50,
+    "utterance": "장애인 전문체육 지원이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도장애인체육회",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도장애인체육회 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 51,
+    "utterance": "전국체전 참가 지원이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도체육회",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도체육회 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 52,
+    "utterance": "관광사업체 회원 지원이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도관광협회",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도관광협회 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 53,
+    "utterance": "관광 마케팅 프로모션이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주관광공사",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주관광공사 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 54,
+    "utterance": "지역 중소기업 기술지원을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주테크노파크",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주테크노파크 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 55,
+    "utterance": "성평등 정책 연구자료가 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주여성가족연구원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주여성가족연구원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 56,
+    "utterance": "마을공동체 사업 공모에 지원하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주마을만들기종합지원센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주마을만들기종합지원센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 57,
+    "utterance": "응급의료센터 운영시간이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 서귀포의료원",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 서귀포의료원 (기관명 미언급, 실제 등록 키워드 기반)"
+  },
+  {
+    "no": 58,
+    "utterance": "도시재생 뉴딜사업 지원이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "제주 공공기관 미언급(상황서술) 시나리오 — 제주특별자치도 도시재생지원센터",
+    "static_verdict": "N/A",
+    "basis": "출자출연기관 — 제주특별자치도 도시재생지원센터 (기관명 미언급, 실제 등록 키워드 기반)"
+  }
+]
