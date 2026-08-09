@@ -42,7 +42,13 @@ const GATE_SYS_PROMPT_HEAD =
 // (국어/수학/영어/과학/사회/체육/미술) — 음악처럼 리프가 세부장르별로만
 // 쪼개져 있어 마땅한 초등 catch-all 리프가 없는 과목은 일단 제외했다
 // (필요해지면 그때 재검토).
-const LEAF_SYNONYMS = {
+// 2026-08-09 export 추가(행동 변화 없음) — tests/live_smoketest/dump_leaves.mjs가
+// 이 파일을 재구현하지 않고 그대로 import해서 실사 검증 메뉴를 만들 수 있게
+// 한다. subject_gate_live_smoketest.py가 dump_leaves.mjs를 거쳐 재구성하던
+// 메뉴에 이 동의어 보강이 빠져 있었음(§professor-ct 라이브 검증 세션에서
+// 발견) — production과 하네스가 다른 메뉴로 채점하면 K-12 어휘 케이스에서
+// 특히 결과가 왜곡된다.
+export const LEAF_SYNONYMS = {
   'professor-korean':             ['국어', '받아쓰기', '맞춤법', '한글', '초등 국어', '글쓰기 기초'],
   'professor-math':               ['수학', '산수', '구구단', '덧셈', '뺄셈', '곱셈', '나눗셈', '초등 수학'],
   'professor-english':            ['영어', '알파벳', '파닉스', '영어 기초', '초등 영어'],
@@ -52,7 +58,7 @@ const LEAF_SYNONYMS = {
   'professor-finearts':           ['미술', '초등 미술', '그리기'],
 };
 
-function _leafMenuLine(leaf) {
+export function _leafMenuLine(leaf) {
   const syn = LEAF_SYNONYMS[leaf.id];
   return syn ? `- ${leaf.id}: ${leaf.label} (${syn.join('·')} 포함)` : `- ${leaf.id}: ${leaf.label}`;
 }

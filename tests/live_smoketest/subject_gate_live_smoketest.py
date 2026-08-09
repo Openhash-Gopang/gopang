@@ -85,7 +85,12 @@ def get_leaf_candidates(roots):
 
 
 def build_gate_system_prompt(leaves):
-    menu = "\n".join(f"- {l['id']}: {l['label']}" for l in leaves)
+    # 2026-08-09 수정 — dump_leaves.mjs가 이제 subject-gate.js._leafMenuLine()을
+    # 그대로 호출해 만든 menuLine(LEAF_SYNONYMS 보강 포함)을 내려준다. 여기서
+    # "- id: label"로 재조립하지 않고 그 필드를 그대로 쓴다 — 이 하네스가
+    # production과 다른(더 빈약한) 메뉴로 채점하던 gap을 없앤다(K-12 어휘
+    # 동의어가 없으면 교과목 발화 검증 자체가 왜곡됨).
+    menu = "\n".join(l["menuLine"] for l in leaves)
     return GATE_SYS_PROMPT_HEAD + menu
 
 
@@ -140,6 +145,20 @@ def grade(scenario, leaf_ids, raw_text, call_err):
         return "LIVE-FAIL", f"JSON 파싱 실패 — raw: {(raw_text or '')[:200]}"
 
     expected = scenario["expected_leaf_id"]
+
+    # 2026-08-09 추가 — expected_leaf_id가 null인 시나리오(대응하는 리프가
+    # 레지스트리에 아예 없는 "완전공백" 과목 검증용, 초중고 교과-전공 매칭
+    # 세션에서 신설)는 모델이 id:null을 내는 것 자체가 정답이다 — 후보 중
+    # 억지로 하나를 고르지 않고 상위 personaId(professor)로 안전하게
+    # 폴백하는 게 production subject-gate.js의 의도된 동작이기 때문.
+    # 기존 분기는 chosen이 None이면 expected 값과 무관하게 무조건 FAIL로
+    # 쳐서 이 케이스를 표현할 수 없었다.
+    if expected is None:
+        if chosen is None:
+            return "LIVE-PASS", "완전공백 과목 — id:null 정상 폴백(기대한 그대로)"
+        if chosen in leaf_ids:
+            return "LIVE-NEEDS-REVIEW", f"완전공백 과목인데 리프를 억지로 고름: {chosen} — 틀린 리프를 자신있게 내주는 것보다는 낫지만 사람 확인 필요"
+        return "LIVE-FAIL", f"화이트리스트 밖 id를 지어냄: {chosen}"
 
     if chosen is None:
         return "LIVE-FAIL", f"id:null 응답 (기대: {expected}) — 후보 중 확신 있는 리프를 못 골랐음"
