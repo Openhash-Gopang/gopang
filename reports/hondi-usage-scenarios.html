@@ -134,6 +134,18 @@
     color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
     padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
   }
+  /* 2026-08-11 신설 — 이 시나리오는 ROADMAP(우리 스택에서 곧 만들 수 있는
+     기능)보다 한 단계 더 먼 얘기다. 현행 여권법이 요구하는 대면 지문·얼굴
+     확인 자체를 없애는 것이고, "디지털 여권"은 어느 나라 출입국심사대도
+     아직 인정하지 않는 개념이다 — 우리가 코드를 완성한다고 되는 일이
+     아니라 여권법 개정과 ICAO 국제표준 변화가 함께 필요하다. ROADMAP과
+     섞어 쓰면 "곧 될 것"으로 오인되므로 별도 뱃지로 분리한다.
+  */
+  .badge-vision{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#5b4a8a; background:#eeeaf6; border:1px solid #d3c7ea;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
 
   /* ── 이용 시나리오 통합 서브탭 (2026-08-11 신설) ── */
   .scenario-tabbar-wrap{
@@ -164,6 +176,7 @@
   <nav class="scenario-tabbar" role="tablist" aria-label="혼디 이용 시나리오 목록">
     <button type="button" class="scenario-tab" data-scenario="bankruptcy" role="tab">개인 · 개인파산 자동화</button>
     <button type="button" class="scenario-tab" data-scenario="business" role="tab">사업체 · 행정 절차 대행</button>
+    <button type="button" class="scenario-tab" data-scenario="passport" role="tab">장기 비전 · 여권 발급</button>
   </nav>
 </div>
 
@@ -626,6 +639,211 @@
 
   <div class="footer-line">
     <span>혼디(Hondi) 홍보 시나리오 — 사업체 행정 절차 대행 · 2026-08-11</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+
+</div>
+
+<div class="scenario-panel" data-scenario="passport">
+
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 홍보 시나리오 · 장기 비전 — 여권 발급</div>
+  <h1 class="doc-title">관공서 창구에서,<br>손바닥 위 1분으로</h1>
+  <p class="doc-sub">
+    개인(개인파산)·사업체(행정 절차) 시나리오에 이어, 혼디가 그리는 가장 먼
+    미래를 여권 발급으로 보여드립니다 — 그리고 왜 이게 가장 먼 미래인지도
+    숨기지 않습니다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-11</b></div>
+    <div>계기<br><b>공공데이터포털 AI 고도화 시범 운영(2026.8.3~)</b></div>
+    <div>예시 사례<br><b>여권 신규(생애 최초) 발급</b></div>
+    <div>성격<br><b>홍보용 장기 비전 시연 · 현행 여권법·국제표준상 실현 불가 단계 포함</b></div>
+  </div>
+
+  <p>
+    개인파산·사업체 시나리오는 "서류를 대신 준비해 대신 접수한다"는, 지금
+    당장 코드로 옮길 수 있는 범위 안의 이야기였습니다. 여권은 다릅니다.
+    여권 발급의 핵심 병목은 서류가 아니라 <b>법이 요구하는 대면 확인
+    그 자체</b>입니다 — 그래서 이 시나리오는 혼디의 스택을 완성한다고
+    실현되는 게 아니라, 여권법 개정과 국제민간항공기구(ICAO) 표준 변화가
+    함께 이뤄져야 하는, 훨씬 더 먼 지점의 비전입니다. 그 전제를 먼저
+    분명히 하고 시작하겠습니다.
+  </p>
+
+  <h2 class="sec"><span class="num">01</span> 지금의 여권 발급, 실제로는 이렇습니다</h2>
+  <p>
+    (생애 최초) 전자여권 발급은 대한민국 여권법상 <b>온라인으로 끝낼 수
+    없습니다.</b> 이미 전자여권을 한 번이라도 발급받은 적이 있는 사람의
+    "재발급"만 정부24 온라인이 가능하고, 첫 발급은 아래 과정을 그대로
+    거쳐야 합니다.
+  </p>
+  <ul class="list">
+    <li>여권용 규격사진 준비 — 6개월 이내 촬영, 3.5×4.5cm, 흰 배경, 정면 무표정. ICAO 국제기준으로 엄격히 검수되어 부적합 시 반려·재촬영</li>
+    <li>신분증, 병역관계서류(만 18~37세 남성), 미성년자는 가족관계증명서·기본증명서·법정대리인 신분증 등 준비</li>
+    <li>거주지 관할 시·군·구청 여권과(또는 외교부 여권센터) <b>사전예약 후 직접 방문</b></li>
+    <li>현장에서 <b>지문·얼굴 대면 촬영</b> — 여권법상 필수 절차, 대리 불가</li>
+    <li>수수료 납부(10년 복수여권 53,000원 등) 후 접수증 수령</li>
+    <li>대기 — 통상 7~10일, 기관·시기에 따라 최대 4~6주</li>
+    <li>발급 후 <b>본인 대면 수령이 원칙</b>(우편 수령도 가능하나 신청 시 별도 절차 필요)</li>
+  </ul>
+  <p>
+    창구 운영시간도 평일 9~18시로 제한적이고, 점심시간(11:20~13:20)엔 교대
+    근무라 대기가 1시간을 넘기기도 합니다. 최소 2번(접수·수령)의 방문이
+    기본값이라는 뜻입니다.
+  </p>
+  <div class="note">
+    이 대면 확인은 "행정 편의" 문제가 아니라 <b>여권법이 명시한 요건</b>입니다.
+    전자여권(ePassport)은 ICAO 국제표준에 따라 얼굴·지문 등 바이오정보를
+    내장한 IC칩이 탑재된 물리적 문서로만 국제적으로 통용됩니다 — 즉 "서류
+    준비를 안 보이게 만드는" 문제가 아니라, <b>법과 국제표준이 요구하는
+    구조 자체</b>가 병목이라는 점에서 개인파산·사업체 시나리오와 근본적으로
+    다릅니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 여권 발급 자동화 · 2026-08-11</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> 혼디가 그리는 미래는 이렇습니다</h2>
+  <p>
+    아래 대화는 전부 <span class="badge-vision">VISION</span> — 오늘 기준
+    코드 한 줄도 존재하지 않는, 법·제도 변화가 먼저 필요한 장기 시나리오입니다.
+    앞선 두 시나리오의 <span class="badge-live">LIVE</span>/<span class="badge-road">ROADMAP</span>
+    표시와 절대 같은 무게로 읽지 말아 주십시오.
+  </p>
+
+  <div class="dialogue">
+
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"혼디야, 여권 신청해 줘."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        PDV(개인데이터금고)에서 ICAO 규격에 맞는 최근 사진을 찾아보겠습니다
+        — 적합한 사진이 없으면 지금 바로 폰 카메라로 촬영해서 배경·표정·
+        조명까지 규격에 맞는지 즉시 검수하겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-vision">VISION</span> 사진 규격 자동검수 자체는
+      이미지 처리 기술로는 어렵지 않습니다. 다만 그 결과를 여권 발급
+      기관이 공식 증빙으로 받아줄지는 전적으로 제도의 문제입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        정부24 연계로 신분증 진위확인, 병역관계서류 등 필요 서류를
+        자동으로 확인·첨부하겠습니다. 여권 발급 신청서도 함께 작성해
+        놓겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-vision">VISION</span> 여기까지는 개인파산·
+      사업체 시나리오와 같은 성격입니다 — 공공데이터포털·정부24 API가
+      열리면 기술적으로는 도달 가능한 영역입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        신청서 접수를 마쳤습니다. 이제 본인 확인 절차입니다 — 정부
+        여권 부서와 실시간으로 연결해, 지금 이 자리에서 폰 카메라로
+        얼굴을 확인하겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-vision">VISION</span> <b>여기가 진짜 장벽입니다.</b>
+      현행 여권법은 지문·얼굴 확인을 반드시 관공서 현장에서, 대면으로
+      받도록 정하고 있습니다. 화상으로 대체하려면 여권법 개정이
+      선행되어야 하며, 혼디가 이 기능을 "만드는" 것과는 완전히 다른
+      차원의 일입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        본인 확인이 끝났습니다. 디지털 여권이 발급됐습니다 — 관공서
+        방문 없이, 손 안의 폰에서 1분 만에 끝났습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-vision">VISION</span> <b>더 큰 장벽입니다.</b>
+      전자여권은 ICAO 표준상 얼굴·지문 정보를 내장한 IC칩이 탑재된
+      물리적 문서로만 전 세계 출입국심사대에서 통용됩니다. "디지털
+      여권"이라는 개념 자체를 아직 어느 나라도 국경에서 인정하지
+      않습니다 — 즉 이 마지막 단계는 대한민국 정부 혼자 결정할 수 있는
+      일도 아니고, 국제표준 자체가 바뀌어야 하는 문제입니다.
+    </div>
+
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 여권 발급 자동화 · 2026-08-11</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
+  <table class="avoid-break cmp-table">
+    <thead><tr><th>기존 (신청자가 직접)</th><th>혼디가 그리는 미래</th></tr></thead>
+    <tbody>
+      <tr><td>사진관에서 여권용 규격사진 촬영</td><td>PDV 사진 재사용 또는 즉석 촬영 + 자동 규격 검수 <span class="badge-vision">VISION</span></td></tr>
+      <tr><td>신분증·병역서류 등을 직접 발급받아 지참</td><td>정부24 연계로 자동 확인·첨부 <span class="badge-vision">VISION</span></td></tr>
+      <tr><td>구청 여권과 사전예약 후 직접 방문 접수</td><td>방문 없이 앱에서 접수 <span class="badge-vision">VISION</span></td></tr>
+      <tr class="highlight"><td><b>현장 지문·얼굴 대면 확인(여권법상 필수)</b></td><td>실시간 화상 확인으로 대체 — <b>여권법 개정 선행 필요</b> <span class="badge-vision">VISION</span></td></tr>
+      <tr class="highlight"><td><b>물리적 여권(IC칩, ICAO 국제표준) 실물 수령</b></td><td>"디지털 여권" 즉시 발급 — <b>국제표준(ICAO) 자체의 변화 필요, 대한민국 정부 단독 결정 불가</b> <span class="badge-vision">VISION</span></td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    강조 표시한 마지막 두 줄이 이 시나리오의 진짜 핵심입니다. 개인파산
+    시나리오의 "면책심문기일 법정 출석", 사업체 시나리오의 "사업주 본인
+    최종 승인"은 혼디가 그 앞뒤를 자동화하고 그 지점만 사람에게 남기면
+    되는 문제였습니다. 여권의 대면 확인·물리적 문서는 성격이 다릅니다 —
+    이건 혼디의 설계 원칙이 아니라 <b>대한민국 여권법과 전 세계가 합의한
+    ICAO 국제표준</b>이 정하고 있는 요건이라, 저희가 아무리 잘 만들어도
+    법과 국제표준이 함께 바뀌지 않으면 그대로 남습니다.
+  </p>
+  <p>
+    그럼에도 이 시나리오를 넣은 이유는, 공공데이터포털 개방이 "서류
+    자동화"에서 끝나지 않고 결국 "신원 확인 방식 자체를 어디까지 디지털로
+    옮길 수 있는가"라는 더 큰 질문으로 이어진다는 걸 보여드리고 싶었기
+    때문입니다. 혼디는 그 질문에 대한 답을 먼저 정해두지 않습니다 — 법과
+    국제표준이 움직이는 만큼만, 정직하게 따라갈 뿐입니다.
+  </p>
+
+  <div class="note warn">
+    <b>※ 안내:</b> 이 시나리오는 대한민국 여권법·외교부 여권안내(passport.go.kr)
+    공식 정보를 바탕으로 구성한 <b>개념 시연</b>이며, 실제 여권 발급 절차나
+    법률 자문을 대체하지 않습니다. <span class="badge-vision">VISION</span>
+    표시가 붙은 항목은 개인파산·사업체 시나리오의
+    <span class="badge-road">ROADMAP</span>(혼디가 자체적으로 개발하면 도달
+    가능한 단계)과 성격이 다릅니다 — 특히 "대면 확인 대체"와 "디지털 여권
+    발급"은 여권법 개정과 ICAO 국제표준 변화가 함께 필요한 영역으로, 혼디의
+    개발 로드맵만으로는 실현될 수 없습니다. 실제 여권 발급은 반드시 외교부
+    여권안내 또는 관할 시·군·구청 여권과를 통해 진행하시기 바랍니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 여권 발급 자동화 · 2026-08-11</span>
     <span>3 / 3</span>
   </div>
 </div>
