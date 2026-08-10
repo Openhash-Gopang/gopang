@@ -73,7 +73,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-law': {
     label: '교수(법학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-law', needsMedicalSafety: false,
-    parentKey: 'professor', // 법학(04) 중계열 아직 미신설 — professor 직속 유지(배치2 범위 밖)
+    parentKey: 'professor-law-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor), // 법학(04) 중계열 아직 미신설 — professor 직속 유지(배치2 범위 밖)
     triggers: ['법학 지도', '법학 교수', '로스쿨 지도'],
   },
   // ── 중계열(2단) 배치2 신설 4개 ─────────────────────────────
@@ -106,7 +106,7 @@ export const PROFESSOR_REGISTRY = {
     key: 'SP_professor-economics', needsMedicalSafety: false,
     // 2026-08-08 배치2: professor 직속 → 경영·경제(03) 중계열로 재소속
     // (배치1 커밋 메시지에서 예고했던 마이그레이션, 이번에 처리)
-    parentKey: 'professor-business-economics',
+    parentKey: 'professor-economics-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-business-economics),
     triggers: ['경제학 지도', '경제학 교수'],
   },
   // ── 소계열(3단, 리프) — 배치1: 수능 5개 교과(국어/수학/영어/한국사/
@@ -126,25 +126,25 @@ export const PROFESSOR_REGISTRY = {
   'professor-history': {
     label: '교수(역사·고고학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-history', needsMedicalSafety: false,
-    parentKey: 'professor-humanities',
+    parentKey: 'professor-history-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-humanities),
     triggers: ['한국사 지도', '세계사 지도', '역사 교수', '고고학 지도'],
   },
   'professor-ethics': {
     label: '교수(철학·윤리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-ethics', needsMedicalSafety: false,
-    parentKey: 'professor-humanities',
+    parentKey: 'professor-ethics-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-humanities),
     triggers: ['철학 지도', '윤리 지도', '생활과 윤리 지도', '윤리와 사상 지도'],
   },
   'professor-politics': {
     label: '교수(정치외교학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-politics', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
+    parentKey: 'professor-politics-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-socialscience),
     triggers: ['정치와 법 지도', '정치외교학 지도', '국제관계 지도'],
   },
   'professor-sociology': {
     label: '교수(사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-sociology', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
+    parentKey: 'professor-sociology-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-socialscience),
     triggers: ['사회문화 지도', '사회학 지도'],
   },
   'professor-geography': {
@@ -156,19 +156,19 @@ export const PROFESSOR_REGISTRY = {
   'professor-physics': {
     label: '교수(물리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-physics', needsMedicalSafety: false,
-    parentKey: 'professor-mathphys',
+    parentKey: 'professor-physics-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-mathphys),
     triggers: ['물리학 지도', '물리 교수'],
   },
   'professor-chemistry': {
     label: '교수(화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-chemistry', needsMedicalSafety: false,
-    parentKey: 'professor-chembio',
+    parentKey: 'professor-chemistry-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-chembio),
     triggers: ['화학 지도', '화학 교수'],
   },
   'professor-biology': {
     label: '교수(생명과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-biology', needsMedicalSafety: false,
-    parentKey: 'professor-chembio',
+    parentKey: 'professor-biology-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-chembio),
     triggers: ['생명과학 지도', '생물 교수'],
   },
   'professor-earthscience': {
@@ -180,7 +180,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-math': {
     label: '교수(수학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-math', needsMedicalSafety: false,
-    parentKey: 'professor-mathphys',
+    parentKey: 'professor-math-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-mathphys),
     triggers: ['수학 지도', '수학 교수'],
   },
   'professor-statistics': {
@@ -193,7 +193,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-business': {
     label: '교수(경영학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-business', needsMedicalSafety: false,
-    parentKey: 'professor-business-economics',
+    parentKey: 'professor-business-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-business-economics),
     triggers: ['경영학 지도', '경영학 교수', 'MBA 지도'],
   },
   'professor-mis': {
@@ -211,7 +211,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-psychology': {
     label: '교수(심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-psychology', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
+    parentKey: 'professor-psychology-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-socialscience),
     triggers: ['심리학 지도', '심리학 교수'],
   },
   'professor-international': {
@@ -223,7 +223,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-computerscience': {
     label: '교수(전산학·컴퓨터공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-computerscience', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
+    parentKey: 'professor-computerscience-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-electrical-computer),
     triggers: ['컴퓨터공학 지도', '전산학 지도', '알고리즘 지도', '코딩테스트 지도'],
   },
   'professor-software': {
@@ -241,7 +241,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-electrical': {
     label: '교수(전기공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-electrical', needsMedicalSafety: false,
-    parentKey: 'professor-electrical-computer',
+    parentKey: 'professor-electrical-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-electrical-computer),
     triggers: ['전기공학 지도', '전기기사 시험 지도'],
   },
   'professor-electronics': {
@@ -253,7 +253,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-mechanical-eng': {
     label: '교수(기계공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-mechanical-eng', needsMedicalSafety: false,
-    parentKey: 'professor-mechanical',
+    parentKey: 'professor-mechanicaleng-series', // 2026-08-10 Tier1 확장 재소속(구 부모: professor-mechanical),
     triggers: ['기계공학 지도', '기계기사 시험 지도'],
   },
   'professor-architecture': {
@@ -1195,5 +1195,661 @@ export const PROFESSOR_REGISTRY = {
     // 정서·심리 상담과는 명확히 구분(임상적 개입 없음).
     parentKey: 'professor-misc-series',
     triggers: ['진로와 직업 지도', '진로교육 지도', '적성검사 해석'],
+  },
+  // ── 중계열(2단) 배치8 신설 15개 + 소계열(3단) 배치8: Tier 1 세부분야 확장
+  // (2026-08-10, 주피터님 지시 — 법학·경제학 등 '표준적으로 알려진 하위분야가
+  // 있는 대분야'를 세분화. 기존 flat 리프(예: professor-law)를 중계열로
+  // 승격하고, 그 아래 표준 하위분야를 소계열로 신설 — 기존 배치2(경영·경제)와
+  // 동일한 '커지면 한 단계 더 쪼갠다' 패턴. 원래 리프는 그대로 남아 중계열
+  // 안에서 '일반/개론' 성격의 소계열로 재소속된다(id 불변, parentKey만 변경).
+  // 게이트가 flat(254개 후보)로 폭증하지 않도록 subject-gate.js를 먼저
+  // 계층형으로 리팩터한 뒤 신설(각 단계 후보 수는 대부분 4~14개로 억제됨).
+  'professor-law-series': {
+    label: '교수(법학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-law-series', needsMedicalSafety: false,
+    parentKey: 'professor',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-constitutionallaw': {
+    label: '교수(헌법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-constitutionallaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['헌법 지도', '기본권 이론 지도'],
+  },
+  'professor-civillaw': {
+    label: '교수(민법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-civillaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['민법 지도', '채권법 지도'],
+  },
+  'professor-criminallaw': {
+    label: '교수(형법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-criminallaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['형법 지도', '형법각론 지도'],
+  },
+  'professor-commerciallaw': {
+    label: '교수(상법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-commerciallaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['상법 지도', '회사법 지도'],
+  },
+  'professor-administrativelaw': {
+    label: '교수(행정법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-administrativelaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['행정법 지도', '행정구제법 지도'],
+  },
+  'professor-civilprocedure': {
+    label: '교수(민사소송법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-civilprocedure', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['민사소송법 지도', '민사집행법 지도'],
+  },
+  'professor-criminalprocedure': {
+    label: '교수(형사소송법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-criminalprocedure', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['형사소송법 지도', '수사절차 지도'],
+  },
+  'professor-internationallaw': {
+    label: '교수(국제법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-internationallaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['국제법 지도', '국제거래법 지도'],
+  },
+  'professor-laborlaw': {
+    label: '교수(노동법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-laborlaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['노동법 지도', '근로기준법 지도'],
+  },
+  'professor-taxlaw': {
+    label: '교수(조세법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-taxlaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['조세법 지도', '세법 지도'],
+  },
+  'professor-iplaw': {
+    label: '교수(지식재산권법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-iplaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['지식재산권법 지도', '특허법 지도'],
+  },
+  'professor-competitionlaw': {
+    label: '교수(경제법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-competitionlaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['경제법 지도', '공정거래법 지도'],
+  },
+  'professor-environmentallaw': {
+    label: '교수(환경법)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-environmentallaw', needsMedicalSafety: false,
+    parentKey: 'professor-law-series',
+    triggers: ['환경법 지도', '환경정책 법제 지도'],
+  },
+  'professor-economics-series': {
+    label: '교수(경제학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-economics-series', needsMedicalSafety: false,
+    parentKey: 'professor-business-economics',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-microeconomics': {
+    label: '교수(미시경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-microeconomics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['미시경제학 지도', '소비자이론 지도'],
+  },
+  'professor-macroeconomics': {
+    label: '교수(거시경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-macroeconomics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['거시경제학 지도', '국민소득 지도'],
+  },
+  'professor-econometrics': {
+    label: '교수(계량경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-econometrics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['계량경제학 지도', '회귀분석 지도'],
+  },
+  'professor-internationaleconomics': {
+    label: '교수(국제경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-internationaleconomics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['국제경제학 지도', '국제무역이론 지도'],
+  },
+  'professor-monetaryeconomics': {
+    label: '교수(화폐금융론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-monetaryeconomics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['화폐금융론 지도', '통화정책 지도'],
+  },
+  'professor-laboreconomics': {
+    label: '교수(노동경제학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-laboreconomics', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['노동경제학 지도', '고용이론 지도'],
+  },
+  'professor-publicfinance': {
+    label: '교수(재정학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-publicfinance', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['재정학 지도', '조세정책 지도'],
+  },
+  'professor-industrialorganization': {
+    label: '교수(산업조직론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-industrialorganization', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['산업조직론 지도', '과점이론 지도'],
+  },
+  'professor-economichistory': {
+    label: '교수(경제사)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-economichistory', needsMedicalSafety: false,
+    parentKey: 'professor-economics-series',
+    triggers: ['경제사 지도', '산업혁명사 지도'],
+  },
+  'professor-physics-series': {
+    label: '교수(물리학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-physics-series', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-mechanicsphysics': {
+    label: '교수(역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-mechanicsphysics', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['고전역학 지도', '뉴턴역학 지도'],
+  },
+  'professor-electromagnetism': {
+    label: '교수(전자기학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-electromagnetism', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['전자기학 지도', '맥스웰방정식 지도'],
+  },
+  'professor-thermalstatphysics': {
+    label: '교수(열및통계역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-thermalstatphysics', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['열역학 지도', '통계역학 지도'],
+  },
+  'professor-quantummechanics': {
+    label: '교수(양자역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-quantummechanics', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['양자역학 지도', '슈뢰딩거방정식 지도'],
+  },
+  'professor-condensedmatter': {
+    label: '교수(고체물리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-condensedmatter', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['고체물리학 지도', '응집물질물리 지도'],
+  },
+  'professor-particlephysics': {
+    label: '교수(입자물리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-particlephysics', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['입자물리학 지도', '표준모형 지도'],
+  },
+  'professor-opticsphysics': {
+    label: '교수(광학(물리))', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-opticsphysics', needsMedicalSafety: false,
+    parentKey: 'professor-physics-series',
+    triggers: ['파동광학 지도', '간섭·회절 지도'],
+  },
+  'professor-math-series': {
+    label: '교수(수학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-math-series', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-algebra': {
+    label: '교수(대수학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-algebra', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['대수학 지도', '군환체 지도'],
+  },
+  'professor-analysis': {
+    label: '교수(해석학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-analysis', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['해석학 지도', '실해석학 지도'],
+  },
+  'professor-geometrytopology': {
+    label: '교수(기하·위상수학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-geometrytopology', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['위상수학 지도', '미분기하학 지도'],
+  },
+  'professor-discretemath': {
+    label: '교수(이산수학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-discretemath', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['이산수학 지도', '조합론 지도'],
+  },
+  'professor-diffeq': {
+    label: '교수(미분방정식)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-diffeq', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['미분방정식 지도', '상미분방정식 지도'],
+  },
+  'professor-probabilitytheory': {
+    label: '교수(확률론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-probabilitytheory', needsMedicalSafety: false,
+    parentKey: 'professor-math-series',
+    triggers: ['확률론 지도', '확률과정 지도'],
+  },
+  'professor-chemistry-series': {
+    label: '교수(화학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-chemistry-series', needsMedicalSafety: false,
+    parentKey: 'professor-chembio',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-organicchemistry': {
+    label: '교수(유기화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-organicchemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chemistry-series',
+    triggers: ['유기화학 지도', '반응기구 지도'],
+  },
+  'professor-inorganicchemistry': {
+    label: '교수(무기화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-inorganicchemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chemistry-series',
+    triggers: ['무기화학 지도', '배위화학 지도'],
+  },
+  'professor-physicalchemistry': {
+    label: '교수(물리화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-physicalchemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chemistry-series',
+    triggers: ['물리화학 지도', '화학열역학 지도'],
+  },
+  'professor-analyticalchemistry': {
+    label: '교수(분석화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-analyticalchemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chemistry-series',
+    triggers: ['분석화학 지도', '정량분석 지도'],
+  },
+  'professor-biochemistry': {
+    label: '교수(생화학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biochemistry', needsMedicalSafety: false,
+    parentKey: 'professor-chemistry-series',
+    triggers: ['생화학 지도', '효소반응 지도'],
+  },
+  'professor-biology-series': {
+    label: '교수(생명과학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biology-series', needsMedicalSafety: false,
+    parentKey: 'professor-chembio',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-molecularbiology': {
+    label: '교수(분자생물학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-molecularbiology', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['분자생물학 지도', 'DNA복제 지도'],
+  },
+  'professor-cellbiology': {
+    label: '교수(세포생물학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-cellbiology', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['세포생물학 지도', '세포소기관 지도'],
+  },
+  'professor-genetics': {
+    label: '교수(유전학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-genetics', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['유전학 지도', '멘델법칙 지도'],
+  },
+  'professor-ecology': {
+    label: '교수(생태학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-ecology', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['생태학 지도', '생태계 지도'],
+  },
+  'professor-microbiology': {
+    label: '교수(미생물학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-microbiology', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['미생물학 지도', '세균학 지도'],
+  },
+  'professor-physiologybio': {
+    label: '교수(생리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-physiologybio', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['생리학 지도', '항상성 지도'],
+  },
+  'professor-developmentalbiology': {
+    label: '교수(발생생물학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-developmentalbiology', needsMedicalSafety: false,
+    parentKey: 'professor-biology-series',
+    triggers: ['발생생물학 지도', '배아발생 지도'],
+  },
+  'professor-psychology-series': {
+    label: '교수(심리학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-psychology-series', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-clinicalpsychology': {
+    label: '교수(임상심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-clinicalpsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['임상심리학 지도', '이상심리학 지도'],
+  },
+  'professor-counselingpsychology': {
+    label: '교수(상담심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-counselingpsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['상담심리학 지도', '상담이론 지도'],
+  },
+  'professor-developmentalpsychology': {
+    label: '교수(발달심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-developmentalpsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['발달심리학 지도', '인지발달이론 지도'],
+  },
+  'professor-cognitivepsychology': {
+    label: '교수(인지심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-cognitivepsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['인지심리학 지도', '기억이론 지도'],
+  },
+  'professor-socialpsychology': {
+    label: '교수(사회심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-socialpsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['사회심리학 지도', '집단역학 지도'],
+  },
+  'professor-iopsychology': {
+    label: '교수(산업및조직심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-iopsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['산업심리학 지도', '조직행동론 지도'],
+  },
+  'professor-biopsychology': {
+    label: '교수(생물심리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biopsychology', needsMedicalSafety: false,
+    parentKey: 'professor-psychology-series',
+    triggers: ['생물심리학 지도', '신경심리학 지도'],
+  },
+  'professor-sociology-series': {
+    label: '교수(사회학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-sociology-series', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-theoreticalsociology': {
+    label: '교수(이론사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-theoreticalsociology', needsMedicalSafety: false,
+    parentKey: 'professor-sociology-series',
+    triggers: ['사회학이론 지도', '고전사회학이론 지도'],
+  },
+  'professor-stratification': {
+    label: '교수(계층및계급론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-stratification', needsMedicalSafety: false,
+    parentKey: 'professor-sociology-series',
+    triggers: ['사회계층론 지도', '불평등이론 지도'],
+  },
+  'professor-familysociology': {
+    label: '교수(가족사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-familysociology', needsMedicalSafety: false,
+    parentKey: 'professor-sociology-series',
+    triggers: ['가족사회학 지도', '가족구조변화 지도'],
+  },
+  'professor-urbansociology': {
+    label: '교수(도시및지역사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-urbansociology', needsMedicalSafety: false,
+    parentKey: 'professor-sociology-series',
+    triggers: ['도시사회학 지도', '지역공동체 지도'],
+  },
+  'professor-culturalsociology': {
+    label: '교수(문화사회학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-culturalsociology', needsMedicalSafety: false,
+    parentKey: 'professor-sociology-series',
+    triggers: ['문화사회학 지도', '대중문화이론 지도'],
+  },
+  'professor-politics-series': {
+    label: '교수(정치외교학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-politics-series', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-politicaltheory': {
+    label: '교수(정치사상)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-politicaltheory', needsMedicalSafety: false,
+    parentKey: 'professor-politics-series',
+    triggers: ['정치사상 지도', '정치철학 지도'],
+  },
+  'professor-comparativepolitics': {
+    label: '교수(비교정치론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-comparativepolitics', needsMedicalSafety: false,
+    parentKey: 'professor-politics-series',
+    triggers: ['비교정치론 지도', '정치체제비교 지도'],
+  },
+  'professor-internationalpolitics': {
+    label: '교수(국제정치론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-internationalpolitics', needsMedicalSafety: false,
+    parentKey: 'professor-politics-series',
+    triggers: ['국제정치론 지도', '국제관계이론 지도'],
+  },
+  'professor-koreanpolitics': {
+    label: '교수(한국정치론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-koreanpolitics', needsMedicalSafety: false,
+    parentKey: 'professor-politics-series',
+    triggers: ['한국정치론 지도', '한국정당정치 지도'],
+  },
+  'professor-policystudies': {
+    label: '교수(정책학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-policystudies', needsMedicalSafety: false,
+    parentKey: 'professor-politics-series',
+    triggers: ['정책학 지도', '정책결정이론 지도'],
+  },
+  'professor-computerscience-series': {
+    label: '교수(전산학·컴퓨터공학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-computerscience-series', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-datastructures': {
+    label: '교수(자료구조·알고리즘)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-datastructures', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['자료구조 지도', '알고리즘 지도'],
+  },
+  'professor-database': {
+    label: '교수(데이터베이스)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-database', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['데이터베이스 지도', 'SQL 지도'],
+  },
+  'professor-operatingsystems': {
+    label: '교수(운영체제)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-operatingsystems', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['운영체제 지도', '프로세스관리 지도'],
+  },
+  'professor-computernetworks': {
+    label: '교수(컴퓨터네트워크)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-computernetworks', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['컴퓨터네트워크 지도', 'TCP/IP 지도'],
+  },
+  'professor-computerarchitecture': {
+    label: '교수(컴퓨터구조)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-computerarchitecture', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['컴퓨터구조 지도', 'CPU설계 지도'],
+  },
+  'professor-theoryofcomputation': {
+    label: '교수(계산이론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-theoryofcomputation', needsMedicalSafety: false,
+    parentKey: 'professor-computerscience-series',
+    triggers: ['계산이론 지도', '오토마타이론 지도'],
+  },
+  'professor-electrical-series': {
+    label: '교수(전기공학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-electrical-series', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-computer',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-circuittheory': {
+    label: '교수(회로이론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-circuittheory', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-series',
+    triggers: ['회로이론 지도', '키르히호프법칙 지도'],
+  },
+  'professor-powerengineering': {
+    label: '교수(전력공학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-powerengineering', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-series',
+    triggers: ['전력공학 지도', '송배전 지도'],
+  },
+  'professor-electricalmachinery': {
+    label: '교수(전기기기학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-electricalmachinery', needsMedicalSafety: false,
+    parentKey: 'professor-electrical-series',
+    triggers: ['전기기기학 지도', '모터·발전기 지도'],
+  },
+  'professor-mechanicaleng-series': {
+    label: '교수(기계공학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-mechanicaleng-series', needsMedicalSafety: false,
+    parentKey: 'professor-mechanical',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-thermodynamics': {
+    label: '교수(열역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-thermodynamics', needsMedicalSafety: false,
+    parentKey: 'professor-mechanicaleng-series',
+    triggers: ['열역학 지도', '열기관 지도'],
+  },
+  'professor-fluidmechanics': {
+    label: '교수(유체역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-fluidmechanics', needsMedicalSafety: false,
+    parentKey: 'professor-mechanicaleng-series',
+    triggers: ['유체역학 지도', '베르누이방정식 지도'],
+  },
+  'professor-solidmechanics': {
+    label: '교수(고체역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-solidmechanics', needsMedicalSafety: false,
+    parentKey: 'professor-mechanicaleng-series',
+    triggers: ['고체역학 지도', '재료역학 지도'],
+  },
+  'professor-dynamics': {
+    label: '교수(동역학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dynamics', needsMedicalSafety: false,
+    parentKey: 'professor-mechanicaleng-series',
+    triggers: ['동역학 지도', '운동방정식 지도'],
+  },
+  'professor-machinedesign': {
+    label: '교수(기계설계)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-machinedesign', needsMedicalSafety: false,
+    parentKey: 'professor-mechanicaleng-series',
+    triggers: ['기계설계 지도', '기계요소설계 지도'],
+  },
+  'professor-history-series': {
+    label: '교수(역사·고고학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-history-series', needsMedicalSafety: false,
+    parentKey: 'professor-humanities',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-koreanhistory': {
+    label: '교수(한국사)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-koreanhistory', needsMedicalSafety: false,
+    parentKey: 'professor-history-series',
+    triggers: ['한국사 지도', '한국사 시대구분 지도'],
+  },
+  'professor-easternhistory': {
+    label: '교수(동양사)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-easternhistory', needsMedicalSafety: false,
+    parentKey: 'professor-history-series',
+    triggers: ['동양사 지도', '중국사 지도'],
+  },
+  'professor-westernhistory': {
+    label: '교수(서양사)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-westernhistory', needsMedicalSafety: false,
+    parentKey: 'professor-history-series',
+    triggers: ['서양사 지도', '유럽사 지도'],
+  },
+  'professor-archaeology': {
+    label: '교수(고고학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-archaeology', needsMedicalSafety: false,
+    parentKey: 'professor-history-series',
+    triggers: ['고고학 지도', '발굴조사 지도'],
+  },
+  'professor-ethics-series': {
+    label: '교수(철학·윤리학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-ethics-series', needsMedicalSafety: false,
+    parentKey: 'professor-humanities',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-metaphysics': {
+    label: '교수(형이상학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-metaphysics', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['형이상학 지도', '존재론 지도'],
+  },
+  'professor-epistemology': {
+    label: '교수(인식론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-epistemology', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['인식론 지도', '지식론 지도'],
+  },
+  'professor-ethicstheory': {
+    label: '교수(윤리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-ethicstheory', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['윤리학이론 지도', '규범윤리학 지도'],
+  },
+  'professor-logic': {
+    label: '교수(논리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-logic', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['논리학 지도', '명제논리 지도'],
+  },
+  'professor-easternphilosophy': {
+    label: '교수(동양철학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-easternphilosophy', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['동양철학 지도', '유교철학 지도'],
+  },
+  'professor-westernphilosophy': {
+    label: '교수(서양철학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-westernphilosophy', needsMedicalSafety: false,
+    parentKey: 'professor-ethics-series',
+    triggers: ['서양철학 지도', '서양철학사 지도'],
+  },
+  'professor-business-series': {
+    label: '교수(경영학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-business-series', needsMedicalSafety: false,
+    parentKey: 'professor-business-economics',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-hrorganization': {
+    label: '교수(인사조직론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-hrorganization', needsMedicalSafety: false,
+    parentKey: 'professor-business-series',
+    triggers: ['인사조직론 지도', '조직행동론 지도'],
+  },
+  'professor-marketing': {
+    label: '교수(마케팅론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-marketing', needsMedicalSafety: false,
+    parentKey: 'professor-business-series',
+    triggers: ['마케팅론 지도', '소비자행동론 지도'],
+  },
+  'professor-operationsmgmt': {
+    label: '교수(생산운영관리)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-operationsmgmt', needsMedicalSafety: false,
+    parentKey: 'professor-business-series',
+    triggers: ['생산운영관리 지도', '품질관리 지도'],
+  },
+  'professor-strategy': {
+    label: '교수(경영전략론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-strategy', needsMedicalSafety: false,
+    parentKey: 'professor-business-series',
+    triggers: ['경영전략론 지도', 'SWOT분석 지도'],
+  },
+  'professor-internationalbusiness': {
+    label: '교수(국제경영론)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-internationalbusiness', needsMedicalSafety: false,
+    parentKey: 'professor-business-series',
+    triggers: ['국제경영론 지도', '해외진출전략 지도'],
   },
 };

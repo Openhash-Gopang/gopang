@@ -1,0 +1,8 @@
+[
+  {"id": "tier1-01-microeconomics", "expert_key": "professor-microeconomics"},
+  {"id": "tier1-02-constitutionallaw", "expert_key": "professor-constitutionallaw"},
+  {"id": "tier1-03-organicchemistry", "expert_key": "professor-organicchemistry"},
+  {"id": "tier1-04-law-series-fallback", "expert_key": "professor-law-series"},
+  {"id": "tier1-05-quantummechanics", "expert_key": "professor-quantummechanics"},
+  {"id": "tier1-06-westernphilosophy", "expert_key": "professor-westernphilosophy"}
+]

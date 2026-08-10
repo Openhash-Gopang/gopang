@@ -10,15 +10,17 @@
  * 지어내지 않도록 설계돼 있어, 만들어내지도 않는다).
  *
  * 이 모듈은 handleExpertTag가 1단계에서 professor/physician/lawyer 같은
- * "리프 아닌" personaId를 받았을 때, 그 아래 실제 리프 후보 목록을
- * getLeafDescendants()로 모으고, 저지연 경량 모델(deepseek-v4-flash,
+ * "리프 아닌" personaId를 받았을 때, getConsultableChildren()으로 그
+ * 직계 자식 후보만 모아 저지연 경량 모델(deepseek-v4-flash,
  * report-utils.js summarizeHandoffContext6W와 동일 패턴)로 사용자 발화를
- * 그 후보 중 하나에 재분류한다. 실패(네트워크 오류, 파싱 실패, 후보
- * 0개)하면 원래 personaId로 안전하게 폴백한다 — 사용자 흐름을 절대
- * 막지 않는다.
+ * 그 후보 중 하나에 재분류하고, 선택된 자식이 또 자식을 가지면(=아직
+ * 리프가 아니면) 같은 방식으로 한 단계 더 내려간다(refineToLeaf, 2026-08-10
+ * flat→계층형 리팩터 — 사유는 아래 refineToLeaf 주석 참고). 실패(네트워크
+ * 오류, 파싱 실패, 후보 0개)하면 그 단계의 personaId로 안전하게 폴백한다 —
+ * 사용자 흐름을 절대 막지 않는다.
  */
 import { CFG } from '../core/config.js';
-import { EXPERT_REGISTRY, getLeafDescendants } from './expert-registry.js';
+import { EXPERT_REGISTRY, getConsultableChildren } from './expert-registry.js';
 
 // 2026-08-10 개정 — "확신이 없으면 null" 지시(2026-08-09에 반례 4건까지
 // 구체적으로 추가했던 버전)를 실사로 재검증한 결과, 완전공백 4과목
@@ -101,79 +103,93 @@ export function _buildGateCandidates(personaId, leaves) {
   return [...leaves, { id: personaId, label: noneLabel }];
 }
 
+// 2026-08-10 리팩터(flat → 계층형) — 배경: professor 트리가 161개
+// 리프로 커지면서(§1-1 K-12 갭 대응 4개 리프 신설 이후), 곧이어 법학·
+// 경제학 등 "표준적으로 알려진 하위분야가 있는 대분야"의 세부 분할
+// (주피터 지시, 90여개 리프 추가 예정)까지 반영하면 flat 게이트가
+// 254개+ 후보를 한 프롬프트에 다 욱여넣게 된다 — 이미 162개 시점에서
+// max_tokens 1000→1500 재상향이 있었던 걸 감안하면 토큰 소진·혼동성
+// 저하가 사실상 확정적이다. 재구조화: 한 번의 호출로 전체 리프
+// 후보를 다 보여주는 대신, EXPERT_REGISTRY의 parentKey 트리를 한
+// 단계씩(직계 자식만) 내려가며 여러 번 작은 게이트를 돈다 — 각 단계의
+// 후보 수는 그 노드의 직계 자식 수(현재 대부분 4~14개, 최악 케이스도
+// 30개 미만)로 억제된다. §CATALOG-EXPERT professor 대분야를 여러
+// 중계열/소계열로 나눈 기존 설계(§2-4~§2-7)와 동일한 "커지면 한 단계
+// 더 쪼갠다" 원칙을 라우팅 로직에도 그대로 적용한 것.
+function _gateOneLevel(personaId, candidates, userText) {
+  return (async () => {
+    try {
+      const menu = candidates.map(_leafMenuLine).join('\n');
+      const res = await fetch(CFG.endpoint + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model:       'deepseek-v4-flash',
+          // 2026-08-09 수정(60→1000), 2026-08-10 재상향(1000→1500) — flat
+          // 162후보 시절 실사로 굳어진 값. 계층형 전환으로 단계당 후보 수가
+          // 크게 줄었으니(대부분 4~14개) 이론상 더 낮춰도 되지만, 실사
+          // 재검증 전까지는 보수적으로 유지한다 — 낮췄다가 또 빈 응답이
+          // 재발하는 걸 이전 세션에서 이미 3차례 겪었다(§1-1).
+          max_tokens:  1500,
+          temperature: 0.0,
+          stream:      false,
+          messages: [
+            { role: 'system', content: GATE_SYS_PROMPT_HEAD + menu },
+            { role: 'user',   content: (userText || '').slice(0, 2000) },
+          ],
+        }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const raw  = data.choices?.[0]?.message?.content || '{}';
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      const chosenId = parsed?.id;
+
+      // 화이트리스트 검증 — 이 단계 후보 목록(직계 자식 + "해당 없음")에
+      // 실제로 있는 id만 채택. "해당 없음"을 고르면 chosenId===personaId.
+      if (chosenId && candidates.some(c => c.id === chosenId) && EXPERT_REGISTRY[chosenId]) {
+        return chosenId;
+      }
+      return personaId;
+    } catch (e) {
+      console.warn('[SubjectGate] 과목 게이트 실패(무시 — 이 단계 personaId로 폴백):', e.message);
+      return personaId;
+    }
+  })();
+}
+
 /**
- * personaId 아래에 실제 리프가 둘 이상 있으면(=1단계 라우팅이 뭉뚱그린
- * 상위 직업군일 가능성) 그 발화를 리프 하나로 재분류해 personaId를
- * 정밀화한다. 리프가 하나뿐이거나(=personaId 자신이 곧 리프) 분류
- * 실패 시에는 원래 personaId를 그대로 반환한다.
+ * personaId부터 시작해 EXPERT_REGISTRY의 parentKey 트리를 한 단계씩
+ * (직계 자식만) 내려가며 사용자 발화를 재분류한다 — 각 단계마다 별도
+ * 게이트 호출(직계 자식이 2개 이상일 때만; 1개면 호출 없이 그냥
+ * 내려가고, 0개면 이미 리프이므로 그 자리에서 멈춘다). 어느 단계에서든
+ * "해당 없음"이 선택되거나 게이트가 실패하면 그 단계의 personaId에서
+ * 멈추고 더 내려가지 않는다 — 항상 안전한 상위 노드로 폴백한다는
+ * 원칙은 flat 버전과 동일, 다만 이제 그 "상위 노드"가 트리 중간
+ * 어디든(예: professor-law-series) 될 수 있다.
  *
  * @param {string} personaId - 1단계 라우팅이 낸 EXPERT_REGISTRY 키
  * @param {string} userText  - 이 태그를 유발한 사용자 발화 원문
  * @returns {Promise<string>} 정밀화된(또는 변경 없는) personaId
  */
 export async function refineToLeaf(personaId, userText) {
-  const leaves = getLeafDescendants(personaId);
+  let currentId = personaId;
+  const MAX_DEPTH = 6; // parentKey 순환/오설정에 대비한 안전 상한 — 현재 트리는 최대 4단계
 
-  // 리프가 하나뿐이면(=personaId 자신이 리프이거나, 자식이 정확히
-  // 하나) 이미 정밀하다 — 게이트를 돌 필요 없음.
-  if (leaves.length <= 1) return personaId;
+  for (let depth = 0; depth < MAX_DEPTH; depth++) {
+    const children = getConsultableChildren(currentId);
 
-  // 2026-08-10 추가 — 실제 리프 후보 뒤에 "해당 없음"(=personaId 자신)을
-  // 정식 후보로 덧붙인다. 상세 배경은 위 GATE_SYS_PROMPT_HEAD 주석 참고.
-  const candidates = _buildGateCandidates(personaId, leaves);
+    if (children.length === 0) return currentId; // currentId 자신이 리프
+    if (children.length === 1) { currentId = children[0].id; continue; } // 게이트 호출 없이 통과
 
-  try {
-    const menu = candidates
-      .map(_leafMenuLine)
-      .join('\n');
-    const res = await fetch(CFG.endpoint + '/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model:       'deepseek-v4-flash',
-        // 2026-08-09 수정(60→1000, 실사로 발견된 결함) — subject_gate_live_smoketest.py
-        // 실사 검증 결과, deepseek-v4-flash가 reasoning_content(사고 과정)에
-        // 토큰을 먼저 쓰고 최종 답변(content)을 나중에 내는 방식이라 60으로는
-        // 사고 과정만으로 소진되어 content가 빈 문자열로 오는 경우가 대부분이었다
-        // (60에서 거의 전멸 → 500에서 35/38 PASS, 그중 2건은 500도 부족해 여전히
-        // 빈 응답). 기본이 non-thinking 계열 모델이라 매 호출이 이 상한까지
-        // 차는 게 아니라 실제 필요한 만큼만 쓰므로, 토큰 비용 증가는 크지 않다는
-        // 전제로 여유 있게 1000으로 올린다.
-        // 2026-08-10 재상향(1000→1500) — K-12 리프 신설로 후보가 158→162개로
-        // 늘면서 프롬프트가 더 길어졌고, reasoning_content_len이 3700~3900대까지
-        // 올라가는 케이스가 실사에서 다시 나타나 1000이 또 부족해졌다(그새
-        // k12-sg-16-music-GAP·k12-sg-22-compound-AMBIG가 빈 응답으로 재발).
-        // 후보가 늘어날수록 이 문제가 반복될 걸 감안해 여유를 더 둔다.
-        max_tokens:  1500,
-        temperature: 0.0,
-        stream:      false,
-        messages: [
-          { role: 'system', content: GATE_SYS_PROMPT_HEAD + menu },
-          { role: 'user',   content: (userText || '').slice(0, 2000) },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const raw  = data.choices?.[0]?.message?.content || '{}';
-    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    const chosenId = parsed?.id;
+    const candidates = _buildGateCandidates(currentId, children);
+    const chosenId = await _gateOneLevel(currentId, candidates, userText);
 
-    // 화이트리스트 검증 — 후보 목록(리프 + "해당 없음")에 실제로 있는
-    // id만 채택. "해당 없음"을 고르면 chosenId===personaId이므로 이
-    // 분기를 그대로 타면서 결과적으로 personaId를 반환한다 — 별도
-    // 분기 불필요. 모델이 후보에 없는 id를 지어내거나 null을 낸
-    // 경우(방어적 안전망, 이제는 정상 경로가 아님)에도 동일하게
-    // personaId로 폴백한다.
-    if (chosenId && candidates.some(l => l.id === chosenId) && EXPERT_REGISTRY[chosenId]) {
-      if (chosenId !== personaId) {
-        console.info('[SubjectGate] 리프 정밀화:', personaId, '→', chosenId);
-      }
-      return chosenId;
+    if (chosenId === currentId) return currentId; // "해당 없음" 또는 실패 폴백 — 더 안 내려감
+    if (chosenId !== currentId) {
+      console.info('[SubjectGate] 리프 정밀화:', currentId, '→', chosenId);
     }
-    return personaId;
-  } catch (e) {
-    console.warn('[SubjectGate] 과목 게이트 실패(무시 — 상위 personaId로 폴백):', e.message);
-    return personaId;
+    currentId = chosenId;
   }
+  return currentId;
 }
