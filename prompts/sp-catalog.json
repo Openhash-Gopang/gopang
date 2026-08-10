@@ -470,5 +470,9 @@
   "SP_professor-secretarial": "SP_professor-secretarial_v1_0.md",
   "SP_professor-generalscience": "SP_professor-generalscience_v1_0.md",
   "SP_professor-medicalscience": "SP_professor-medicalscience_v1_0.md",
-  "SP_professor-beautyart": "SP_professor-beautyart_v1_0.md"
+  "SP_professor-beautyart": "SP_professor-beautyart_v1_0.md",
+  "SP_professor-generalmusic": "SP_professor-generalmusic_v1_0.md",
+  "SP_professor-classicalchinese": "SP_professor-classicalchinese_v1_0.md",
+  "SP_professor-generalpractical": "SP_professor-generalpractical_v1_0.md",
+  "SP_professor-careereducation": "SP_professor-careereducation_v1_0.md"
 }
