@@ -1,4 +1,4 @@
-/// <reference path="../pb_data/types.d.ts" />
+﻿/// <reference path="../pb_data/types.d.ts" />
 // ── 2026-08-10 신설: GDC 충전 자동화(방식 A 오픈뱅킹 폴링 + 방식 B PG
 // 가상계좌 웹훅) 동시 지원을 위한 charge_requests 스키마 확장.
 //
@@ -18,7 +18,7 @@
 //                        방식 A(매칭코드) 건에서는 항상 빈 값.
 migrate((db) => {
   const dao = new Dao(db);
-  const collection = dao.findCollectionByNameOrId("chrg0000000001");
+  const collection = dao.findCollectionByNameOrId("charge_requests");
 
   collection.schema.addField(new SchemaField({
     "system": false,
@@ -75,7 +75,7 @@ migrate((db) => {
   return dao.saveCollection(collection);
 }, (db) => {
   const dao = new Dao(db);
-  const collection = dao.findCollectionByNameOrId("chrg0000000001");
+  const collection = dao.findCollectionByNameOrId("charge_requests");
 
   ["channel", "confirmed_by", "external_tx_id", "virtual_account_no"].forEach((name) => {
     const field = collection.schema.getFieldByName(name);
