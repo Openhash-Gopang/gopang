@@ -543,6 +543,9 @@ const GWP_REGISTRY = [
       // ★ 2026-08-11 추가 — 위생점검 실행형 기능(관할 보건소 조회,
       // /gov/sigungu-dept-resolve 첫 실사용 연결)에 맞춰 보강.
       '위생점검 일정','위생점검 신청','관할 보건소','우리 가게 위생',
+      // ★ 2026-08-11 추가 — 고객 리뷰 대응 실기능(seller_reviews 신설,
+      // handleReviewList/ReplyDraft/ReplySubmit) 신설에 맞춰 보강.
+      '고객 리뷰','리뷰 대응','리뷰 답글','악성 리뷰','리뷰 관리',
     ],
   },
 

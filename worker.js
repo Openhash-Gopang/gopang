@@ -2576,6 +2576,169 @@ async function handleMarketingPlan(request, url, env, corsHeaders) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 고객 리뷰 대응(Review Response) — 2026-08-11 신설
+// (사업자 티어 미비 기능 4/4, 착수 시점 기준 마지막). 이전엔 실제 리뷰
+// 저장소 자체가 없었다 — kmarket_seller_template.html의 SELLER_DATA.reviews는
+// AI 생성 사이트 템플릿에 정적으로 박히는 값일 뿐, 고객이 실제로 리뷰를
+// 남길 방법도, 판매자가 답글을 달 방법도 전혀 없었다(실사로 확인). 이번에
+// seller_products와 동일한 컨벤션으로 seller_reviews L1 컬렉션을 신설하고,
+// 작성·조회·답글 초안(AI)·답글 등록까지 최소 흐름을 연결한다.
+// ═══════════════════════════════════════════════════════════
+
+async function _l1ListSellerReviews(env, guid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`seller_guid='${guid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/seller_reviews/records?filter=${filter}&sort=-created_at&perPage=200`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 seller_reviews 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+// POST /biz/reviews/submit — 고객이 리뷰 작성(공개, 인증 없음 — seller_products
+// 등록과 동일한 신뢰 수준의 MVP. 남용 방지는 향후 과제).
+async function handleReviewSubmit(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const sellerGuid = (body.seller_guid || '').trim();
+  const rating = Number(body.rating);
+  const text = (body.text || '').trim();
+  if (!sellerGuid) return _err(400, 'MISSING_SELLER_GUID', 'seller_guid 필수', corsHeaders);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return _err(400, 'INVALID_RATING', 'rating은 1~5 정수', corsHeaders);
+  if (!text) return _err(400, 'MISSING_TEXT', 'text 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/seller_reviews/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seller_guid: sellerGuid,
+        product_id: (body.product_id || '').trim() || null,
+        reviewer_name: (body.reviewer_name || '').trim().slice(0, 40) || '익명',
+        rating,
+        text: text.slice(0, 2000),
+        created_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, review: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'REVIEW_SUBMIT_FAILED', e.message, corsHeaders);
+  }
+}
+
+// GET /biz/reviews/list?guid=... — 판매자 사이트(공개)와 관리자 대시보드가 공용으로 쓴다
+async function handleReviewList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 파라미터 필수', corsHeaders);
+  try {
+    const items = await _l1ListSellerReviews(env, guid);
+    const rating_dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let sum = 0;
+    for (const r of items) { rating_dist[r.rating] = (rating_dist[r.rating] || 0) + 1; sum += Number(r.rating) || 0; }
+    const avg = items.length ? (sum / items.length) : 0;
+    return new Response(JSON.stringify({
+      source: 'live', guid, reviews: items,
+      stats: { review_count: items.length, rating: avg.toFixed(1) },
+      rating_dist,
+    }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'REVIEW_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+const _REVIEW_REPLY_SYSTEM = `당신은 소상공인 사장님을 대신해 고객 리뷰에 남길 답글 초안을 씁니다.
+규칙: (1) 리뷰에 실제로 쓰인 내용에만 반응하고 없는 사실을 지어내 언급하지 말 것.
+(2) 별점이 낮거나 불만 리뷰면 방어적이지 않게 사과·개선 의지를 담을 것.
+(3) 존댓말, 2~4문장, 과장된 이모지 남발 금지.
+반드시 아래 JSON으로만 답하십시오: {"reply_draft":"문자열"}`;
+
+// GET /biz/reviews/reply-draft?review_id=&seller_guid= — AI가 답글 초안 생성(저장 안 함)
+async function handleReviewReplyDraft(request, url, env, corsHeaders) {
+  const reviewId = (url.searchParams.get('review_id') || '').trim();
+  const sellerGuid = (url.searchParams.get('seller_guid') || '').trim();
+  if (!reviewId || !sellerGuid) return _err(400, 'MISSING_PARAM', 'review_id/seller_guid 필수', corsHeaders);
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  let review;
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/seller_reviews/records/${reviewId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    review = await res.json();
+  } catch (e) {
+    return _err(502, 'REVIEW_FETCH_FAILED', e.message, corsHeaders);
+  }
+  if (review.seller_guid !== sellerGuid) return _err(403, 'NOT_OWNER', '이 리뷰의 소유 판매자가 아닙니다', corsHeaders);
+
+  const userMsg = `[리뷰]\n별점: ${review.rating}/5\n작성자: ${review.reviewer_name || '익명'}\n내용: ${review.text}\n\n위 리뷰에 대한 사장님 답글 초안을 JSON으로 작성하십시오.`;
+
+  let data;
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [{ role: 'system', content: _REVIEW_REPLY_SYSTEM }, { role: 'user', content: userMsg }],
+        max_tokens: 400, stream: false,
+      }),
+    });
+    if (!res.ok) throw new Error(`DeepSeek 호출 실패(HTTP ${res.status})`);
+    data = await res.json();
+  } catch (e) {
+    return _err(502, 'DEEPSEEK_ERROR', e.message, corsHeaders);
+  }
+
+  const raw = data.choices?.[0]?.message?.content || '{}';
+  let parsed;
+  try {
+    parsed = JSON.parse(raw.replace(/^```json\s*|```\s*$/g, '').trim());
+  } catch (e) {
+    return _err(502, 'PARSE_ERROR', 'AI 응답 파싱 실패', corsHeaders);
+  }
+  return new Response(JSON.stringify({ review_id: reviewId, reply_draft: parsed.reply_draft || '' }), { headers: corsHeaders });
+}
+
+// POST /biz/reviews/reply — 판매자가 최종 답글을 등록(AI 초안을 그대로 쓰거나 수정해서)
+async function handleReviewReplySubmit(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const reviewId = (body.review_id || '').trim();
+  const sellerGuid = (body.seller_guid || '').trim();
+  const replyText = (body.reply_text || '').trim();
+  if (!reviewId || !sellerGuid) return _err(400, 'MISSING_PARAM', 'review_id/seller_guid 필수', corsHeaders);
+  if (!replyText) return _err(400, 'MISSING_REPLY_TEXT', 'reply_text 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const checkRes = await fetch(`${L1_DEFAULT}/api/collections/seller_reviews/records/${reviewId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!checkRes.ok) throw new Error(`HTTP ${checkRes.status}`);
+    const review = await checkRes.json();
+    if (review.seller_guid !== sellerGuid) return _err(403, 'NOT_OWNER', '이 리뷰의 소유 판매자가 아닙니다', corsHeaders);
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/seller_reviews/records/${reviewId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply_text: replyText.slice(0, 2000), reply_at: new Date().toISOString() }),
+    });
+    if (!patchRes.ok) throw new Error(`HTTP ${patchRes.status}`);
+    const updated = await patchRes.json();
+    return new Response(JSON.stringify({ ok: true, review: updated }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'REVIEW_REPLY_FAILED', e.message, corsHeaders);
+  }
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -9103,6 +9266,11 @@ export default {
     if (pathname === '/biz/trade-area-analysis') return handleTradeAreaAnalysis(request, url, env, corsHeaders);
     // ── 마케팅 방안 제안 — 사업자 티어 미비기능 2/4 (2026-08-11 신설) ──
     if (pathname === '/biz/marketing-plan') return handleMarketingPlan(request, url, env, corsHeaders);
+    // ── 고객 리뷰 대응 — 사업자 티어 미비기능 4/4 (2026-08-11 신설) ──
+    if (pathname === '/biz/reviews/submit' && request.method === 'POST') return handleReviewSubmit(request, env, corsHeaders);
+    if (pathname === '/biz/reviews/list' && request.method === 'GET') return handleReviewList(request, url, env, corsHeaders);
+    if (pathname === '/biz/reviews/reply-draft' && request.method === 'GET') return handleReviewReplyDraft(request, url, env, corsHeaders);
+    if (pathname === '/biz/reviews/reply' && request.method === 'POST') return handleReviewReplySubmit(request, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
