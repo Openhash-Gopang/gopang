@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>공공데이터포털 개방과 혼디 — 개인파산 자동화 시나리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.78; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  /* ── 이 문서 전용 컴포넌트 ── */
+  .quote{
+    font-family:'Noto Serif KR',serif; font-style:italic;
+    font-size:11px; line-height:1.75; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; margin:10px 0 14px;
+  }
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:90%; }
+  .msg .who{
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:10.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .aside{
+    font-size:9.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .cmp-table td:first-child{ color:var(--ink-soft); }
+  .cmp-table td:last-child{ color:var(--accent); font-weight:500; }
+  .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; color:var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 홍보 시나리오 · 공공데이터포털 AI 고도화 연계</div>
+  <h1 class="doc-title">"질문에 답하는 AI"에서<br>"일을 끝내주는 AI"로</h1>
+  <p class="doc-sub">
+    공공데이터포털 AI 고도화 시범 운영 개시, 혼디에게는 무엇을 의미하는가 —
+    개인파산 및 면책 신청을 예시로.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-10</b></div>
+    <div>계기<br><b>공공데이터포털 AI 고도화 시범 운영(2026.8.3~)</b></div>
+    <div>예시 사례<br><b>개인파산 및 면책 신청</b></div>
+    <div>성격<br><b>홍보용 개념 시연 · 실제 법률 자문 아님</b></div>
+  </div>
+
+  <p>
+    지난 8월 3일, 행정안전부 산하 공공데이터 활용지원센터가 공공데이터포털의
+    AI 고도화 시범 운영을 시작했습니다. 안내문 그대로 옮기면 이렇습니다.
+  </p>
+  <div class="quote">
+    "AI 기반 공공데이터포털 고도화 시범 운영 및 이용 안내 — 시범 운영 기간:
+    2026. 8. 3.(월) ~ 별도 안내 시까지. 주요 개선 기능: 1) AI 대화형 검색
+    서비스, 2) 포털 사용자 환경(UI/UX) 전면 개편."
+  </div>
+  <p>
+    많은 사람들에게 이건 "정부 웹사이트에 챗봇이 하나 더 생겼다"는 소식일
+    겁니다. 하지만 혼디에게는 다른 의미입니다.
+  </p>
+  <p>
+    혼디의 임무는 처음부터 "질문에 답하는 것"이 아니라
+    <b>"사용자가 맡긴 절차적 행정 업무를 실제로 끝내는 것"</b>이었습니다. 그
+    임무를 가로막던 가장 큰 벽 중 하나가, 공공데이터가 사람이 눈으로 읽는
+    웹페이지 형태로만 흩어져 있고 기계가 조합해 쓸 수 있는 형태로 열려 있지
+    않다는 점이었습니다. 포털이 AI 친화적으로 개방될수록, 혼디가 "가져와서
+    보여주는" 단계를 넘어 "가져와서 채우고 제출하는" 단계로 넘어갈 여지가
+    커집니다.
+  </p>
+  <p>
+    말로만 하면 추상적이니, 실제로 가장 절차가 무겁고 고통스러운 사례 하나로
+    보여드리겠습니다 — <b>개인파산 및 면책 신청</b>입니다.
+  </p>
+
+  <h2 class="sec"><span class="num">01</span> 왜 하필 개인파산인가</h2>
+  <p>
+    개인파산은 "빚을 갚을 수 없는 상태"를 법원에 증명해 남은 채무를 면책받는
+    절차입니다. 제도 자체는 채무자를 돕기 위한 것이지만, 정작 그 문 앞에 서는
+    과정이 사람을 지치게 만듭니다.
+  </p>
+  <p>실제로 법원에 제출해야 하는 서류만 봐도 이렇습니다.</p>
+  <ul class="list">
+    <li>가족관계증명서, 혼인관계증명서(이혼내역 포함)</li>
+    <li>주민등록등본·초본(과거 주소 변동 이력 전체, 개명·주민등록번호 변동사항 포함)</li>
+    <li>지방세 세목별 과세증명서 — <b>과거 5년치, 전국 단위로 전체 세목 표시</b></li>
+    <li>소득금액증명원</li>
+    <li>최근 1~3년 계좌 거래내역</li>
+    <li>보험 가입내역 및 예상 해약환급금 조회서</li>
+    <li>진술서(채권자목록·재산목록·현재 생활상황·수입 및 지출에 관한 목록)</li>
+  </ul>
+  <p>
+    사실 대부분의 사람은 이 목록조차 모릅니다. 어떤 서류를, 어느 기관에서,
+    어떤 순서로 떼야 하는지 자체가 일반인에게는 낯선 영역입니다. 정부24에서
+    뗄 수 있는 서류인지, 홈택스인지, 위택스인지조차 구분하기 어렵고, "5년치
+    지방세 세목별 과세증명서를 전국 단위로 발급"해야 한다는 요건은 관련
+    업무를 안 해본 사람이라면 존재조차 모르는 조건입니다. 그래서 대부분은
+    결국 변호사나 법무사에게 수십만~수백만 원을 들여 전체를 위임합니다 —
+    문제는 서류 발급의 "번거로움"이 아니라, <b>절차 자체가 안 보인다는
+    것</b>입니다.
+  </p>
+  <div class="note">
+    신청서 제출부터 면책 결정까지, 전국 평균은 6~9개월로 알려져 있습니다.
+    하지만 <b>제주지방법원은 사정이 다릅니다.</b> 개인회생·파산 사건을
+    처리하는 재판부가 단 3곳뿐입니다(수원회생법원 25곳과 비교하면 현저히
+    적은 수치). 최근 1년간 제주 지역 개인회생 접수 건수가 36.7% 늘었는데도
+    재판부 수는 그대로라, 실제 체감 처리 기간은 <b>1.5~2년</b>까지 늘어지는
+    경우가 드물지 않습니다. 그 시작점부터 이미 지쳐버리는 경우가 많습니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 개인파산 자동화 · 2026-08-10</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> 혼디가 하면 어떻게 달라지는가</h2>
+  <p>
+    아래는 혼디의 실제 작동 원칙(§0 관제탑 원칙 — 사용자에게 절차를 나열하지
+    않고, 정확한 창구를 찾아 대신 실행한다) 그대로 구성한 시나리오입니다.
+  </p>
+
+  <div class="dialogue">
+
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"저 더 이상 빚을 감당할 수가 없어요. 개인파산 신청하고 싶어요."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">확인했습니다. PDV(개인데이터금고)에 기록된 최근 소득과 가족관계 정보를 바로 조회하겠습니다 — 월 소득, 부양가족 수를 다시 여쭤보지 않아도 됩니다.</div>
+    </div>
+    <div class="aside">
+      여기가 핵심입니다. 혼디는 사용자의 가족관계·소득·재산 현황을 PDV를
+      통해 이미 상시로 파악하고 있습니다. "소득이 얼마세요?"라고 묻는 순간
+      이미 한 발 늦은 것 — 채무자가 가장 지쳐 있는 시점에 서류를 꺼내 숫자를
+      불러주게 만드는 그 자체가 마찰입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">조회 결과, 월 소득이 2026년 기준 중위소득 60%(1인 가구 기준 153만 8,543원) 이하로 확인되어 개인파산 신청 자격 요건에 해당하십니다. 바로 진행하겠습니다.</div>
+    </div>
+    <div class="aside">자격 판정까지 사용자는 질문 하나에도 답하지 않았습니다. 여기서부터가 진짜 시작입니다.</div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        법원 제출 서류 8종을 순서대로 준비하겠습니다. PDV로 가족관계·주소이력·소득
+        현황은 이미 파악돼 있지만, 법원은 정부 기관이 직접 발급한 공식 증명서
+        원본을 요구합니다 — 이 부분만은 실제 발급 절차를 거쳐야 합니다.
+        본인인증을 한 번만 해주시면, 정부24·홈택스·위택스 연계로 가족관계증명서,
+        주민등록초본, 최근 5년 지방세 세목별 과세증명서를 자동으로 발급받아
+        놓겠습니다. 계좌 거래내역과 보험 해약환급금 조회서는 은행·보험사
+        소관이라 아직 PDV와 실시간 연동돼 있지 않습니다 — 이 부분만은 인증서
+        로그인 화면을 함께 봐주시면 됩니다.
+      </div>
+    </div>
+    <div class="aside">
+      은행·보험사 데이터가 PDV 밖에 있는 건 기술적 한계가 아니라 아직 연동
+      계약·API가 없기 때문입니다. 마이데이터(MyData) 표준이 이미 있는
+      영역이라, 이 마지막 수기 단계도 머지않아 사라질 예정입니다.
+    </div>
+    <div class="aside" style="margin-top:-8px;">
+      공공데이터포털·정부24 API가 열릴수록, "본인이 직접 발급받아 업로드"해야
+      했던 항목들이 하나씩 "혼디가 대신 발급해 채워 넣는" 항목으로 옮겨갑니다.
+      이게 오늘 발표의 실질적 의미입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        서류가 다 모였습니다. 이제 진술서를 작성하겠습니다. 채권자목록·재산목록·
+        수입 및 지출 목록은 PDV에 축적된 거래내역과 방금 확인된 계좌 내역을
+        바탕으로 이미 채워 넣었습니다. "채무가 발생하게 된 경위"만은 PDV의
+        지출 패턴을 근거로 초안을 먼저 제안해 드리겠습니다 — 법원이 정직함을
+        가장 중요하게 보는 항목이라, 초안을 보시고 사실과 다른 부분만 직접
+        고쳐주시면 됩니다.
+      </div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">파산 및 면책 동시신청서 전체 초안이 완성됐습니다. 관할 법원은 주소지 기준 서울회생법원입니다. 검토해 주시면 전자소송포털로 접수를 도와드리겠습니다.</div>
+    </div>
+    <div class="aside">접수 후, 혼디는 절차를 여기서 손 떼지 않습니다.</div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        접수 완료했습니다. 지금부터는 법원 처리 상황을 대신 확인하며
+        알려드리겠습니다.
+        <ul class="list" style="margin-top:8px;">
+          <li>파산선고까지는 접수일로부터 통상 30일 이내입니다. 결정이 나오면 바로 알려드리겠습니다.</li>
+          <li>파산관재인이 선임되면, 요청하는 소명자료를 놓치지 않도록 요청이 들어오는 즉시 정리해서 안내드리겠습니다.</li>
+          <li><b>면책심문기일이 잡히면, 이 부분만은 반드시 본인이 직접 법정에 출석하셔야 합니다</b> — 이건 혼디가 대신할 수 없는 몇 안 되는 절차입니다. 날짜와 준비사항을 미리 안내드리겠습니다.</li>
+          <li>면책 결정이 나오는 순간, 바로 알려드리겠습니다.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 개인파산 자동화 · 2026-08-10</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
+  <table class="avoid-break cmp-table">
+    <thead><tr><th>기존 (사람이 직접)</th><th>혼디 적용 후</th></tr></thead>
+    <tbody>
+      <tr><td>어떤 서류를 어느 기관에서 떼야 하는지조차 몰라 결국 변호사·법무사에 수십만~수백만 원 위임</td><td>절차를 몰라도 됨 — 혼디가 필요한 서류·기관·순서를 전부 파악해 대신 처리</td></tr>
+      <tr><td>소득·부양가족 등을 스스로 확인해 자격 요건 계산</td><td>PDV에 상시 기록된 데이터로 질문 없이 즉시 판정</td></tr>
+      <tr><td>정부24·홈택스·위택스·은행·보험사 개별 로그인 후 서류 8종 각각 발급</td><td>본인인증 1회 → 발급 가능한 서류는 혼디가 API로 자동 취득(은행·보험사 항목은 마이데이터 연동 확대 시 함께 자동화 예정)</td></tr>
+      <tr><td>진술서·채권자목록·재산목록을 백지에서 직접 작성</td><td>PDV 데이터로 초안 자동 생성, 사용자는 확인·서명만</td></tr>
+      <tr><td>접수 후 절차 진행 상황을 스스로 계속 확인</td><td>파산선고·관재인 조사·면책심문기일을 혼디가 추적해 선제 안내</td></tr>
+      <tr class="highlight"><td><b>면책심문기일 법정 출석</b></td><td>그대로 유지 — 법이 요구하는 본인 출석은 대체 불가능</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    마지막 줄이 중요합니다. 혼디는 모든 걸 대신하겠다고 말하지 않습니다.
+    법이 사람의 물리적 출석을 요구하는 지점은 정확히 남겨두고, <b>그 앞뒤의
+    모든 서류·행정 마찰만 없앱니다.</b> 이게 혼디가 "AI 챗봇"이 아니라 "행정
+    집행 에이전트"라고 스스로를 규정하는 이유입니다.
+  </p>
+  <p>
+    공공데이터포털이 AI 친화적으로 열리는 오늘의 변화는, 위 시나리오에서
+    "혼디가 자동으로 발급받아 채운다"고 적어놓은 부분들이 실제 코드로 옮겨질
+    수 있는 창구가 하나 더 열렸다는 뜻입니다. 혼디는 이미 그 방향으로
+    준비돼 있습니다.
+  </p>
+
+  <div class="note warn">
+    <b>※ 안내:</b> 위 시나리오는 개인파산·면책 절차의 실제 법적 요건(채무자
+    회생 및 파산에 관한 법률, 서울회생법원·전자소송포털 실무 기준)을
+    바탕으로 구성한 <b>개념 시연</b>이며, 실제 법률 자문을 대체하지 않습니다.
+    또한 시나리오에 등장하는 "PDV 연계 자동 발급·자동 진술서 초안 생성"
+    기능은 현재 로드맵 단계이며, 지금 이 순간 실제로 구현되어 서비스되고
+    있는 기능이 아닙니다. 개별 사안은 반드시 법률구조공단 또는 전문
+    변호사·법무사와 상담하시기 바랍니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 개인파산 자동화 · 2026-08-10</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+</body>
+</html>
