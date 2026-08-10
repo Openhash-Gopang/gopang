@@ -2372,6 +2372,51 @@ function _parseAgyVaultStoreTag(raw) {
   } catch (e) { return null; }
 }
 
+// ── AGY_VAULT_STORE 인터셉트 헬퍼 (2026-08-10 신설) ──────────────────
+// handleGovRelay가 반환하는 모든 "최종 응답" data 객체는 반환 직전에
+// 반드시 이걸 거쳐야 한다 — 원래 첫 LLM 응답 한 곳에만 인라인으로
+// 있던 로직을 추출한 것. 왜 추출이 필요했는지: canDelegate(SP_CALL
+// 위임) 분기 안에서 새로 받는 후속 LLM 응답(위임 거부 재합성/서브호출
+// 실패/위임 성공 최종 합성, 총 4개 지점)은 원래 이 인터셉트를 전혀
+// 거치지 않고 그대로 반환됐다 — 그 응답에 새로 나타난
+// [AGY_VAULT_STORE] 태그는 (1) owner_pdv에 기록되지 않고, (2) 스트립도
+// 안 돼 사용자 화면에 태그 원문이 그대로 노출될 수 있었다(2026-08-10
+// 코드 추적으로 발견).
+//
+// data.choices[0].message.content를 **제자리에서 변경**한다(반환값을
+// 다시 대입하지 않아도 호출부의 data/data2/data3/data4가 그대로
+// 갱신된다) — 이 파일 전역이 `const data = ...`로 선언하는 관례라
+// 재대입식 헬퍼로 만들면 호출부에서 "Assignment to constant variable"
+// 런타임 에러가 난다. 호출은 `await _interceptAgyVaultStore(env, data,
+// guid, ctx);`처럼 반환값을 버려도 무방한 statement로 쓴다.
+async function _interceptAgyVaultStore(env, dataObj, guid, ctx) {
+  const content = dataObj?.choices?.[0]?.message?.content;
+  const match = typeof content === 'string'
+    ? content.match(/\[AGY_VAULT_STORE:([\s\S]*?)\]/)
+    : null;
+  if (!match) return dataObj;
+
+  const fields = _parseAgyVaultStoreTag(match[1]);
+  if (fields) {
+    const writeTask = _writeOwnerPdvRecord(env, {
+      recordType: 'consultation',
+      ownerAgency: fields.agency_id,
+      guidForHashing: guid,
+      when: fields.when || new Date().toISOString(),
+      where: fields.where || null,
+      what: fields.what,
+      how: 'completed', // owner_pdv의 how는 완료상태 enum — AGY_VAULT_STORE의 how(처리 절차 설명)와 의미가 달라 detail로 옮긴다
+      why: fields.why || null,
+      detail: fields.how ? { procedure: fields.how } : null,
+    }).catch(e => console.warn('[AgyVaultStore] 기록 실패(응답 흐름은 계속 진행):', e.message));
+    if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
+  } else {
+    console.warn('[AgyVaultStore] 태그 파싱 실패 — 형식이 예상과 다름:', match[1].slice(0, 200));
+  }
+  dataObj.choices[0].message.content = content.replace(/\[AGY_VAULT_STORE:[\s\S]*?\]/, '').trim();
+  return dataObj;
+}
+
 function _parseMetaTableTag(raw) {
   try {
     const fields = {};
@@ -15802,7 +15847,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const data = await res.json();
   billGovCall(data?.usage, agency);
 
-  // ── AGY_VAULT_STORE 서버측 처리 (2026-07-23 신설) ──────────────────
+  // ── AGY_VAULT_STORE 서버측 처리 (2026-07-23 신설, 2026-08-10 재구조화) ──
   // 배경: AGENCY-AC-COMMON §1(5)이 65개 이상의 국가기관 SP 템플릿에
   // 이미 "대화 종료 시 [AGY_VAULT_STORE: ...] 태그로 6하원칙 기록을
   // 남기라"고 지시하고 있었지만, 그 태그를 실제로 읽어서 저장하는
@@ -15819,48 +15864,18 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 개인정보 최소화 원칙(U5) 적용"이라고만 되어 있어 원문 guid를 그대로
   // 쓰라는 뜻이 아니다.
   //
-  // ★★ 알려진 한계(2026-07-23 재검토 중 발견, 정직하게 고지) — 이 블록은
-  // 첫 LLM 응답(delegation 이전) 시점의 content만 본다. `canDelegate`가
-  // true인 agency(gov_do/gov_national — 정확히 이 태그를 실제로 방출하는
-  // 국가기관 트리 최상위 두 곳)에서 아래 위임 오케스트레이션(SP_CALL·
-  // DEPT_TASK_REQUEST·AFFILIATION_APPROVE/REVOKE·WORK_PDV_REQUEST)이
-  // 실제로 발동해 응답이 다시 합성되면, 그 최종 응답에 새로 나타날 수
-  // 있는 [AGY_VAULT_STORE] 태그는 이 블록이 잡지 못하고 조기 반환된다.
-  // **이건 이번에 새로 생긴 문제가 아니라, 바로 아래 META_TABLE_UPDATE
-  // 처리(2026-07-14 신설)도 처음부터 갖고 있던 것과 동일한 구조적
-  // 한계다** — 위임 분기 안에 조기 return이 6곳 넘게 흩어져 있어(각각
-  // DEPT_TASK_REQUEST/AFFILIATION_APPROVE/AFFILIATION_REVOKE/
-  // WORK_PDV_REQUEST/SP_CALL 성공·거부·실패 경로), 그 모두를 안전하게
-  // 고치는 건 결제·라우팅이 얽힌 별도의 신중한 후속 작업으로 남긴다.
-  // 지금 이 위치는 "위임이 발생하지 않는 절대다수의 단일 응답 케이스"는
-  // 정확히 처리하며, 이는 "아무 데도 기록되지 않던" 이전 상태보다 명백한
-  // 개선이다.
-  {
-    const avContent = data?.choices?.[0]?.message?.content;
-    const avMatch = typeof avContent === 'string'
-      ? avContent.match(/\[AGY_VAULT_STORE:([\s\S]*?)\]/)
-      : null;
-    if (avMatch) {
-      const avFields = _parseAgyVaultStoreTag(avMatch[1]);
-      if (avFields) {
-        const writeTask = _writeOwnerPdvRecord(env, {
-          recordType: 'consultation',
-          ownerAgency: avFields.agency_id,
-          guidForHashing: guid,
-          when: avFields.when || new Date().toISOString(),
-          where: avFields.where || null,
-          what: avFields.what,
-          how: 'completed', // owner_pdv의 how는 완료상태 enum — AGY_VAULT_STORE의 how(처리 절차 설명)와 의미가 달라 detail로 옮긴다
-          why: avFields.why || null,
-          detail: avFields.how ? { procedure: avFields.how } : null,
-        }).catch(e => console.warn('[AgyVaultStore] 기록 실패(응답 흐름은 계속 진행):', e.message));
-        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
-      } else {
-        console.warn('[AgyVaultStore] 태그 파싱 실패 — 형식이 예상과 다름:', avMatch[1].slice(0, 200));
-      }
-      data.choices[0].message.content = avContent.replace(/\[AGY_VAULT_STORE:[\s\S]*?\]/, '').trim();
-    }
-  }
+  // 2026-08-10 재구조화 — 기존엔 이 로직이 여기 한 곳(첫 LLM 응답)에만
+  // 인라인으로 있었고, canDelegate(SP_CALL 위임) 분기 안에서 새로
+  // 받는 후속 LLM 응답(data2/data3/data4)은 이 블록을 안 거쳐 지나갔다
+  // — 그 결과 (1) 그 응답에 새로 나타난 [AGY_VAULT_STORE] 태그가
+  // 기록되지 않았을 뿐 아니라, (2) 스트립도 안 돼 태그 원문이 사용자
+  // 화면에 그대로 노출될 수 있었다(실사 없이 코드 추적만으로 발견 —
+  // 실제 발생 빈도는 미확인이나, 구조상 가능한 경로였다). 로직을
+  // `_interceptAgyVaultStore()` 헬퍼로 추출해 이 자리와 canDelegate
+  // 분기의 새 응답 4곳(거부 재합성/서브호출 실패/위임 성공 합성/최종
+  // 안전문구 대체 직전) 전부에서 재사용한다 — 이제 "이 함수가 반환하는
+  // 모든 최종 응답은 반환 직전에 반드시 이 인터셉트를 거친다"가 보장된다.
+  await _interceptAgyVaultStore(env, data, guid, ctx);
 
   // ── META_TABLE_UPDATE 서버측 처리 (2026-07-14 신설, 회귀 복구) ─────
   // AGENCY-AC-COMMON_v1.3.md §6 배선. canDelegate 여부와 무관하게 모든
@@ -16053,6 +16068,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
             ? '죄송합니다, 요청을 처리하는 중 확인이 필요한 절차가 있어 완전한 답을 드리기 어렵습니다. 관련 기관에 직접 문의해 주시기 바랍니다.'
             : data2?.choices?.[0]?.message?.content;
           data2.choices[0].message.content = finalContent;
+          await _interceptAgyVaultStore(env, data2, guid, ctx); // 2026-08-10 — 이 새 응답에도 AGY_VAULT_STORE가 있을 수 있음
           return new Response(JSON.stringify(data2), { headers: corsHeaders });
         }
         return new Response(JSON.stringify(data), { headers: corsHeaders });
@@ -16076,6 +16092,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         if (res3 && res3.ok) {
           const data3 = await res3.json();
           billGovCall(data3?.usage, `${agency}(sub-fail)`);
+          await _interceptAgyVaultStore(env, data3, guid, ctx); // 2026-08-10
           return new Response(JSON.stringify(data3), { headers: corsHeaders });
         }
         return new Response(JSON.stringify(data), { headers: corsHeaders });
@@ -16107,6 +16124,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
             `${sub.label} 확인 결과를 포함해 안내드리려 했으나 응답 처리 중 문제가 있었습니다. ` +
             `${sub.label}에 직접 문의하시거나 잠시 후 다시 시도해 주세요.`;
         }
+        await _interceptAgyVaultStore(env, data4, guid, ctx); // 2026-08-10 — 위임 최종 합성 응답, 세션 종료형 AGY_VAULT_STORE 태그가 나올 확률이 가장 높은 지점
         return new Response(JSON.stringify(data4), { headers: corsHeaders });
       }
       return new Response(JSON.stringify(data), { headers: corsHeaders });
