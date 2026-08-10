@@ -20,31 +20,26 @@
 import { CFG } from '../core/config.js';
 import { EXPERT_REGISTRY, getLeafDescendants } from './expert-registry.js';
 
-// 2026-08-09 개정 — 완전공백 과목(대응 리프가 후보 목록에 아예 없는
-// 경우) 4건을 scenarios_k12_subject_gate_20260809.json 라이브 재검증으로
-// 실사 확인한 결과, 아래 "확신이 없으면 null" 지시만으로는 막히지 않고
-// 매번 표면적으로 연상되는 다른 전공을 자신 있게 골랐다: 음악(리코더
-// 운지법)→국악, 기술·가정(칼질 안전수칙)→조리과학, 한문(천자문)→
-// 중국어·문학, 진로와 직업(적성검사)→심리학. 넷 다 raw_response가
-// {"id": null}이 아니라 확신도 높은 JSON 정답 형태로 왔다 — 즉 모델이
-// "확신이 없다"고 스스로 판단하지 못하고 있었다. 추상적 지시("확신이
-// 없으면 null")가 안 먹히는 걸 확인했으니, 실패한 4건을 그대로 반례로
-// 박아 "표면적 연상 ≠ 실제 소속"을 구체적으로 가르친다.
+// 2026-08-10 개정 — "확신이 없으면 null" 지시(2026-08-09에 반례 4건까지
+// 구체적으로 추가했던 버전)를 실사로 재검증한 결과, 완전공백 4과목
+// (음악/기술가정/한문/진로) 전부 반례를 그대로 명시했는데도 매번 똑같이
+// 억지 매칭을 반복했다(raw_response가 {"id": null}이 아니라 확신도 높은
+// JSON 정답 그대로) — 프롬프트 문구를 아무리 강하게 써도 "목록에서 하나
+// 고르기"라는 과제 프레이밍 자체를 못 이겼다는 뜻으로 판단.
+// 그래서 접근을 바꾼다: "예외적으로 null을 내라"는 별도 지시 대신,
+// "해당 없음"을 후보 목록 안의 정식 항목으로 넣는다(_buildGateCandidates).
+// 모델 입장에서는 여전히 "목록에서 하나 고르기"라는 같은 과제이고, 그
+// 항목을 고르면 코드는 그걸 원래 personaId로 안전 폴백시킨다 — null
+// 특수 케이스를 하나 더 얹는 게 아니라, 이미 있는 "목록에서 고르기"
+// 메커니즘 자체를 안전한 결과로 이어지게 만드는 구조적 수정이다.
 const GATE_SYS_PROMPT_HEAD =
-  '사용자 발화를 아래 후보 목록 중 정확히 하나로 분류하세요. ' +
-  '반드시 후보 목록의 id 값 중 하나만, 다른 텍스트 없이 JSON으로만 ' +
-  '응답하세요: {"id": "<후보 id>"}. 확신이 없거나 후보 중 뚜렷이 맞는 ' +
-  '것이 없으면 {"id": null}로 응답하세요(지어내지 않습니다).\n\n' +
-  '주의: 후보 전공이 발화 소재와 표면적으로 연상된다고 정답은 아닙니다. ' +
-  '예를 들어 "리코더 운지법 시험"은 "기악"·"국악" 전공이 다루는 실기가 ' +
-  '아니라 초중고 정규 "음악" 교과이고, "요리실습 칼질 안전수칙"은 ' +
-  '"조리과학" 전공이 아니라 "기술·가정" 교과이며, "천자문 한자 뜻"은 ' +
-  '"중국어·문학" 전공이 아니라 "한문" 교과이고, "적성검사 결과 해석"은 ' +
-  '"심리학" 전공이 아니라 "진로와 직업" 교과입니다 — 이 네 과목은 이 ' +
-  '레지스트리에 대응하는 전공 자체가 없습니다. 발화가 가리키는 실제 ' +
-  '교과·소재를 후보 목록의 어떤 전공도 정확히 담당하지 않으면, 이름이 ' +
-  '비슷하거나 소재가 겹치는 후보가 있어도 절대 고르지 말고 반드시 ' +
-  '{"id": null}로 응답하십시오.\n\n후보 목록:\n';
+  '사용자 발화를 아래 후보 목록 중 정확히 하나로 분류하세요. 후보 목록 ' +
+  '맨 마지막 항목은 그 어떤 전공도 실제로 맞지 않을 때 고르는 "해당 ' +
+  '없음" 항목입니다 — 발화 소재와 이름이 비슷하거나 어렴풋이 연상되는 ' +
+  '전공이 있어도, 그 전공이 실제로 다루는 정규 교과·분야가 아니면 ' +
+  '억지로 고르지 말고 이 "해당 없음" 항목을 고르십시오. 반드시 후보 ' +
+  '목록의 id 값 중 하나만, 다른 텍스트 없이 JSON으로만 응답하세요: ' +
+  '{"id": "<후보 id>"}.\n\n후보 목록:\n';
 
 // ── 2026-08-08 신설(초중고 학년대 어휘 보강) ────────────────────────
 // 배경(주피터 지시): 초등 산수와 대학 수학을 별도 페르소나로 안 쪼갠다
@@ -83,6 +78,23 @@ export function _leafMenuLine(leaf) {
   return syn ? `- ${leaf.id}: ${leaf.label} (${syn.join('·')} 포함)` : `- ${leaf.id}: ${leaf.label}`;
 }
 
+// 2026-08-10 신설 — 실제 리프 후보 목록 끝에 "해당 없음" 항목을 하나
+// 덧붙인다. 이 항목의 id는 일부러 personaId(예: 'professor') 그대로
+// 쓴다 — EXPERT_REGISTRY에 이미 등록돼 있는 유효한 id라 refineToLeaf의
+// 화이트리스트 검증을 그대로 통과하고, 반환값도 정확히 "게이트를 안
+// 탄 것과 동일한" personaId가 된다. 즉 null을 위한 별도 분기를 늘리는
+// 게 아니라, 이미 있는 "화이트리스트에 있는 id면 그대로 채택" 경로를
+// 안전한 폴백으로 재사용하는 것 — export하는 이유는 dump_leaves.mjs가
+// 실사 검증에서 production과 동일한 후보 목록(개수·순서·라벨 전부)을
+// 그대로 재현해야 하기 때문이다(재구현 금지 원칙, 이전 세션과 동일).
+export function _buildGateCandidates(personaId, leaves) {
+  const parentDef = EXPERT_REGISTRY[personaId];
+  const noneLabel = parentDef
+    ? `${parentDef.label} — 해당하는 세부 전공이 후보에 없음(일반 1:1 지도로 진행)`
+    : '해당하는 세부 전공이 후보에 없음(일반 지도로 진행)';
+  return [...leaves, { id: personaId, label: noneLabel }];
+}
+
 /**
  * personaId 아래에 실제 리프가 둘 이상 있으면(=1단계 라우팅이 뭉뚱그린
  * 상위 직업군일 가능성) 그 발화를 리프 하나로 재분류해 personaId를
@@ -100,8 +112,12 @@ export async function refineToLeaf(personaId, userText) {
   // 하나) 이미 정밀하다 — 게이트를 돌 필요 없음.
   if (leaves.length <= 1) return personaId;
 
+  // 2026-08-10 추가 — 실제 리프 후보 뒤에 "해당 없음"(=personaId 자신)을
+  // 정식 후보로 덧붙인다. 상세 배경은 위 GATE_SYS_PROMPT_HEAD 주석 참고.
+  const candidates = _buildGateCandidates(personaId, leaves);
+
   try {
-    const menu = leaves
+    const menu = candidates
       .map(_leafMenuLine)
       .join('\n');
     const res = await fetch(CFG.endpoint + '/chat/completions', {
@@ -132,10 +148,16 @@ export async function refineToLeaf(personaId, userText) {
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const chosenId = parsed?.id;
 
-    // 화이트리스트 검증 — 후보 목록에 실제로 있는 id만 채택. 모델이
-    // 후보에 없는 id를 지어내거나 null을 낸 경우 원래 personaId로 폴백.
-    if (chosenId && leaves.some(l => l.id === chosenId) && EXPERT_REGISTRY[chosenId]) {
-      console.info('[SubjectGate] 리프 정밀화:', personaId, '→', chosenId);
+    // 화이트리스트 검증 — 후보 목록(리프 + "해당 없음")에 실제로 있는
+    // id만 채택. "해당 없음"을 고르면 chosenId===personaId이므로 이
+    // 분기를 그대로 타면서 결과적으로 personaId를 반환한다 — 별도
+    // 분기 불필요. 모델이 후보에 없는 id를 지어내거나 null을 낸
+    // 경우(방어적 안전망, 이제는 정상 경로가 아님)에도 동일하게
+    // personaId로 폴백한다.
+    if (chosenId && candidates.some(l => l.id === chosenId) && EXPERT_REGISTRY[chosenId]) {
+      if (chosenId !== personaId) {
+        console.info('[SubjectGate] 리프 정밀화:', personaId, '→', chosenId);
+      }
       return chosenId;
     }
     return personaId;
