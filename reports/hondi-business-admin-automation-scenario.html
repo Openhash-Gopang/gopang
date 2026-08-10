@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>공공데이터포털 개방과 혼디 — 사업체 행정 절차 대행 시나리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.78; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  /* ── 이 문서 전용 컴포넌트 ── */
+  .quote{
+    font-family:'Noto Serif KR',serif; font-style:italic;
+    font-size:11px; line-height:1.75; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; margin:10px 0 14px;
+  }
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:90%; }
+  .msg .who{
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:10.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .aside{
+    font-size:9.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .cmp-table td:first-child{ color:var(--ink-soft); }
+  .cmp-table td:last-child{ color:var(--accent); font-weight:500; }
+  .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; color:var(--ink); }
+  .badge-live{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-road{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 홍보 시나리오 · 사업체 행정 절차 대행</div>
+  <h1 class="doc-title">개업부터 폐업까지,<br>사업자가 혼자 뛰지 않아도 되는 이유</h1>
+  <p class="doc-sub">
+    개인 대상 행정 자동화(개인파산·면책 신청 시나리오)에 이어, 혼디가
+    사업체를 대신 뛰어다닐 수 있다는 걸 요식업 창업 사례로 보여드립니다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-11</b></div>
+    <div>대상<br><b>제주 소상공인 시범 사업(사업자 티어)</b></div>
+    <div>예시 사례<br><b>요식업(국숫집) 창업 인허가~개업 후 관리</b></div>
+    <div>성격<br><b>홍보용 개념 시연 · 실제 법률·세무 자문 아님</b></div>
+  </div>
+
+  <p>
+    사업체를 운영해 본 사람이라면 다 아는 사실이 하나 있습니다. 가게를
+    여는 순간부터 <b>"장사"와 "행정"이라는 두 가지 다른 일을 동시에
+    떠맡게 된다</b>는 것입니다. 요리는 할 줄 알아도, 사업자등록증을 어디서
+    떼야 하는지, 영업신고를 하려면 위생교육을 먼저 들어야 한다는 걸,
+    직원을 한 명이라도 뽑으면 4대보험 신고 기한이 며칠인지는 아무도
+    가르쳐주지 않습니다.
+  </p>
+  <p>
+    개인파산 시나리오에서 다뤘던 문제와 본질은 같습니다 — <b>절차 자체가
+    안 보인다</b>는 것. 다만 사업체는 그 절차가 개업 한 번으로 끝나지
+    않고, 문을 여는 순간부터 매달·매분기 반복되는 행정 사이클로 이어진다는
+    점이 다릅니다.
+  </p>
+
+  <h2 class="sec"><span class="num">01</span> 요식업 창업, 실제로 뭘 해야 하나</h2>
+  <p>제주에서 작은 국숫집을 연다고 가정하면, 최소한 이 정도를 거쳐야 합니다.</p>
+  <ul class="list">
+    <li>사업자등록(홈택스·관할 세무서) — 개인/간이과세자 여부부터 결정</li>
+    <li>위생교육 이수(한국외식업중앙회 등) — <b>영업신고 접수의 선행 요건</b></li>
+    <li>영업신고(일반음식점업, 관할 시청·읍면동) — 위생교육 이수증 첨부 필수</li>
+    <li>소방시설 완비증명(면적 기준 초과 시, 관할 소방서)</li>
+    <li>원산지표시판 게시 의무 등록(국립농산물품질관리원)</li>
+    <li>직원을 채용하면 4대보험 성립신고(근로복지공단·국민연금공단·건강보험공단)</li>
+    <li>배달앱에 입점하면 통신판매업 신고(관할 시군구)</li>
+  </ul>
+  <p>
+    이 목록에서 항목 하나라도 순서가 꼬이면 전체가 밀립니다 — 위생교육을
+    먼저 안 들으면 영업신고 자체가 접수되지 않고, 영업신고가 안 되면
+    사업자등록 업종 신고도 매끄럽지 않습니다. 그래서 실제로는 세무사·
+    행정사에게 수십만 원을 주고 전체를 위임하거나, 여러 관공서를 하루에
+    다 돌며 몇 주를 허비하는 경우가 대부분입니다.
+  </p>
+  <div class="note">
+    개업은 끝이 아니라 시작입니다. 문을 연 뒤에도 부가세·종합소득세
+    정기신고, 정기 위생점검, 4대보험 정산이 매년 반복됩니다 — "한 번
+    고생하면 끝"이 아니라 <b>운영 기간 내내 이어지는 행정 부담</b>이라는
+    점이 개인 행정 절차와 가장 다른 지점입니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 사업체 행정 절차 대행 · 2026-08-11</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> 혼디가 하면 어떻게 달라지는가</h2>
+  <p>
+    아래는 K-Business(혼디의 사업체 보조 AI)의 실제 원칙 그대로 구성한
+    시나리오입니다. <span class="badge-live">LIVE</span> 표시는 오늘
+    기준 실제로 동작하는 기능, <span class="badge-road">ROADMAP</span>은
+    아직 구현 전인 개념 시연 부분입니다.
+  </p>
+
+  <div class="dialogue">
+
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"제주에서 작은 국숫집을 열려고 하는데, 뭐부터 해야 할지 모르겠어요."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        국숫집(일반음식점업) 창업에 필요한 절차를 순서대로 정리해 드리겠습니다 —
+        사업자등록 → 위생교육 이수 → 영업신고 → (필요시) 소방시설 완비증명 →
+        원산지표시판 등록 순입니다. 하나씩 실제로 대신 진행하겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      개인파산 시나리오와 같은 원칙입니다 — 절차를 나열만 하고 사용자가
+      직접 순서를 알아서 밟게 두지 않고, 혼디가 그 순서 자체를 대신
+      관리합니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        위생교육은 영업신고보다 먼저 이수하셔야 합니다. 온라인 교육 일정을
+        확인해 안내드리겠습니다. 이수증이 나오면 영업신고서에 자동으로
+        첨부하겠습니다.
+      </div>
+    </div>
+    <div class="aside">사업자등록·영업신고 <b>서류 초안 자동 준비까지는 로드맵 단계</b><span class="badge-road">ROADMAP</span> — 오늘 기준으론 어떤 서류가 언제 왜 필요한지 안내하는 수준입니다.</div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        영업신고 관할 부서를 바로 확인하겠습니다 — 제주시 위생과입니다.
+        방문·전화 전 명칭만 한 번 더 확인해 주세요.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 이 부분은 실제로 동작합니다 —
+      시군구별 담당부서를 실시간으로 찾아주는 기능이 오늘 처음
+      K-Business에 연결됐습니다. 예전엔 "관할 보건소가 어디냐"는 질문에
+      혼디가 답할 방법이 아예 없었습니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        영업신고까지 마치면 개업 준비는 끝입니다. 이제부터는 개업 후 운영을
+        돕겠습니다 — 반경 500m 안에 국숫집이 몇 곳인지, 어떤 업종이 밀집한
+        상권인지부터 확인해 드릴까요?
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 소상공인시장진흥공단 공공데이터를
+      실시간으로 조회해 반경 내 실제 점포 수·업종 밀집도를 보여줍니다 —
+      지어낸 "동네 상권 분석"이 아니라 실제 데이터입니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        분석해보니 반경 500m 안에 국숫집·분식류 업종이 7곳으로 밀집도가
+        높은 편입니다. 등록하신 메뉴 구성과 이 경쟁 밀집도를 근거로 마케팅
+        방안을 만들어 드리겠습니다 — 차별화 포인트와 추천 채널까지
+        정리했습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 실제 등록 메뉴(K-Market 카탈로그)와
+      방금 조회한 실측 경쟁 데이터, 두 가지 실제 데이터를 근거로만 제안하도록
+      설계돼 있습니다 — 데이터가 부족하면 "부족하다"고 정직하게 알립니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        개업 후 첫 손님 리뷰가 달렸습니다. 별점 5점에 "국물이 진하고
+        좋아요"라는 내용입니다. 답글 초안을 만들어 드릴까요?
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 리뷰 원문에만 근거해 답글 초안을
+      만들고, 사장님이 수정 후 등록하면 고객 화면에 바로 반영됩니다 —
+      리뷰 작성·답글 기능 자체가 오늘 처음 만들어졌습니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        직원을 채용하시면 4대보험 성립신고 기한을 미리 알려드리고, 부가세·
+        종합소득세 신고 시기가 다가오면 미리 안내드리겠습니다. 정기 위생점검
+        시기도 계속 추적해 드리겠습니다.
+      </div>
+    </div>
+    <div class="aside">신고서 자동 작성·자동 제출은 <span class="badge-road">ROADMAP</span> — 오늘은 기한·관할부서 안내 수준입니다. K-Law처럼 노무·세무 분쟁이 생기면 인간 전문가 연결로 이어집니다.</div>
+
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 사업체 행정 절차 대행 · 2026-08-11</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
+  <table class="avoid-break cmp-table">
+    <thead><tr><th>기존 (사업주가 직접)</th><th>혼디 적용 후</th></tr></thead>
+    <tbody>
+      <tr><td>어떤 인허가를, 어느 기관에서, 어떤 순서로 받아야 하는지 몰라 세무사·행정사에 위임</td><td>필요한 절차·순서를 혼디가 먼저 정리해 안내 <span class="badge-live">LIVE</span></td></tr>
+      <tr><td>영업신고 관할 부서를 몰라 관공서 대표번호로 여러 번 전화 돌림</td><td>시군구별 실제 담당부서를 실시간 조회 <span class="badge-live">LIVE</span></td></tr>
+      <tr><td>우리 가게 상권·경쟁 강도를 감으로만 판단</td><td>공공데이터 기반 반경 내 실제 점포 수·업종 밀집도 제공 <span class="badge-live">LIVE</span></td></tr>
+      <tr><td>마케팅은 "일단 SNS나 해볼까" 식 감각 의존</td><td>실제 상품 구성·상권 데이터를 근거로 한 마케팅 방안 <span class="badge-live">LIVE</span></td></tr>
+      <tr><td>리뷰에 답글을 달아본 적도, 달 방법도 없음</td><td>리뷰 원문 기반 AI 답글 초안 → 수정 후 등록 <span class="badge-live">LIVE</span></td></tr>
+      <tr><td>사업자등록·영업신고 서류를 처음부터 직접 작성</td><td>서류 자동 작성·자동 제출 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>4대보험·세금 신고 기한을 달력에 직접 표시해 관리</td><td>기한 추적·선제 안내 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr class="highlight"><td><b>실제 인허가 서류 제출·전문가 최종 승인</b></td><td>그대로 유지 — 사업주 본인 확인 없이 확정하지 않음(U1 원칙)</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    마지막 줄이 개인파산 시나리오와 똑같은 이유로 중요합니다. K-Business는
+    재무제표 확정·세금 신고 제출·채용 결정처럼 <b>사업주 본인의 최종 승인이
+    필요한 판단은 대신 확정하지 않습니다</b>(U1 원칙) — 초안 준비와 절차
+    안내까지가 혼디의 역할이고, 확정과 서명은 항상 사업주 몫입니다.
+  </p>
+  <p>
+    이번 시나리오에서 <span class="badge-live">LIVE</span> 표시가 붙은
+    5가지(절차 안내, 관할부서 조회, 상권분석, 마케팅 방안, 리뷰 답글)는
+    2026-08-11 기준 실제로 코드로 존재하고 동작합니다 — 개인파산 시나리오
+    때보다 로드맵 대비 실구현 비중이 훨씬 높습니다. 사업체 행정은 사이클이
+    반복되는 만큼, 한 번 자동화해두면 매달·매분기 계속 값을 하는 영역이기도
+    합니다.
+  </p>
+
+  <div class="note warn">
+    <b>※ 안내:</b> 위 시나리오는 요식업 창업의 실제 행정 절차(식품위생법·
+    소상공인시장진흥공단 상권정보·K-Market 실사용 데이터)를 바탕으로 구성한
+    <b>개념 시연</b>이며, 실제 세무·법률·인허가 자문을 대체하지 않습니다.
+    <span class="badge-road">ROADMAP</span> 표시가 붙은 "서류 자동 작성·
+    자동 제출", "4대보험·세금 신고 자동화" 기능은 현재 로드맵 단계이며,
+    지금 이 순간 실제로 구현되어 서비스되고 있는 기능이 아닙니다. 개별
+    사안은 반드시 관할 세무서·관공서 또는 전문 세무사·행정사·노무사와
+    상담하시기 바랍니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 사업체 행정 절차 대행 · 2026-08-11</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+</body>
+</html>
