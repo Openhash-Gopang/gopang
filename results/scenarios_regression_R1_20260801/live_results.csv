@@ -1,0 +1,124 @@
+no,utterance,expected_type,expected_id,category,static_verdict,live_verdict,live_note,raw_response,call_error
+1,회사에서 갑자기 나가라고 하는데 이거 정당한 건지 판단 좀 받고 싶어,GWP,klaw,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"회사에서 갑자기 나가라고 하는 상황이라면 많이 당황스러우셨겠습니다. 
+
+이런 경우, 해고의 정당성 여부는 근로기준법 등 관련 법령에 따라 판단되어야 하는 사안입니다. 다만, 제가 직접 법적 판단을 내리기보다는, 이 사안을 처리할 최적의 주체를 연결해 드리는 것이 맞습니다.
+
+귀하의 상황은 법적 절차와 권리 구제에 관한 것으로, 이는 **K-Law(klaw)**가 담당하는 분야입니다. K-Law를 통해 해고의 정당성, 부당해고 구제 절차 등에 대한 제도적 정보를 확인하실 수 있습니다.
+
+**K-Law를 호출하겠습니다.**",
+2,인터넷에 제 욕하는 글이 올라왔는데 이거 처벌 가능한 수위인지 궁금해요,GWP,klaw,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[GWP: klaw] 일치,"[GWP: klaw]
+
+{USER_NAME}님, K-Law를 호출하겠습니다.",
+3,배우자랑 갈라서기로 했는데 재산은 어떻게 나눠야 하는지 판단해줘,GWP,klaw,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"[CALL_KINTENT: query=배우자랑 갈라서기로 했는데 재산은 어떻게 나눠야 하는지 판단해줘]
+
+{USER_NAME}님, 이혼에 따른 재산분할은 법원 절차와 개인 상황이 복잡하게 얽힌 사안이라, 전문 시스템이 전체 절차를 검토해 도와드리도록 연결하겠습니다.",
+4,은행이라는 사람한테 전화 와서 계좌번호랑 비밀번호를 다 불러줬는데 사기인 거 같아요,GWP,ksecurity,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [GWP: ksecurity] vs 실제 [GWP: kpolice],"[GWP: kpolice]
+
+{USER_NAME}님, K-Police를 호출하겠습니다.",
+5,독감 예방주사 언제 맞으면 좋을지 상담받고 싶어요,GWP,khealth,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [GWP: khealth] vs 실제 [EXPERT: physician],"[EXPERT: physician]
+
+{USER_NAME}님, 의사 선생님을 호출하겠습니다.",
+6,졸업논문 주제를 아직도 못 정했는데 방향을 좀 잡아줄 사람이 필요해요,GWP,kedu,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [GWP: kedu] vs 실제 [EXPERT: professor],"[EXPERT: professor]
+
+{USER_NAME}님, 교수(1:1 맞춤교육)를 호출하겠습니다.",
+7,취업 준비하는데 자소서 방향부터 다 막막해요,GWP,kedu,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[GWP: kedu] 일치,"[GWP: kedu]
+
+{USER_NAME}님, K-School을 호출하겠습니다.",
+8,퇴직금 받은 거 그냥 두기 아까운데 어디에 굴려야 할지 모르겠어요,GWP,kfinance,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[GWP: kfinance] 일치,"[GWP: kfinance]
+
+{USER_NAME}님, K-Stock을 호출하겠습니다. 투자·주식·포트폴리오 관련 상담을 도와드릴 서비스입니다.",
+9,연금저축 계좌 세금 좀 아끼는 방법 없을까요,GWP,kfinance,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [GWP: kfinance] vs 실제 [GWP: ktax],"[GWP: ktax]
+
+{USER_NAME}님, K-Tax를 호출하겠습니다.",
+10,카드값이 너무 많이 나와서 나눠 갚을 수 있는 방법 좀 알아봐줘요,GWP,kgdc,회귀(R1 패치 재검증 — 기대값 정정: 2026-08-01 kbank 철회(PR#164) — kbank는 더 이...),N/A,LIVE-PASS,[GWP: kgdc] 일치,"[GWP: kgdc]
+
+{USER_NAME}님, GDC를 호출하겠습니다. 카드값 분할 납부와 관련된 상담을 도와드릴 수 있도록 연결해 드릴게요.",
+11,이사 가는 집에 인터넷 새로 깔아야 하는데 어떻게 신청해요,PLATFORM,direct-response,회귀(R1 패치 재검증 — 기대값 정정: 2026-08-01 발견 — ktelecom은 gwp-registry.j...),N/A,LIVE-FAIL,라우팅 불필요 상황인데 [GWP: ktelecom] 오발동,"[GWP: ktelecom]
+
+{USER_NAME}님, K-Telecom을 호출하겠습니다.",
+12,휴대폰을 잃어버린 것 같은데 어디다 신고해야 해요,PLATFORM,direct-response,회귀(R1 패치 재검증 — 기대값 정정: 위 no=49와 동일 사유....),N/A,LIVE-FAIL,라우팅 불필요 상황인데 [GWP: ktelecom] 오발동,"[GWP: ktelecom]
+
+{USER_NAME}님, 휴대폰 분실 신고 관련 서비스를 호출하겠습니다.",
+13,면허 갱신할 때가 다 됐는데 뭘 준비해야 하는지 알려줘요,GWP,ktransport,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[GWP: ktransport] 일치,"면허 갱신 준비물을 안내해 드리겠습니다. 운전면허 갱신은 지역에 따라 처리 절차가 다를 수 있어, 정확한 안내를 위해 K-Traffic(교통행정 민원) 서비스를 연결해 드리겠습니다.
+
+[GWP: ktransport]
+
+{USER_NAME}님, K-Traffic을 호출하겠습니다.",
+14,창고에 재고가 얼마나 남았는지 파악이 안 돼서 곤란해요,GWP,klogistics,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"재고 파악이 안 되셔서 곤란하시군요. 재고 관리와 관련된 업무는 K-Business에서 도와드릴 수 있습니다.
+
+{USER_NAME}님, K-Business를 호출하겠습니다.",
+15,소상공인한테 좋다는 공제 상품이 있다던데 저도 가입할 수 있나요,GWP,kbusiness,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"소상공인 공제 상품 가입 조건을 확인해 드리겠습니다. 정확한 가입 자격과 조건을 안내받으실 수 있도록 관련 서비스를 연결해 드릴게요.
+
+{USER_NAME}님, 소상공인 공제 상품 관련 안내를 위해 K-Business를 호출하겠습니다.",
+16,우리 애 수학 과외 선생님을 구하고 있는데 사람으로 붙여줄 수 있어요?,EXPERT,professor,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 수학 과외 선생님을 찾아드리기 위해 교수(1:1 맞춤교육) 전문가를 호출하겠습니다.",
+17,변호사한테 맡겨서 소송을 진행하고 싶어요,GWP,klaw,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [GWP: klaw] vs 실제 [EXPERT: lawyer],"[EXPERT: lawyer]
+
+{USER_NAME}님, 변호사를 호출하겠습니다.",
+18,경매로 나온 집을 낙찰받고 싶은데 절차를 아는 사람한테 물어보고 싶어요,EXPERT,judicial-scrivener,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: judicial-scrivener] 일치,"[EXPERT: judicial-scrivener]
+
+{USER_NAME}님, 경매 절차 전문가인 법무사를 호출하겠습니다.",
+19,이 땅이 실제로 얼마짜리인지 정확하게 평가받고 싶어요,EXPERT,appraiser,회귀(R1 패치 재검증 — 기대값 정정: 2026-08-01 발견 — kestate도 ktelecom과 동일한 미...),N/A,LIVE-PASS,[EXPERT: appraiser] 일치,"[EXPERT: appraiser]
+
+{USER_NAME}님, 감정평가사를 호출하겠습니다.",
+20,직장 내 괴롭힘 신고 절차를 전문가한테 상담받고 싶어요,EXPERT,labor-attorney,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: labor-attorney] 일치,"[EXPERT: labor-attorney]
+
+{USER_NAME}님, 공인노무사를 호출하겠습니다.",
+21,가게 이름을 상표로 등록하고 싶은데 도와줄 사람이 필요해요,EXPERT,patent-attorney,회귀(R1 패치 재검증 — 기대값 정정: R1(GWP↔EXPERT) 축 문제 — klaw가 아니라 patent-a...),N/A,LIVE-PASS,[EXPERT: patent-attorney] 일치,"[EXPERT: patent-attorney]
+
+{USER_NAME}님, 상표 등록 전문가인 변리사를 호출하겠습니다.",
+22,해외에서 물건을 들여오는데 통관 절차를 전문가한테 맡기고 싶어요,EXPERT,customs-broker,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"[CALL_KINTENT: query=해외에서 물건을 들여오는데 통관 절차를 전문가한테 맡기고 싶어요]
+
+{USER_NAME}님, 통관 절차를 전문가에게 맡기는 건 여러 기관·자격이 얽힌 사안이라 통합 처리로 연결하겠습니다.",
+23,혈액검사 수치가 뭘 의미하는지 전문가한테 물어보고 싶어요,EXPERT,medical-lab-technologist,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: medical-lab-technologist] 일치,"[EXPERT: medical-lab-technologist]
+
+{USER_NAME}님, 임상병리사 전문가를 호출하겠습니다.",
+24,틀니를 새로 맞추려는데 만드는 과정을 전문가한테 여쭤보고 싶어요,EXPERT,dental-technician,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: dental-technician] 일치,"[EXPERT: dental-technician]
+
+{USER_NAME}님, 치과기공사 전문가를 호출하겠습니다.",
+25,아이가 갑자기 쓰러졌을 때 어떻게 응급처치를 해야 하는지 미리 배워두고 싶어요,EXPERT,paramedic,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [EXPERT: paramedic] vs 실제 [GWP: khealth],"[GWP: khealth]
+
+{USER_NAME}님, K-Health를 호출하겠습니다.",
+26,오래된 건물인데 안전한지 기술사님께 진단받고 싶어요,EXPERT,professional-engineer,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: professional-engineer] 일치,"[EXPERT: professional-engineer]
+
+{USER_NAME}님, 기술사(전문가)를 호출하겠습니다.",
+27,공장 설비를 새로 들이는데 안전 컨설팅을 받고 싶어요,EXPERT,industrial-safety-consultant,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: industrial-safety-consultant] 일치,"[EXPERT: industrial-safety-consultant]
+
+{USER_NAME}님, 산업안전·보건지도사(전문가)를 호출하겠습니다.",
+28,건물 소화전이랑 스프링클러가 제대로 작동하는지 점검받고 싶어요,EXPERT,fire-safety-manager,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [EXPERT: fire-safety-manager] vs 실제 [GWP: ksecurity],"[GWP: ksecurity]
+
+{USER_NAME}님, K-Security를 호출하겠습니다.",
+29,땅 경계가 애매해서 정확히 측량을 받아보고 싶어요,EXPERT,surveying-engineer,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [EXPERT: surveying-engineer] vs 실제 [GWP: kgov],"[GWP: kgov]
+
+{USER_NAME}님, 측량 관련 업무를 담당하는 기관을 호출하겠습니다.",
+30,오래된 집 전기배선이 위험할까봐 전문가한테 점검받고 싶어요,EXPERT,electrical-safety-engineer,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"[CALL_KINTENT: query=오래된 집 전기배선이 위험할까봐 전문가한테 점검받고 싶어요]
+
+{USER_NAME}님, 전기 안전 점검 전문가를 찾아 연결해 드리겠습니다.",
+31,살 집을 계약하는데 중개사님께 직접 계약을 맡기고 싶어요,EXPERT,real-estate-agent,회귀(R1 패치 재검증 — 기대값 정정: kestate가 막혀있어 EXPERT(real-estate-agent)가...),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"[CALL_KINTENT: query=살 집을 계약하는데 중개사님께 직접 계약을 맡기고 싶어요]
+
+{USER_NAME}님, 부동산 계약을 공인중개사님께 직접 맡기시려는 요청이군요. 정확한 중개인 연결과 계약 진행을 위해 관련 서비스를 호출하겠습니다.",
+32,회사 개인정보가 유출된 것 같아서 보안 전문가한테 진단받고 싶어요,EXPERT,security-engineer,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: security-engineer] 일치,"[EXPERT: security-engineer]
+
+{USER_NAME}님, 정보보안 전문가를 호출하겠습니다.",
+33,이거 지금 사는 게 맞는지 다른 데랑 가격 비교부터 해보고 싶어요,EXPERT,advisor,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료),"[CALL_KINTENT: query=이거 지금 사는 게 맞는지 다른 데랑 가격 비교부터 해보고 싶어요]
+
+{USER_NAME}님, 구매 결정 전 가격 비교와 적정성 판단이 필요하신 상황이군요. 이 용건은 단순히 물건을 찾는 것(검색·비교·중개)을 넘어, **지금 사는 게 맞는지에 대한 평가와 조언**이 필요하므로 K-Market과 K-Advisor의 협업이 필요한 복합 요청입니다. 정확한 처리를 위해 K-Intent로 연결하겠습니다.",
+34,리모델링하려는 집 도면을 건축사님께 새로 그려달라고 하고 싶어요,EXPERT,architect,회귀(R1 패치 재검증 — 기대값 정정: kestate와 무관한 순수 R1(GWP↔EXPERT) 축 문제(엉뚱하게...),N/A,LIVE-PASS,[EXPERT: architect] 일치,"[EXPERT: architect]
+
+{USER_NAME}님, 건축사(architect)를 호출하겠습니다.",
+35,우리 회사 시스템이 뚫린 거 같은데 보안 전문가한테 원인 진단을 맡기고 싶어요,EXPERT,security-engineer,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[EXPERT: security-engineer] 일치,"[EXPERT: security-engineer]
+
+{USER_NAME}님, 정보보안 전문가를 호출하겠습니다.",
+36,아이 성적표 보고 담임 선생님께 상담을 신청하고 싶어요,EXPERT,teacher,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-FAIL,기대 [EXPERT: teacher] vs 실제 [GWP: kedu],"[GWP: kedu]
+
+{USER_NAME}님, K-School을 호출하겠습니다.",
+37,보증금을 못 돌려받고 있는데 이거 절차상 어떻게 진행해야 하는지 알고 싶어요,PLATFORM,direct-response,회귀(R1 패치 재검증 — 기대값 정정: no=281은 원래 kestate GWP 자체를 기대했던 케이스라(EXP...),N/A,LIVE-FAIL,라우팅 불필요 상황인데 [GWP: klaw] 오발동,"[GWP: klaw]
+
+{USER_NAME}님, K-Law를 호출하겠습니다.",
+38,갑자기 정전이 됐는데 우리 동네만 그런 건지 확인하고 싶어요,PLATFORM,direct-response,회귀(R1 패치 재검증 — 기대값 정정: 위 no=49와 동일 사유....),N/A,LIVE-FAIL,라우팅 불필요 상황인데 [GWP: kemergency] 오발동,"[GWP: kemergency]
+
+{USER_NAME}님, K-Emergency를 호출하겠습니다.",
+39,소상공인 스마트화 지원사업이 있다던데 저희 카페에도 해당되는지 알아봐줘요,GWP,kbusiness,회귀(R1 패치 재검증 — 원본 batch2 기대값 유지),N/A,LIVE-PASS,[GWP: kbusiness] 일치,"[GWP: kbusiness]
+
+{USER_NAME}님, K-Business를 호출하겠습니다.",
