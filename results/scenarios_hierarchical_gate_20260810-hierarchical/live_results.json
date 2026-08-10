@@ -1,0 +1,1240 @@
+[
+  {
+    "id": "t1-law-01",
+    "utterance": "기본권 침해 여부와 위헌법률심판을 공부하고 싶어요",
+    "expected_leaf_id": "professor-constitutionallaw",
+    "category": "법학(15후보 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-law-series",
+        "chosenId": "professor-law-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-law-series",
+        "usage": {
+          "prompt_tokens": 805,
+          "completion_tokens": 124,
+          "total_tokens": 929,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 114
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 805
+        }
+      },
+      {
+        "gateNodeId": "professor-law-series",
+        "correctChoiceId": "professor-constitutionallaw",
+        "chosenId": "professor-constitutionallaw",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-constitutionallaw",
+        "usage": {
+          "prompt_tokens": 506,
+          "completion_tokens": 107,
+          "total_tokens": 613,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 95
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 506
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-law-02",
+    "utterance": "채권과 물권의 차이를 정리하고 싶어요",
+    "expected_leaf_id": "professor-civillaw",
+    "category": "법학(15후보 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-law-series",
+        "chosenId": "professor-law-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-law-series",
+        "usage": {
+          "prompt_tokens": 798,
+          "completion_tokens": 170,
+          "total_tokens": 968,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 160
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 798
+        }
+      },
+      {
+        "gateNodeId": "professor-law-series",
+        "correctChoiceId": "professor-civillaw",
+        "chosenId": "professor-civillaw",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-civillaw",
+        "usage": {
+          "prompt_tokens": 499,
+          "completion_tokens": 154,
+          "total_tokens": 653,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 142
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 499
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-law-03",
+    "utterance": "특허 출원 요건과 발명의 진보성 판단기준을 공부하고 싶어요",
+    "expected_leaf_id": "professor-iplaw",
+    "category": "법학(선택법, 인접 변리사 페르소나와 경계)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-law-series",
+        "chosenId": "professor-law-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-law-series",
+        "usage": {
+          "prompt_tokens": 807,
+          "completion_tokens": 214,
+          "total_tokens": 1021,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 204
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 807
+        }
+      },
+      {
+        "gateNodeId": "professor-law-series",
+        "correctChoiceId": "professor-iplaw",
+        "chosenId": "professor-iplaw",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-iplaw",
+        "usage": {
+          "prompt_tokens": 508,
+          "completion_tokens": 106,
+          "total_tokens": 614,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 95
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 124
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-econ-01",
+    "utterance": "소비자이론과 생산자이론을 다시 정리하고 싶어요",
+    "expected_leaf_id": "professor-microeconomics",
+    "category": "경제학(3단계 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-business-economics",
+        "chosenId": "professor-business-economics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-business-economics",
+        "usage": {
+          "prompt_tokens": 801,
+          "completion_tokens": 90,
+          "total_tokens": 891,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 79
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 801
+        }
+      },
+      {
+        "gateNodeId": "professor-business-economics",
+        "correctChoiceId": "professor-economics-series",
+        "chosenId": "professor-economics-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-economics-series",
+        "usage": {
+          "prompt_tokens": 450,
+          "completion_tokens": 250,
+          "total_tokens": 700,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 239
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 450
+        }
+      },
+      {
+        "gateNodeId": "professor-economics-series",
+        "correctChoiceId": "professor-microeconomics",
+        "chosenId": "professor-microeconomics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-microeconomics",
+        "usage": {
+          "prompt_tokens": 459,
+          "completion_tokens": 138,
+          "total_tokens": 597,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 128
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 459
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-econ-02",
+    "utterance": "회귀분석과 시계열 모형을 경제자료에 적용하는 법을 배우고 싶어요",
+    "expected_leaf_id": "professor-econometrics",
+    "category": "경제학, 통계학과 인접쌍",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-business-economics",
+        "chosenId": "professor-business-economics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-business-economics",
+        "usage": {
+          "prompt_tokens": 808,
+          "completion_tokens": 219,
+          "total_tokens": 1027,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 208
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 808
+        }
+      },
+      {
+        "gateNodeId": "professor-business-economics",
+        "correctChoiceId": "professor-economics-series",
+        "chosenId": "professor-economics-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-economics-series",
+        "usage": {
+          "prompt_tokens": 457,
+          "completion_tokens": 366,
+          "total_tokens": 823,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 355
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 73
+        }
+      },
+      {
+        "gateNodeId": "professor-economics-series",
+        "correctChoiceId": "professor-econometrics",
+        "chosenId": "professor-econometrics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-econometrics",
+        "usage": {
+          "prompt_tokens": 466,
+          "completion_tokens": 135,
+          "total_tokens": 601,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 124
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 82
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-physics-01",
+    "utterance": "슈뢰딩거 방정식과 파동함수 해석을 배우고 싶어요",
+    "expected_leaf_id": "professor-quantummechanics",
+    "category": "물리학(3단계 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-mathphys",
+        "chosenId": "professor-mathphys",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-mathphys",
+        "usage": {
+          "prompt_tokens": 807,
+          "completion_tokens": 115,
+          "total_tokens": 922,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 104
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 39
+        }
+      },
+      {
+        "gateNodeId": "professor-mathphys",
+        "correctChoiceId": "professor-physics-series",
+        "chosenId": "professor-physics-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-physics-series",
+        "usage": {
+          "prompt_tokens": 420,
+          "completion_tokens": 145,
+          "total_tokens": 565,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 134
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 420
+        }
+      },
+      {
+        "gateNodeId": "professor-physics-series",
+        "correctChoiceId": "professor-quantummechanics",
+        "chosenId": "professor-quantummechanics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-quantummechanics",
+        "usage": {
+          "prompt_tokens": 439,
+          "completion_tokens": 98,
+          "total_tokens": 537,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 85
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 439
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-psych-01",
+    "utterance": "우울증과 불안장애의 진단기준(DSM)을 공부하고 싶어요",
+    "expected_leaf_id": "professor-clinicalpsychology",
+    "category": "심리학, 정신건강의학과 인접쌍",
+    "live_verdict": "LIVE-FAIL",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-socialscience",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-FAIL",
+        "note": "다른 노드로 정밀화됨: professor-medicine-series (기대: professor-socialscience)",
+        "usage": {
+          "prompt_tokens": 806,
+          "completion_tokens": 575,
+          "total_tokens": 1381,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 564
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 38
+        }
+      }
+    ]
+  },
+  {
+    "id": "t2-geo-01",
+    "utterance": "QGIS로 공간자료를 분석하고 지도화하는 법을 배우고 싶어요",
+    "expected_leaf_id": "professor-gis",
+    "category": "Tier2 지리학(4단계 게이트)",
+    "live_verdict": "LIVE-FAIL",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-socialscience",
+        "chosenId": "professor-mathphys",
+        "verdict": "LIVE-FAIL",
+        "note": "다른 노드로 정밀화됨: professor-mathphys (기대: professor-socialscience)",
+        "usage": {
+          "prompt_tokens": 804,
+          "completion_tokens": 368,
+          "total_tokens": 1172,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 357
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 36
+        }
+      }
+    ]
+  },
+  {
+    "id": "t2-anthro-01",
+    "utterance": "말리노프스키의 참여관찰 민족지 방법론을 배우고 싶어요",
+    "expected_leaf_id": "professor-culturalanthropology",
+    "category": "Tier2 인류학(4단계 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-socialscience",
+        "chosenId": "professor-socialscience",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-socialscience",
+        "usage": {
+          "prompt_tokens": 805,
+          "completion_tokens": 282,
+          "total_tokens": 1087,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 272
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 37
+        }
+      },
+      {
+        "gateNodeId": "professor-socialscience",
+        "correctChoiceId": "professor-anthropology-series",
+        "chosenId": "professor-anthropology-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-anthropology-series",
+        "usage": {
+          "prompt_tokens": 551,
+          "completion_tokens": 165,
+          "total_tokens": 716,
+          "prompt_tokens_details": {
+            "cached_tokens": 512
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 153
+          },
+          "prompt_cache_hit_tokens": 512,
+          "prompt_cache_miss_tokens": 39
+        }
+      },
+      {
+        "gateNodeId": "professor-anthropology-series",
+        "correctChoiceId": "professor-culturalanthropology",
+        "chosenId": "professor-culturalanthropology",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-culturalanthropology",
+        "usage": {
+          "prompt_tokens": 381,
+          "completion_tokens": 228,
+          "total_tokens": 609,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 217
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 381
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-soc-01",
+    "utterance": "베버와 뒤르켐의 고전 사회학이론을 정리하고 싶어요",
+    "expected_leaf_id": "professor-theoreticalsociology",
+    "category": "사회학(3단계 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-socialscience",
+        "chosenId": "professor-socialscience",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-socialscience",
+        "usage": {
+          "prompt_tokens": 803,
+          "completion_tokens": 159,
+          "total_tokens": 962,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 149
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 35
+        }
+      },
+      {
+        "gateNodeId": "professor-socialscience",
+        "correctChoiceId": "professor-sociology-series",
+        "chosenId": "professor-sociology-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-sociology-series",
+        "usage": {
+          "prompt_tokens": 549,
+          "completion_tokens": 218,
+          "total_tokens": 767,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 206
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 549
+        }
+      },
+      {
+        "gateNodeId": "professor-sociology-series",
+        "correctChoiceId": "professor-theoreticalsociology",
+        "chosenId": "professor-theoreticalsociology",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-theoreticalsociology",
+        "usage": {
+          "prompt_tokens": 412,
+          "completion_tokens": 589,
+          "total_tokens": 1001,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 576
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 412
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-cs-01",
+    "utterance": "이진트리와 정렬 알고리즘 시간복잡도를 공부하고 싶어요",
+    "expected_leaf_id": "professor-datastructures",
+    "category": "전산학(3단계 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-electrical-computer",
+        "chosenId": "professor-electrical-computer",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-electrical-computer",
+        "usage": {
+          "prompt_tokens": 802,
+          "completion_tokens": 185,
+          "total_tokens": 987,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 173
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 34
+        }
+      },
+      {
+        "gateNodeId": "professor-electrical-computer",
+        "correctChoiceId": "professor-computerscience-series",
+        "chosenId": "professor-computerscience-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-computerscience-series",
+        "usage": {
+          "prompt_tokens": 469,
+          "completion_tokens": 992,
+          "total_tokens": 1461,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 979
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 469
+        }
+      },
+      {
+        "gateNodeId": "professor-computerscience-series",
+        "correctChoiceId": "professor-datastructures",
+        "chosenId": "professor-datastructures",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-datastructures",
+        "usage": {
+          "prompt_tokens": 442,
+          "completion_tokens": 232,
+          "total_tokens": 674,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 220
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 442
+        }
+      }
+    ]
+  },
+  {
+    "id": "t2-stat-01",
+    "utterance": "표본분포와 가설검정의 수학적 증명을 배우고 싶어요",
+    "expected_leaf_id": "professor-mathematicalstatistics",
+    "category": "Tier2 통계학, 확률론과 인접쌍",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-mathphys",
+        "chosenId": "professor-mathphys",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-mathphys",
+        "usage": {
+          "prompt_tokens": 804,
+          "completion_tokens": 257,
+          "total_tokens": 1061,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 246
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 36
+        }
+      },
+      {
+        "gateNodeId": "professor-mathphys",
+        "correctChoiceId": "professor-statistics-series",
+        "chosenId": "professor-statistics-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-statistics-series",
+        "usage": {
+          "prompt_tokens": 417,
+          "completion_tokens": 99,
+          "total_tokens": 516,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 88
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 33
+        }
+      },
+      {
+        "gateNodeId": "professor-statistics-series",
+        "correctChoiceId": "professor-mathematicalstatistics",
+        "chosenId": "professor-mathematicalstatistics",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-mathematicalstatistics",
+        "usage": {
+          "prompt_tokens": 376,
+          "completion_tokens": 234,
+          "total_tokens": 610,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 222
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 376
+        }
+      }
+    ]
+  },
+  {
+    "id": "med-01-internal",
+    "utterance": "심전도 판독과 부정맥 진단 기준을 공부하고 싶어요",
+    "expected_leaf_id": "professor-med-internalmedicine",
+    "category": "의학(28후보 대형 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-series",
+        "usage": {
+          "prompt_tokens": 802,
+          "completion_tokens": 249,
+          "total_tokens": 1051,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 238
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 34
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-series",
+        "correctChoiceId": "professor-medicine-specialty-series",
+        "chosenId": "professor-medicine-specialty-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-specialty-series",
+        "usage": {
+          "prompt_tokens": 393,
+          "completion_tokens": 490,
+          "total_tokens": 883,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 476
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 393
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-specialty-series",
+        "correctChoiceId": "professor-med-internalmedicine",
+        "chosenId": "professor-med-internalmedicine",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-med-internalmedicine",
+        "usage": {
+          "prompt_tokens": 745,
+          "completion_tokens": 419,
+          "total_tokens": 1164,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 407
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 745
+        }
+      }
+    ]
+  },
+  {
+    "id": "med-03-derm-vs-skincare",
+    "utterance": "아토피 피부염의 의학적 진단과 치료를 공부하고 싶어요",
+    "expected_leaf_id": "professor-med-dermatology",
+    "category": "의학 피부과학, 보건계열 피부미용과 인접쌍(핵심 검증)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-series",
+        "usage": {
+          "prompt_tokens": 803,
+          "completion_tokens": 100,
+          "total_tokens": 903,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 89
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 35
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-series",
+        "correctChoiceId": "professor-medicine-specialty-series",
+        "chosenId": "professor-medicine-specialty-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-specialty-series",
+        "usage": {
+          "prompt_tokens": 394,
+          "completion_tokens": 561,
+          "total_tokens": 955,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 547
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 394
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-specialty-series",
+        "correctChoiceId": "professor-med-dermatology",
+        "chosenId": "professor-med-dermatology",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-med-dermatology",
+        "usage": {
+          "prompt_tokens": 746,
+          "completion_tokens": 128,
+          "total_tokens": 874,
+          "prompt_tokens_details": {
+            "cached_tokens": 640
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 116
+          },
+          "prompt_cache_hit_tokens": 640,
+          "prompt_cache_miss_tokens": 106
+        }
+      }
+    ]
+  },
+  {
+    "id": "dent-01-omfs",
+    "utterance": "매복사랑니 발치와 악안면 골절 수술을 공부하고 싶어요",
+    "expected_leaf_id": "professor-dent-omfs",
+    "category": "치의학(12후보 게이트)",
+    "live_verdict": "LIVE-FAIL",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-series",
+        "usage": {
+          "prompt_tokens": 806,
+          "completion_tokens": 138,
+          "total_tokens": 944,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 127
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 38
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-series",
+        "correctChoiceId": "professor-dentistry-specialty-series",
+        "chosenId": "professor-dentistry-specialty-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-dentistry-specialty-series",
+        "usage": {
+          "prompt_tokens": 397,
+          "completion_tokens": 355,
+          "total_tokens": 752,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 340
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 141
+        }
+      },
+      {
+        "gateNodeId": "professor-dentistry-specialty-series",
+        "correctChoiceId": "professor-dent-omfs",
+        "chosenId": null,
+        "verdict": "LIVE-FAIL",
+        "note": "JSON 파싱 실패 — raw: ",
+        "usage": {
+          "prompt_tokens": 520,
+          "completion_tokens": 15,
+          "total_tokens": 535,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 15
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 520
+        }
+      }
+    ]
+  },
+  {
+    "id": "t1-passthrough-01",
+    "utterance": "간호학 국가고시를 준비하고 있어요",
+    "expected_leaf_id": "professor-nursing",
+    "category": "단일 레벨 게이트(루트 1회 호출)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-nursing-series",
+        "chosenId": "professor-nursing-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-nursing-series",
+        "usage": {
+          "prompt_tokens": 794,
+          "completion_tokens": 185,
+          "total_tokens": 979,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 174
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 26
+        }
+      }
+    ]
+  },
+  {
+    "id": "med-02-ophthal",
+    "utterance": "안압 측정과 녹내장 진단을 공부하고 싶어요",
+    "expected_leaf_id": "professor-med-ophthalmology",
+    "category": "의학(28후보 대형 게이트)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-series",
+        "usage": {
+          "prompt_tokens": 801,
+          "completion_tokens": 142,
+          "total_tokens": 943,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 131
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 33
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-series",
+        "correctChoiceId": "professor-medicine-specialty-series",
+        "chosenId": "professor-medicine-specialty-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-specialty-series",
+        "usage": {
+          "prompt_tokens": 392,
+          "completion_tokens": 789,
+          "total_tokens": 1181,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 775
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 392
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-specialty-series",
+        "correctChoiceId": "professor-med-ophthalmology",
+        "chosenId": "professor-med-ophthalmology",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-med-ophthalmology",
+        "usage": {
+          "prompt_tokens": 744,
+          "completion_tokens": 194,
+          "total_tokens": 938,
+          "prompt_tokens_details": {
+            "cached_tokens": 640
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 181
+          },
+          "prompt_cache_hit_tokens": 640,
+          "prompt_cache_miss_tokens": 104
+        }
+      }
+    ]
+  },
+  {
+    "id": "regression-music-01",
+    "utterance": "리코더 운지법과 단소 초보 연주를 배우고 싶어요",
+    "expected_leaf_id": "professor-generalmusic",
+    "category": "회귀(§1-1 미해결 이슈 — 국악으로 새는지 재확인)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-music-series",
+        "chosenId": "professor-music-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-music-series",
+        "usage": {
+          "prompt_tokens": 802,
+          "completion_tokens": 201,
+          "total_tokens": 1003,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 190
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 34
+        }
+      },
+      {
+        "gateNodeId": "professor-music-series",
+        "correctChoiceId": "professor-generalmusic",
+        "chosenId": "professor-generalmusic",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-generalmusic",
+        "usage": {
+          "prompt_tokens": 421,
+          "completion_tokens": 166,
+          "total_tokens": 587,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 155
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 421
+        }
+      }
+    ]
+  },
+  {
+    "id": "regression-earthsci-astro-01",
+    "utterance": "대기 순환과 기후 시스템의 물리적 원리를 배우고 싶어요",
+    "expected_leaf_id": "professor-earthscience",
+    "category": "회귀(§1-1 인접쌍 지구과학 vs 천문학)",
+    "live_verdict": "LIVE-FAIL",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-mathphys",
+        "chosenId": "professor-mathphys",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-mathphys",
+        "usage": {
+          "prompt_tokens": 802,
+          "completion_tokens": 213,
+          "total_tokens": 1015,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 202
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 34
+        }
+      },
+      {
+        "gateNodeId": "professor-mathphys",
+        "correctChoiceId": "professor-earthscience",
+        "chosenId": "professor-astronomy",
+        "verdict": "LIVE-FAIL",
+        "note": "다른 노드로 정밀화됨: professor-astronomy (기대: professor-earthscience)",
+        "usage": {
+          "prompt_tokens": 415,
+          "completion_tokens": 239,
+          "total_tokens": 654,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 228
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 31
+        }
+      }
+    ]
+  },
+  {
+    "id": "regression-classicalchinese-01",
+    "utterance": "사자성어 뜻풀이와 한자 급수시험을 준비하고 싶어요",
+    "expected_leaf_id": "professor-classicalchinese",
+    "category": "회귀(K-12 갭 리프, 중국어와 인접)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-language-literature",
+        "chosenId": "professor-language-literature",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-language-literature",
+        "usage": {
+          "prompt_tokens": 804,
+          "completion_tokens": 350,
+          "total_tokens": 1154,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 339
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 36
+        }
+      },
+      {
+        "gateNodeId": "professor-language-literature",
+        "correctChoiceId": "professor-classicalchinese",
+        "chosenId": "professor-classicalchinese",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-classicalchinese",
+        "usage": {
+          "prompt_tokens": 611,
+          "completion_tokens": 155,
+          "total_tokens": 766,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 143
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 227
+        }
+      }
+    ]
+  },
+  {
+    "id": "kmed-01-sasang",
+    "utterance": "태음인 태양인 체질 진단과 처방을 공부하고 싶어요",
+    "expected_leaf_id": "professor-kmed-sasang",
+    "category": "한의학(9후보 게이트)",
+    "live_verdict": "LIVE-FAIL",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor",
+        "verdict": "LIVE-FAIL",
+        "note": "다른 노드로 정밀화됨: professor (기대: professor-medicine-series)",
+        "usage": {
+          "prompt_tokens": 802,
+          "completion_tokens": 1294,
+          "total_tokens": 2096,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 1286
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 34
+        }
+      }
+    ]
+  },
+  {
+    "id": "med-04-tuberculosis",
+    "utterance": "결핵균 배양검사와 항결핵제 내성 판정을 공부하고 싶어요",
+    "expected_leaf_id": "professor-med-tuberculosis",
+    "category": "의학(희소과목, 법정과목이지만 사실상 비활성 — 라우팅되는지 확인)",
+    "live_verdict": "LIVE-PASS",
+    "step_results": [
+      {
+        "gateNodeId": "professor",
+        "correctChoiceId": "professor-medicine-series",
+        "chosenId": "professor-medicine-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-series",
+        "usage": {
+          "prompt_tokens": 807,
+          "completion_tokens": 801,
+          "total_tokens": 1608,
+          "prompt_tokens_details": {
+            "cached_tokens": 768
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 790
+          },
+          "prompt_cache_hit_tokens": 768,
+          "prompt_cache_miss_tokens": 39
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-series",
+        "correctChoiceId": "professor-medicine-specialty-series",
+        "chosenId": "professor-medicine-specialty-series",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-medicine-specialty-series",
+        "usage": {
+          "prompt_tokens": 398,
+          "completion_tokens": 1035,
+          "total_tokens": 1433,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 1021
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 142
+        }
+      },
+      {
+        "gateNodeId": "professor-medicine-specialty-series",
+        "correctChoiceId": "professor-med-tuberculosis",
+        "chosenId": "professor-med-tuberculosis",
+        "verdict": "LIVE-PASS",
+        "note": "정확히 일치: professor-med-tuberculosis",
+        "usage": {
+          "prompt_tokens": 750,
+          "completion_tokens": 158,
+          "total_tokens": 908,
+          "prompt_tokens_details": {
+            "cached_tokens": 640
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 146
+          },
+          "prompt_cache_hit_tokens": 640,
+          "prompt_cache_miss_tokens": 110
+        }
+      }
+    ]
+  }
+]
