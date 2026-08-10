@@ -322,6 +322,36 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
 
   console.info('[Expert] LLM 판단 → 새 탭:', personaId);
 
+  // ── 2026-08-11 신설 — 교수 페르소나 월 사용 한도(시민 티어 제한, 학생
+  // 티어 무제한). worker.js handleProfessorUsageConsume이 실제 판정·
+  // 카운트 증가를 맡는다 — 여기서는 그 결과에 따라 세션을 열지 말지만
+  // 결정한다. 조회 실패 시에는 막지 않는다(과금 누락보다 UX 차단이 더
+  // 나쁘다는 코드베이스 기존 관례 — _settleAiUsage 등과 동일 원칙).
+  if (personaId.startsWith('professor')) {
+    try {
+      const guid = window.gopangWallet?.guid;
+      if (guid) {
+        const base = (CFG.endpoint || '').replace(/\/+$/, '');
+        const res = await fetch(`${base}/subscription/professor-usage/consume`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid }),
+        });
+        const data = await res.json().catch(() => null);
+        if (data && data.allowed === false) {
+          appendBubble(
+            'ai',
+            `이번 달 교수 페르소나 무료 이용 횟수(월 ${data.limit}회)를 다 쓰셨어요. ` +
+            `학생 티어(월 49,900원)로 전환하시면 무제한으로 이용하실 수 있습니다 — ` +
+            `다음 달에 초기화되니 그때 다시 이용하셔도 됩니다.`
+          );
+          return false;
+        }
+      }
+    } catch (e) {
+      console.warn('[Expert] 교수 페르소나 사용 한도 조회 실패(막지 않고 통과):', e.message);
+    }
+  }
+
   // ── 2026-07-19 신설: AC와의 이전 대화 맥락을 페르소나에 함께 인계 ──
   // 배경: 지금까지는 이 태그를 유발한 "이번 발화"(userText) 한 줄만 전달돼,
   // AC와 여러 턴에 걸쳐 이미 확인된 맥락(당사자·경위·이미 진행된 절차 등)이

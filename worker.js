@@ -2869,6 +2869,112 @@ async function handleSubscriptionStatus(request, url, env, corsHeaders) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 교수 페르소나(professor) 월 사용 한도 — 2026-08-11 신설(주피터 지시)
+//
+// 시민 티어(9,900원)에 교수 페르소나를 "제한적으로" 포함하기로 결정 —
+// 학생 티어(49,900원)는 무제한. 학생 티어와의 가격 차별화가 무너지지
+// 않도록 시민 등급은 월 N회로 제한한다(PROFESSOR_MONTHLY_LIMIT_CITIZEN,
+// 기본 8회 — 임의 초기값이라 실사용 데이터로 조정 필요, 확정치 아님).
+//
+// 카운터는 KV(AI_SETUP_SEALS_KV, 기존 hondi:free_spend:{guid} 패턴과
+// 동일 저장소 재사용)에 "hondi:professor_usage:{guid}:{YYYY-MM}" 키로
+// 월별 자동 리셋(다음 달엔 새 키라 카운트가 자연히 0부터 시작 — 별도
+// 배치 리셋 작업 불필요). TTL 40일로 넉넉히 잡아 월말 경계에서도 그
+// 달 안에는 절대 유실되지 않게 한다.
+// ═══════════════════════════════════════════════════════════
+
+const PROFESSOR_MONTHLY_LIMIT_CITIZEN = 8; // 잠정치 — 실사용 데이터로 재조정 필요
+
+function _currentYearMonth() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// tier(문자열 또는 null=미구독)를 받아 professor 무제한 여부를 반환.
+// professional(all_services_free) · student만 무제한 — 그 외(citizen,
+// business, 미구독)는 전부 시민과 동일한 제한을 받는다(business 티어에
+// 대한 별도 정책은 아직 결정된 바 없어 안전한 기본값으로 citizen과
+// 동일하게 취급 — §PRICING_TIER_FINAL 문서 §5 참고).
+function _professorUnlimited(tier) {
+  return tier === 'student' || tier === 'professional';
+}
+
+// GET /subscription/professor-usage?guid=
+async function handleProfessorUsageStatus(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+
+  let tier = null;
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    tier = sub?.tier || null;
+  } catch (e) { /* 구독 조회 실패는 미구독(citizen과 동일 제한)으로 보수적 간주 */ }
+
+  if (_professorUnlimited(tier)) {
+    return new Response(JSON.stringify({ tier, unlimited: true, allowed: true }), { headers: corsHeaders });
+  }
+
+  let used = 0;
+  if (env.AI_SETUP_SEALS_KV) {
+    try { used = parseInt(await env.AI_SETUP_SEALS_KV.get(`hondi:professor_usage:${guid}:${_currentYearMonth()}`) || '0', 10) || 0; }
+    catch (e) { /* 조회 실패는 0으로 보수적 간주(막지 않는 쪽으로) */ }
+  }
+  return new Response(JSON.stringify({
+    tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used,
+    remaining: Math.max(PROFESSOR_MONTHLY_LIMIT_CITIZEN - used, 0),
+    allowed: used < PROFESSOR_MONTHLY_LIMIT_CITIZEN,
+  }), { headers: corsHeaders });
+}
+
+// POST /subscription/professor-usage/consume — 실제 교수 세션 시작 시점에
+// 호출(client: expert-session.js handleExpertTag). 한도 초과면 소비하지
+// 않고 allowed:false만 반환 — 세션은 시작되지 않는다.
+async function handleProfessorUsageConsume(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+
+  let tier = null;
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    tier = sub?.tier || null;
+  } catch (e) { /* 미구독으로 간주 */ }
+
+  if (_professorUnlimited(tier)) {
+    return new Response(JSON.stringify({ tier, unlimited: true, allowed: true }), { headers: corsHeaders });
+  }
+
+  if (!env.AI_SETUP_SEALS_KV) {
+    // KV 바인딩 자체가 없으면 한도를 강제할 방법이 없다 — 사용자 흐름을
+    // 막지 않는 쪽으로 안전하게 통과시킨다(과금 누락보다 UX 차단이 더
+    // 나쁘다는 기존 코드베이스 관례 — _settleAiUsage 주석 참고).
+    return new Response(JSON.stringify({ tier, unlimited: false, allowed: true, note: 'KV_UNAVAILABLE' }), { headers: corsHeaders });
+  }
+
+  const key = `hondi:professor_usage:${guid}:${_currentYearMonth()}`;
+  let used = 0;
+  try { used = parseInt(await env.AI_SETUP_SEALS_KV.get(key) || '0', 10) || 0; } catch (e) { /* 0으로 간주 */ }
+
+  if (used >= PROFESSOR_MONTHLY_LIMIT_CITIZEN) {
+    return new Response(JSON.stringify({
+      tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used, remaining: 0, allowed: false,
+    }), { headers: corsHeaders });
+  }
+
+  const newUsed = used + 1;
+  try {
+    await env.AI_SETUP_SEALS_KV.put(key, String(newUsed), { expirationTtl: 40 * 24 * 60 * 60 });
+  } catch (e) {
+    console.error('[ProfessorUsage] KV put 실패(카운트 유실 가능, 통과시킴):', e.message);
+  }
+  return new Response(JSON.stringify({
+    tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used: newUsed,
+    remaining: Math.max(PROFESSOR_MONTHLY_LIMIT_CITIZEN - newUsed, 0), allowed: true,
+  }), { headers: corsHeaders });
+}
+
 // ── 월정기 결제 스윕 — scheduled()의 기존 10분 주기 크론에 편승 ──────────
 // (openbanking 자동확정 폴링과 동일 관례). next_billing_at이 지난 active/
 // grace 구독을 찾아 그 잔액에서 차감을 시도한다. 성공하면 다음 결제일을
@@ -9746,6 +9852,8 @@ export default {
     // ── 구독 티어 · 월정기 결제 — 공통 선결과제 (2026-08-11 신설) ──
     if (pathname === '/subscription/subscribe' && request.method === 'POST') return handleSubscribe(request, env, corsHeaders);
     if (pathname === '/subscription/status' && request.method === 'GET') return handleSubscriptionStatus(request, url, env, corsHeaders);
+    if (pathname === '/subscription/professor-usage' && request.method === 'GET') return handleProfessorUsageStatus(request, url, env, corsHeaders);
+    if (pathname === '/subscription/professor-usage/consume' && request.method === 'POST') return handleProfessorUsageConsume(request, env, corsHeaders);
     // ── 사업자 티어 확장 — 재고관리·공급망·인사·채용·업무일정 (2026-08-11 신설) ──
     if (pathname === '/biz/inventory/reorder-suggestions' && request.method === 'GET') return handleInventoryReorderSuggestions(request, url, env, corsHeaders);
     if (pathname === '/biz/suppliers/list' && request.method === 'GET') return handleSupplierList(request, url, env, corsHeaders);
