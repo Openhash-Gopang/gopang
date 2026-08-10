@@ -322,7 +322,9 @@ export const CORE_REGISTRY = {
     label: '위생사', icon: '🧼', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_sanitarian', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명
-    triggers: ['위생사', '위생 점검', '식품위생'],
+    // 2026-08-11 추가 — 실행형("관할 보건소 찾아줘") 트리거 보강. §STEP R 신설과
+    // 짝(market kmarket_admin_dashboard.html 위생점검 탭 안내).
+    triggers: ['위생사', '위생 점검', '식품위생', '위생점검 일정', '위생점검 신청', '관할 보건소'],
   },
   'health-educator': {
     label: '보건교육사', icon: '📢', category: 'HEALTH', ownerAgency: 'khealth',
