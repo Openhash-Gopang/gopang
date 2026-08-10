@@ -75,7 +75,7 @@ export const LEAF_SYNONYMS = {
   // 위 7개와 같은 이유(교과서 어휘 ≠ 대학 학과명 라벨)로 동의어 보강.
   'professor-generalmusic':       ['음악', '초등 음악', '리코더', '단소', '가창'],
   'professor-classicalchinese':   ['한문', '한자', '사자성어'],
-  'professor-generalpractical':   ['기술가정', '기술·가정', '실과', '가정 실습'],
+  'professor-generalpractical':   ['기술가정', '기술·가정', '실과', '가정 실습', '요리실습', '바느질', '목공', '발명'],
   'professor-careereducation':    ['진로와 직업', '진로', '적성검사'],
 };
 
@@ -139,7 +139,12 @@ export async function refineToLeaf(personaId, userText) {
         // 빈 응답). 기본이 non-thinking 계열 모델이라 매 호출이 이 상한까지
         // 차는 게 아니라 실제 필요한 만큼만 쓰므로, 토큰 비용 증가는 크지 않다는
         // 전제로 여유 있게 1000으로 올린다.
-        max_tokens:  1000,
+        // 2026-08-10 재상향(1000→1500) — K-12 리프 신설로 후보가 158→162개로
+        // 늘면서 프롬프트가 더 길어졌고, reasoning_content_len이 3700~3900대까지
+        // 올라가는 케이스가 실사에서 다시 나타나 1000이 또 부족해졌다(그새
+        // k12-sg-16-music-GAP·k12-sg-22-compound-AMBIG가 빈 응답으로 재발).
+        // 후보가 늘어날수록 이 문제가 반복될 걸 감안해 여유를 더 둔다.
+        max_tokens:  1500,
         temperature: 0.0,
         stream:      false,
         messages: [

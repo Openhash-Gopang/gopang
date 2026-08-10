@@ -112,10 +112,13 @@ def call_deepseek(api_key, system_prompt, user_utterance):
     payload = {
         "model": MODEL,
         "temperature": 0,
-        "max_tokens": 1000,  # 2026-08-09 재상향(500→1000) — 500으로도 여전히 실패한
+        "max_tokens": 1500,  # 2026-08-09 재상향(500→1000) — 500으로도 여전히 실패한
         # professor-gap-01/17 실사 확인(reasoning_content 1700~1800자, finish_reason=length,
         # 500 전량 소진). 프로덕션 subject-gate.js도 이번에 60→1000으로 맞춰 패치함 —
         # 이 스크립트도 동일 값으로 맞춰 재검증.
+        # 2026-08-10 재상향(1000→1500) — K-12 리프 신설로 후보 158→162개, 프롬프트가
+        # 더 길어지며 reasoning_content_len 3700~3900대 재발(k12-sg-16/22 빈 응답).
+        # subject-gate.js와 동일 값으로 재동기화.
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_utterance[:2000]},
