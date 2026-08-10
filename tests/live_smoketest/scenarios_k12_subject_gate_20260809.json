@@ -208,5 +208,12 @@
     "utterance": "화학 산화환원반응 넘 헷갈리는데 좀 봐주실수있나요?ㅠ",
     "expected_leaf_id": "professor-chemistry",
     "category": "오타·구어체 노이즈 강건성 테스트"
+  },
+  {
+    "id": "k12-sg-31-generalpractical-woodwork",
+    "root_id": "professor",
+    "utterance": "중학교 기술 시간에 목공으로 발명품 설계 과제를 하는데 도와주세요.",
+    "expected_leaf_id": "professor-generalpractical",
+    "category": "매칭O·동의어O(2026-08-10 추가 — 기존 k12-sg-17이 조리 소재라 professor-culinaryscience와 겹쳐 FAIL한 것과 대조하기 위해 목공/발명(기술 쪽) 소재로 신설, professor-craft[공예]와의 구분도 관찰 대상)"
   }
 ]
