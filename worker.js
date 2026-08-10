@@ -2468,6 +2468,114 @@ async function handleTradeAreaAnalysis(request, url, env, corsHeaders) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 마케팅 방안 제안(Marketing Plan) — 2026-08-11 신설
+// (사업자 티어 미비 기능 2/4). 상권분석(handleTradeAreaAnalysis)과 달리
+// 대응하는 공공데이터가 없는 영역이라 "AI 조언" 성격을 완전히 벗을 수는
+// 없다 — 대신 지어낸 일반론이 되지 않도록, 실제 데이터 두 가지를
+// 반드시 프롬프트에 근거로 넣는다:
+//   1) 판매자가 실제 등록한 상품 카탈로그(seller_products, K-Market)
+//   2) (좌표가 주어지면) 상권분석의 실측 경쟁 밀집도(§1과 동일 SBIZ 데이터)
+// 둘 다 없으면 일반론 대신 "등록된 데이터가 없어 구체적 제안이
+// 어렵다"고 명시하도록 시스템 프롬프트에서 강제한다(U2 정확성 원칙).
+// ═══════════════════════════════════════════════════════════
+
+const _MARKETING_PLAN_SYSTEM = `당신은 소상공인 마케팅 컨설턴트입니다. 아래 [실제 데이터]만 근거로
+마케팅 방안을 제안하십시오. 데이터에 없는 매출·고객수·예산 등은
+추측해 지어내지 말고, 데이터가 부족하면 caveats에 그 사실을 명시하십시오.
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "target_customers": ["문자열, 등록 상품/업종 기반으로 추정한 핵심 고객층 1~3개"],
+  "channel_recommendations": [{"channel":"채널명","reason":"이 데이터 기준으로 적합한 이유"}],
+  "differentiation_points": ["경쟁 밀집도·상품 구성 등 실제 데이터 기반 차별화 포인트"],
+  "promotion_ideas": ["구체적 실행 아이디어 2~5개"],
+  "caveats": ["데이터 부족·불확실성 고지 사항 — 없으면 빈 배열"]
+}`;
+
+// GET /biz/marketing-plan?guid=...&lat=&lng=&radius=
+async function handleMarketingPlan(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 파라미터 필수', corsHeaders);
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  // 1) 실제 등록 상품 카탈로그
+  let products = [];
+  try {
+    products = await _l1ListSellerProducts(env, guid);
+  } catch (e) {
+    console.warn('[MarketingPlan] 카탈로그 조회 실패(무시하고 진행):', e.message);
+  }
+  const catalogSummary = products.length
+    ? products.slice(0, 50).map(p => `- ${p.name || '(이름없음)'} (${p.category || '분류없음'}, ${p.price != null ? p.price + '원' : '가격미기재'})`).join('\n')
+    : '(등록된 상품 없음)';
+
+  // 2) (선택) 실측 경쟁 밀집도 — 상권분석과 동일 SBIZ 데이터 재사용
+  const lat = parseFloat(url.searchParams.get('lat'));
+  const lng = parseFloat(url.searchParams.get('lng'));
+  let tradeAreaSummary = '(위치 정보 없음 — 상권 데이터 미포함)';
+  if (Number.isFinite(lat) && Number.isFinite(lng) && env.SBIZ_API_KEY) {
+    try {
+      const radius = Math.min(parseInt(url.searchParams.get('radius') || '500', 10) || 500, 3000);
+      const items = await _sbizStoreListInRadius(lng, lat, radius, env.SBIZ_API_KEY);
+      const agg = _aggregateTradeArea(items, '');
+      const top5 = agg.top_middle_categories.slice(0, 5).map(r => `${r.name} ${r.count}곳`).join(', ');
+      tradeAreaSummary = `반경 ${radius}m 내 총 ${agg.total_store_count}개 점포. 업종 밀집 상위: ${top5 || '없음'}`;
+    } catch (e) {
+      console.warn('[MarketingPlan] 상권 데이터 조회 실패(무시하고 진행):', e.message);
+      tradeAreaSummary = '(상권 데이터 조회 실패 — 위치 정보 없이 진행)';
+    }
+  }
+
+  const userMsg = `[실제 데이터]\n■ 등록 상품 카탈로그(최대 50개 표시):\n${catalogSummary}\n\n■ 상권 경쟁 밀집도:\n${tradeAreaSummary}\n\n위 데이터만 근거로 마케팅 방안을 JSON으로 제안하십시오.`;
+
+  let res, data;
+  try {
+    res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: _MARKETING_PLAN_SYSTEM },
+          { role: 'user', content: userMsg },
+        ],
+        max_tokens: 1200,
+        stream: false,
+      }),
+    });
+    if (!res.ok) throw new Error(`DeepSeek 호출 실패(HTTP ${res.status})`);
+    data = await res.json();
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', message: '마케팅 방안 생성 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  const raw = data.choices?.[0]?.message?.content || '{}';
+  let plan;
+  try {
+    // DeepSeek가 ```json 코드펜스를 씌워 반환하는 경우가 있어 벗겨낸다
+    // (call-ai.js/기타 JSON 파서 호출부의 공통 관례).
+    const cleaned = raw.replace(/^```json\s*|```\s*$/g, '').trim();
+    plan = JSON.parse(cleaned);
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'parse_error', message: 'AI 응답 파싱 실패', raw_excerpt: raw.slice(0, 300) }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  return new Response(JSON.stringify({
+    source: 'live',
+    guid,
+    catalog_item_count: products.length,
+    has_trade_area_data: tradeAreaSummary.startsWith('반경'),
+    plan,
+  }), { headers: corsHeaders });
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -8993,6 +9101,8 @@ export default {
     if (pathname === '/api/stats/resolve') return handleGovDataResolve(request, url, env, corsHeaders);
     // ── 상권분석(SBIZ 반경조회) — 사업자 티어 미비기능 1/4 (2026-08-11 신설) ──
     if (pathname === '/biz/trade-area-analysis') return handleTradeAreaAnalysis(request, url, env, corsHeaders);
+    // ── 마케팅 방안 제안 — 사업자 티어 미비기능 2/4 (2026-08-11 신설) ──
+    if (pathname === '/biz/marketing-plan') return handleMarketingPlan(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
