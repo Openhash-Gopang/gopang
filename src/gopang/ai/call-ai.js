@@ -33,6 +33,34 @@ import { handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId, EXPERT_REGISTRY } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
 import { buildRoutingHintPart } from './routing-hint.js';
+
+// ═══════════════════════════════════════════════════════════
+// 2026-08-10 신설 — "내 사용량 보여줘" 등 액션 인텐트 → usage.html
+// 대시보드로 안내하는 버튼을 즉시(LLM 호출 없이) 표시한다.
+//
+// 기존 hondi-faq-router.js의 'quota' 항목(트리거: '사용량', '얼마나 썼' 등)은
+// "무료 한도가 뭔지 설명해달라"는 정보성 질문에는 잘 맞지만, "그래서 내
+// 실제 사용량을 화면으로 보고 싶다"는 액션 요청에는 텍스트 설명만
+// 돌려주고 실제 대시보드로 연결하지 않았다 — PC에서는 settings.js가
+// usage.html을 이미 열어주지만, 이 채팅 인터페이스(특히 폰)에서 "보여줘"
+// 라고 말했을 때 실제로 열어주는 경로가 없었던 게 이 신설의 이유다.
+//
+// LLM에게 별도 태그를 가르쳐 방출시키는 방식(예: _handleBalanceCheckTag의
+// [BALANCE_CHECK] 패턴) 대신, 여기서는 결정론적 로컬 매칭으로 처리한다 —
+// "화면을 열어달라"는 건 LLM의 자연어 이해가 필요한 애매한 요청이 아니라
+// 명확한 UI 액션이므로, 매 턴 LLM 호출 비용·지연 없이 즉시 응답하는 게
+// 사용자 경험상 더 낫다. 명사(사용량/지출 등) + 액션 동사(보여줘/열어줘 등)
+// 둘 다 있어야 매칭되도록 일부러 보수적으로 잡았다 — "사용량이 얼마나
+// 될까요?"처럼 순수 질문형은 그대로 기존 대화 흐름(FAQ 텍스트 설명 또는
+// [BALANCE_CHECK])을 타게 둔다.
+const _USAGE_DASHBOARD_NOUN = /사용량|지출|충전\s*내역|사용\s*내역|GDC\s*(잔액|현황)/i;
+const _USAGE_DASHBOARD_ACTION = /보여\s*줘|보고\s*싶|확인하고\s*싶|확인해\s*줘|열어\s*줘|대시보드|화면으로|어디서\s*보|어디서\s*확인/i;
+
+function _matchUsageDashboardIntent(text) {
+  if (!text || typeof text !== 'string') return false;
+  if (text.trim().startsWith('[')) return false; // 클라이언트 내부 신호 제외 (hondi-faq-router.js와 동일 원칙)
+  return _USAGE_DASHBOARD_NOUN.test(text) && _USAGE_DASHBOARD_ACTION.test(text);
+}
 import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate, _submitUserFeedback } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
@@ -4447,6 +4475,23 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
 
 
 async function _callAIInner(userText, imageFile = null, _preTab = null, modelTier = null, onFailure = null) {
+  // 2026-08-10 신설 — "내 사용량 보여줘" 등은 LLM 호출 없이 즉시 처리.
+  // 사용자 말풍선은 호출부(send-message.js의 sendMessage())가 callAI 진입
+  // 전에 이미 찍어뒀으므로 여기서 다시 찍지 않는다(중복 방지). 이미지
+  // 첨부가 함께 온 경우(예: 영수증 사진 + "사용량 보여줘")는 이미지 분석이
+  // 본 의도일 가능성이 높으므로 이 단락은 건너뛰고 기존 흐름을 탄다.
+  if (!imageFile && _matchUsageDashboardIntent(userText)) {
+    history.push({ role: 'user', content: userText });
+    const _msg =
+      '📊 GDC 사용량·충전 내역을 한눈에 볼 수 있는 대시보드입니다.<br>' +
+      '<button onclick="window.location.href=\'usage.html\'" ' +
+      'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+      'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">내 사용량 확인하기</button>';
+    appendBubble('ai', _msg);
+    history.push({ role: 'assistant', content: _msg });
+    return;
+  }
+
   showTyping();
 
   // urgent=true → kemergency면 경고 표시 후 계속 처리
