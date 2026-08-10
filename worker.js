@@ -2958,6 +2958,254 @@ async function _runMonthlyBillingSweep(env) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 사업자 티어 확장(2026-08-11, 주피터 지시) — 재고관리(JIT)·공급망관리·
+// 인사관리·채용관리·직원 업무 및 일정관리. seller_products/seller_reviews와
+// 동일한 MVP 컨벤션(guid 소유, 엄격한 인증 없음, 느슨한 참조).
+// ═══════════════════════════════════════════════════════════
+
+// ── 재고관리(JIT) — 새 컬렉션 없이 기존 seller_products.stock_qty +
+// order_queue 판매 속도로 재주문 시점을 계산한다. ──────────────────────
+// GET /biz/inventory/reorder-suggestions?guid=&days=14(기본, 최근 N일
+// 판매량으로 일평균 소진량을 추정)
+async function handleInventoryReorderSuggestions(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  const windowDays = Math.min(Math.max(parseInt(url.searchParams.get('days') || '14', 10) || 14, 1), 90);
+
+  let products, orders;
+  try {
+    [products, orders] = await Promise.all([
+      _l1ListSellerProducts(env, guid),
+      (async () => {
+        const token = await _l1AdminToken(env);
+        const sinceIso = new Date(Date.now() - windowDays * 86400000).toISOString();
+        const filter = encodeURIComponent(`seller_guid='${guid}' && queued_at>='${sinceIso}'`);
+        const res = await fetch(`${L1_DEFAULT}/api/collections/order_queue/records?filter=${filter}&perPage=500`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`order_queue 조회 실패 HTTP ${res.status}`);
+        const data = await res.json().catch(() => ({ items: [] }));
+        return data.items || [];
+      })(),
+    ]);
+  } catch (e) {
+    return _err(502, 'INVENTORY_DATA_FETCH_FAILED', e.message, corsHeaders);
+  }
+
+  // 최근 windowDays 동안 product_id별 판매 수량 합산
+  const soldQty = new Map();
+  for (const o of orders) {
+    let items;
+    try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch (e) { items = []; }
+    for (const it of items) {
+      const pid = it.id || it.product_id;
+      const qty = Number(it.quantity) || 0;
+      if (pid) soldQty.set(pid, (soldQty.get(pid) || 0) + qty);
+    }
+  }
+
+  const suggestions = [];
+  for (const p of products) {
+    if (typeof p.stock_qty !== 'number') continue; // 무제한/미추적 상품은 재고관리 대상 아님
+    const soldInWindow = soldQty.get(p.product_id) || soldQty.get(p.id) || 0;
+    const dailyAvg = soldInWindow / windowDays;
+    const daysUntilOut = dailyAvg > 0 ? p.stock_qty / dailyAvg : null;
+    // JIT 판단: 조달 리드타임(기본 3일, 실제 공급업체 등록 시 그 값으로 대체
+    // — 이 엔드포인트 단독으로는 공급업체 리드타임을 모르므로 대시보드가
+    // biz_suppliers 조회 결과와 조합해 보정한다) 이내에 소진 예상이면 경고.
+    const needsReorder = daysUntilOut !== null && daysUntilOut <= 7;
+    suggestions.push({
+      product_id: p.product_id, name: p.name, current_stock: p.stock_qty,
+      sold_in_window: soldInWindow, daily_avg_sold: Math.round(dailyAvg * 100) / 100,
+      days_until_out: daysUntilOut !== null ? Math.round(daysUntilOut * 10) / 10 : null,
+      needs_reorder: needsReorder,
+    });
+  }
+  suggestions.sort((a, b) => (a.days_until_out ?? Infinity) - (b.days_until_out ?? Infinity));
+
+  return new Response(JSON.stringify({
+    source: 'live', guid, window_days: windowDays,
+    tracked_product_count: suggestions.length,
+    reorder_needed_count: suggestions.filter(s => s.needs_reorder).length,
+    suggestions,
+  }), { headers: corsHeaders });
+}
+
+// ── 공급망관리 — biz_suppliers CRUD ──────────────────────────────────
+async function handleSupplierList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`seller_guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/biz_suppliers/records?filter=${filter}&perPage=200`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, suppliers: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SUPPLIER_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleSupplierUpsert(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.seller_guid || '').trim();
+  const name = (body.name || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'seller_guid 필수', corsHeaders);
+  if (!name) return _err(400, 'MISSING_NAME', 'name 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      seller_guid: guid, name,
+      product_category: (body.product_category || '').trim() || null,
+      contact: (body.contact || '').trim() || null,
+      lead_time_days: Number.isFinite(Number(body.lead_time_days)) ? Number(body.lead_time_days) : null,
+      notes: (body.notes || '').trim() || null,
+    };
+    const isUpdate = !!body.id;
+    const url = isUpdate
+      ? `${L1_DEFAULT}/api/collections/biz_suppliers/records/${body.id}`
+      : `${L1_DEFAULT}/api/collections/biz_suppliers/records`;
+    if (!isUpdate) payload.created_at = new Date().toISOString();
+    const res = await fetch(url, {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, supplier: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SUPPLIER_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── 인사관리 + 채용관리 — biz_staff CRUD (record_type으로 구분) ──────────
+async function handleStaffList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  const recordType = (url.searchParams.get('record_type') || '').trim(); // 'employee' | 'candidate' | '' (전체)
+  try {
+    const token = await _l1AdminToken(env);
+    let filter = `seller_guid='${guid}'`;
+    if (recordType) filter += ` && record_type='${recordType}'`;
+    const res = await fetch(`${L1_DEFAULT}/api/collections/biz_staff/records?filter=${encodeURIComponent(filter)}&perPage=200`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, staff: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'STAFF_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+const _STAFF_VALID_STATUS = ['applied', 'interview', 'hired', 'rejected', 'active', 'on_leave', 'terminated'];
+
+async function handleStaffUpsert(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.seller_guid || '').trim();
+  const name = (body.name || '').trim();
+  const recordType = (body.record_type || '').trim();
+  const status = (body.status || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'seller_guid 필수', corsHeaders);
+  if (!name) return _err(400, 'MISSING_NAME', 'name 필수', corsHeaders);
+  if (!['candidate', 'employee'].includes(recordType)) return _err(400, 'INVALID_RECORD_TYPE', "record_type은 candidate 또는 employee", corsHeaders);
+  if (!_STAFF_VALID_STATUS.includes(status)) return _err(400, 'INVALID_STATUS', `status는 ${_STAFF_VALID_STATUS.join('/')} 중 하나`, corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      seller_guid: guid, record_type: recordType, name, status,
+      contact: (body.contact || '').trim() || null,
+      role: (body.role || '').trim() || null,
+      hourly_wage_krw: Number.isFinite(Number(body.hourly_wage_krw)) ? Number(body.hourly_wage_krw) : null,
+      notes: (body.notes || '').trim() || null,
+    };
+    const isUpdate = !!body.id;
+    const url = isUpdate
+      ? `${L1_DEFAULT}/api/collections/biz_staff/records/${body.id}`
+      : `${L1_DEFAULT}/api/collections/biz_staff/records`;
+    if (!isUpdate) payload.created_at = new Date().toISOString();
+    const res = await fetch(url, {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, staff: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'STAFF_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── 직원 업무 및 일정관리 — biz_staff_tasks CRUD ──────────────────────
+async function handleStaffTaskList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`seller_guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/biz_staff_tasks/records?filter=${filter}&sort=due_at&perPage=200`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, tasks: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'STAFF_TASK_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleStaffTaskUpsert(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.seller_guid || '').trim();
+  const isUpdate = !!body.id;
+  const status = (body.status || 'todo').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'seller_guid 필수', corsHeaders);
+  if (!isUpdate && !(body.title || '').trim()) return _err(400, 'MISSING_TITLE', 'title 필수', corsHeaders);
+  if (!['todo', 'in_progress', 'done'].includes(status)) return _err(400, 'INVALID_STATUS', 'status는 todo/in_progress/done 중 하나', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    // 업데이트 시엔 넘어온 필드만 патch — title 등을 빈 값으로 덮어쓰지 않는다
+    // (예: 상태만 바꾸는 taskUpdateStatus 호출이 기존 제목을 지우지 않도록).
+    const payload = { status };
+    if (body.title !== undefined) payload.title = (body.title || '').trim();
+    if (body.seller_guid !== undefined) payload.seller_guid = guid;
+    if (body.staff_id !== undefined) payload.staff_id = (body.staff_id || '').trim() || null;
+    if (body.description !== undefined) payload.description = (body.description || '').trim() || null;
+    if (body.due_at !== undefined) payload.due_at = body.due_at || null;
+    if (!isUpdate) {
+      payload.seller_guid = guid;
+      payload.title = (body.title || '').trim();
+      payload.created_at = new Date().toISOString();
+    }
+    const url = isUpdate
+      ? `${L1_DEFAULT}/api/collections/biz_staff_tasks/records/${body.id}`
+      : `${L1_DEFAULT}/api/collections/biz_staff_tasks/records`;
+    const res = await fetch(url, {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, task: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'STAFF_TASK_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -9498,6 +9746,14 @@ export default {
     // ── 구독 티어 · 월정기 결제 — 공통 선결과제 (2026-08-11 신설) ──
     if (pathname === '/subscription/subscribe' && request.method === 'POST') return handleSubscribe(request, env, corsHeaders);
     if (pathname === '/subscription/status' && request.method === 'GET') return handleSubscriptionStatus(request, url, env, corsHeaders);
+    // ── 사업자 티어 확장 — 재고관리·공급망·인사·채용·업무일정 (2026-08-11 신설) ──
+    if (pathname === '/biz/inventory/reorder-suggestions' && request.method === 'GET') return handleInventoryReorderSuggestions(request, url, env, corsHeaders);
+    if (pathname === '/biz/suppliers/list' && request.method === 'GET') return handleSupplierList(request, url, env, corsHeaders);
+    if (pathname === '/biz/suppliers/save' && request.method === 'POST') return handleSupplierUpsert(request, env, corsHeaders);
+    if (pathname === '/biz/staff/list' && request.method === 'GET') return handleStaffList(request, url, env, corsHeaders);
+    if (pathname === '/biz/staff/save' && request.method === 'POST') return handleStaffUpsert(request, env, corsHeaders);
+    if (pathname === '/biz/staff-tasks/list' && request.method === 'GET') return handleStaffTaskList(request, url, env, corsHeaders);
+    if (pathname === '/biz/staff-tasks/save' && request.method === 'POST') return handleStaffTaskUpsert(request, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
