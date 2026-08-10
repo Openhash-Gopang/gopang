@@ -560,6 +560,16 @@ export const PROFESSOR_REGISTRY = {
     parentKey: 'professor-music-series',
     triggers: ['음악사 지도', '음악학 지도'],
   },
+  // 2026-08-10 신설 — K-12 교과-전공 매칭 갭 대응(§K12-SUBJECT-PROFESSOR-
+  // MAJOR-MAPPING). 초중고 정규 "음악" 교과가 성악·기악·국악·작곡·
+  // 실용음악·음악학 어느 소계열에도 정확히 안 맞아 subject-gate 실사
+  // 검증에서 3차례 억지 매칭(주로 국악)됐던 걸 리프 신설로 해결.
+  'professor-generalmusic': {
+    label: '교수(교양음악)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-generalmusic', needsMedicalSafety: false,
+    parentKey: 'professor-music-series',
+    triggers: ['교양음악 지도', '음악 개론 지도'],
+  },
   // ── 중계열(2단) 배치5 신설 3개 (공학 확장) ───────────────────
   'professor-industrial-safety-series': {
     label: '교수(산업·안전 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
@@ -950,6 +960,17 @@ export const PROFESSOR_REGISTRY = {
     parentKey: 'professor-language-literature',
     triggers: ['중국어 지도', 'HSK 지도'],
   },
+  // 2026-08-10 신설 — K-12 교과-전공 매칭 갭 대응. 초중고 정규 "한문"
+  // 교과를 담당할 리프가 아예 없어 subject-gate 실사 검증에서 3차례
+  // professor-chinese(현대 중국어)로 억지 매칭됐던 걸 리프 신설로 해결
+  // — SP_professor-classicalchinese_v1_0.md에 현대 중국어와의 경계를
+  // 명시했다.
+  'professor-classicalchinese': {
+    label: '교수(한문학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-classicalchinese', needsMedicalSafety: false,
+    parentKey: 'professor-language-literature',
+    triggers: ['한문 지도', '한자 교육 지도'],
+  },
   'professor-french': {
     label: '교수(프랑스어·문학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-french', needsMedicalSafety: false,
@@ -1153,5 +1174,26 @@ export const PROFESSOR_REGISTRY = {
     key: 'SP_professor-beautyart', needsMedicalSafety: false,
     parentKey: 'professor-misc-series',
     triggers: ['뷰티아트 지도', '메이크업 색채이론 지도'],
+  },
+  // 2026-08-10 신설 2건 — K-12 교과-전공 매칭 갭 대응. 둘 다 subject-gate
+  // 실사 검증에서 3차례 억지 매칭됐던 완전공백 과목을 리프 신설로 해결.
+  'professor-generalpractical': {
+    label: '교수(교양 기술·가정)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-generalpractical', needsMedicalSafety: false,
+    // 초중고 "기술·가정" 교과가 소비자·가정자원/아동·가족학/공예/
+    // 주생활학으로 파편화돼 있어 매번 professor-culinaryscience(조리과학,
+    // 정식 소계열도 아닌 인접 리프)로 억지 매칭됐음.
+    parentKey: 'professor-misc-series',
+    triggers: ['기술가정 지도', '실과 지도'],
+  },
+  'professor-careereducation': {
+    label: '교수(진로교육)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-careereducation', needsMedicalSafety: false,
+    // 초중고 "진로와 직업" 교과를 담당할 리프가 아예 없어 매번
+    // professor-psychology(적성 "검사"라는 표면적 연상만으로)로 억지
+    // 매칭됐음. SP_professor-careereducation_v1_0.md §세부분야 경계에서
+    // 정서·심리 상담과는 명확히 구분(임상적 개입 없음).
+    parentKey: 'professor-misc-series',
+    triggers: ['진로와 직업 지도', '진로교육 지도', '적성검사 해석'],
   },
 };

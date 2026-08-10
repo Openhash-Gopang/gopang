@@ -71,6 +71,12 @@ export const LEAF_SYNONYMS = {
   'professor-generalsocialscience': ['사회', '초등 사회'],
   'professor-physicaleducation':  ['체육', '초등 체육'],
   'professor-finearts':           ['미술', '초등 미술', '그리기'],
+  // 2026-08-10 추가 — K-12 교과-전공 매칭 갭 대응으로 신설한 4개 리프.
+  // 위 7개와 같은 이유(교과서 어휘 ≠ 대학 학과명 라벨)로 동의어 보강.
+  'professor-generalmusic':       ['음악', '초등 음악', '리코더', '단소', '가창'],
+  'professor-classicalchinese':   ['한문', '한자', '사자성어'],
+  'professor-generalpractical':   ['기술가정', '기술·가정', '실과', '가정 실습'],
+  'professor-careereducation':    ['진로와 직업', '진로', '적성검사'],
 };
 
 export function _leafMenuLine(leaf) {

@@ -108,22 +108,22 @@
     "id": "k12-sg-16-music-GAP",
     "root_id": "professor",
     "utterance": "단소 운지법 실기고사를 봐야 하는데 연습을 도와주세요.",
-    "expected_leaf_id": "professor",
-    "category": "완전공백(대응 리프 없음. '운지법'이 professor-instrumental[기악]·professor-koreanmusic[국악]과 표면 연상돼 억지 매칭 위험 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
+    "expected_leaf_id": "professor-generalmusic",
+    "category": "매칭O·동의어O(2026-08-10 리프 신설 — 3차례 프롬프트 수정으로 안 풀려 professor-generalmusic 신설로 해결)"
   },
   {
     "id": "k12-sg-17-techhome-GAP",
     "root_id": "professor",
     "utterance": "요리실습 칼질 안전수칙을 정리해야 하는데 도와주세요.",
-    "expected_leaf_id": "professor",
-    "category": "완전공백(대응 리프 없음. professor-culinaryscience[조리과학]가 실재 후보라 억지 매칭 위험 최상위 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
+    "expected_leaf_id": "professor-generalpractical",
+    "category": "매칭O·동의어O(2026-08-10 리프 신설 — professor-generalpractical 신설로 해결)"
   },
   {
     "id": "k12-sg-18-hanmun-GAP",
     "root_id": "professor",
     "utterance": "천자문에 나오는 한자 뜻을 외워야 하는데 도와주세요.",
-    "expected_leaf_id": "professor",
-    "category": "완전공백(대응 리프 없음. professor-chinese[중국어·문학]가 '한자'로 연상돼 억지 매칭 위험 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
+    "expected_leaf_id": "professor-classicalchinese",
+    "category": "매칭O·동의어O(2026-08-10 리프 신설 — professor-classicalchinese 신설로 해결)"
   },
   {
     "id": "k12-sg-19-biology-bioeng-ADJ",
@@ -178,8 +178,8 @@
     "id": "k12-sg-26-career-GAP",
     "root_id": "professor",
     "utterance": "진로와 직업 시간에 적성검사 결과를 해석해야 하는데 도와주세요.",
-    "expected_leaf_id": "professor",
-    "category": "완전공백 + 범위 경계 케이스(적성검사 해석은 진로상담 성격이라 애초에 professor 산하가 아닐 수도 있음 — \"해당 없음\"(id=professor) 또는 다른 EXPERT[예: 상담 계열]로 새는지도 관찰 대상, 2026-08-10 구조적 수정 이후)"
+    "expected_leaf_id": "professor-careereducation",
+    "category": "매칭O·동의어O(2026-08-10 리프 신설 — professor-careereducation 신설로 해결)"
   },
   {
     "id": "k12-sg-27-secondlang-german",
