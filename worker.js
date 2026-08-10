@@ -2337,6 +2337,137 @@ async function handleGovDataResolve(request, url, env, corsHeaders) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 상권분석(Trade Area Analysis) — 소상공인시장진흥공단 상가(상권)정보
+// Open API(B553077, data.go.kr) 반경조회 연동. 2026-08-11 신설
+// (사업자 티어 미비 기능 착수분 1/4 — K_SERVICE_MONETIZATION 사업자
+// 49,900원 티어의 "상권 분석" 항목. 그 전까지는 desktop.html/
+// hondi_flyer.html에 예시 문구로만 존재하고 실제 로직은 0건이었음).
+//
+// 데이터 출처: 공공데이터포털 "소상공인시장진흥공단_상가(상권)정보"
+// (data.go.kr, 국세청/카드사 데이터 기반, storeListInRadius 반경조회).
+// 서비스키는 공공데이터포털(data.go.kr)에서 개별 신청·발급받아
+// SBIZ_API_KEY secret으로 설정해야 한다(wrangler secret put SBIZ_API_KEY).
+//
+// ★ 주의(미검증): 아래 응답 필드명(bizesNm/indsLclsNm/indsMclsNm/
+// indsSclsNm 등)은 공개된 사용 예시·문서 스니펫을 근거로 작성했다 —
+// 실제 서비스키 발급 후 라이브 응답으로 필드명·구조를 반드시 대조
+// 검증할 것(KOSIS 사례처럼 포털 API가 표준 JSON이 아니거나, sdsc/sdsc2
+// 버전 간 스키마가 다를 가능성 있음 — _kosisSearch의 _lenientJsonParse
+// 전례 참고).
+// ═══════════════════════════════════════════════════════════
+
+const SBIZ_BASE = 'https://apis.data.go.kr/B553077/api/open/sdsc';
+
+// 반경 내 상가업소 목록 조회 — storeListInRadius
+// (cx=경도, cy=위도, radius=미터, type=json)
+async function _sbizStoreListInRadius(lng, lat, radiusM, apiKey) {
+  const url = `${SBIZ_BASE}/storeListInRadius` +
+    `?cx=${encodeURIComponent(lng)}&cy=${encodeURIComponent(lat)}` +
+    `&radius=${encodeURIComponent(radiusM)}` +
+    `&type=json&numOfRows=1000&pageNo=1` +
+    `&ServiceKey=${apiKey}`;
+  const res = await fetch(url);
+  const bodyText = await res.text();
+  if (!res.ok) throw new Error(`SBIZ 반경조회 실패(HTTP ${res.status}): ${bodyText.slice(0, 200)}`);
+
+  let data;
+  try {
+    data = JSON.parse(bodyText);
+  } catch (e) {
+    // 공공데이터포털 API는 인증키 오류 시 JSON이 아니라 XML 오류 문서를
+    // 주는 경우가 흔하다(KOSIS와 같은 계열 문제) — 파싱 실패를 곧장
+    // "인증키 확인 필요"로 구분해 던진다.
+    throw new Error(`SBIZ 응답 파싱 실패(JSON 아님 — 인증키/파라미터 확인 필요): ${bodyText.slice(0, 200)}`);
+  }
+  const body = data?.body;
+  if (!body || !Array.isArray(body.items)) {
+    if (data?.header && data.header.resultCode && data.header.resultCode !== '00') {
+      throw new Error(`SBIZ 오류 응답(${data.header.resultCode}): ${data.header.resultMsg || ''}`);
+    }
+    return []; // 정상 응답이지만 반경 내 결과 0건
+  }
+  return body.items;
+}
+
+// 업종중/대분류명 기준 밀집도 집계 + 사용자 업종 키워드가 있으면 그
+// 경쟁 점포 수까지 계산한다. AI 코멘트 없이도 그대로 화면 렌더링 가능.
+function _aggregateTradeArea(items, myCategoryKeyword) {
+  const byMiddle = new Map();
+  const byLarge  = new Map();
+  let matched = 0;
+  for (const it of items) {
+    const mid = it.indsMclsNm || '분류없음';
+    const lcl = it.indsLclsNm || '분류없음';
+    byMiddle.set(mid, (byMiddle.get(mid) || 0) + 1);
+    byLarge.set(lcl, (byLarge.get(lcl) || 0) + 1);
+    if (myCategoryKeyword && (
+      String(it.indsMclsNm || '').includes(myCategoryKeyword) ||
+      String(it.indsSclsNm || '').includes(myCategoryKeyword) ||
+      String(it.bizesNm || '').includes(myCategoryKeyword)
+    )) matched++;
+  }
+  const sortDesc = (m) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
+  return {
+    total_store_count: items.length,
+    top_middle_categories: sortDesc(byMiddle).slice(0, 15),
+    top_large_categories: sortDesc(byLarge),
+    my_category_keyword: myCategoryKeyword || null,
+    my_category_competitor_count: myCategoryKeyword ? matched : null,
+  };
+}
+
+// GET /biz/trade-area-analysis?lat=&lng=&radius=&category=
+// radius 기본 500m(도보 5~7분권 관례치), 최대 3000m로 제한(응답 크기·
+// 남용 방지 — numOfRows=1000 캡과 함께 과도한 광역조회 예방).
+async function handleTradeAreaAnalysis(request, url, env, corsHeaders) {
+  const lat = parseFloat(url.searchParams.get('lat'));
+  const lng = parseFloat(url.searchParams.get('lng'));
+  let radius = parseInt(url.searchParams.get('radius') || '500', 10);
+  const category = (url.searchParams.get('category') || '').trim();
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return _err(400, 'MISSING_COORDS', 'lat/lng 파라미터 필수(숫자)', corsHeaders);
+  }
+  if (!Number.isFinite(radius) || radius <= 0) radius = 500;
+  radius = Math.min(radius, 3000);
+
+  if (!env.SBIZ_API_KEY) return _err(500, 'SBIZ_KEY_MISSING', 'SBIZ_API_KEY secret 미설정', corsHeaders);
+
+  const cacheKey = `trade-area:${lat.toFixed(4)}:${lng.toFixed(4)}:${radius}`;
+  if (env.GOV_DATA_KV) {
+    const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
+    if (cached) {
+      const agg = _aggregateTradeArea(cached.items, category);
+      return new Response(JSON.stringify({ source: 'cache', lat, lng, radius, ...agg }), { headers: corsHeaders });
+    }
+  }
+
+  let items;
+  try {
+    items = await _sbizStoreListInRadius(lng, lat, radius, env.SBIZ_API_KEY);
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', message: '상권정보 조회 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  if (env.GOV_DATA_KV) {
+    try {
+      // 상가업소 데이터는 국세청/카드사 기준 배치 갱신이라 하루 단위로도
+      // 안전 — KOSIS 캐시(30일)보다 짧게 7일로 설정.
+      await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ items }), { expirationTtl: 60 * 60 * 24 * 7 });
+    } catch (e) {
+      console.error('trade-area KV 캐시 실패(무시):', e.message);
+    }
+  }
+
+  const agg = _aggregateTradeArea(items, category);
+  return new Response(JSON.stringify({ source: 'live', lat, lng, radius, ...agg }), { headers: corsHeaders });
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -8860,6 +8991,8 @@ export default {
 
     // ── 국가데이터처(KOSIS) 통계 리졸버 (2026-07-16 배선) ──
     if (pathname === '/api/stats/resolve') return handleGovDataResolve(request, url, env, corsHeaders);
+    // ── 상권분석(SBIZ 반경조회) — 사업자 티어 미비기능 1/4 (2026-08-11 신설) ──
+    if (pathname === '/biz/trade-area-analysis') return handleTradeAreaAnalysis(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
