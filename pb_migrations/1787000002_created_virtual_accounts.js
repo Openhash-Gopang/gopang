@@ -70,3 +70,5 @@ migrate((db) => {
   const collection = dao.findCollectionByNameOrId("vacc0000000001");
   return dao.deleteCollection(collection);
 })
+
+// 2026-08-10 재배포 트리거 (최초 배포 시 diff에서 누락됨)
