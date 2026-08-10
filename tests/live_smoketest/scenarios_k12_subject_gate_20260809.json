@@ -2,127 +2,211 @@
   {
     "id": "k12-sg-01-korean",
     "root_id": "professor",
-    "utterance": "초등학교 2학년인데 받아쓰기 시험에서 자꾸 틀려서 연습 좀 도와주세요.",
+    "utterance": "맞춤법이 자꾸 틀려서 국어 공부를 도와줄 사람이 필요해요.",
     "expected_leaf_id": "professor-korean",
     "category": "매칭O·동의어O(초중고 공통 국어)"
   },
   {
     "id": "k12-sg-02-math",
     "root_id": "professor",
-    "utterance": "초등학교 3학년 나눗셈 문제집을 풀다가 자꾸 막혀요.",
+    "utterance": "곱셈구구를 아직 다 못 외워서 연습을 도와주세요.",
     "expected_leaf_id": "professor-math",
     "category": "매칭O·동의어O(초중고 공통 수학)"
   },
   {
     "id": "k12-sg-03-english",
     "root_id": "professor",
-    "utterance": "초등학생인데 파닉스로 영어 읽기를 연습하고 싶어요.",
+    "utterance": "알파벳도 겨우 아는 수준인데 영어를 처음부터 가르쳐 주실 수 있나요?",
     "expected_leaf_id": "professor-english",
     "category": "매칭O·동의어O(초중고 공통 영어)"
   },
   {
     "id": "k12-sg-04-science",
     "root_id": "professor",
-    "utterance": "초등학교 5학년 과학 시간에 화산 모형 실험을 준비 중인데 원리를 설명해 주세요.",
+    "utterance": "그림자가 생기는 원리를 알아보는 과학 숙제가 있는데 정리가 안 돼서 도와주세요.",
     "expected_leaf_id": "professor-generalscience",
     "category": "매칭O·동의어O(초등 과학)"
   },
   {
     "id": "k12-sg-05-socialstudies",
     "root_id": "professor",
-    "utterance": "초등학교 4학년 사회 숙제로 우리 고장 지도 그리기를 하는데 도와주세요.",
+    "utterance": "우리 동네 공공기관을 조사하는 사회 숙제를 도와주세요.",
     "expected_leaf_id": "professor-generalsocialscience",
     "category": "매칭O·동의어O(초등 사회)"
   },
   {
     "id": "k12-sg-06-pe",
     "root_id": "professor",
-    "utterance": "초등학교 체육 시간에 줄넘기 이중뛰기가 안 돼서 연습법을 배우고 싶어요.",
+    "utterance": "피구 경기 규칙을 정리해야 하는 체육 숙제가 있는데 도와주세요.",
     "expected_leaf_id": "professor-physicaleducation",
     "category": "매칭O·동의어O(초중고 공통 체육)"
   },
   {
     "id": "k12-sg-07-art",
     "root_id": "professor",
-    "utterance": "초등학교 미술 시간에 수채화 물 조절이 잘 안 돼서 도와주세요.",
+    "utterance": "찰흙으로 조소 작품을 만드는 미술 숙제를 도와주세요.",
     "expected_leaf_id": "professor-finearts",
     "category": "매칭O·동의어O(초중고 공통 미술)"
   },
   {
     "id": "k12-sg-08-history",
     "root_id": "professor",
-    "utterance": "중학교 역사 수행평가로 고려에서 조선으로 넘어가는 과정을 정리해야 해요.",
+    "utterance": "삼국시대 연표가 자꾸 헷갈려서 정리하는 걸 도와주세요.",
     "expected_leaf_id": "professor-history",
     "category": "매칭O·동의어X(중고 역사 — LEAF_SYNONYMS 미등록)"
   },
   {
     "id": "k12-sg-09-ethics",
     "root_id": "professor",
-    "utterance": "중학교 도덕 수행평가로 공리주의와 의무론을 비교하는 글을 써야 해요.",
+    "utterance": "칸트의 정언명령을 정리해서 도덕 수행평가를 준비해야 하는데 도와주세요.",
     "expected_leaf_id": "professor-ethics",
-    "category": "매칭 근사치·동의어X(초중고 도덕 ≈ 대학 철학·윤리학, 개념적 거리 있음)"
+    "category": "매칭 근사치·동의어X(초중고 도덕 ≈ 대학 철학·윤리학)"
   },
   {
     "id": "k12-sg-10-physics",
     "root_id": "professor",
-    "utterance": "고등학교 물리학1 등가속도 운동 문제가 자꾸 안 풀려요.",
+    "utterance": "뉴턴의 운동법칙 문제가 안 풀려서 물리 공부를 도와주세요.",
     "expected_leaf_id": "professor-physics",
-    "category": "매칭O·동의어X(고등 물리 — LEAF_SYNONYMS 미등록)"
+    "category": "매칭O·동의어X(고등 물리)"
   },
   {
-    "id": "k12-sg-11-chemistry",
+    "id": "k12-sg-11-biology",
     "root_id": "professor",
-    "utterance": "고등학교 화학1 몰농도 계산 문제를 같이 풀어봤으면 해요.",
-    "expected_leaf_id": "professor-chemistry",
-    "category": "매칭O·동의어X(고등 화학 — LEAF_SYNONYMS 미등록)"
-  },
-  {
-    "id": "k12-sg-12-biology",
-    "root_id": "professor",
-    "utterance": "고등학교 생명과학1 세포호흡 단원이 헷갈려서 정리하고 싶어요.",
+    "utterance": "멘델의 유전법칙 단원이 헷갈려서 생명과학 공부를 도와주세요.",
     "expected_leaf_id": "professor-biology",
-    "category": "매칭O·동의어X(고등 생명과학 — LEAF_SYNONYMS 미등록)"
+    "category": "매칭O·동의어X(고등 생명과학)"
+  },
+  {
+    "id": "k12-sg-12-chemistry-ADJ",
+    "root_id": "professor",
+    "utterance": "고등학교 화학2 산화환원 반응이 헷갈려서 도와주세요.",
+    "expected_leaf_id": "professor-chemistry",
+    "category": "인접쌍 함정(professor-chemicalengineering[화학공학]과 라벨 유사 — 산화환원은 순수화학 개념이라 chemistry가 정답)"
   },
   {
     "id": "k12-sg-13-earthscience",
     "root_id": "professor",
-    "utterance": "고등학교 지구과학1 판구조론 부분을 이해하기 어려워요.",
+    "utterance": "태양계 행성 특징을 정리해야 하는데 지구과학 숙제를 도와주세요.",
     "expected_leaf_id": "professor-earthscience",
-    "category": "매칭O·동의어X(고등 지구과학 — LEAF_SYNONYMS 미등록)"
+    "category": "매칭O·동의어X(고등 지구과학)"
   },
   {
     "id": "k12-sg-14-informatics",
     "root_id": "professor",
-    "utterance": "중학교 정보 시간에 스크래치로 코딩 과제를 하는데 순서도 짜는 걸 도와주세요.",
+    "utterance": "엔트리로 블록코딩 과제를 하는데 순서도 짜는 법을 모르겠어요, 도와주세요.",
     "expected_leaf_id": "professor-computerscience",
-    "category": "매칭 근사치·동의어X(초중고 정보 ≈ 대학 전산학, 개념적 거리 있음)"
+    "category": "매칭 근사치·동의어X(초중고 정보 ≈ 대학 전산학, 어휘 거리 큼 — 위험군)"
   },
   {
     "id": "k12-sg-15-secondlang-japanese",
     "root_id": "professor",
-    "utterance": "고등학교 제2외국어로 일본어를 배우는데 가타카나가 자꾸 헷갈려요.",
+    "utterance": "고등학교 제2외국어 일본어 가타카나가 자꾸 헷갈려서 도와주세요.",
     "expected_leaf_id": "professor-japanese",
-    "category": "매칭O·동의어X(고등 제2외국어 대표 사례 — LEAF_SYNONYMS 미등록)"
+    "category": "매칭O·동의어X(고등 제2외국어)"
   },
   {
     "id": "k12-sg-16-music-GAP",
     "root_id": "professor",
-    "utterance": "중학교 음악 수행평가로 리코더 운지법 시험을 봐야 하는데 연습 좀 도와주세요.",
+    "utterance": "단소 운지법 실기고사를 봐야 하는데 연습을 도와주세요.",
     "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음 — professor-music-series 하위가 성악/작곡/기악/국악/현대음악/음악학으로만 세분화, 초중고 '일반 음악 교과' 캐치올 리프 자체가 없음. id:null 응답이 정상 폴백)"
+    "category": "완전공백(대응 리프 없음. '운지법'이 professor-instrumental[기악]·professor-koreanmusic[국악]과 표면 연상돼 억지 매칭 위험 — id:null이 정답)"
   },
   {
     "id": "k12-sg-17-techhome-GAP",
     "root_id": "professor",
-    "utterance": "중학교 기술·가정 시간에 손바느질 실습 과제를 하는데 방법을 알려주세요.",
+    "utterance": "요리실습 칼질 안전수칙을 정리해야 하는데 도와주세요.",
     "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음 — consumerscience/childfamilystudies/craft/housingstudies로 파편화, '기술·가정' 교과 캐치올 리프 없음. id:null 응답이 정상 폴백)"
+    "category": "완전공백(대응 리프 없음. professor-culinaryscience[조리과학]가 실재 후보라 억지 매칭 위험 최상위 — id:null이 정답)"
   },
   {
     "id": "k12-sg-18-hanmun-GAP",
     "root_id": "professor",
-    "utterance": "고등학교 한문 시간에 배우는 사자성어 뜻을 정리하고 싶어요.",
+    "utterance": "천자문에 나오는 한자 뜻을 외워야 하는데 도와주세요.",
     "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음 — 한문 전용 리프 자체가 레지스트리에 없음. id:null 응답이 정상 폴백)"
+    "category": "완전공백(대응 리프 없음. professor-chinese[중국어·문학]가 '한자'로 연상돼 억지 매칭 위험 — id:null이 정답)"
+  },
+  {
+    "id": "k12-sg-19-biology-bioeng-ADJ",
+    "root_id": "professor",
+    "utterance": "고등학교 생명과학2에서 배우는 유전자 재조합 실험 원리가 헷갈려서 도와주세요.",
+    "expected_leaf_id": "professor-biology",
+    "category": "인접쌍 함정(professor-bioengineering[생명공학]과 개념 인접 — 여전히 고교 교육과정 범위라 biology가 정답)"
+  },
+  {
+    "id": "k12-sg-20-earthscience-astro-ADJ",
+    "root_id": "professor",
+    "utterance": "지구과학 시간에 배우는 별자리 관측 과제가 있는데 도와주세요.",
+    "expected_leaf_id": "professor-earthscience",
+    "category": "인접쌍 함정(professor-astronomy[천문·대기과학]가 실재 후보 — 실제 고교 '지구과학' 교과가 천문 단원을 포함하므로 earthscience가 정답이지만 astronomy로 샐 위험 큼)"
+  },
+  {
+    "id": "k12-sg-21-generalscience-physics-ADJ",
+    "root_id": "professor",
+    "utterance": "초등학교 3학년인데 자석에 관한 과학 실험 숙제가 있어요, 도와주세요.",
+    "expected_leaf_id": "professor-generalscience",
+    "category": "인접쌍 함정(professor-physics와 개념 인접 — 초등 수준이므로 generalscience가 정답, 동의어 '과학 실험'도 이쪽에 등록됨)"
+  },
+  {
+    "id": "k12-sg-22-compound-AMBIG",
+    "root_id": "professor",
+    "utterance": "수학 숙제도 있고 과학 숙제도 있어서 오늘 안에 다 봐주실 수 있나요?",
+    "expected_leaf_id": null,
+    "category": "복합요청(두 과목 동시 언급 — 단일 리프로 확신 있게 못 좁히는 게 정상, id:null 또는 되묻기가 바람직. 관찰용, 자동판정은 참고만)"
+  },
+  {
+    "id": "k12-sg-23-korean-slang",
+    "root_id": "professor",
+    "utterance": "쌤 저 국어 받아쓰기 좀 도와주세요 ㅠㅠ",
+    "expected_leaf_id": "professor-korean",
+    "category": "채팅체·은어('쌤') — 동의어 '받아쓰기' 보유로 안전할 것으로 예측"
+  },
+  {
+    "id": "k12-sg-24-math-fragment",
+    "root_id": "professor",
+    "utterance": "수학 나눗셈 몰라요 ㅜㅜ 알려주세요",
+    "expected_leaf_id": "professor-math",
+    "category": "파편체·강건성 테스트 — 동의어 '나눗셈' 보유"
+  },
+  {
+    "id": "k12-sg-25-healtheducation-APPROX",
+    "root_id": "professor",
+    "utterance": "보건 시간에 배우는 심폐소생술 순서를 외워야 하는데 도와주세요.",
+    "expected_leaf_id": "professor-healtheducation",
+    "category": "매칭 근사치·동의어X(초중고 '보건' 교과 ≈ 대학 간호·보건교육 전공, 개념적 거리 있음)"
+  },
+  {
+    "id": "k12-sg-26-career-GAP",
+    "root_id": "professor",
+    "utterance": "진로와 직업 시간에 적성검사 결과를 해석해야 하는데 도와주세요.",
+    "expected_leaf_id": null,
+    "category": "완전공백 + 범위 경계 케이스(적성검사 해석은 진로상담 성격이라 애초에 professor 산하가 아닐 수도 있음 — id:null 또는 다른 EXPERT[예: 상담 계열]로 새는지도 관찰 대상)"
+  },
+  {
+    "id": "k12-sg-27-secondlang-german",
+    "root_id": "professor",
+    "utterance": "고등학교 제2외국어 독일어 관사 변화가 헷갈려서 도와주세요.",
+    "expected_leaf_id": "professor-german",
+    "category": "매칭O·동의어X(고등 제2외국어, 언어 다양화)"
+  },
+  {
+    "id": "k12-sg-28-secondlang-spanish",
+    "root_id": "professor",
+    "utterance": "고등학교 제2외국어 스페인어 동사 활용이 헷갈려서 도와주세요.",
+    "expected_leaf_id": "professor-spanish",
+    "category": "매칭O·동의어X(고등 제2외국어, 언어 다양화)"
+  },
+  {
+    "id": "k12-sg-29-physics-adult",
+    "root_id": "professor",
+    "utterance": "편입 준비 중인데 물리학과 전공 시험을 대비해서 도와주세요.",
+    "expected_leaf_id": "professor-physics",
+    "category": "성인·대학 맥락 대조군(K-12 전용이 아님을 재확인)"
+  },
+  {
+    "id": "k12-sg-30-chemistry-noisy",
+    "root_id": "professor",
+    "utterance": "화학 산화환원반응 넘 헷갈리는데 좀 봐주실수있나요?ㅠ",
+    "expected_leaf_id": "professor-chemistry",
+    "category": "오타·구어체 노이즈 강건성 테스트"
   }
 ]
