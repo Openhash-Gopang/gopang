@@ -2739,6 +2739,225 @@ async function handleReviewReplySubmit(request, env, corsHeaders) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 구독 티어 · 월정기 결제 스케줄러 — 공통 선결과제 (2026-08-11 신설)
+//
+// 지난 조사에서 확인된 공백: profiles 스키마에 "이번 달 기본/프리미엄
+// 구독 중인지" 저장할 필드 자체가 없었고, GDC 잔액에서 매달 정기적으로
+// 구독료를 차감하는 스케줄 로직도 전혀 없었다(입금→GDC 충전만 있었음).
+// 이 블록은 그 두 가지를 채운다 — profiles 자체는 건드리지 않고 별도
+// user_subscriptions 컬렉션(seller_products/seller_reviews와 동일
+// 컨벤션)으로 분리했다.
+//
+// 요금제(주피터 지시, 2026-08-11 대화 기준):
+//   citizen(시민, 9,900원) — 일반 시민, K-Law 등 개별 서비스는 건당 결제
+//   business(사업자, 49,900원) — K-Business 관련 서비스 포함
+//   student(학생, 49,900원) — 교수 AI 페르소나·K-School 포함
+//   professional(전문직, 99,900원) — K-Law 등 혼디의 모든 서비스 무료
+// 자동 카드결제는 없다 — 가입자가 GDC 지갑을 충전해두면(기존 charge.html
+// 수동 확인 방식 그대로), 이 스케줄러가 매월 그 잔액에서 구독료를
+// 차감한다. 잔액 부족 시 즉시 정지하지 않고 유예(grace) 기간을 둔다.
+// ═══════════════════════════════════════════════════════════
+
+const SUBSCRIPTION_TIERS = {
+  citizen:      { name: '시민',   price_krw: 9900,  all_services_free: false },
+  business:     { name: '사업자', price_krw: 49900, all_services_free: false },
+  student:      { name: '학생',   price_krw: 49900, all_services_free: false },
+  professional: { name: '전문직', price_krw: 99900, all_services_free: true  },
+};
+// 잔액 부족으로 결제가 밀렸을 때, 즉시 서비스를 끊지 않고 봐주는 기간.
+// 통신사·OTT 등 일반적 유예 관행(3~7일)을 참고해 7일로 설정 — 재조정 가능.
+const SUBSCRIPTION_GRACE_DAYS = 7;
+
+function _addOneMonth(date) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + 1);
+  return d;
+}
+
+async function _l1GetSubscription(env, guid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`user_guid='${guid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/user_subscriptions/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 user_subscriptions 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// POST /subscription/subscribe — {guid, tier} → 신규 가입 또는 티어 변경.
+// 가입 즉시 1회차를 청구한다(구독 시작일 = 결제일 원칙 — 무료 유예 없이
+// 바로 청구해야 "구독 중인데 결제 안 됨" 상태가 애초에 생기지 않는다).
+async function handleSubscribe(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const tier = (body.tier || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!SUBSCRIPTION_TIERS[tier]) return _err(400, 'INVALID_TIER', `tier는 ${Object.keys(SUBSCRIPTION_TIERS).join('/')} 중 하나`, corsHeaders);
+
+  const priceKrw = SUBSCRIPTION_TIERS[tier].price_krw;
+  let charge;
+  try {
+    charge = await _chargeGdcForAiUsage(env, {
+      guid, krwAmount: priceKrw, serviceId: 'hondi-subscription',
+      memo: `구독 개시: ${SUBSCRIPTION_TIERS[tier].name}(${tier})`,
+    });
+  } catch (e) {
+    return _err(502, 'CHARGE_FAILED', e.message, corsHeaders);
+  }
+  if (!charge?.ok) {
+    return new Response(JSON.stringify({
+      ok: false, error: 'INSUFFICIENT_BALANCE',
+      message: 'GDC 잔액이 부족합니다. 먼저 충전한 뒤 다시 시도해 주세요.',
+      detail: charge,
+    }), { status: 402, headers: corsHeaders });
+  }
+
+  const now = new Date();
+  const nextBilling = _addOneMonth(now);
+  try {
+    const token = await _l1AdminToken(env);
+    const existing = await _l1GetSubscription(env, guid);
+    const payload = {
+      user_guid: guid, tier, status: 'active',
+      billing_amount_krw: priceKrw,
+      next_billing_at: nextBilling.toISOString(),
+      last_billed_at: now.toISOString(),
+      last_billing_result: 'success',
+      grace_started_at: null,
+      created_at: existing?.created_at || now.toISOString(),
+    };
+    const url = existing
+      ? `${L1_DEFAULT}/api/collections/user_subscriptions/records/${existing.id}`
+      : `${L1_DEFAULT}/api/collections/user_subscriptions/records`;
+    const res = await fetch(url, {
+      method: existing ? 'PATCH' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, subscription: rec, balance_after_krw: charge.balance_after }), { headers: corsHeaders });
+  } catch (e) {
+    // GDC는 이미 차감됐는데 레코드 저장에 실패한 경우 — 돈만 나가고 구독은
+    // 안 잡히는 사고를 막기 위해 반드시 에러로 표면화한다(조용히 삼키지 않음).
+    return _err(502, 'SUBSCRIPTION_RECORD_FAILED', `결제는 완료됐으나 구독 기록 저장 실패 — 반드시 수동 확인 필요: ${e.message}`, corsHeaders);
+  }
+}
+
+// GET /subscription/status?guid=...
+async function handleSubscriptionStatus(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 파라미터 필수', corsHeaders);
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    if (!sub) {
+      return new Response(JSON.stringify({ subscribed: false, tiers: SUBSCRIPTION_TIERS }), { headers: corsHeaders });
+    }
+    return new Response(JSON.stringify({
+      subscribed: true,
+      tier: sub.tier, tier_name: SUBSCRIPTION_TIERS[sub.tier]?.name,
+      status: sub.status, next_billing_at: sub.next_billing_at,
+      last_billed_at: sub.last_billed_at, last_billing_result: sub.last_billing_result,
+      all_services_free: !!SUBSCRIPTION_TIERS[sub.tier]?.all_services_free,
+      tiers: SUBSCRIPTION_TIERS,
+    }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SUBSCRIPTION_STATUS_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── 월정기 결제 스윕 — scheduled()의 기존 10분 주기 크론에 편승 ──────────
+// (openbanking 자동확정 폴링과 동일 관례). next_billing_at이 지난 active/
+// grace 구독을 찾아 그 잔액에서 차감을 시도한다. 성공하면 다음 결제일을
+// 한 달 뒤로 미루고 grace를 해제, 실패하면 grace로 전환(또는 grace 만료
+// 시 suspended로). 이미 처리된 건은 next_billing_at이 미래로 밀려 있으므로
+// 10분마다 재실행돼도 중복 청구되지 않는다(멱등).
+async function _runMonthlyBillingSweep(env) {
+  if (!env.L1_ADMIN_EMAIL || !env.L1_ADMIN_PASSWORD) return; // 로컬/미배포 환경 보호
+  let due;
+  try {
+    const token = await _l1AdminToken(env);
+    const nowIso = new Date().toISOString();
+    const filter = encodeURIComponent(`next_billing_at<='${nowIso}' && (status='active' || status='grace')`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/user_subscriptions/records?filter=${filter}&perPage=200`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    due = data.items || [];
+  } catch (e) {
+    console.error('[SubscriptionBilling] 대상 조회 실패:', e.message);
+    return;
+  }
+  if (!due.length) return;
+
+  const token = await _l1AdminToken(env);
+  for (const sub of due) {
+    try {
+      const tierCfg = SUBSCRIPTION_TIERS[sub.tier];
+      if (!tierCfg) { console.warn('[SubscriptionBilling] 알 수 없는 tier, 건너뜀:', sub.tier, sub.user_guid); continue; }
+
+      const charge = await _chargeGdcForAiUsage(env, {
+        guid: sub.user_guid, krwAmount: tierCfg.price_krw, serviceId: 'hondi-subscription',
+        memo: `월 정기 구독료: ${tierCfg.name}(${sub.tier})`,
+      });
+
+      const now = new Date();
+      let patch;
+      if (charge?.ok) {
+        patch = {
+          status: 'active',
+          next_billing_at: _addOneMonth(now).toISOString(),
+          last_billed_at: now.toISOString(),
+          last_billing_result: 'success',
+          grace_started_at: null,
+        };
+      } else {
+        // 잔액 부족 등 실패 — 이미 grace 중이었고 유예기간을 넘겼으면 정지,
+        // 아니면 grace로 전환(최초 실패면 grace_started_at을 지금으로 기록).
+        const graceStartedAt = sub.grace_started_at ? new Date(sub.grace_started_at) : now;
+        const graceExpired = (now - graceStartedAt) / (1000 * 60 * 60 * 24) >= SUBSCRIPTION_GRACE_DAYS;
+        patch = {
+          status: graceExpired ? 'suspended' : 'grace',
+          // next_billing_at을 하루 뒤로 미뤄 재시도 — 매 10분마다 무의미하게
+          // 재시도하지 않도록 최소 간격을 둔다.
+          next_billing_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          // L1 /api/ai-charge의 정확한 실패 사유 코드 체계는 이 저장소
+          // 밖(main.pb.js)이라 여기서 세밀히 분기하지 않는다 — charge가
+          // 존재하는데 실패했으면 대부분 잔액부족이므로 그렇게 기록하고,
+          // charge 자체가 없으면(네트워크 등 예외적 상황) error로 남긴다.
+          last_billing_result: charge ? 'insufficient_balance' : 'error',
+          grace_started_at: graceStartedAt.toISOString(),
+        };
+        await _sendPushToGuid(env, sub.user_guid, {
+          title: graceExpired ? '혼디 구독이 정지되었습니다' : '혼디 구독료 결제 실패',
+          body: graceExpired
+            ? `GDC 잔액 부족으로 구독(${tierCfg.name})이 정지됐습니다. 충전 후 다시 구독해 주세요.`
+            : `GDC 잔액 부족으로 구독료(${tierCfg.name}, ${tierCfg.price_krw.toLocaleString('ko-KR')}원)가 결제되지 않았습니다. ${SUBSCRIPTION_GRACE_DAYS}일 안에 충전해 주세요.`,
+          tag: 'subscription-billing', url: 'https://gdc.hondi.net/charge.html',
+        }).catch(() => {});
+      }
+
+      await fetch(`${L1_DEFAULT}/api/collections/user_subscriptions/records/${sub.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).catch(e => console.error('[SubscriptionBilling] 레코드 갱신 실패:', sub.id, e.message));
+
+      console.log(JSON.stringify({
+        tag: 'SUBSCRIPTION_BILLING', guid: sub.user_guid, tier: sub.tier,
+        result: patch.last_billing_result || patch.status, ts: now.toISOString(),
+      }));
+    } catch (e) {
+      console.error('[SubscriptionBilling] 개별 처리 실패(건너뜀):', sub.user_guid, e.message);
+    }
+  }
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -9166,6 +9385,11 @@ export default {
     // 크론에 편승 — 별도 wrangler.toml 트리거 불필요. env.AUTO_CONFIRM_
     // OPENBANKING_ENABLED=true 아니면 함수 내부에서 즉시 반환(no-op).
     ctx.waitUntil(_pollOpenBankingAutoConfirm(env).catch(e => console.error('[OpenBanking] 폴링 전체 실패:', e.message)));
+    // 2026-08-11 신설 — 구독 월정기 결제 스윕. 같은 10분 주기 크론에 편승
+    // (openbanking 자동확정과 동일 관례) — 별도 wrangler.toml 트리거 불필요.
+    // 함수 자체가 멱등이라(처리된 건은 next_billing_at이 미래로 밀림)
+    // 10분마다 재실행돼도 중복 청구되지 않는다.
+    ctx.waitUntil(_runMonthlyBillingSweep(env).catch(e => console.error('[SubscriptionBilling] 스윕 전체 실패:', e.message)));
   },
 
   async fetch(request, env, ctx) {
@@ -9271,6 +9495,9 @@ export default {
     if (pathname === '/biz/reviews/list' && request.method === 'GET') return handleReviewList(request, url, env, corsHeaders);
     if (pathname === '/biz/reviews/reply-draft' && request.method === 'GET') return handleReviewReplyDraft(request, url, env, corsHeaders);
     if (pathname === '/biz/reviews/reply' && request.method === 'POST') return handleReviewReplySubmit(request, env, corsHeaders);
+    // ── 구독 티어 · 월정기 결제 — 공통 선결과제 (2026-08-11 신설) ──
+    if (pathname === '/subscription/subscribe' && request.method === 'POST') return handleSubscribe(request, env, corsHeaders);
+    if (pathname === '/subscription/status' && request.method === 'GET') return handleSubscriptionStatus(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
