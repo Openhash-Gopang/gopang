@@ -28,6 +28,13 @@ subject-gate.js의 refineToLeaf()와 동일한 system prompt(GATE_SYS_PROMPT_HEA
   ...
 ]
 
+2026-08-10 개정 — 대응하는 리프가 레지스트리에 아예 없는 "완전공백"
+과목 시나리오는 expected_leaf_id를 null이 아니라 root_id 그대로
+채운다(예: "professor"). "해당 없음" 항목의 id가 root_id와 같기
+때문이다(subject-gate.js._buildGateCandidates 참고) — 이러면 별도
+분기 없이 일반 채점 로직(chosen == expected)이 그대로 정답 판정을
+해준다.
+
 ## 한계
 - 후보 메뉴는 dump_leaves.mjs로 그때그때 최신 레지스트리에서 뽑으므로,
   expected_leaf_id가 리프 레지스트리에서 이름이 바뀌면 이 스크립트가
@@ -66,24 +73,18 @@ RETRY_BASE_SLEEP = 3
 
 # subject-gate.js의 GATE_SYS_PROMPT_HEAD와 정확히 동일한 문구 — 이
 # 하네스가 프로덕션과 다른 결과를 내지 않으려면 여기가 그 파일과
-# 어긋나면 안 된다(수정 시 양쪽 다 갱신). 2026-08-09 개정 — 완전공백
-# 4건(음악/기술가정/한문/진로) 실사 재검증에서 억지매칭이 확인돼
-# subject-gate.js에 반례 예시를 추가한 것과 동일하게 갱신.
+# 어긋나면 안 된다(수정 시 양쪽 다 갱신). 2026-08-10 개정 — "확신이
+# 없으면 null" 지시(반례 4건 추가판 포함)가 실사 재검증에서 효과가
+# 없었음을 확인해, "해당 없음"을 후보 목록의 정식 항목으로 넣는 구조로
+# 전면 교체(subject-gate.js._buildGateCandidates 참고).
 GATE_SYS_PROMPT_HEAD = (
-    "사용자 발화를 아래 후보 목록 중 정확히 하나로 분류하세요. "
-    "반드시 후보 목록의 id 값 중 하나만, 다른 텍스트 없이 JSON으로만 "
-    '응답하세요: {"id": "<후보 id>"}. 확신이 없거나 후보 중 뚜렷이 맞는 '
-    '것이 없으면 {"id": null}로 응답하세요(지어내지 않습니다).\n\n'
-    '주의: 후보 전공이 발화 소재와 표면적으로 연상된다고 정답은 아닙니다. '
-    '예를 들어 "리코더 운지법 시험"은 "기악"·"국악" 전공이 다루는 실기가 '
-    '아니라 초중고 정규 "음악" 교과이고, "요리실습 칼질 안전수칙"은 '
-    '"조리과학" 전공이 아니라 "기술·가정" 교과이며, "천자문 한자 뜻"은 '
-    '"중국어·문학" 전공이 아니라 "한문" 교과이고, "적성검사 결과 해석"은 '
-    '"심리학" 전공이 아니라 "진로와 직업" 교과입니다 — 이 네 과목은 이 '
-    '레지스트리에 대응하는 전공 자체가 없습니다. 발화가 가리키는 실제 '
-    '교과·소재를 후보 목록의 어떤 전공도 정확히 담당하지 않으면, 이름이 '
-    '비슷하거나 소재가 겹치는 후보가 있어도 절대 고르지 말고 반드시 '
-    '{"id": null}로 응답하십시오.\n\n후보 목록:\n'
+    "사용자 발화를 아래 후보 목록 중 정확히 하나로 분류하세요. 후보 목록 "
+    '맨 마지막 항목은 그 어떤 전공도 실제로 맞지 않을 때 고르는 "해당 '
+    '없음" 항목입니다 — 발화 소재와 이름이 비슷하거나 어렴풋이 연상되는 '
+    '전공이 있어도, 그 전공이 실제로 다루는 정규 교과·분야가 아니면 '
+    '억지로 고르지 말고 이 "해당 없음" 항목을 고르십시오. 반드시 후보 '
+    '목록의 id 값 중 하나만, 다른 텍스트 없이 JSON으로만 응답하세요: '
+    '{"id": "<후보 id>"}.\n\n후보 목록:\n'
 )
 
 
@@ -158,22 +159,14 @@ def grade(scenario, leaf_ids, raw_text, call_err):
 
     expected = scenario["expected_leaf_id"]
 
-    # 2026-08-09 추가 — expected_leaf_id가 null인 시나리오(대응하는 리프가
-    # 레지스트리에 아예 없는 "완전공백" 과목 검증용, 초중고 교과-전공 매칭
-    # 세션에서 신설)는 모델이 id:null을 내는 것 자체가 정답이다 — 후보 중
-    # 억지로 하나를 고르지 않고 상위 personaId(professor)로 안전하게
-    # 폴백하는 게 production subject-gate.js의 의도된 동작이기 때문.
-    # 기존 분기는 chosen이 None이면 expected 값과 무관하게 무조건 FAIL로
-    # 쳐서 이 케이스를 표현할 수 없었다.
-    if expected is None:
-        if chosen is None:
-            return "LIVE-PASS", "완전공백 과목 — id:null 정상 폴백(기대한 그대로)"
-        if chosen in leaf_ids:
-            return "LIVE-NEEDS-REVIEW", f"완전공백 과목인데 리프를 억지로 고름: {chosen} — 틀린 리프를 자신있게 내주는 것보다는 낫지만 사람 확인 필요"
-        return "LIVE-FAIL", f"화이트리스트 밖 id를 지어냄: {chosen}"
-
+    # 2026-08-10 개정 — "해당 없음"이 이제 후보 목록의 정식 항목(id는
+    # personaId=root_id 그대로)이라, 완전공백 과목 시나리오는
+    # expected_leaf_id를 root_id로 채워두면(예: "professor") 아래 일반
+    # 분기(chosen == expected)가 그대로 정답 판정을 해준다 — null 전용
+    # 특수 분기가 더 이상 필요 없다. chosen이 None으로 오는 경우는 이제
+    # 정상 경로가 아니라 순수 방어적 안전망(파싱 실패 등)으로만 취급한다.
     if chosen is None:
-        return "LIVE-FAIL", f"id:null 응답 (기대: {expected}) — 후보 중 확신 있는 리프를 못 골랐음"
+        return "LIVE-FAIL", f"id:null 응답 (기대: {expected}) — '해당 없음' 항목이 후보에 있는데도 null을 냄, 이례적"
     if chosen not in leaf_ids:
         return "LIVE-FAIL", f"화이트리스트 밖 id를 지어냄: {chosen} (기대: {expected}) — subject-gate.js면 이 경우 원래 personaId로 폴백함"
     if chosen == expected:
