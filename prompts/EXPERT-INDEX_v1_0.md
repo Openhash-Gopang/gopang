@@ -66,6 +66,7 @@
 | 059 | EXPERT-BEAUTY-01 | 미용사 | `hairdresser` | 💇 | — | `SP_hairdresser` |
 | 060 | EXPERT-CULINARY-01 | 조리사 | `chef` | 👨‍🍳 | — | `SP_chef` |
 | 061 | EXPERT-PLATFORM-01 | 혼디 안내 | `hondi` | 🏝️ | — | `SP_hondi` |
+| 062 | EXPERT-EDU-11 | 교수(1:1 맞춤교육) | `professor` | 🎓 | — | `SP_professor` |
 
 ## 카테고리별 개수
 
@@ -74,7 +75,7 @@
 | 법률·자격전문직 | LAW | 7 |
 | 재무·세무 | FIN | 3 |
 | 의료·보건 | HEALTH | 20 |
-| 교육·상담·문화 | EDU | 10 |
+| 교육·상담·문화 | EDU | 11 |
 | 공학·건설·해사 | ENG | 13 |
 | 부동산 | RE | 1 |
 | IT·보안 | IT | 1 |
@@ -84,7 +85,7 @@
 | 뷰티 | BEAUTY | 1 |
 | 조리 | CULINARY | 1 |
 | 플랫폼 안내 | PLATFORM | 1 |
-| **합계** | | **61** |
+| **합계** | | **62** |
 
 > **2026-07-20 추가**: No.061 혼디(`hondi`)는 다른 60개와 근본적으로 다르다 —
 > 자격을 요구하는 전문직이 아니라 플랫폼 자체를 안내하는 페르소나이며, C5의

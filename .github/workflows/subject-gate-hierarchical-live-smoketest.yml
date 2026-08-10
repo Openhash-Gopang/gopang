@@ -1,0 +1,99 @@
+name: Subject Gate Hierarchical Live Smoketest (DeepSeek, 계층형 게이트 v2)
+
+# 2026-08-10 신설 — 기존 subject-gate-live-smoketest.yml은
+# subject_gate_live_smoketest.py(flat 게이트 채점기)를 돌리는데, 같은
+# 날 subject-gate.js가 flat→계층형으로 리팩터되면서 그 채점기가 더
+# 이상 production과 같은 걸 테스트하지 않게 됐다(root_id 하나에 전체
+# 리프 후보를 한 방에 보여주던 방식 — 지금은 단계별로 나눠서 게이트를
+# 돈다). 기존 워크플로는 그대로 남겨두고(다른 트리 검증에 계속 쓰일 수
+# 있음), 이 워크플로는 새 하네스
+# (subject_gate_hierarchical_live_smoketest.py)로 professor 트리(오늘
+# 세션에 161→307개로 3차례 확장됨)의 계층형 라우팅 정확도를 검증한다.
+#
+# 이 워크플로는 코드만 작성됐고 실행은 트리거하지 않았다 — 사용자가
+# 아래 workflow_dispatch로 직접 실행해야 한다(DEEPSEEK_API_KEY 시크릿
+# 소비 + 실제 라이브 API 비용 발생).
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Debug: only run first N scenarios (blank = all in file)"
+        required: false
+        default: ""
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_hierarchical_gate_20260810.json)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-subject-gate-hierarchical-live-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Sanity-check gate structure before spending API calls
+        working-directory: tests/live_smoketest
+        run: |
+          echo "=== 게이트 레벨 규모(최대 후보 수 확인) ==="
+          node dump_gate_levels.mjs professor | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          for s in d['summary'][:10]:
+              print(f\"  {s['nodeId']}: {s['candidateCount']}\")
+          "
+          echo "=== 리프 경로 계산 확인(총 리프 수) ==="
+          node dump_leaf_paths.mjs professor | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(f'  총 리프 수: {len(d)}')
+          "
+
+      - name: Run subject gate hierarchical live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_hierarchical_gate_20260810.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}-hierarchical"
+          echo "scenarios=$SCEN out=$OUT"
+          ARGS="--scenarios $SCEN --out $OUT --resume"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python3 subject_gate_hierarchical_live_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-hierarchical
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: subject gate hierarchical live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-hierarchical
+
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: subject-gate-hierarchical-live-smoketest-results
+          path: results/
