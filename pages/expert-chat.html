@@ -107,7 +107,7 @@ import { _missingNextStepMarker } from '/src/gopang/ai/expert-session.js';
 // 실제 라이브 경로이므로(위 주석 참조), 세션 종료 리포팅도 여기 붙여야 실제로
 // 동작한다. expert-session.js의 endExpertSession()에 붙이면 죽은 코드에
 // 연결하는 셈이라 아무 효과가 없다.
-import { recordOwnerPDV } from '/src/gopang/gwp/gwp-report-client.js';
+import { recordOwnerPDV, queryOwnerPdvSelfHistory } from '/src/gopang/gwp/gwp-report-client.js';
 import { escHtml, appendBubble, appendTyping as _sharedAppendTyping } from '/src/gopang/ui/chat-shell.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -561,6 +561,18 @@ async function _recordExpertOwnerPDV(reason) {
     ? lastUserTurn.content.slice(0, 80)
     : `${def.label} AI 상담 (${exchanged}턴)`;
 
+  // ── §U0-1 6하원칙 "why" (2026-08-10 수정) ──────────────────────────
+  // 기존엔 항상 null로 하드코딩돼 있었다(recordOwnerPDV() 함수 자체는
+  // why 파라미터를 정상 지원하므로, 이건 라이브러리 결함이 아니라 이
+  // 호출부만의 문제였다). 세션을 요약하는 별도 LLM 호출을 새로 만드는
+  // 대신(비용·지연 증가), 이미 갖고 있는 데이터로 저비용 개선: 첫
+  // 사용자 발화는 보통 이 상담을 시작한 목적을 담고 있다 — what(마지막
+  // 발화, 어떻게 끝났는지)과는 다른 축의 정보라 둘 다 남길 가치가 있다.
+  const firstUserTurn = messages.find(m => m.role === 'user');
+  const why = typeof firstUserTurn?.content === 'string'
+    ? firstUserTurn.content.slice(0, 80)
+    : null;
+
   await recordOwnerPDV({
     ownerAgency,
     recordType: 'consultation',
@@ -569,7 +581,7 @@ async function _recordExpertOwnerPDV(reason) {
     personaVersion: _extractPersonaVersion(systemPrompt),
     what,
     how,
-    why: null,
+    why,
     when: _sessionStartedAt,
     where: location.href,
     outcomeSignals: { explicit_rating: explicitRating },
@@ -580,6 +592,39 @@ async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await composeExpertPrompt();
   messages = [{ role: 'system', content: systemPrompt }];
+
+  // ── §U0-1 "즉시조회 가능성" (2026-08-10 신설) ──────────────────────
+  // 인사말을 실제로 만들기 전에(U0-2/U8-2 요구사항) 이 사용자와 이
+  // 기관(ownerAgency) 사이의 과거 상담 기록을 먼저 조회한다. 조회
+  // 실패/기록 없음이어도 세션 진행을 막지 않는다(U2 정직성 — 아래
+  // 결과는 모델에게 있는 그대로 전달되고, 모델이 "이전 기록이 확인되지
+  // 않는다"고 정직하게 안내할지는 U8-5가 이미 규정).
+  try {
+    const user = _loadUser();
+    if (def?.ownerAgency && user?.ipv6) {
+      const hist = await queryOwnerPdvSelfHistory({
+        ownerAgency: def.ownerAgency,
+        guid: user.ipv6,
+        personaKeyPrefix: PERSONA.split('-')[0], // 'professor-math' → 'professor' 계열 전체를 본다(리프 단위로 좁히면 과거에 다른 리프로 만났던 기록을 놓침)
+        limit: 3,
+      });
+      let histNote;
+      if (hist?.ok && hist.found) {
+        const lines = hist.recent.map(r =>
+          `- ${r.when || '(시각 미상)'} | ${r.persona_key || PERSONA} | ${r.what || '(내용 미상)'} | 결과: ${r.how}`
+        ).join('\n');
+        histNote = `[PDV_SELF_HISTORY_RESULT]\n이 사용자와의 과거 상담 총 ${hist.total_visits}건 중 최근 ${hist.recent.length}건:\n${lines}\n이 정보로 인사말에 과거 맥락을 반영하세요(U0-2). 대화 전문이 아니라 요약이므로, 세부 내용이 필요하면 사용자에게 자연스럽게 확인하세요.`;
+      } else if (hist?.ok && !hist.found) {
+        histNote = `[PDV_SELF_HISTORY_RESULT]\n이 사용자와의 과거 상담 기록이 없습니다(첫 방문으로 보입니다).`;
+      } else {
+        histNote = `[PDV_SELF_HISTORY_RESULT]\n조회에 실패했습니다 — 기록이 없다고 단정하지 말고, 필요하면 사용자에게 이전 대화 여부를 자연스럽게 물어보세요.`;
+      }
+      messages.push({ role: 'system', content: histNote });
+    }
+  } catch (e) {
+    console.warn('[Expert] §U0-1 자기이력 조회 단계 실패(무시 — 세션은 계속 진행):', e.message);
+  }
+
   return systemPrompt;
 }
 

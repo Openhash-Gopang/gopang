@@ -8764,6 +8764,7 @@ export default {
     // 사용자측 /pdv/report와 별개 — K-서비스/전문가 페르소나가 자신의
     // 상담·산출물 이력을 가명화 해시로 남기는 거버넌스 레코드.
     if (pathname === '/owner-pdv/report')        return handleOwnerPdvReport(request, env, corsHeaders);
+    if (pathname === '/owner-pdv/self-history')   return handleOwnerPdvSelfHistory(request, env, corsHeaders);
 
     // ── 오케스트레이션 project_state (2026-07-17 신설 — mode=project
     // human_action 일시정지/재개, SP-19 v1.2/SP-20 v1.6/SP-22 v1.1) ──
@@ -12328,6 +12329,35 @@ async function handlePdvReport(request,env,corsHeaders){
 // 이미 서버가 확정한 agency 값 범위 안에서만 호출되므로 화이트리스트가
 // 불필요하다(악용 경로가 아니라 형식 오류 가능성만 있음 — 최소한의
 // 정제만 한다).
+// ── 화이트리스트 (2026-08-10 모듈 상수로 승격) ──────────────────────
+// 원래 handleOwnerPdvReport 함수 안 지역 상수였다 — 신설한
+// handleOwnerPdvSelfHistory도 같은 목록으로 owner_agency를 검증해야
+// 해서(등록 안 된 agency로 조회하면 엉뚱한 salt/whoHash를 계산하게
+// 됨) 모듈 상수로 끌어올려 두 함수가 공유한다. 내용은 원래 그대로.
+const OWNER_AGENCY_WHITELIST_SHARED = new Set([
+  'gopang', 'klaw', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
+  'kfinance', 'kinsurance', 'kbank', 'ktelecom', 'kestate',
+  'kcommerce_seller', 'ktax', 'kcommerce', 'ktransport', 'klogistics',
+  'jeju', 'kgov', 'kdemocracy', 'kbusiness', 'kemergency',
+  'fiil-kcleaner', 'ksearch', 'kqna', 'kusers',
+  'gov_do', 'gov_national',
+]);
+
+// ── 공유 해시 헬퍼 (2026-08-10 추출) ──────────────────────────────
+// §7.2 가명화 해시 계산 — 원문 guid는 이 함수 밖으로 나가지 않으며
+// 어디에도 로그로 남기지 않는다. 기존엔 _writeOwnerPdvRecord 안에
+// 인라인으로만 있었는데, 신설하는 자기이력 조회 엔드포인트
+// (handleOwnerPdvSelfHistory)도 "같은 guid+ownerAgency면 반드시 같은
+// who_hash"가 나와야 조회가 성립하므로, 계산 로직을 하나로 합쳐
+// 두 경로가 어긋날 여지를 원천 차단한다.
+async function _ownerPdvWhoHash(env, ownerAgency, guidForHashing) {
+  if (!guidForHashing) return null;
+  const agencySalt = await _sha256Hex(
+    `${_requireMasterKey(env)}:owner-pdv-salt:${ownerAgency}`
+  );
+  return _sha256Hex(`${guidForHashing}:${agencySalt}`);
+}
+
 async function _writeOwnerPdvRecord(env, r) {
   const RECORD_TYPES = ['consultation', 'own_output'];
   if (!RECORD_TYPES.includes(r.recordType)) throw new Error(`record_type은 ${RECORD_TYPES.join('|')} 중 하나여야 합니다`);
@@ -12341,15 +12371,11 @@ async function _writeOwnerPdvRecord(env, r) {
   const guidForHashing = r.guidForHashing || null;
   if (r.recordType === 'consultation' && !guidForHashing) throw new Error('consultation 레코드는 guid_for_hashing 필수');
 
-  // §7.2 가명화 해시 계산 — 원문 guid는 이 함수 밖으로 나가지 않으며
-  // 어디에도 로그로 남기지 않는다.
   let whoHash = null;
   if (guidForHashing) {
-    const agencySalt = await _sha256Hex(
-      `${_requireMasterKey(env)}:owner-pdv-salt:${ownerAgency}`
-    );
-    whoHash = await _sha256Hex(`${guidForHashing}:${agencySalt}`);
+    whoHash = await _ownerPdvWhoHash(env, ownerAgency, guidForHashing);
   }
+
 
   const now = new Date().toISOString();
   const pbFetch = await fetch(`${L1_DEFAULT}/api/collections/owner_pdv/records`, {
@@ -12401,14 +12427,10 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   // UNKNOWN_AGENCY로 거부되지 않는다. AGY_VAULT_STORE 자동감지 경로(아래
   // handleGovRelay 내부)는 이 화이트리스트를 거치지 않고 _writeOwnerPdvRecord를
   // 직접 호출하므로 더 세분화된 agency_id(예: emd:한림읍:agent)를 쓸 수 있다.
-  const OWNER_AGENCY_WHITELIST = new Set([
-    'gopang', 'klaw', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
-    'kfinance', 'kinsurance', 'kbank', 'ktelecom', 'kestate',
-    'kcommerce_seller', 'ktax', 'kcommerce', 'ktransport', 'klogistics',
-    'jeju', 'kgov', 'kdemocracy', 'kbusiness', 'kemergency',
-    'fiil-kcleaner', 'ksearch', 'kqna', 'kusers',
-    'gov_do', 'gov_national',
-  ]);
+  // ★ 2026-08-10 — 이 화이트리스트는 이제 모듈 상수
+  // OWNER_AGENCY_WHITELIST_SHARED(handleOwnerPdvSelfHistory와 공유)로
+  // 승격됐다 — 아래는 그 별칭 참조일 뿐, 내용은 그대로다.
+  const OWNER_AGENCY_WHITELIST = OWNER_AGENCY_WHITELIST_SHARED;
   // 2026-07-20(SSOT 마이그레이션 중 발견) — 개별 K-서비스 저장소의 로컬
   // AGENCY_ID(REGISTERED_SERVICES 키, 예: 'tax'/'market'/'school')와
   // GWP_REGISTRY의 표준 agency id(예: 'ktax'/'kcommerce'/'kedu')는 서로 다른
@@ -12453,6 +12475,94 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
     record_type: r.record_type,
   }), { status: 200, headers: corsHeaders });
 }
+
+// ── owner_pdv 자기이력 조회 (2026-08-10 신설) ───────────────────────
+// 배경: UNIVERSAL-common §U0-1이 요구하는 4대 요건(기록·6하원칙·분류·
+// 즉시조회) 중 "즉시조회"가 이 저장소 전체에서 구현된 적이 없었다
+// (실사로 확인 — /owner-pdv/report 하나만 있고 읽기 엔드포인트가
+// 전혀 없었음, owner_pdv listRule/viewRule도 null이라 클라이언트발
+// 직접 조회는 스키마 단에서부터 막혀 있었음). U8(PDV_HISTORY_REQUEST)의
+// /pdv/query는 타 기관 데이터에 대한 동의 기반 접근 프로토콜이라 이
+// 용도(같은 기관이 같은 사용자에 대한 자기 과거 기록을 보는 것 — 기관
+// 간 교차가 전혀 없는 경우)엔 원래도 안 맞았다(VALID_PDV_SCOPES에
+// 개별 EXPERT 페르소나가 등록돼 있지도 않음). 그래서 별도의 훨씬
+// 가벼운 전용 엔드포인트를 신설한다 — 동의 절차 없음(자기 기관 데이터
+// 자기가 보는 것이라 C8 기관 간 교차 금지 원칙과 무관), 관리자 토큰으로
+// owner_pdv를 읽어 요약만 돌려준다(원문 who_hash·내부 id는 클라이언트에
+// 노출하지 않음).
+async function handleOwnerPdvSelfHistory(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'SCHEMA_ERROR', 'JSON body 필수', corsHeaders);
+
+  const ownerAgency = String(body.owner_agency || '').trim().toLowerCase();
+  const guidForHashing = body.guid_for_hashing || null;
+  const personaKeyPrefix = body.persona_key_prefix ? String(body.persona_key_prefix).trim() : null;
+  const limit = Math.min(Math.max(parseInt(body.limit, 10) || 5, 1), 20);
+
+  // 화이트리스트는 handleOwnerPdvReport와 동일한 목록을 쓴다 — 별도
+  // 상수로 다시 선언하지 않고 그쪽 함수 안의 지역 상수를 참조할 수
+  // 없으므로(스코프 분리), 모듈 상수로 승격해 두 함수가 공유한다.
+  if (!OWNER_AGENCY_WHITELIST_SHARED.has(ownerAgency))
+    return _err(400, 'SCHEMA_ERROR', `등록되지 않은 owner_agency: ${ownerAgency}`, corsHeaders);
+  if (!guidForHashing) return _err(400, 'SCHEMA_ERROR', 'guid_for_hashing 필수', corsHeaders);
+
+  let whoHash;
+  try {
+    whoHash = await _ownerPdvWhoHash(env, ownerAgency, guidForHashing);
+  } catch (e) {
+    return _err(503, 'OWNER_PDV_HASH_FAILED', '해시 계산 실패', corsHeaders);
+  }
+
+  let filter = `owner_agency='${ownerAgency}' && who_hash='${whoHash}' && record_type='consultation'`;
+  if (personaKeyPrefix) {
+    // PocketBase '~'는 LIKE(부분일치) — id가 항상 이 접두사로 시작하는
+    // 명명 규칙(예: professor-*)이므로 부분일치로도 사실상 접두사
+    // 일치와 동일하게 동작한다. 정확한 startsWith가 아니므로 접두사가
+    // 다른 리프 id 중간에 우연히 같은 문자열이 낄 가능성은 이론상
+        // 있으나(예: 'law' 접두사가 다른 id 중간에 낄 가능성), 현재
+    // 명명 규칙(도메인-세부분야)상 실질 위험은 낮다.
+    filter += ` && persona_key~'${personaKeyPrefix}'`;
+  }
+
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/owner_pdv/records?filter=${encodeURIComponent(filter)}&sort=-when&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const items = data.items || [];
+
+    if (items.length === 0) {
+      return new Response(JSON.stringify({ ok: true, found: false, total_visits: 0 }), {
+        status: 200, headers: corsHeaders,
+      });
+    }
+
+    // 클라이언트에는 요약만 돌려준다 — who_hash/PocketBase 내부 id는
+    // 노출하지 않는다(이미 자기 데이터라 해도, 불필요한 내부 식별자
+    // 노출을 최소화하는 최소권한 원칙).
+    const recent = items.map((it) => ({
+      when: it.when, what: it.what, how: it.how, why: it.why || null,
+      persona_key: it.persona_key || null,
+    }));
+    // totalVisits는 perPage(limit) 이내로 잘렸을 수 있으므로 별도로
+    // totalItems가 있으면 그걸 쓰고, 없으면 이번에 받은 개수로 대체한다.
+    const totalVisits = typeof data.totalItems === 'number' ? data.totalItems : items.length;
+
+    return new Response(JSON.stringify({
+      ok: true, found: true, total_visits: totalVisits, recent,
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    // U2 정직성 원칙과 동일 — 조회 실패는 "기록 없음"으로 위장하지
+    // 않고 명시적으로 실패를 알린다(호출부가 "조회 실패, 새로 시작"
+    // 안내를 하도록).
+    return _err(503, 'OWNER_PDV_QUERY_FAILED', '자기이력 조회 실패, 잠시 후 재시도', corsHeaders);
+  }
+}
+
 
 // ═══════════════════════════════════════════════════════════
 // 2026-07-17 신설 — project_state 저장/조회 (SP-19 v1.2/SP-20 v1.6/

@@ -286,3 +286,61 @@ export async function recordOwnerPDV({
     return { recorded: false, recordId: record.record_id };
   }
 }
+
+/**
+ * queryOwnerPdvSelfHistory — §U0-1(UNIVERSAL-common 제1원칙) "즉시조회
+ * 가능성" 구현 (2026-08-10 신설)
+ *
+ * recordOwnerPDV()가 쌓아온 자기 기관(ownerAgency)의 과거 상담 기록
+ * 중, 지금 이 사용자(guid)와 나눈 것만 요약해서 돌려받는다. U8의
+ * /pdv/query(타 기관 데이터에 대한 동의 기반 접근)와는 다르다 — 이건
+ * "같은 기관이 자기 자신의 과거 기록을 보는" 것이라 기관 간 교차가
+ * 전혀 없고, 그래서 동의 절차도 없다.
+ *
+ * 호출 시점 권장: 세션 시작 시(첫 인사말을 만들기 전) 1회 — U0-2/U8-2가
+ * "인사말은 이 조회 결과가 나온 뒤에 구성한다"고 요구하는 바로 그
+ * 지점이다.
+ *
+ * @param {Object} opts
+ * @param {string} opts.ownerAgency        - 소유 K-서비스 id (예: 'kedu')
+ * @param {string} opts.guid               - 사용자 GUID (해싱은 프록시가 수행)
+ * @param {string} [opts.personaKeyPrefix] - 특정 페르소나 계열로 좁히고 싶을 때(예: 'professor'). 생략하면 이 ownerAgency의 모든 persona_key를 다 본다
+ * @param {number} [opts.limit=5]          - 최근 몇 건까지 받을지(최대 20)
+ * @param {string} [opts.proxyBase]
+ * @returns {Promise<{ok: boolean, found: boolean, totalVisits?: number, recent?: Array}>}
+ *   실패 시에도 throw하지 않고 {ok:false}를 돌려준다 — 호출부가 U2
+ *   정신대로 "조회 실패, 새로 시작"을 정직하게 처리하도록.
+ */
+export async function queryOwnerPdvSelfHistory({
+  ownerAgency,
+  guid,
+  personaKeyPrefix = null,
+  limit = 5,
+  proxyBase = DEFAULT_PROXY,
+} = {}) {
+  if (!ownerAgency || !guid) {
+    console.warn('[owner-pdv] queryOwnerPdvSelfHistory: ownerAgency/guid 필수 — 조회 생략');
+    return { ok: false, found: false };
+  }
+  try {
+    const res = await fetch(proxyBase + '/owner-pdv/self-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        owner_agency: ownerAgency,
+        guid_for_hashing: guid,
+        persona_key_prefix: personaKeyPrefix,
+        limit,
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[owner-pdv] 자기이력 조회 실패(무시 — 새 세션으로 진행):', res.status);
+      return { ok: false, found: false };
+    }
+    return await res.json();
+  } catch (e) {
+    console.warn('[owner-pdv] 자기이력 조회 예외(무시 — 새 세션으로 진행):', e.message);
+    return { ok: false, found: false };
+  }
+}
+
