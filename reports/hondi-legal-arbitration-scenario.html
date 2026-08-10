@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>공공데이터포털 개방과 혼디 — 법적 분쟁 중재 시나리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.78; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  /* ── 이 문서 전용 컴포넌트 ── */
+  .quote{
+    font-family:'Noto Serif KR',serif; font-style:italic;
+    font-size:11px; line-height:1.75; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; margin:10px 0 14px;
+  }
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:90%; }
+  .msg .who{
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:10.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  /* 2026-08-11 신설 — 인간 중재인(변호사) 발화 전용 스타일. 혼디/K-Law와
+     시각적으로 명확히 구분해서 "AI가 최종 판단자가 아니라 인간이 최종
+     서명·책임을 진다"는 걸 색상으로도 드러낸다. */
+  .msg.arbiter .who{ color:#8a6d1f; }
+  .msg.arbiter .bubble{ background:#fdf9ef; border:1px solid #e6d49a; border-left:3px solid #8a6d1f; }
+  .aside{
+    font-size:9.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .cmp-table td:first-child{ color:var(--ink-soft); }
+  .cmp-table td:last-child{ color:var(--accent); font-weight:500; }
+  .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; color:var(--ink); }
+  .badge-live{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-road{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-fact{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#8a6d1f; background:#f7f0dd; border:1px solid #e6d49a;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 홍보 시나리오 · K-Law × 인간 중재인 협업</div>
+  <h1 class="doc-title">3년의 법정 공방을,<br>사람과 K-Law가 함께 매듭짓다</h1>
+  <p class="doc-sub">
+    이 시나리오의 결론부터 분명히 하겠습니다 — <b>K-Law는 판사를 대체하지
+    않습니다.</b> K-Law가 빠르게 만드는 건 법리 분석 초안이고, 그 초안에
+    법적 구속력을 부여하는 서명은 언제나 자격을 갖춘 인간 중재인(변호사)의
+    몫입니다. 이 협업이 실제로 어떤 법 위에서 작동하는지부터 보여드립니다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-11</b></div>
+    <div>근거 법령<br><b>중재법 제35조(중재판정의 효력)</b></div>
+    <div>예시 사례<br><b>상거래 분쟁 중재</b></div>
+    <div>성격<br><b>홍보용 개념 시연 · K-Law 초안은 법적 구속력 없음, 최종 판단은 인간 중재인</b></div>
+  </div>
+
+  <h2 class="sec"><span class="num">01</span> 지금의 소송, 실제로 이렇습니다</h2>
+  <p>
+    2025 사법연감(대법원 발간) 기준, 민사 1심 처리기간은 <b>합의사건
+    평균 437.3일(약 14.6개월), 단독사건 평균 222.1일</b>입니다. 여기서
+    끝나지 않습니다 — 항소하면 고등법원 기준 평균 313.8일, 지방법원
+    항소부 기준 327.5일이 추가되고, 상고심까지 가면 합의부 사건은
+    평균 521.1일이 더 걸립니다. <b>1심부터 대법원까지 다 가면 총
+    3년을 훌쩍 넘기는 경우가 드물지 않습니다.</b>
+  </p>
+  <p>
+    비용도 만만치 않습니다. 변호사 착수금은 심급마다 별도 계약이라
+    보통 심급당 300만~700만 원 수준(사안이 복잡하면 더 높아짐)이고,
+    여기에 소가에 비례하는 성공보수가 더해집니다. 3개 심급을 다 거치면
+    합계 수천만 원도 드물지 않습니다. 인지대·송달료는 상대적으로
+    적은 편이지만(소가 5천만 원 기준 1심 인지대 약 20만 7천 원, 항소
+    1.5배·상고 2배), 승소해도 상대방에게 청구할 수 있는 변호사비는
+    법원이 정한 기준까지만이라 <b>전액을 돌려받기는 어렵습니다.</b>
+  </p>
+  <div class="note">
+    이 모든 시간과 비용을 감수하고 소송을 끝까지 끌고 가는 이유는
+    결국 하나입니다 — 다른 방법으로는 확정판결과 같은 <b>법적 구속력</b>을
+    얻을 수 없기 때문입니다. 그런데 대한민국 법에는 이미 그 구속력을
+    훨씬 빠르게 얻을 수 있는 정식 제도가 있습니다. 바로 <b>중재</b>입니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 법적 분쟁 중재 · 2026-08-11</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> K-Law와 인간 중재인이 협업하면</h2>
+  <p>
+    중재법 제35조는 "중재판정은 양쪽 당사자 간에 법원의 확정판결과
+    동일한 효력을 가진다"고 명시합니다. 다만 중재가 성립하려면
+    <b>양 당사자가 먼저 중재로 해결하기로 합의</b>해야 하고, 실제
+    판정은 <b>당사자가 선택한 중재인</b>이 내립니다. K-Law가 하는
+    일은 이 중재인의 판단을 돕는 것이지, 대신하는 게 아닙니다. 아래는
+    그 협업 과정을 그대로 옮긴 시나리오입니다 — 전부
+    <span class="badge-road">ROADMAP</span>, 오늘 기준 코드로
+    존재하지 않는 개념 시연입니다.
+  </p>
+
+  <div class="dialogue">
+
+    <div class="msg user">
+      <div class="who">당사자 A</div>
+      <div class="bubble">"이 계약 분쟁, 소송 대신 중재로 해결하고 싶습니다."</div>
+    </div>
+
+    <div class="msg user">
+      <div class="who">당사자 B</div>
+      <div class="bubble">"저도 동의합니다. 다투지 않는 사실관계부터 정리해 주시면 좋겠어요."</div>
+    </div>
+    <div class="aside">
+      이 두 발화가 곧 <b>중재합의</b>입니다. 어느 한쪽이라도 동의하지
+      않으면 중재 자체가 성립하지 않고, 그 경우 헌법 제27조가 보장하는
+      재판청구권에 따라 정식 소송으로 갈 권리는 항상 그대로 남습니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">K-Law</div>
+      <div class="bubble">
+        양측이 제출한 사실관계를 대조했습니다. 계약 체결일·금액·이행
+        기한은 다투지 않는 사실로 확인됩니다. 실제 쟁점은 "이행 지체의
+        책임 소재" 한 가지로 좁혀집니다. 유사한 대법원 판례를 근거로
+        법리 분석 초안을 5분 내로 준비하겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-road">ROADMAP</span> 여기까지가 K-Law의
+      역할입니다 — 사실관계 정리와 판례 조사를, 사람이라면 수십~수백
+      시간 걸릴 일을 초안 수준으로 빠르게 준비하는 것.
+    </div>
+
+    <div class="msg arbiter">
+      <div class="who">중재인 (변호사)</div>
+      <div class="bubble">
+        초안을 검토했습니다. 인용하신 판례 대부분은 타당한데, 이 사건과
+        가장 유사한 최근 판례 하나가 빠졌고 그 판례는 결론이 다릅니다 —
+        이 부분은 제가 직접 수정하겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <b>이 장면이 핵심입니다.</b> K-Law의 초안이 항상 맞다고 전제하지
+      않습니다. 실제 자격을 갖춘 인간 중재인이 내용을 바꿀 수 있고,
+      실제로 바꿉니다 — 최종 법리적 판단과 그 책임은 여전히 사람의
+      몫입니다.
+    </div>
+
+    <div class="msg arbiter">
+      <div class="who">중재인 (변호사)</div>
+      <div class="bubble">
+        수정을 반영해 중재판정을 발령합니다. 중재법 제35조에 따라
+        이 판정은 양측에게 법원의 확정판결과 동일한 효력을 가집니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-fact">사실확인</span> 중재판정은 원칙적으로
+      단심제입니다 — 항소·상고로 다시 다툴 수 없고, 좁은 사유(중재법
+      제36조)로 법원에 취소소송을 제기하는 것만 가능합니다. 그만큼
+      신속하지만, 그만큼 신중해야 하는 절차이기도 합니다.
+    </div>
+
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 법적 분쟁 중재 · 2026-08-11</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
+  <table class="avoid-break cmp-table">
+    <thead><tr><th>기존 소송(1심~3심)</th><th>K-Law × 인간 중재인 협업 중재</th></tr></thead>
+    <tbody>
+      <tr><td>1심 평균 7.4~14.6개월 + 항소 10~11개월 + 상고 → 총 3년 이상도 흔함</td><td>중재는 통상 3~6개월(업계 평균) — 여기에 K-Law가 초안 준비 시간을 더 줄임 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>심급마다 별도 착수금(300만~700만 원)+성공보수, 3심 다 가면 수천만 원</td><td>K-Law가 법리 초안을 먼저 준비해 인간 중재인의 검토 시간(=비용)을 대폭 절감 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>판례 조사·서면 작성에 변호사 수십~수백 시간 소요</td><td>다투지 않는 사실관계 정리와 관련 판례 매칭을 K-Law가 5분 내 초안화 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr class="highlight"><td><b>중재 성립 자체 — 양 당사자의 사전 합의(중재합의) 필요</b></td><td>그대로 유지 — 어느 한쪽이 원치 않으면 강제될 수 없고, 소송으로 갈 권리(헌법 제27조)는 항상 보장</td></tr>
+      <tr class="highlight"><td><b>최종 법리 판단과 서명, 그에 따른 법적 책임</b></td><td>그대로 유지 — K-Law는 초안만 제공, 확정과 서명은 인간 중재인의 몫</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    강조 표시한 두 줄이 이 시나리오 전체의 뼈대입니다. 이건 "AI가 재판을
+    대신한다"는 이야기가 아닙니다. 대한민국 법이 이미 <b>중재</b>라는
+    이름으로 인정해 온, 확정판결과 동일한 효력을 가지는 정식 분쟁해결
+    절차 — 그 절차 안에서 인간 중재인이 판단에 이르기까지 걸리는 시간을
+    K-Law가 줄여주는 것뿐입니다. 판단하는 주체는 바뀌지 않고, 판단에
+    이르는 속도만 바뀝니다.
+  </p>
+
+  <div class="note warn">
+    <b>※ 안내 — 이 시나리오를 읽을 때 반드시 기억해 주십시오:</b>
+  </div>
+  <ul class="list">
+    <li><b>K-Law가 만든 법리 분석 초안은 그 자체로 어떤 법적 구속력도 없습니다.</b> 법적 구속력은 오직 인간 중재인이 검토·수정·서명해 발령한 중재판정에서만 발생합니다(중재법 제35조).</li>
+    <li>중재는 <b>양 당사자의 사전 합의(중재합의)</b>가 반드시 있어야 성립합니다. 어느 한쪽이라도 동의하지 않으면 성립하지 않으며, 이 시나리오도 그 합의를 강제하거나 우회하지 않습니다.</li>
+    <li>"AI가 만든 판단을 인간 법원·중재인이 뒤집기 어렵다"는 식의 주장은 이 문서 어디에도 담지 않았습니다. 실제로 인간 중재인이 K-Law 초안의 판례 인용을 수정하는 장면을 시나리오에 그대로 넣었습니다 — K-Law의 결과물은 언제나 검토·반박·수정 대상입니다.</li>
+    <li>K-Law의 판례 매칭·법리 추론 정확도는 공식적으로 검증된 지표가 없는 <span class="badge-road">ROADMAP</span> 단계이며, 지금 이 순간 실제로 구현되어 서비스되고 있는 기능이 아닙니다.</li>
+    <li>실제 법적 분쟁이 있다면 소송·중재·조정 중 어떤 절차가 적합한지는 반드시 변호사 등 법률 전문가와 상담해 결정하시기 바랍니다.</li>
+  </ul>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 법적 분쟁 중재 · 2026-08-11</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+</body>
+</html>
