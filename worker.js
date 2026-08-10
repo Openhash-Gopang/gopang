@@ -11502,7 +11502,17 @@ async function handleRegisterKey(request, env, corsHeaders) {
   // 2026-07-07 신설(제주 L1~L3 필드 테스트, §4): 클라이언트가 위치 기반으로
   // 확정한 읍면동 소속 L1 노드 ID(home_l1, 예: "KR-JEJU-JEJU-AEWOL")를
   // 받는다. 안 보내면(기존 클라이언트 하위호환) hanlim으로 폴백한다.
-  const homeNodeId = (home_l1 && L1_NODE_MAP[home_l1]) ? home_l1 : 'KR-JEJU-JEJU-HANLIM';
+  //
+  // 2026-08-10 임시 고정(GDC 충전/차감 기능 완성 기간 한정) — 실제 서비스
+  // 클라이언트는 지금 home_l1을 보낸 적이 없어(전수 조사 완료) 이미
+  // 사실상 전원 hanlim으로 가고 있었지만, 그건 "우연히 안 보내서"였을
+  // 뿐 코드가 보장하던 게 아니었다. GDC 기능이 hanlim 하나에서만
+  // 완성·검증되는 동안 실수로라도 다른 노드로 새 가입자가 새면 안 되므로,
+  // 클라이언트가 뭘 보내든(과거 필드테스트 잔재 포함) 무조건 hanlim으로
+  // 못박는다. 제주 43개 읍면동 자동배정 재개 시 이 블록을 원복할 것
+  // (git blame으로 이 커밋 찾아 되돌리면 됨 — L1_NODE_MAP 매핑 자체는
+  // 그대로 남겨뒀으니 로직 원복만 하면 즉시 재사용 가능).
+  const homeNodeId = 'KR-JEJU-JEJU-HANLIM';
   const homeBase    = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
 
   try {
