@@ -8715,6 +8715,10 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(anchorL1MerkleRoot(env));
     ctx.waitUntil(_sweepBridgeOutbox(env).catch(e => console.error('[BridgeSweep] 전체 실패:', e.message)));
+    // 2026-08-10 신설 — 방식A(오픈뱅킹) 자동 확정 폴링. 기존 10분 주기
+    // 크론에 편승 — 별도 wrangler.toml 트리거 불필요. env.AUTO_CONFIRM_
+    // OPENBANKING_ENABLED=true 아니면 함수 내부에서 즉시 반환(no-op).
+    ctx.waitUntil(_pollOpenBankingAutoConfirm(env).catch(e => console.error('[OpenBanking] 폴링 전체 실패:', e.message)));
   },
 
   async fetch(request, env, ctx) {
@@ -9056,6 +9060,8 @@ export default {
     if (pathname === '/biz/charge-status'  && request.method === 'GET')  return handleChargeStatus(request, env, corsHeaders);
     if (pathname === '/biz/charge-list'    && request.method === 'GET')  return handleChargeList(request, env, corsHeaders);
     if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
+    // 2026-08-10 신설 — 방식B(PG 가상계좌) 자동 확정 웹훅.
+    if (pathname === '/biz/charge-webhook-pg' && request.method === 'POST') return handleChargeWebhookPG(request, env, corsHeaders);
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
@@ -11131,8 +11137,130 @@ async function handleChargeList(request, env, corsHeaders) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 2026-08-10 신설 — 충전 확정 3채널(관리자 수동 / 방식A 오픈뱅킹 폴링 /
+// 방식B PG 가상계좌 웹훅) 공용 코어. 민팅(L1 /api/mint) + charge_requests
+// 상태 갱신(또는 웹훅의 경우 신규 생성)이라는 동일한 두 단계를 세 채널이
+// 그대로 재사용한다 — 로직을 세 곳에 복붙하면 "한쪽만 고치고 다른 쪽은
+// 놓치는" 사고가 반복될 것이므로 이번에 한 곳으로 합쳤다.
+//
+// existingRequestId가 있으면(관리자 수동, 방식A) 그 pending 레코드를
+// matched로 PATCH한다. 없으면(방식B — 가상계좌는 건별 사전 신청이 없음)
+// 새 charge_requests 레코드를 status=matched로 바로 생성한다.
+//
+// externalTxId가 주어지면(방식A/B 전용) 멱등성 체크를 먼저 수행한다 —
+// 같은 거래ID로 이미 확정된 레코드가 있으면 재민팅하지 않고 그 결과를
+// 그대로 반환한다(오픈뱅킹 폴링 중복 조회, PG 웹훅 재전송 모두 안전).
+async function _mintAndRecordCharge(env, {
+  existingRequestId = null, guid, krwAmount, depositorName = '', memo = '',
+  channel, confirmedBy, externalTxId = null, virtualAccountNo = null,
+}) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // ── 멱등성 체크 (externalTxId 있는 자동 채널 전용) ──
+  if (externalTxId) {
+    const dupFilter = encodeURIComponent(`external_tx_id='${externalTxId}'`);
+    const dupRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${dupFilter}&perPage=1`, { headers });
+    const dupData = await dupRes.json().catch(() => ({ items: [] }));
+    if (dupData.items && dupData.items.length > 0) {
+      const prev = dupData.items[0];
+      console.log(JSON.stringify({ tag: 'CHARGE_AUTO_DUPLICATE_SKIPPED', channel, externalTxId, existingRequestId: prev.id, ts: new Date().toISOString() }));
+      return { ok: true, already_matched: true, request_id: prev.id, mint_content_hash: prev.mint_content_hash };
+    }
+  }
+
+  let rec = null;
+  if (existingRequestId) {
+    const getRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${existingRequestId}`, { headers });
+    if (!getRes.ok) return { ok: false, status: 404, error: 'NOT_FOUND', detail: '신청 내역을 찾을 수 없습니다' };
+    rec = await getRes.json();
+    if (rec.status === 'matched') {
+      return { ok: true, already_matched: true, request_id: existingRequestId, mint_content_hash: rec.mint_content_hash };
+    }
+    if (rec.status !== 'pending') {
+      return { ok: false, status: 409, error: 'INVALID_STATUS', detail: `이 신청은 이미 ${rec.status} 상태입니다` };
+    }
+  }
+
+  const finalKrw = Number(krwAmount) > 0 ? Number(krwAmount) : (rec ? rec.requested_krw : 0);
+  if (!(finalKrw > 0)) return { ok: false, status: 400, error: 'INVALID_AMOUNT', detail: 'krwAmount 필요' };
+  const finalGuid = guid || (rec ? rec.guid : null);
+  if (!finalGuid) return { ok: false, status: 400, error: 'MISSING_GUID', detail: 'guid 필요' };
+
+  const mintMemoTag = existingRequestId ? `charge_request:${existingRequestId}` : `charge_auto:${channel}:${externalTxId || 'no-tx-id'}`;
+  let mintData;
+  try {
+    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: finalGuid, krw_amount: finalKrw, secret: _mintSecret(env),
+        memo: `${mintMemoTag}${depositorName ? ' / 입금자:' + depositorName : ''}${memo ? ' / ' + memo : ''}`,
+      }),
+    });
+    mintData = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+  } catch (e) {
+    return { ok: false, status: 502, error: 'L1_UNREACHABLE', detail: 'GDC 발행 실패: ' + e.message };
+  }
+  if (!mintData.ok) {
+    console.warn('[MintAndRecordCharge] mint 실패:', JSON.stringify(mintData));
+    return { ok: false, status: 502, error: mintData.error || 'MINT_FAILED', detail: mintData.detail || 'GDC 발행 실패' };
+  }
+
+  const patchBody = {
+    status: 'matched', matched_krw: finalKrw,
+    depositor_name: depositorName || '', memo: memo || '',
+    mint_content_hash: mintData.content_hash, matched_at: new Date().toISOString(),
+    channel, confirmed_by: confirmedBy,
+    external_tx_id: externalTxId || '', virtual_account_no: virtualAccountNo || '',
+  };
+
+  let finalRequestId = existingRequestId;
+  if (existingRequestId) {
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${existingRequestId}`, {
+      method: 'PATCH', headers, body: JSON.stringify(patchBody),
+    });
+    if (!patchRes.ok) {
+      // GDC는 이미 발행됐는데 상태 갱신만 실패한 경우 — 발행 자체는 되돌릴 수
+      // 없으므로(멱등 처리 없음), 크게 로그를 남겨 수동 정정이 필요함을 표시.
+      console.error(JSON.stringify({ tag: 'CHARGE_CONFIRM_PATCH_FAILED_AFTER_MINT', requestId: existingRequestId, mint_content_hash: mintData.content_hash, guid: finalGuid, krwAmount: finalKrw, channel, ts: new Date().toISOString() }));
+    }
+  } else {
+    // 방식B(가상계좌 웹훅) — 사전 pending 레코드가 없으므로 감사 기록용으로
+    // matched 레코드를 새로 만든다. requested_krw도 matched_krw와 동일값으로
+    // 채워(입금액 그대로가 곧 신청액이므로) 다른 조회 로직과의 스키마 일관성 유지.
+    const createRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        guid: finalGuid, match_code: '(가상계좌 자동입금 — 매칭코드 없음)',
+        requested_krw: finalKrw, expires_at: new Date().toISOString(),
+        ...patchBody,
+      }),
+    });
+    const createData = await createRes.json().catch(() => null);
+    if (!createRes.ok || !createData?.id) {
+      console.error(JSON.stringify({ tag: 'CHARGE_AUTO_RECORD_CREATE_FAILED_AFTER_MINT', mint_content_hash: mintData.content_hash, guid: finalGuid, krwAmount: finalKrw, channel, ts: new Date().toISOString() }));
+    } else {
+      finalRequestId = createData.id;
+    }
+  }
+
+  console.log(JSON.stringify({ tag: 'CHARGE_CONFIRM_OK', requestId: finalRequestId, guid: finalGuid, krwAmount: finalKrw, contentHash: mintData.content_hash, channel, confirmedBy, ts: new Date().toISOString() }));
+  return {
+    ok: true, guid: finalGuid, charged_krw: finalKrw, request_id: finalRequestId,
+    gdc_amount: mintData.amount, mint_content_hash: mintData.content_hash,
+  };
+}
+
+function _chargeCoreResultToResponse(result, corsHeaders) {
+  if (!result.ok) return _err(result.status || 500, result.error || 'ERROR', result.detail || '처리 실패', corsHeaders);
+  return new Response(JSON.stringify(result), { status: 200, headers: corsHeaders });
+}
+
 // POST /biz/charge-confirm — 관리자 전용. 은행 명세서에서 입금을 직접
 // 확인한 뒤 호출 → GDC 발행(L1 /api/mint) + charge_requests 확정 갱신.
+// (2026-08-10: 코어 로직을 _mintAndRecordCharge로 이관 — 이 함수는 이제
+//  "관리자 인증 + 파라미터 정리" 얇은 래퍼다.)
 async function handleChargeConfirm(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -11140,59 +11268,165 @@ async function handleChargeConfirm(request, env, corsHeaders) {
   if (secret !== _adminActionSecret(env)) return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
   if (!request_id) return _err(400, 'MISSING_FIELD', 'request_id 필수', corsHeaders);
 
-  const token = await _l1AdminToken(env);
-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-
-  // 멱등성/이중 확정 방지: 이미 matched면 재차감하지 않는다.
-  const getRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${request_id}`, { headers });
-  if (!getRes.ok) return _err(404, 'NOT_FOUND', '신청 내역을 찾을 수 없습니다', corsHeaders);
-  const rec = await getRes.json();
-  if (rec.status === 'matched') {
-    return new Response(JSON.stringify({ ok: true, already_matched: true, mint_content_hash: rec.mint_content_hash }), { status: 200, headers: corsHeaders });
-  }
-  if (rec.status !== 'pending') {
-    return _err(409, 'INVALID_STATUS', `이 신청은 이미 ${rec.status} 상태입니다`, corsHeaders);
-  }
-
-  const krwAmount = Number(matched_krw) > 0 ? Number(matched_krw) : rec.requested_krw;
-
-  let mintData;
-  try {
-    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        guid: rec.guid, krw_amount: krwAmount, secret: _mintSecret(env),
-        memo: `charge_request:${request_id}${depositor_name ? ' / 입금자:' + depositor_name : ''}${memo ? ' / ' + memo : ''}`,
-      }),
-    });
-    mintData = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
-  } catch (e) {
-    return _err(502, 'L1_UNREACHABLE', 'GDC 발행 실패: ' + e.message, corsHeaders);
-  }
-  if (!mintData.ok) {
-    console.warn('[ChargeConfirm] mint 실패:', JSON.stringify(mintData));
-    return _err(502, mintData.error || 'MINT_FAILED', mintData.detail || 'GDC 발행 실패', corsHeaders);
-  }
-
-  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${request_id}`, {
-    method: 'PATCH', headers,
-    body: JSON.stringify({
-      status: 'matched', matched_krw: krwAmount,
-      depositor_name: depositor_name || '', memo: memo || '',
-      mint_content_hash: mintData.content_hash, matched_at: new Date().toISOString(),
-    }),
+  const result = await _mintAndRecordCharge(env, {
+    existingRequestId: request_id, krwAmount: matched_krw,
+    depositorName: depositor_name, memo,
+    channel: 'manual_admin', confirmedBy: 'admin',
   });
-  if (!patchRes.ok) {
-    // GDC는 이미 발행됐는데 상태 갱신만 실패한 경우 — 발행 자체는 되돌릴 수
-    // 없으므로(멱등 처리 없음), 크게 로그를 남겨 수동 정정이 필요함을 표시.
-    console.error(JSON.stringify({ tag: 'CHARGE_CONFIRM_PATCH_FAILED_AFTER_MINT', request_id, mint_content_hash: mintData.content_hash, guid: rec.guid, krwAmount, ts: new Date().toISOString() }));
+  return _chargeCoreResultToResponse(result, corsHeaders);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 방식 A — 오픈뱅킹 조회 API 폴링 자동 확정 (2026-08-10 신설)
+//
+// scheduled()가 10분마다 호출한다(기존 머클 앵커링용 크론에 편승 —
+// 별도 wrangler.toml 크론 트리거 추가 불필요). env.AUTO_CONFIRM_
+// OPENBANKING_ENABLED가 'true'가 아니면 아무 것도 하지 않고 즉시
+// 반환한다 — 오픈뱅킹 이용기관 등록(금융결제원 심사)이 끝나기 전까지는
+// 이 플래그를 미설정 상태로 두면 기존 수동 확정 흐름에 전혀 영향 없다.
+//
+// ⚠️ 아래 _openBankingFetchRecentDeposits는 실제 은행/오픈뱅킹 API
+// 스펙(엔드포인트, 요청/응답 필드명, 접근토큰 갱신 방식)이 계약 체결
+// 후에만 확정되므로 지금은 뼈대만 작성했다 — TODO 표시 부분은 실제
+// API 문서를 받은 뒤 채워야 한다. 그 전까지는 AUTO_CONFIRM_OPENBANKING
+// _ENABLED가 항상 false이므로 배포해도 안전하다(no-op).
+// ═══════════════════════════════════════════════════════════
+
+async function _openBankingFetchRecentDeposits(env) {
+  // TODO(오픈뱅킹 계약 체결 후 구현):
+  //  1. env.OPENBANKING_ACCESS_TOKEN이 만료됐으면 env.OPENBANKING_REFRESH_TOKEN으로
+  //     https://openapi.openbanking.or.kr/oauth/2.0/token 재발급(만료 이력은 KV에 캐싱).
+  //  2. POST https://openapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num
+  //     (env.OPENBANKING_FINTECH_USE_NUM = 회사 고정계좌의 핀테크이용번호)로
+  //     최근 10~15분 구간 입금 내역 조회.
+  //  3. 각 거래를 { externalTxId, depositorName, memo, krwAmount } 형태로 정규화해 반환.
+  //     externalTxId는 응답의 거래고유번호(bank_tran_id 등 — 실제 필드명은 API 문서
+  //     확정 후 채울 것) — _mintAndRecordCharge의 멱등성 키로 그대로 쓰인다.
+  console.warn('[OpenBanking] _openBankingFetchRecentDeposits 미구현(오픈뱅킹 계약 체결 대기) — 빈 배열 반환');
+  return [];
+}
+
+function _extractChargeMatchCodeFromText(text) {
+  if (!text) return null;
+  // 입금자명/적요 어디에 있든(예: "홍길동HD482910") HDxxxxxx 6자리 패턴만 뽑는다.
+  const m = String(text).match(/HD\d{6}/);
+  return m ? m[0] : null;
+}
+
+async function _pollOpenBankingAutoConfirm(env) {
+  if (env.AUTO_CONFIRM_OPENBANKING_ENABLED !== 'true') return; // 기본 비활성 — 계약 전 안전한 no-op
+
+  let deposits;
+  try {
+    deposits = await _openBankingFetchRecentDeposits(env);
+  } catch (e) {
+    console.error('[OpenBanking] 조회 실패:', e.message);
+    return;
+  }
+  if (!deposits || deposits.length === 0) return;
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  for (const dep of deposits) {
+    try {
+      const code = _extractChargeMatchCodeFromText(dep.depositorName) || _extractChargeMatchCodeFromText(dep.memo);
+      if (!code) {
+        console.warn('[OpenBanking] 매칭코드 없는 입금 — 관리자 수동 확인 필요:', JSON.stringify(dep));
+        continue; // 매칭코드 없으면 기존 수동 경로(charge-admin.html)로 폴백 — 자동 처리 대상 아님
+      }
+      const filter = encodeURIComponent(`match_code='${code}' && status='pending'`);
+      const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, { headers });
+      const data = await res.json().catch(() => ({ items: [] }));
+      const pendingRec = data.items && data.items[0];
+      if (!pendingRec) {
+        console.warn('[OpenBanking] 매칭코드는 찾았으나 대기 중인 신청 없음(만료·이미 처리됨 가능):', code);
+        continue;
+      }
+      const result = await _mintAndRecordCharge(env, {
+        existingRequestId: pendingRec.id, guid: pendingRec.guid,
+        krwAmount: dep.krwAmount, depositorName: dep.depositorName, memo: dep.memo,
+        channel: 'auto_openbanking', confirmedBy: 'system:openbanking',
+        externalTxId: dep.externalTxId,
+      });
+      if (!result.ok) {
+        console.error('[OpenBanking] 자동 확정 실패 — 관리자 수동 확인 필요:', JSON.stringify({ code, result }));
+      }
+    } catch (e) {
+      console.error('[OpenBanking] 건별 처리 중 오류(다음 건 계속 진행):', e.message, JSON.stringify(dep));
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 방식 B — PG 가상계좌 웹훅 자동 확정 (2026-08-10 신설)
+//
+// POST /biz/charge-webhook-pg — PG사가 가상계좌 입금 발생 즉시 호출.
+// env.AUTO_CONFIRM_PG_WEBHOOK_ENABLED가 'true'가 아니면 501로 거절 —
+// PG 가맹계약·웹훅 URL 등록 전까지는 이 경로 자체가 비활성 상태를
+// 명확히 반환하게 해서, 설정 누락으로 인한 불필요한 오류 로그를 막는다.
+//
+// ⚠️ 서명 검증(_verifyPgWebhookSignature)은 PG사별로 알고리즘이 다르다
+// (HMAC-SHA256이 가장 흔하지만 계약 체결 PG사 문서로 확정 필요) — 지금은
+// env.PG_WEBHOOK_SECRET 기반 HMAC-SHA256 스켈레톤만 넣어뒀다.
+// ═══════════════════════════════════════════════════════════
+
+async function _verifyPgWebhookSignature(env, rawBody, signatureHeader) {
+  const secret = env.PG_WEBHOOK_SECRET;
+  if (!secret) return false; // fail-closed — 시크릿 미설정이면 절대 통과시키지 않음
+  if (!signatureHeader) return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+    const computedHex = [...new Uint8Array(sigBuf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    // 상수시간 비교(타이밍 공격 방지) — 길이 다르면 즉시 false.
+    if (computedHex.length !== signatureHeader.length) return false;
+    let diff = 0;
+    for (let i = 0; i < computedHex.length; i++) diff |= computedHex.charCodeAt(i) ^ signatureHeader.charCodeAt(i);
+    return diff === 0;
+  } catch (e) {
+    console.error('[PgWebhook] 서명 검증 오류:', e.message);
+    return false;
+  }
+}
+
+async function handleChargeWebhookPG(request, env, corsHeaders) {
+  if (env.AUTO_CONFIRM_PG_WEBHOOK_ENABLED !== 'true') {
+    return _err(501, 'NOT_ENABLED', 'PG 가상계좌 자동확정이 아직 활성화되지 않았습니다(가맹계약 체결 대기)', corsHeaders);
   }
 
-  console.log(JSON.stringify({ tag: 'CHARGE_CONFIRM_OK', request_id, guid: rec.guid, krwAmount, contentHash: mintData.content_hash, ts: new Date().toISOString() }));
-  return new Response(JSON.stringify({
-    ok: true, guid: rec.guid, charged_krw: krwAmount,
-    gdc_amount: mintData.amount, mint_content_hash: mintData.content_hash,
-  }), { status: 200, headers: corsHeaders });
+  const rawBody = await request.text();
+  // TODO(PG 계약 체결 후 확정): 실제 서명 헤더 이름은 PG사 문서 기준으로 교체.
+  //  예: 다날 'X-Danal-Signature', 토스페이먼츠 'TossPayments-Signature' 등.
+  const signatureHeader = request.headers.get('X-PG-Signature');
+  const sigOk = await _verifyPgWebhookSignature(env, rawBody, signatureHeader);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '웹훅 서명 검증 실패', corsHeaders);
+
+  const body = JSON.parse(rawBody || '{}');
+  // TODO(PG 계약 체결 후 확정): 아래 필드명은 PG사 웹훅 페이로드 스펙에 맞춰 조정.
+  const { account_no, deposited_krw, depositor_name, tx_id, provider } = body;
+  if (!account_no || !(Number(deposited_krw) > 0) || !tx_id) {
+    return _err(400, 'MISSING_FIELD', 'account_no, deposited_krw, tx_id 필수', corsHeaders);
+  }
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`account_no='${account_no}' && status='active'`);
+  const vaRes = await fetch(`${L1_DEFAULT}/api/collections/virtual_accounts/records?filter=${filter}&perPage=1`, { headers });
+  const vaData = await vaRes.json().catch(() => ({ items: [] }));
+  const va = vaData.items && vaData.items[0];
+  if (!va) return _err(404, 'VIRTUAL_ACCOUNT_NOT_FOUND', '이 계좌번호에 매핑된 활성 가상계좌가 없습니다', corsHeaders);
+
+  const result = await _mintAndRecordCharge(env, {
+    guid: va.guid, krwAmount: deposited_krw, depositorName: depositor_name || '',
+    memo: `PG웹훅(${provider || va.pg_provider})`,
+    channel: 'auto_pg_webhook', confirmedBy: 'system:pg_webhook',
+    externalTxId: tx_id, virtualAccountNo: account_no,
+  });
+  return _chargeCoreResultToResponse(result, corsHeaders);
 }
 
 // ── POST /gwp/register-key — 가입 시점 지갑 공개키 등록 ─────────────
