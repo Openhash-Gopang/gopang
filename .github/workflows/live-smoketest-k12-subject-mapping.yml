@@ -64,8 +64,16 @@ jobs:
           if [ -z "$SCEN" ]; then SCEN="scenarios_k12_professor_vs_teacher_20260809.json"; fi
           BASE=$(basename "$SCEN" .json)
           OUT="../../results/${BASE}"
-          echo "[STEP-1] scenarios=$SCEN out=$OUT"
-          ARGS="--scenarios $SCEN --system-prompt ../../prompts/AC-PRO-CORE_v1_6.txt --out $OUT --resume"
+          # 2026-08-10 수정 — AC-PRO-CORE 파일명을 여기 하드코딩해뒀다가
+          # v1.6→v1.7 갱신 때 이 워크플로를 못 바꿔서, STEP-1이 옛 프롬프트로
+          # 계속 채점되는 걸 실사로 확인(§teacher 트랩 재검증 세션). 이제
+          # prompts/sp-catalog.json의 "AC-PRO-CORE" 키(프로덕션이 실제로
+          # 참조하는 그 매니페스트, call-ai.js가 같은 파일로 버전을 정함)를
+          # 직접 읽어서, 어떤 버전이 활성화돼 있든 항상 그걸 그대로 쓴다 —
+          # 이 파일명을 다시는 손으로 맞출 필요가 없다.
+          AC_PRO_CORE_FILE=$(python3 -c "import json; print(json.load(open('../../prompts/sp-catalog.json'))['AC-PRO-CORE'])")
+          echo "[STEP-1] scenarios=$SCEN out=$OUT system-prompt=prompts/$AC_PRO_CORE_FILE (sp-catalog.json에서 읽음)"
+          ARGS="--scenarios $SCEN --system-prompt ../../prompts/$AC_PRO_CORE_FILE --out $OUT --resume"
           if [ -n "${{ github.event.inputs.limit }}" ]; then
             ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
           fi
