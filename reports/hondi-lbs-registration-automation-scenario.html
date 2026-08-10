@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>공공데이터포털 개방과 혼디 — 위치기반서비스 등록 자동화 시나리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.78; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  /* ── 이 문서 전용 컴포넌트 ── */
+  .quote{
+    font-family:'Noto Serif KR',serif; font-style:italic;
+    font-size:11px; line-height:1.75; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; margin:10px 0 14px;
+  }
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:90%; }
+  .msg .who{
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:10.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .aside{
+    font-size:9.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .cmp-table td:first-child{ color:var(--ink-soft); }
+  .cmp-table td:last-child{ color:var(--accent); font-weight:500; }
+  .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; color:var(--ink); }
+  .badge-live{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-road{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-vision{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#5b4a8a; background:#eeeaf6; border:1px solid #d3c7ea;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  /* 2026-08-11 신설 — 사실관계 정정 표시. 사용자가 "등록 인지대 납부"를
+     시나리오에 넣어달라고 했으나, 정부24 공식 안내에 이 신고는
+     "수수료 없음"으로 명시돼 있다. 조용히 사용자 표현을 그대로 따르면
+     실제로 없는 수수료가 있는 것처럼 보이는 오정보가 되므로, 정정
+     사실임을 명확히 표시하는 전용 뱃지를 둔다. */
+  .badge-fact{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#8a6d1f; background:#f7f0dd; border:1px solid #e6d49a;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 홍보 시나리오 · 사업체 행정 절차 대행</div>
+  <h1 class="doc-title">2시간짜리 신고서를,<br>1분짜리 대화로</h1>
+  <p class="doc-sub">
+    개업·개인파산·여권에 이어, 이번엔 스타트업·IT 서비스 창업자라면 한 번은
+    마주치는 관문 — 위치기반서비스사업 신고입니다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-11</b></div>
+    <div>근거 법령<br><b>위치정보의 보호 및 이용 등에 관한 법률 제9조</b></div>
+    <div>예시 사례<br><b>위치기반서비스사업 신고(최초)</b></div>
+    <div>성격<br><b>홍보용 개념 시연 · 실제 법률 자문 아님</b></div>
+  </div>
+
+  <p>
+    "고객 위치 정보를 활용해 근처 매장을 추천한다", "배달 기사 위치를
+    실시간으로 보여준다" — 이런 서비스를 만드는 순간, 위치정보의 보호 및
+    이용 등에 관한 법률(위치정보법) 제9조에 따라 <b>방송통신위원회에
+    위치기반서비스사업 신고</b>를 해야 합니다. 신고 없이 서비스를 운영하면
+    3년 이하 징역 또는 3천만 원 이하 벌금 — 가볍게 넘길 수 있는 문제가
+    아닙니다.
+  </p>
+
+  <h2 class="sec"><span class="num">01</span> 지금은 이렇게 합니다</h2>
+  <p>전자민원센터(emsit.go.kr) 또는 정부24를 통해 신고하며, 구비서류는 다음과 같습니다.</p>
+  <ul class="list">
+    <li>사업자 현황 및 사업 내용이 담긴 <b>사업계획서</b></li>
+    <li>사업용 주요설비(서버 등)의 내용·설치장소 확인 서류(임차 시 임차 증빙)</li>
+    <li>위치정보법 제16조에 따른 <b>위치정보 보호조치를 증명하는 서류</b> — 암호화 방식, 접근권한 통제, 접속기록 6개월 보관 등 기술적·관리적 보호조치를 구체적으로 기술해야 함</li>
+    <li>사업자등록증, 법인등기부등본</li>
+    <li>(외국회사인 경우) 해당 국가 법인등기사항증명서·영업소등기사항증명서</li>
+  </ul>
+  <p>
+    이 중 가장 까다로운 건 "위치정보 보호조치를 증명하는 서류"입니다.
+    법조문 한 줄이 아니라, 실제로 우리 시스템이 암호화를 어떻게 적용하고
+    접근권한을 어떻게 통제하며 접속기록을 얼마나 보관하는지를 문서로
+    구체화해야 합니다. 시스템 구조를 잘 아는 <b>IT 담당자가 직접 작성해도
+    보통 2시간 안팎이 걸리고</b>, 법률 문장으로 다듬는 부분까지 신경 쓰다
+    보면 반나절을 넘기기도 합니다. 시스템을 잘 모르는 대표나 창업 초기
+    팀이라면 결국 변호사·법무사에게 맡기게 되고, 이 경우 상당한 비용이
+    발생합니다.
+  </p>
+  <div class="note">
+    참고로 이 신고 자체의 <b>정부 수수료는 없습니다</b>(정부24 공식 안내
+    기준). 그런데도 실비용이 드는 이유는 수수료가 아니라 <b>서류를
+    작성하는 데 들어가는 시간과 전문가 위임 비용</b> 때문입니다 — 개인파산
+    시나리오에서 짚었던 것과 같은 패턴입니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 위치기반서비스 등록 자동화 · 2026-08-11</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> 혼디가 하면 어떻게 달라지는가</h2>
+  <p>
+    아래 시나리오는 전부 <span class="badge-road">ROADMAP</span> —
+    오늘 기준 코드로 존재하지 않는 개념 시연입니다. 다만 여권 시나리오와
+    달리 법 개정이 필요한 영역은 아닙니다 — 필요한 건 오직 공공데이터
+    API 연동과 문서 자동화뿐입니다.
+  </p>
+
+  <div class="dialogue">
+
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"혼디야, 위치기반서비스 등록해 줘."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        PDV(개인데이터금고)에서 사업자등록증·법인등기부등본을 먼저
+        확인하겠습니다. 최신본이 있으면 바로 사용하고, 없거나 유효기간이
+        지난 서류는 정부24에서 다시 발급받아 PDV에 저장해 두겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-road">ROADMAP</span> 이 패턴은 개인파산
+      시나리오와 동일합니다 — PDV에 이미 있는 서류는 재사용하고, 없는
+      것만 정부24로 새로 받아 채워 넣습니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        위치정보 보호조치 증명 서류도 준비하겠습니다. 등록하신 시스템의
+        암호화 방식·접근권한 통제·접속기록 보관 설정을 바탕으로 초안을
+        작성했습니다 — 법이 요구하는 항목을 빠짐없이 담았는지 확인해
+        주시면 됩니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-road">ROADMAP</span> IT 담당자가 2시간
+      들이던 부분입니다. 혼디가 시스템 설정값을 근거로 초안을 먼저
+      만들고, 사람은 검토·확정만 하는 구조로 바뀝니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        위치기반서비스사업 신고서를 작성해 전자민원센터로 접수하겠습니다.
+        확인해보니 이 신고 자체는 <b>수수료가 없습니다</b>
+        <span class="badge-fact">정정</span> — 혹시 관련해서 실제로
+        발생하는 비용이 있다면 자동으로 납부하고 영수증을 PDV에
+        보관해 드리겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-fact">정정</span> 처음에 "등록 인지대 납부"로
+      요청하신 부분인데, 정부24 공식 안내를 확인해보니 위치기반서비스사업
+      신고 자체는 수수료가 없는 절차입니다. 혼디라면 이런 지점에서
+      사용자의 말을 그대로 따르기보다, 사실을 확인해서 정정된 정보로
+      알려드리는 쪽을 택합니다.
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        접수 완료했습니다. 위치기반서비스사업 신고가 등록됐습니다 —
+        관공서 방문도, 서류 작성도 없이 1분 만에 끝났습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-road">ROADMAP</span> 신고제(허가제가 아님)라는
+      점도 이 시나리오가 여권보다 훨씬 가까운 미래인 이유입니다 —
+      방통위의 재량적 심사 없이 요건만 갖추면 접수 즉시 효력이
+      발생합니다.
+    </div>
+
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 위치기반서비스 등록 자동화 · 2026-08-11</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
+  <table class="avoid-break cmp-table">
+    <thead><tr><th>기존 (신청자가 직접)</th><th>혼디 적용 후</th></tr></thead>
+    <tbody>
+      <tr><td>사업자등록증·법인등기부등본을 직접 발급받아 준비</td><td>PDV 재사용 또는 정부24 자동 발급 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>위치정보 보호조치 증명서류를 IT 담당자가 2시간 들여 직접 작성, 또는 변호사·법무사에 위임(상당한 비용)</td><td>시스템 설정값 기반 초안 자동 생성, 사람은 검토·확정만 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>전자민원센터·정부24에서 신고서 직접 작성·접수</td><td>혼디가 작성해 자동 접수 <span class="badge-road">ROADMAP</span></td></tr>
+      <tr><td>수수료 유무를 스스로 확인(있는 줄 알고 준비하는 경우도 흔함)</td><td>실제 수수료 여부를 확인해 정정 안내, 발생 시 자동 납부·영수증 보관 <span class="badge-fact">정정</span></td></tr>
+      <tr class="highlight"><td><b>보호조치 서류 내용의 최종 정확성 책임</b></td><td>그대로 유지 — 시스템을 실제로 어떻게 운영하는지는 사업자 본인만 확정할 수 있음</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    마지막 줄이 이 시나리오의 정직한 한계입니다. 혼디가 보호조치 서류의
+    초안을 시스템 설정값으로 채울 수는 있지만, "실제로 그렇게 운영하고
+    있는지"를 확정하는 책임은 여전히 사업자 본인에게 있습니다. 허위로
+    작성하면 신고 자체가 무효가 되거나 더 큰 법적 책임으로 이어질 수
+    있어, 이 지점만은 사람의 확인을 반드시 거칩니다.
+  </p>
+  <p>
+    또 하나 짚어둘 점 — 이 시나리오 초안 요청에는 "등록 인지대 납부"가
+    포함돼 있었지만, 실제로는 이 신고에 수수료가 없다는 걸 조사 과정에서
+    확인했습니다. 혼디가 실제로 이렇게 동작한다면, 사용자가 잘못 알고
+    있는 부분까지 조용히 넘기지 않고 짚어주는 게 맞다고 판단해 시나리오
+    자체를 사실에 맞게 정정했습니다.
+  </p>
+
+  <div class="note warn">
+    <b>※ 안내:</b> 위 시나리오는 위치정보의 보호 및 이용 등에 관한 법률과
+    정부24·전자민원센터(emsit.go.kr) 공식 안내를 바탕으로 구성한 <b>개념
+    시연</b>이며, 실제 법률·기술 자문을 대체하지 않습니다.
+    <span class="badge-road">ROADMAP</span> 표시가 붙은 기능은 현재
+    로드맵 단계이며, 지금 이 순간 실제로 구현되어 서비스되고 있는 기능이
+    아닙니다. 개별 사안, 특히 위치정보 보호조치의 적정성은 반드시
+    방송통신위원회 또는 개인정보·정보보안 전문 변호사·기술 전문가와
+    상담하시기 바랍니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 홍보 시나리오 — 위치기반서비스 등록 자동화 · 2026-08-11</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+</body>
+</html>
