@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디 도입 시 연간 인간 노동시간 절감 추정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:25px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.75; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  thead th.num, td.num{ text-align:right; }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+  tbody tr.total td{
+    background:var(--tint); font-weight:700; border-top:1.5px solid var(--accent);
+    border-bottom:1.5px solid var(--accent);
+  }
+
+  .kpi-row{ display:flex; gap:10px; margin:14px 0; }
+  .kpi{ flex:1; background:var(--accent); color:#fff; padding:12px 13px; }
+  .kpi .lbl{ font-size:9px; letter-spacing:.05em; opacity:.8; margin-bottom:4px; }
+  .kpi .val{ font-family:'Noto Serif KR',serif; font-size:19px; font-weight:700; line-height:1.15; }
+  .kpi .sub{ font-size:8.5px; opacity:.75; margin-top:3px; }
+  .kpi.alt{ background:var(--tint); color:var(--ink); border:1px solid var(--line-strong); }
+  .kpi.alt .lbl{ color:var(--ink-soft); opacity:1; }
+
+  .formula{
+    font-size:10.5px; background:#fff; border:1px dashed var(--line-strong);
+    padding:9px 12px; margin:8px 0 12px; color:var(--ink);
+  }
+  .formula .op{ color:var(--accent-soft); font-weight:700; margin:0 5px; }
+  .formula .res{ color:var(--accent); font-weight:700; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.7; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 정책 영향 추정 · 페르미 추정 메모</div>
+  <h1 class="doc-title">혼디(Hondi) 도입에 따른<br>연간 인간 노동시간 절감 추정</h1>
+  <p class="doc-sub">
+    혼디가 입법·사법·행정·교통·물류·금융·시장·교육·의료·산업·기업 전반에서 시민·기업의
+    업무를 <b>직접 대행·집행</b>하는 에이전트로 기능한다고 가정할 때, 절감 가능한
+    연간 인간 노동시간을 개략적으로 추산한다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-10</b></div>
+    <div>대상<br><b>Openhash-Gopang / 혼디(Hondi) 플랫폼</b></div>
+    <div>혼디 완성도<br><b>60%(현재) / 90%(목표 시나리오)</b></div>
+    <div>추정 성격<br><b>페르미 추정 · 오차범위 ±2~3배</b></div>
+  </div>
+
+  <h2 class="sec"><span class="num">01</span> 전제와 방법론</h2>
+  <p>
+    이 문서는 정밀 계량이 아니라 페르미 추정이다. 통계청·한국은행·KDI·고용노동부의
+    실측치(취업자 수, 연간 노동시간, 임금, 인력부족)에 저자의 정성적 가정을 곱해
+    자릿수(order of magnitude) 감을 잡는다 — 어느 숫자가 실측이고 어느 숫자가
+    저자 판단인지는 <a href="#appendix">부록 A</a>에 전수 명시했다.
+  </p>
+  <div class="note warn">
+    <b>핵심 전제(이 문서 전체에 적용):</b> 혼디가 시민·기업을 대신해 신청·접수·서류작성·
+    전달·상태추적·정형적 승인까지 <b>자율적으로 완결</b>하려면 두 장벽이 사라져야 한다 —
+    (A) 정부·산업 기관의 API 미개방, (B) 혼디 자체 설계에 내장된 HUMAN-AUTHORITY-GATE
+    원칙(사람의 최종 승인 없이는 업무를 완료 처리하지 않음 — Openhash-Gopang/gopang
+    저장소 <code>dept-task-handler.js</code>·<code>/gov/task/submit</code> 코드로 확인).
+    <b>이 문서의 모든 계산은 두 장벽이 법제화를 통해 모두 걷어내진다는 최대치
+    시나리오를 전제한다.</b> 이 전제가 부분적으로만 실현되면(API만 개방되고 최종
+    승인은 여전히 사람이 함) 아래 절감분은 크게 축소된다 — 개략적으로 §6·§7이
+    제시하는 완성도·채택률 범위보다 한 단계 더 낮은 자릿수로 이해해야 한다.
+  </div>
+
+  <h2 class="sec"><span class="num">02</span> 기초 통계</h2>
+  <table class="avoid-break">
+    <thead><tr><th>지표</th><th class="num">값</th><th>출처</th></tr></thead>
+    <tbody>
+      <tr><td>전체 취업자 수</td><td class="num">약 2,890만 명</td><td>통계청, 경제활동인구조사(2025.08)</td></tr>
+      <tr><td>취업자 1인당 연간 노동시간</td><td class="num">약 1,900시간</td><td>통계청(1,908h)·고용부 사업체조사(1,859h), 2024</td></tr>
+      <tr><td>전체 유급 노동시간 총량</td><td class="num">약 550억 시간/년</td><td>위 두 지표의 곱(자체 산출)</td></tr>
+      <tr><td>성인(19세 이상) 인구</td><td class="num">약 4,400만 명</td><td>통계청 인구총조사 기반 어림</td></tr>
+      <tr><td>평균 시간당 임금(준거임금)</td><td class="num">약 20,000원</td><td>고용노동부 사업체노동력조사(월209h 환산)</td></tr>
+      <tr><td>전산업 인력부족 인원</td><td class="num">약 44.9만 명</td><td>고용노동부 직종별사업체노동력조사(2025.10)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 노동시간 절감 추정 · 2026-08-10</span>
+    <span>1 / 5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">03</span> 분야별 절차적 집행 업무 절감 추정</h2>
+  <p>
+    §1의 전제(장벽 A·B 완전 제거) 하에서, 신청·접수·서류작성·전달·상태추적·정형적
+    승인 같은 <b>절차적 집행 업무</b>가 대상이 된다 — 정책결정·판결·진단·창작·복잡한
+    협상 등 재량 판단 영역은 제외했다. 종사자 수는 KOSIS 직업별 취업자 구성비를
+    11개 분야에 근사 매핑한 저자 산정치이며, 비율 열은 전부 저자의 정성적 판단이다
+    (근거는 <a href="#appendix">부록 A</a> 참조).
+  </p>
+  <table class="avoid-break">
+    <thead>
+      <tr><th>분야</th><th class="num">종사자</th><th class="num">연간 노동시간</th>
+        <th class="num">절차적 집행 비중</th><th class="num">AI 집행가능률</th><th class="num">절감 상한</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>행정</td><td class="num">120만명</td><td class="num">22.8억h</td><td class="num">60%</td><td class="num">75%</td><td class="num">10.3억h</td></tr>
+      <tr><td>사법·법률</td><td class="num">15만명</td><td class="num">2.9억h</td><td class="num">45%</td><td class="num">60%</td><td class="num">0.8억h</td></tr>
+      <tr><td>교통·물류</td><td class="num">220만명</td><td class="num">41.8억h</td><td class="num">50%</td><td class="num">75%</td><td class="num">15.7억h</td></tr>
+      <tr><td>금융</td><td class="num">80만명</td><td class="num">1.5억h</td><td class="num">55%</td><td class="num">70%</td><td class="num">0.6억h</td></tr>
+      <tr><td>시장·유통</td><td class="num">350만명</td><td class="num">66.5억h</td><td class="num">40%</td><td class="num">75%</td><td class="num">20.0억h</td></tr>
+      <tr><td>교육</td><td class="num">190만명</td><td class="num">36.1억h</td><td class="num">35%</td><td class="num">65%</td><td class="num">8.2억h</td></tr>
+      <tr><td>의료</td><td class="num">200만명</td><td class="num">38.0억h</td><td class="num">35%</td><td class="num">55%</td><td class="num">7.3억h</td></tr>
+      <tr><td>산업·기업</td><td class="num">750만명</td><td class="num">142.5억h</td><td class="num">45%</td><td class="num">70%</td><td class="num">44.9억h</td></tr>
+      <tr class="total"><td colspan="5">절차적 집행 절감 상한 (A)</td><td class="num">≈ 108억 h/년</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    판단 원칙: 대민 접점·반복거래가 많을수록(행정·시장유통·산업기업) 절차적 집행
+    비중을 높게, 개별 사안마다 깊은 전문판단이 필요할수록(사법법률·의료·교육)
+    낮게 잡았다. AI 집행가능률은 의료·금융·사법처럼 규제·안전·정확성 요건이
+    높은 분야를 보수적으로(55~60%) 잡았다. 전체 유급 노동시간(550억h)의 약
+    <b>19.6%</b>에 해당한다.
+  </div>
+
+  <h2 class="sec"><span class="num">04</span> 국민 개인 비임금 행정처리 시간</h2>
+  <p>
+    관공서를 찾아 헤매기·재방문·전화 대기 등 <b>국민이 직접, 무급으로 쓰는 시간</b>은
+    §2의 550억h 통계에 잡히지 않는다. 이 마찰을 줄이는 것이 혼디의 원초적 설계
+    목적이므로 별도 항목으로 다룬다.
+  </p>
+  <div class="formula">
+    성인 4,400만 명 <span class="op">×</span> 1인당 연 12.5시간(연 3~5회 × 회당 2~3h 어림)
+    <span class="op">=</span> 약 5.5억h
+    <span class="op">×</span> 대상비중 75% <span class="op">×</span> AI 절감률 55%
+    <span class="op">=</span> <span class="res">이론적 절감 상한(raw) ≈ 2.3억h</span>
+  </div>
+  <div class="formula">
+    2.3억h <span class="op">×</span> 시간가치 환산율 70%(비임금 시간을 임금노동시간
+    등가로 할인 — 정책분석 일반 관행 60~100% 중 보수적 값)
+    <span class="op">=</span> <span class="res">환산 임금노동시간 상한(B) ≈ 1.6억 h/년</span>
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 노동시간 절감 추정 · 2026-08-10</span>
+    <span>2 / 5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">05</span> 통합 결과</h2>
+  <p>이론적 상한(A+B ≈ 109.6억h)에 혼디의 현재/목표 완성도와 초기 채택률(50~70%,
+  유사 공공 디지털서비스 초기 보급률에 대한 저자의 일반적 인상)을 적용한다.</p>
+  <table class="avoid-break">
+    <thead><tr><th>시나리오</th><th class="num">유급 절차집행분(A)</th><th class="num">국민 개인분(B)</th><th class="num">통합 범위</th><th class="num">체감 단위(1,900h/인)</th></tr></thead>
+    <tbody>
+      <tr><td><b>현재(완성도 60%)</b></td><td class="num">32.4억~45.4억h</td><td class="num">0.48억~0.67억h</td><td class="num">33억~46억h</td><td class="num">약 174만~242만 명분</td></tr>
+      <tr><td><b>목표(완성도 90%)</b></td><td class="num">48.6억~68.0억h</td><td class="num">0.72억~1.01억h</td><td class="num">49억~69억h</td><td class="num">약 258만~363만 명분</td></tr>
+    </tbody>
+  </table>
+  <div class="kpi-row avoid-break">
+    <div class="kpi">
+      <div class="lbl">현재 완성도(60%) 기준 절감 범위</div>
+      <div class="val">약 33억 ~ 46억 h/년</div>
+      <div class="sub">전체 노동시간의 약 6.0~8.4%</div>
+    </div>
+    <div class="kpi alt">
+      <div class="lbl">목표 완성도(90%) 기준 절감 범위</div>
+      <div class="val">약 49억 ~ 69억 h/년</div>
+      <div class="sub">전체 노동시간의 약 8.9~12.5%</div>
+    </div>
+  </div>
+
+  <h2 class="sec"><span class="num">06</span> 주4일(주32시간) 전환 평가 — 완성도 90% 시나리오</h2>
+  <p>
+    주40시간→주32시간(-20%)을 임금 삭감 없이 유지하려면 국가 전체 유급 노동시간
+    (550억h)의 20%, 즉 <b>약 110억 시간/년</b>을 생산성 상승 또는 인력 재배치로
+    상쇄해야 한다(재배치 경로로 환산 시 약 723만 명의 신규 노동력 투입 규모 —
+    한국은 생산가능인구 감소 국면이라 비현실적이며, 사실상 생산성 상승에 의존).
+  </p>
+  <div class="formula">
+    실현 범위(90% 완성도, 49억~69억h) <span class="op">÷</span> 필요 상쇄량 110억h
+    <span class="op">=</span> <span class="res">전국 평균 충족률 약 44% ~ 62%</span>
+  </div>
+  <table class="avoid-break">
+    <thead><tr><th>분야</th><th class="num">부문 내 절감비율(완성도90%×채택률50~70%)</th><th class="num">필요치(20%) 대비</th></tr></thead>
+    <tbody>
+      <tr><td>행정</td><td class="num">18.1% ~ 25.4%</td><td class="num">91~127%</td></tr>
+      <tr><td>교통·물류</td><td class="num">15.9% ~ 22.3%</td><td class="num">80~111%</td></tr>
+      <tr><td>금융</td><td class="num">15.4% ~ 21.6%</td><td class="num">77~108%</td></tr>
+      <tr><td>산업·기업</td><td class="num">14.2% ~ 19.9%</td><td class="num">71~99%</td></tr>
+      <tr><td>시장·유통</td><td class="num">12.2% ~ 17.1%</td><td class="num">61~85%</td></tr>
+      <tr><td>사법·법률</td><td class="num">11.2% ~ 15.7%</td><td class="num">56~78%</td></tr>
+      <tr><td>교육</td><td class="num">9.1% ~ 12.8%</td><td class="num">46~64%</td></tr>
+      <tr><td>의료</td><td class="num">7.8% ~ 10.9%</td><td class="num">39~55%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 노동시간 절감 추정 · 2026-08-10</span>
+    <span>3 / 5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 4 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">07</span> 종합 판단</h2>
+  <div class="kpi-row avoid-break">
+    <div class="kpi alt">
+      <div class="lbl">전국 평균(전 부문 가중)</div>
+      <div class="val">여전히 부족</div>
+      <div class="sub">충족률 44~62%, 격차 1.6~2.3배</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">행정·교통물류·금융·산업</div>
+      <div class="val">조건부 도달권</div>
+      <div class="sub">채택률 낙관 시 20% 문턱 근접·초과</div>
+    </div>
+  </div>
+  <p>
+    §1 전제(장벽 A·B 완전 법제화) 하에서도 전국·전산업 일괄 주4일제는 산술적으로
+    확정적이지 않다 — 의료·교육이 여전히 절반 수준(39~55%, 46~64%)에 머물기
+    때문이다. 다만 <b>행정·교통물류·금융·산업처럼 절차적 업무 비중이 높고
+    안전·인명 리스크가 낮은 부문</b>은 채택률이 낙관적일 경우 20% 문턱에 근접하거나
+    넘어선다 — 이는 혼디의 설계 범위 자체의 한계가 아니라, <b>완성도와 채택률의
+    문제</b>다.
+  </p>
+  <div class="note warn">
+    이 결론 전체는 §1에서 명시한 강한 전제(자율 집행 권한의 전면 법제화)에 전적으로
+    의존한다. 그 전제가 부분적으로만 실현된다면(API만 개방되고 최종 승인은
+    여전히 사람이 담당) 실제 절감 범위와 주4일제 충족률은 이 문서 수치보다
+    한 단계 낮은 자릿수로 봐야 한다.
+  </div>
+
+  <h3 class="subsec">7-1. 인력 재배치 관점 — 4일제보다 인력난 해소에 더 가깝다</h3>
+  <p>
+    완성도 90% 시나리오에서 확보되는 잉여 노동력(약 258만~363만 명분)은
+    <b>주4일제(약 723만 명분 필요)에는 부족</b>하지만, 현재 전산업 인력부족 총량
+    (약 44.9만 명 — 제조업·보건복지·도소매·숙박음식점 순)을 이미 크게 상회한다.
+    "산업 구조 재구성 + 인력 재배치"라는 전제를 살리려면, 목표를 "전 국민
+    주4일제"보다 "만성적 인력부족 업종의 정상화"로 좁히는 편이 데이터로 더
+    뒷받침된다.
+  </p>
+
+  <h3 class="subsec">7-2. 정책 맥락</h3>
+  <p>
+    한국은 이미 주4.5일제를 123대 국정과제에 포함해 2025년 6월 고용노동부가
+    국정기획위원회에 도입 계획을 보고했다(출처: 고용노동부 발표·관련 보도,
+    입법정책 이슈보고서 「주 4.5일제 도입의 현실과 향후 법개정 과제」, 2026-04-07
+    기준). 관련 보고서들은 한결같이 "생산성 향상·업무 프로세스 효율화 없는
+    단순 근무일 단축은 지속 가능하지 않다"고 지적한다 — 혼디는 이 논의에 기여할
+    수 있는 여러 생산성 향상 수단 중 하나이며, 단독 충분조건은 아니다.
+  </p>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 노동시간 절감 추정 · 2026-08-10</span>
+    <span>4 / 5</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 5 — 부록 A ═══════════════════ -->
+<div class="sheet page-break" id="appendix">
+
+  <h2 class="sec"><span class="num">A</span> 부록 — 가정·근거 일람</h2>
+  <p>표에 숫자가 있으면 근거가 있는 것처럼 보이기 쉽다. 이 부록은 문서 전체에서
+  쓰인 모든 비자명한 수치를 근거 유형별로 전수 나열한다.</p>
+
+  <table class="avoid-break">
+    <thead><tr><th>유형</th><th>정의</th><th class="num">신뢰도</th></tr></thead>
+    <tbody>
+      <tr><td><b>① 공식 통계</b></td><td>통계청·고용노동부·한국은행 등 실측치</td><td class="num">높음</td></tr>
+      <tr><td><b>② 저장소 코드 확인</b></td><td>Openhash-Gopang 저장소 직접 열람 사실</td><td class="num">높음(해석은 저자 판단)</td></tr>
+      <tr><td><b>③ 산식 도출</b></td><td>①·②를 재료로 본문 수식으로 계산한 값</td><td class="num">①·②에 종속</td></tr>
+      <tr><td><b>④ 저자 정성적 추정(Fermi)</b></td><td>공식 데이터 대사 없이 저자가 판단한 값</td><td class="num"><b>낮음 · 검증 필요</b></td></tr>
+      <tr><td><b>⑤ 사용자 전제</b></td><td>사용자가 대화에서 지정한 가정(완성도 수치, 장벽 A·B 제거 시나리오)</td><td class="num">전제이지 사실 아님</td></tr>
+    </tbody>
+  </table>
+
+  <table class="avoid-break">
+    <thead><tr><th>위치</th><th>항목</th><th class="num">유형</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>§2</td><td>취업자수·연간노동시간·준거임금·인력부족</td><td class="num">①</td><td>표에 출처 명기</td></tr>
+      <tr><td>§2</td><td>성인인구 4,400만</td><td class="num">①(근사)</td><td>인구총조사 기반이나 19세 이상 정확치는 별도 대사 안 함</td></tr>
+      <tr><td>§3</td><td>분야별 종사자 수(120만~750만명)</td><td class="num">④</td><td>KOSIS 직업별 구성비를 11개 분야에 저자가 근사 매핑, 공식 분류와 1:1 대응 아님</td></tr>
+      <tr><td>§3</td><td>절차적 집행 비중(35~60%)·AI 집행가능률(55~75%)</td><td class="num">④</td><td>판단 원칙은 §3 note 서술, 개별 수치의 실측 검증 없음</td></tr>
+      <tr><td>§3</td><td>절감 상한 108억h</td><td class="num">③</td><td>위 값들의 곱</td></tr>
+      <tr><td>§4</td><td>1인당 연 12.5시간(국민 개인)</td><td class="num">④</td><td>연 3~5회 × 회당 2~3h 어림, 개인차 매우 큼</td></tr>
+      <tr><td>§4</td><td>대상비중 75%·AI절감률 55%·시간가치환산율 70%</td><td class="num">④</td><td>공식 데이터 대사 없음, 환산율은 정책분석 일반 관행 참고</td></tr>
+      <tr><td>§5</td><td>완성도 60%·90%</td><td class="num">⑤</td><td>사용자가 대화에서 직접 제시</td></tr>
+      <tr><td>§5</td><td>채택률 50~70%</td><td class="num">④</td><td>유사 공공 디지털서비스 초기 보급률에 대한 일반적 인상, 특정 사례 대사 없음</td></tr>
+      <tr><td>§5</td><td>통합 범위(33억~46억h, 49억~69억h)</td><td class="num">③</td><td>④·⑤ 재료의 곱 — 최종값도 ④ 수준 불확실성을 물려받음</td></tr>
+      <tr><td>§6</td><td>필요 상쇄량 110억h·723만명</td><td class="num">③</td><td>550억h×20%, 550억h÷(32h×52주)</td></tr>
+      <tr><td>§1</td><td>HUMAN-AUTHORITY-GATE·GOV_TASK 등 대행 아키텍처</td><td class="num">②</td><td>dept-task-handler.js·worker.js 주석 원문 확인</td></tr>
+      <tr><td>§1</td><td>"장벽 A·B 모두 걷어낸다"는 전제</td><td class="num">⑤</td><td>사용자가 2026-08-10 명시적으로 지시</td></tr>
+      <tr><td>§7-2</td><td>주4.5일제 국정과제 채택</td><td class="num">①</td><td>고용노동부 발표·관련 보도, 2026-04-07 기준 이슈보고서</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note warn">
+    <b>가장 중요한 결론:</b> 최종 수치는 ①(공식통계)에서 출발하지만, 그 위에
+    곱해지는 계수(절차적 집행 비중·AI 집행가능률·채택률 등)는 전부 ④ 저자
+    정성적 추정이다. ①은 신뢰할 수 있어도 ④가 2~3배 어긋나면 최종 결과도
+    그만큼 어긋난다. 이 문서를 의사결정에 쓰려면 ④ 항목들을 실제 시간사용조사·
+    설문·전문가 델파이 등으로 검증하는 후속 작업이 필요하다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 노동시간 절감 추정 · 2026-08-10</span>
+    <span>5 / 5</span>
+  </div>
+</div>
+
+</body>
+</html>
