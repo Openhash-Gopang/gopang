@@ -61,39 +61,59 @@
    있지만 의미상 professor가 정답인 함정 케이스), 그리고 **부정대조군
    2건**(no=18 "수업 설계를 도와주세요"[교사 본인 시점 → 정답은 teacher],
    no=20 "시험 일정이 언제인지"[제도 정보 질문 → 정답은 kedu(K-School)])을
-   포함한다 — professor가 항상 이기는 게 아니라는 걸 함께 확인해야 진짜
-   정밀도(precision) 검증이 된다. no=6("학교 다녀와서 국어 받아쓰기를 봐줄
-   선생님을 구하고 있어요")은 teacher의 트리거 `'학교 선생님'`과 표면
-   문자열이 거의 겹쳐 오분류 위험이 가장 크다.
-   실행: `python3 live_smoketest.py --scenarios scenarios_k12_professor_vs_teacher_20260809.json --system-prompt ../../prompts/AC-PRO-CORE_v1_6.txt --out ../../results/k12-professor-vs-teacher`
+   포함한다.
+   실행: `python3 live_smoketest.py --scenarios scenarios_k12_professor_vs_teacher_20260809.json --system-prompt ../../prompts/AC-PRO-CORE_v1_7.txt --out ../../results/k12-professor-vs-teacher`
+   (2026-08-10 — 워크플로가 이 경로를 `v1_6.txt`로 하드코딩해뒀던 걸
+   `prompts/sp-catalog.json["AC-PRO-CORE"]`를 직접 읽도록 고쳤다 —
+   `.github/workflows/live-smoketest-k12-subject-mapping.yml` 참고.)
 
 2. **STEP-2 (subject-gate, 리프 정밀화)** —
    `scenarios_k12_subject_gate_20260809.json`(2026-08-09 다양화 개정, 30건:
    매칭O·동의어O 7건 + 매칭O·동의어X/근사치 10건 + 완전공백 4건 + 인접쌍
-   함정 3건 + 복합요청/강건성/성인맥락 6건). 완전공백 4건은
-   `expected_leaf_id: null`로 표시했다 — 이 경우 모델이 억지로 리프 하나를
-   고르지 않고 `id:null`을 내는 것 자체가 정답이다(그래야 production
-   `subject-gate.js`가 상위 `professor`로 안전 폴백한다). 이 케이스를
-   `LIVE-PASS`로 정확히 채점하도록 `subject_gate_live_smoketest.py`의
-   `grade()`도 함께 손봤다(과거엔 `chosen is None`이면 `expected`와 무관하게
-   무조건 FAIL — null-기대 시나리오를 표현할 수 없었음). 인접쌍 함정 3건
-   (화학/화학공학, 생명과학/생명공학, 지구과학/천문학)은 실제 professor
-   트리에 두 후보가 모두 존재해 라벨 유사도로 흔들릴 개연성이 구조적으로
-   있는 지점이다.
-   실행: `python3 subject_gate_live_smoketest.py --scenarios scenarios_k12_subject_gate_20260809.json --out ../../results/k12-subject-gate`
+   함정 3건 + 복합요청/강건성/성인맥락 6건). 인접쌍 함정 3건(화학/화학공학,
+   생명과학/생명공학, 지구과학/천문학)은 실제 professor 트리에 두 후보가
+   모두 존재해 라벨 유사도로 흔들릴 개연성이 구조적으로 있는 지점이다.
    실행: `python3 subject_gate_live_smoketest.py --scenarios scenarios_k12_subject_gate_20260809.json --out ../../results/k12-subject-gate`
 
-   실행 전 `dump_leaves.mjs`도 이번에 수정했다 — 기존 버전은
-   `subject-gate.js._leafMenuLine()`(LEAF_SYNONYMS 보강)을 재구현하지 않고
-   `id: label`만 재조립해, production보다 빈약한 메뉴로 채점하고 있었다.
-   이제 `_leafMenuLine`을 export해서 그대로 가져다 쓴다 — production과
-   완전히 동일한 메뉴 텍스트로 검증한다.
+## 완전공백 과목 처리 방식의 변천 (2026-08-09 → 2026-08-10)
 
-## 남는 판단 — 완전공백 3과목(음악·기술가정·한문)을 어떻게 할지
+**1차 시도(2026-08-09, 실패)** — `GATE_SYS_PROMPT_HEAD`에 "확신이 없으면
+`{"id": null}`로 응답하라"는 지시를 넣었다. 실사 결과 음악(리코더 운지법)
+→`professor-koreanmusic`, 기술·가정(칼질 안전수칙)→`professor-culinaryscience`,
+한문(천자문)→`professor-chinese`, 진로와 직업(적성검사)→`professor-psychology`
+로 매번 확신도 높은 오답을 냈다(`raw_response`가 `{"id": null}`이 아니라
+정상 JSON 정답 형태).
 
-이번 세션 범위는 "현재 상태가 무엇인지 확인"까지다. 공백을 메우려면
-(a) 각 교과를 대표하는 신규 리프를 professor 트리에 추가하거나(예: 음악은
-`professor-music-series`에 "일반음악교육" 소계열 신설), (b) teacher 쪽에
-극히 제한된 예외로 편입하는 방법이 있는데, (b)는 옵션 A(교사 세분화 안 함)
-결정과 정면으로 배치되므로 (a) 쪽이 일관성 있다. 다만 이건 검증 결과를 보고
-결정할 일이라 이번 문서에서는 확정하지 않는다.
+**2차 시도(2026-08-09, 역시 실패)** — 실패한 4건을 그대로 반례 문구로
+프롬프트에 추가(`"'리코더 운지법 시험'은 '기악'·'국악' 전공이 아니라..."`
+같은 식). 재검증 결과 **4건 전부 토씨 하나 안 틀리고 동일한 오답을
+반복**했다 — 프롬프트 문구를 아무리 구체적으로 강화해도 "목록에서 하나
+고르기"라는 과제 프레이밍 자체를 못 이겼다고 판단.
+
+**3차 — 구조적 수정(2026-08-10, 채택)** — "예외적으로 null을 내라"는
+별도 지시를 없애고, "해당 없음"을 후보 목록 안의 **정식 항목**으로
+추가했다(`subject-gate.js._buildGateCandidates`). 이 항목의 id는 일부러
+`personaId` 그대로 써서(예: `professor`), 골라도 기존 화이트리스트
+검증·폴백 로직을 그대로 통과한다 — null을 위한 특수 분기를 늘리는 게
+아니라 이미 있는 "목록에서 후보 고르기" 메커니즘 자체가 안전한 결과로
+이어지게 만든 것이다. `dump_leaves.mjs`도 `_buildGateCandidates`를 그대로
+불러 쓰도록 갱신해 하네스가 production과 동일한 158개(리프 157 + 해당없음
+1) 후보를 재현한다. 시나리오 파일의 완전공백 4건은 `expected_leaf_id`를
+`null` 대신 `root_id`(예: `"professor"`) 그대로 채웠다 — "해당 없음"의
+id가 root_id와 같아서 별도 채점 분기 없이 일반 로직(`chosen == expected`)이
+그대로 판정해준다.
+
+## 알려진 한계 — 아직 못 채운 것과 앞으로의 방향
+
+**전수조사 미완료** — 지금까지 발견한 완전공백 4과목(음악·기술가정·한문·
+진로와 직업)은 20개 시나리오를 손으로 짜다가 우연히 걸린 것이지, 2022
+개정 교육과정 전체(고교 전문교과·진로선택/융합선택 과목 등)를 professor
+157개 리프와 전수 대조한 결과가 아니다. 3차 구조적 수정(해당 없음 후보화)이
+제대로 작동한다면, 지금 못 찾은 공백도 억지매칭 대신 안전하게 상위
+`professor`로 폴백할 것으로 기대되지만 — 이건 검증이 더 필요하다.
+
+**리프 신설 여부는 별개 결정** — 구조적 수정으로 "안전하게 실패"하는 것과
+"애초에 정답 리프가 있어서 잘 되는 것"은 다르다. 이 4과목(+전수조사로
+추가 발견될 과목)에 실제 professor 리프를 신설할지는 이번 세션 범위
+밖으로 남겨둔다 — 신설한다 해도 teacher 세분화 안 함(옵션 A) 결정과는
+무관하게 professor 트리 내부의 확장 문제다.

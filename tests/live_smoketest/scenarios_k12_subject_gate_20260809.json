@@ -108,22 +108,22 @@
     "id": "k12-sg-16-music-GAP",
     "root_id": "professor",
     "utterance": "단소 운지법 실기고사를 봐야 하는데 연습을 도와주세요.",
-    "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음. '운지법'이 professor-instrumental[기악]·professor-koreanmusic[국악]과 표면 연상돼 억지 매칭 위험 — id:null이 정답)"
+    "expected_leaf_id": "professor",
+    "category": "완전공백(대응 리프 없음. '운지법'이 professor-instrumental[기악]·professor-koreanmusic[국악]과 표면 연상돼 억지 매칭 위험 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
   },
   {
     "id": "k12-sg-17-techhome-GAP",
     "root_id": "professor",
     "utterance": "요리실습 칼질 안전수칙을 정리해야 하는데 도와주세요.",
-    "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음. professor-culinaryscience[조리과학]가 실재 후보라 억지 매칭 위험 최상위 — id:null이 정답)"
+    "expected_leaf_id": "professor",
+    "category": "완전공백(대응 리프 없음. professor-culinaryscience[조리과학]가 실재 후보라 억지 매칭 위험 최상위 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
   },
   {
     "id": "k12-sg-18-hanmun-GAP",
     "root_id": "professor",
     "utterance": "천자문에 나오는 한자 뜻을 외워야 하는데 도와주세요.",
-    "expected_leaf_id": null,
-    "category": "완전공백(대응 리프 없음. professor-chinese[중국어·문학]가 '한자'로 연상돼 억지 매칭 위험 — id:null이 정답)"
+    "expected_leaf_id": "professor",
+    "category": "완전공백(대응 리프 없음. professor-chinese[중국어·문학]가 '한자'로 연상돼 억지 매칭 위험 — \"해당 없음\"(id=professor) 선택이 정답 — 2026-08-10 구조적 수정 이후)"
   },
   {
     "id": "k12-sg-19-biology-bioeng-ADJ",
@@ -150,8 +150,8 @@
     "id": "k12-sg-22-compound-AMBIG",
     "root_id": "professor",
     "utterance": "수학 숙제도 있고 과학 숙제도 있어서 오늘 안에 다 봐주실 수 있나요?",
-    "expected_leaf_id": null,
-    "category": "복합요청(두 과목 동시 언급 — 단일 리프로 확신 있게 못 좁히는 게 정상, id:null 또는 되묻기가 바람직. 관찰용, 자동판정은 참고만)"
+    "expected_leaf_id": "professor",
+    "category": "복합요청(두 과목 동시 언급 — 단일 리프로 확신 있게 못 좁히는 게 정상, \"해당 없음\"(id=professor) 선택 또는 되묻기가 바람직. 관찰용, 자동판정은 참고만)"
   },
   {
     "id": "k12-sg-23-korean-slang",
@@ -178,8 +178,8 @@
     "id": "k12-sg-26-career-GAP",
     "root_id": "professor",
     "utterance": "진로와 직업 시간에 적성검사 결과를 해석해야 하는데 도와주세요.",
-    "expected_leaf_id": null,
-    "category": "완전공백 + 범위 경계 케이스(적성검사 해석은 진로상담 성격이라 애초에 professor 산하가 아닐 수도 있음 — id:null 또는 다른 EXPERT[예: 상담 계열]로 새는지도 관찰 대상)"
+    "expected_leaf_id": "professor",
+    "category": "완전공백 + 범위 경계 케이스(적성검사 해석은 진로상담 성격이라 애초에 professor 산하가 아닐 수도 있음 — \"해당 없음\"(id=professor) 또는 다른 EXPERT[예: 상담 계열]로 새는지도 관찰 대상, 2026-08-10 구조적 수정 이후)"
   },
   {
     "id": "k12-sg-27-secondlang-german",
