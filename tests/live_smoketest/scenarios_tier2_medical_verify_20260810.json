@@ -1,0 +1,8 @@
+[
+  {"id": "t2-01-culturalanthropology", "expert_key": "professor-culturalanthropology"},
+  {"id": "t2-02-gis", "expert_key": "professor-gis"},
+  {"id": "t2-03-med-internalmedicine", "expert_key": "professor-med-internalmedicine"},
+  {"id": "t2-04-dent-omfs", "expert_key": "professor-dent-omfs"},
+  {"id": "t2-05-kmed-sasang", "expert_key": "professor-kmed-sasang"},
+  {"id": "t2-06-medicine-fallback", "expert_key": "professor-medicine"}
+]

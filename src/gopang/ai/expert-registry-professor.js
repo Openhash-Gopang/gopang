@@ -150,7 +150,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-geography': {
     label: '교수(도시·지역·지리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-geography', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
+    parentKey: 'professor-geography-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-socialscience),
     triggers: ['한국지리 지도', '세계지리 지도', '지리학 지도', '도시지리 지도'],
   },
   'professor-physics': {
@@ -186,7 +186,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-statistics': {
     label: '교수(통계학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-statistics', needsMedicalSafety: false,
-    parentKey: 'professor-mathphys',
+    parentKey: 'professor-statistics-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-mathphys),
     triggers: ['통계학 지도', '확률과 통계 지도'],
   },
   // ── 소계열(3단, 리프) 배치2: 인기 전공 12개 ──────────────────
@@ -357,19 +357,19 @@ export const PROFESSOR_REGISTRY = {
   'professor-medicine': {
     label: '교수(의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-medicine', needsMedicalSafety: false,
-    parentKey: 'professor-medicine-series',
+    parentKey: 'professor-medicine-specialty-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-medicine-series),
     triggers: ['의학 본과 지도', '의사 국가고시 지도'],
   },
   'professor-dentistry-academic': {
     label: '교수(치의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-dentistry-academic', needsMedicalSafety: false,
-    parentKey: 'professor-medicine-series',
+    parentKey: 'professor-dentistry-specialty-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-medicine-series),
     triggers: ['치의학 본과 지도', '치과의사 국가고시 지도'],
   },
   'professor-koreanmedicine': {
     label: '교수(한의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-koreanmedicine', needsMedicalSafety: false,
-    parentKey: 'professor-medicine-series',
+    parentKey: 'professor-koreanmedicine-specialty-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-medicine-series),
     triggers: ['한의학 본과 지도', '한의사 국가고시 지도'],
   },
   'professor-premed': {
@@ -811,7 +811,7 @@ export const PROFESSOR_REGISTRY = {
   'professor-anthropology': {
     label: '교수(인류학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_professor-anthropology', needsMedicalSafety: false,
-    parentKey: 'professor-socialscience',
+    parentKey: 'professor-anthropology-series', // 2026-08-10 Tier2/§4 확장 재소속(구 부모: professor-socialscience),
     triggers: ['인류학 지도', '문화상대주의 지도'],
   },
   'professor-libraryscience': {
@@ -1851,5 +1851,364 @@ export const PROFESSOR_REGISTRY = {
     key: 'SP_professor-internationalbusiness', needsMedicalSafety: false,
     parentKey: 'professor-business-series',
     triggers: ['국제경영론 지도', '해외진출전략 지도'],
+  },
+  // ── 중계열(2단) 배치9 신설 6개 + 소계열(3단) 배치9: Tier 2(3개) + §4
+  // 의료 전문과목(3개, 2026-08-10, 주피터님 지시). 의학·치의학·한의학은
+  // 「전문의의 수련 및 자격 인정 등에 관한 규정」 제3조의 법정 전문과목
+  // 수(26/10/8)를 그대로 따름 — 수의학은 한국에 법정 전문수의사 제도가
+  // 아직 확립되지 않아(2026년 기준 도입 논의 단계) 이번 배치에서 제외.
+  'professor-anthropology-series': {
+    label: '교수(인류학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-anthropology-series', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-culturalanthropology': {
+    label: '교수(문화인류학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-culturalanthropology', needsMedicalSafety: false,
+    parentKey: 'professor-anthropology-series',
+    triggers: ['문화인류학 지도', '민족지 지도'],
+  },
+  'professor-archaeologicalanthropology': {
+    label: '교수(고고인류학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-archaeologicalanthropology', needsMedicalSafety: false,
+    parentKey: 'professor-anthropology-series',
+    triggers: ['고고인류학 지도', '선사시대 지도'],
+  },
+  'professor-linguisticanthropology': {
+    label: '교수(언어인류학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-linguisticanthropology', needsMedicalSafety: false,
+    parentKey: 'professor-anthropology-series',
+    triggers: ['언어인류학 지도', '언어와문화 지도'],
+  },
+  'professor-geography-series': {
+    label: '교수(지리학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-geography-series', needsMedicalSafety: false,
+    parentKey: 'professor-socialscience',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-physicalgeography': {
+    label: '교수(자연지리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-physicalgeography', needsMedicalSafety: false,
+    parentKey: 'professor-geography-series',
+    triggers: ['자연지리학 지도', '지형학 지도'],
+  },
+  'professor-humangeography': {
+    label: '교수(인문지리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-humangeography', needsMedicalSafety: false,
+    parentKey: 'professor-geography-series',
+    triggers: ['인문지리학 지도', '경제지리학 지도'],
+  },
+  'professor-gis': {
+    label: '교수(지리정보시스템(GIS))', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-gis', needsMedicalSafety: false,
+    parentKey: 'professor-geography-series',
+    triggers: ['GIS 지도', '공간정보 지도'],
+  },
+  'professor-statistics-series': {
+    label: '교수(통계학 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-statistics-series', needsMedicalSafety: false,
+    parentKey: 'professor-mathphys',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-mathematicalstatistics': {
+    label: '교수(수리통계학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-mathematicalstatistics', needsMedicalSafety: false,
+    parentKey: 'professor-statistics-series',
+    triggers: ['수리통계학 지도', '확률분포이론 지도'],
+  },
+  'professor-appliedstatistics': {
+    label: '교수(응용통계학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-appliedstatistics', needsMedicalSafety: false,
+    parentKey: 'professor-statistics-series',
+    triggers: ['응용통계학 지도', '실험계획법 지도'],
+  },
+  'professor-biostatistics': {
+    label: '교수(생물통계학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-biostatistics', needsMedicalSafety: false,
+    parentKey: 'professor-statistics-series',
+    triggers: ['생물통계학 지도', '임상시험통계 지도'],
+  },
+  'professor-medicine-specialty-series': {
+    label: '교수(의학 전문과목 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-medicine-specialty-series', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-med-internalmedicine': {
+    label: '교수(내과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-internalmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['내과학 지도', '내과 국시 지도'],
+  },
+  'professor-med-neurology': {
+    label: '교수(신경과학(임상))', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-neurology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['신경과 지도'],
+  },
+  'professor-med-psychiatry': {
+    label: '교수(정신건강의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-psychiatry', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['정신건강의학과 지도'],
+  },
+  'professor-med-generalsurgery': {
+    label: '교수(외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-generalsurgery', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['외과학 지도'],
+  },
+  'professor-med-orthopedics': {
+    label: '교수(정형외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-orthopedics', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['정형외과 지도'],
+  },
+  'professor-med-neurosurgery': {
+    label: '교수(신경외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-neurosurgery', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['신경외과 지도'],
+  },
+  'professor-med-thoracicsurgery': {
+    label: '교수(심장혈관흉부외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-thoracicsurgery', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['흉부외과 지도'],
+  },
+  'professor-med-plasticsurgery': {
+    label: '교수(성형외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-plasticsurgery', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['성형외과 지도'],
+  },
+  'professor-med-anesthesiology': {
+    label: '교수(마취통증의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-anesthesiology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['마취통증의학과 지도'],
+  },
+  'professor-med-obgyn': {
+    label: '교수(산부인과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-obgyn', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['산부인과 지도'],
+  },
+  'professor-med-pediatrics': {
+    label: '교수(소아청소년과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-pediatrics', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['소아청소년과 지도'],
+  },
+  'professor-med-ophthalmology': {
+    label: '교수(안과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-ophthalmology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['안과 지도'],
+  },
+  'professor-med-otolaryngology': {
+    label: '교수(이비인후과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-otolaryngology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['이비인후과 지도'],
+  },
+  'professor-med-dermatology': {
+    label: '교수(피부과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-dermatology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['피부과 지도'],
+  },
+  'professor-med-urology': {
+    label: '교수(비뇨의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-urology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['비뇨의학과 지도'],
+  },
+  'professor-med-radiology': {
+    label: '교수(영상의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-radiology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['영상의학과 지도'],
+  },
+  'professor-med-radiationoncology': {
+    label: '교수(방사선종양학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-radiationoncology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['방사선종양학과 지도'],
+  },
+  'professor-med-pathology': {
+    label: '교수(병리학(임상))', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-pathology', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['병리과 지도'],
+  },
+  'professor-med-labmedicine': {
+    label: '교수(진단검사의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-labmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['진단검사의학과 지도'],
+  },
+  'professor-med-tuberculosis': {
+    label: '교수(결핵과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-tuberculosis', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['결핵과 지도'],
+  },
+  'professor-med-rehabmedicine': {
+    label: '교수(재활의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-rehabmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['재활의학과 지도'],
+  },
+  'professor-med-preventivemedicine': {
+    label: '교수(예방의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-preventivemedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['예방의학과 지도'],
+  },
+  'professor-med-familymedicine': {
+    label: '교수(가정의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-familymedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['가정의학과 지도'],
+  },
+  'professor-med-emergencymedicine': {
+    label: '교수(응급의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-emergencymedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['응급의학과 지도'],
+  },
+  'professor-med-nuclearmedicine': {
+    label: '교수(핵의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-nuclearmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['핵의학과 지도'],
+  },
+  'professor-med-occupationalmedicine': {
+    label: '교수(직업환경의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-med-occupationalmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-specialty-series',
+    triggers: ['직업환경의학과 지도'],
+  },
+  'professor-dentistry-specialty-series': {
+    label: '교수(치의학 전문과목 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dentistry-specialty-series', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-dent-omfs': {
+    label: '교수(구강악안면외과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-omfs', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['구강악안면외과 지도'],
+  },
+  'professor-dent-prosthodontics': {
+    label: '교수(치과보철학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-prosthodontics', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['치과보철학 지도'],
+  },
+  'professor-dent-orthodontics': {
+    label: '교수(치과교정학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-orthodontics', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['치과교정학 지도'],
+  },
+  'professor-dent-pediatricdentistry': {
+    label: '교수(소아치과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-pediatricdentistry', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['소아치과학 지도'],
+  },
+  'professor-dent-periodontics': {
+    label: '교수(치주과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-periodontics', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['치주과학 지도'],
+  },
+  'professor-dent-conservative': {
+    label: '교수(치과보존학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-conservative', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['치과보존학 지도'],
+  },
+  'professor-dent-oralmedicine': {
+    label: '교수(구강내과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-oralmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['구강내과학 지도'],
+  },
+  'professor-dent-oralradiology': {
+    label: '교수(구강악안면방사선학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-oralradiology', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['구강악안면방사선학 지도'],
+  },
+  'professor-dent-oralpathology': {
+    label: '교수(구강병리학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-oralpathology', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['구강병리학 지도'],
+  },
+  'professor-dent-preventivedentistry': {
+    label: '교수(예방치과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-dent-preventivedentistry', needsMedicalSafety: false,
+    parentKey: 'professor-dentistry-specialty-series',
+    triggers: ['예방치과학 지도'],
+  },
+  'professor-koreanmedicine-specialty-series': {
+    label: '교수(한의학 전문과목 중계열)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-koreanmedicine-specialty-series', needsMedicalSafety: false,
+    parentKey: 'professor-medicine-series',
+    triggers: [], // 중계열 자체는 직접 호출 대상 아님 — 소계열이 리프
+  },
+  'professor-kmed-internalmedicine': {
+    label: '교수(한방내과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-internalmedicine', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방내과학 지도'],
+  },
+  'professor-kmed-obgyn': {
+    label: '교수(한방부인과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-obgyn', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방부인과학 지도'],
+  },
+  'professor-kmed-pediatrics': {
+    label: '교수(한방소아과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-pediatrics', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방소아과학 지도'],
+  },
+  'professor-kmed-neuropsychiatry': {
+    label: '교수(한방신경정신과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-neuropsychiatry', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방신경정신과학 지도'],
+  },
+  'professor-kmed-acupuncture': {
+    label: '교수(침구학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-acupuncture', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['침구학 지도'],
+  },
+  'professor-kmed-eentderm': {
+    label: '교수(한방안이비인후피부과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-eentderm', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방안이비인후피부과학 지도'],
+  },
+  'professor-kmed-rehab': {
+    label: '교수(한방재활의학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-rehab', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['한방재활의학 지도'],
+  },
+  'professor-kmed-sasang': {
+    label: '교수(사상체질과학)', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
+    key: 'SP_professor-kmed-sasang', needsMedicalSafety: false,
+    parentKey: 'professor-koreanmedicine-specialty-series',
+    triggers: ['사상체질의학 지도'],
   },
 };
