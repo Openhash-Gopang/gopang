@@ -1,0 +1,54 @@
+no,utterance,expected_type,expected_id,category,static_verdict,live_verdict,live_note,raw_response,call_error
+1,초등학교 2학년인데 받아쓰기 시험에서 자꾸 틀려서 연습 좀 도와주세요.,EXPERT,professor,"안전군(교사 트리거 단어 없음, 매칭O·동의어O 과목)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 1:1 맞춤교육을 담당하는 교수님을 호출하겠습니다.",
+2,중학교 역사 수행평가로 고려에서 조선으로 넘어가는 과정을 정리해야 해요.,EXPERT,professor,"안전군(교사 트리거 단어 없음, 매칭O·동의어X 과목)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 역사 과목 1:1 맞춤교육을 담당하는 교수님을 호출하겠습니다.",
+3,고등학교 화학1 몰농도 계산 문제를 같이 풀어봤으면 해요.,EXPERT,professor,"안전군(교사 트리거 단어 없음, 매칭O·동의어X 과목)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 화학1 몰농도 계산 문제를 함께 풀어드릴 교수(1:1 맞춤교육)를 호출하겠습니다.",
+4,중학교 음악 수행평가로 리코더 운지법 시험을 봐야 하는데 연습 좀 도와주세요.,EXPERT,professor,"안전군(교사 트리거 단어 없음, 완전공백 과목 — STEP-1은 professor로 가고, 리프 공백 여부는 STEP-2 문제)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]김민준님, 음악 수행평가 리코더 연습을 도와드릴 교수님(1:1 맞춤교육)을 호출하겠습니다.",
+5,"초등학교 3학년 아이 수학 숙제를 봐줄 선생님이 필요해요, 나눗셈 부분이요.",EXPERT,professor,"위험군(선생님 단어 포함, teacher 트리거 근접)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 1:1 맞춤교육을 담당하는 교수(professor)를 호출하겠습니다. 초등학교 3학년 수학 나눗셈 숙제 지도를 위해 적절한 전문가와 연결해 드리겠습니다.",
+6,학교 다녀와서 국어 받아쓰기를 봐줄 선생님을 구하고 있어요.,EXPERT,professor,위험군(교사 트리거 '학교 선생님'과 문구가 거의 겹침 — 핵심 함정 케이스),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 국어 받아쓰기를 봐줄 선생님(교수)을 호출하겠습니다.",
+7,담임 선생님이 내주신 사회 숙제(우리 고장 지도)를 도와줄 사람이 필요해요.,EXPERT,professor,"위험군('담임' 트리거 단어 포함, 단 배경 설명일 뿐 요청 대상 아님)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 교수(1:1 맞춤교육)를 호출하겠습니다.",
+8,"1:1로 봐주실 수학 선생님을 구해요, 고등학교 물리1도요.",EXPERT,professor,위험군('선생님' 단어 + '1:1' 명시 — professor triggers와 정확히 겹치는 대조군),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 1:1 맞춤 교육을 담당하는 교수(professor) 서비스를 호출하겠습니다.",
+9,과외 선생님처럼 저희 아이 영어 파닉스를 봐주실 분 있나요?,EXPERT,professor,위험군('선생님' + '과외' 단어 — professor triggers의 '과외'와 정확히 겹침),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 1:1 맞춤 영어 파닉스 지도를 담당하는 교수(과외) 서비스를 호출하겠습니다.",
+10,학교 선생님한테 물어보기 어려운 화학 문제가 있어서 대신 봐주실 분을 찾아요.,EXPERT,professor,위험군(문자열 '학교 선생님'이 그대로 등장하지만 의미상 대체 조력자를 요청 — 최고난도 함정),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 교수(1:1 맞춤교육)를 호출하겠습니다.",
+11,"정교사 자격증 준비랑 무관하게, 그냥 중학교 도덕 수행평가를 도와줄 사람이 필요해요.",EXPERT,professor,위험군(teacher 정식 트리거 단어 '정교사'가 문장에 있지만 화자 본인과 무관한 맥락),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+{USER_NAME}님, 1:1 맞춤교육을 담당하는 교수(professor)를 호출하겠습니다.",
+12,"담임 선생님을 대신할 순 없겠지만, 아이 미술 숙제(수채화)를 봐줄 분을 찾고 있어요.",EXPERT,professor,위험군('담임' 트리거 단어 + 명시적 대체재 요청 맥락),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+
+김민준님, 미술 숙제(수채화) 지도를 도와드릴 교수(1:1 맞춤교육)를 호출하겠습니다.",
+13,쌤 저 국어 받아쓰기 좀 도와주세요 ㅠㅠ,EXPERT,professor,"신규 위험군('쌤' — '선생님'의 채팅 은어. teacher 정식 트리거 문자열과는 다른 표기라 트리거 매칭은 안 되지만, 의미상 동일 위험을 모델이 인식하는지 시험)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 국어 과목 1:1 맞춤 지도를 담당하는 교수님을 호출하겠습니다.",
+14,수학 나눗셈 몰라요 ㅜㅜ 알려주세요,EXPERT,professor,신규 안전군(완성문 아닌 파편체 + 이모티콘 — 강건성 테스트),PASS,LIVE-CLARIFY,"태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음 (1턴 테스트 한계, 사람 검토 필요)","수학 나눗셈을 도와드릴게요! 어떤 부분이 궁금하신가요?
+
+예를 들어:
+- 나눗셈의 기본 개념이 궁금하신가요?
+- 특정 문제를 풀다가 막히셨나요?
+- 나눗셈과 곱셈의 관계가 궁금하신가요?
+
+구체적으로 알려주시면 그에 맞춰 쉽게 설명해드릴게요. 예를 들어 ""12 ÷ 3 = ?"" 같은 문제부터 시작해서, 나눗셈의 원리를 차근차근 이해할 수 있도록 도와드리겠습니다.
+
+어떤 걸 도와드릴까요?",
+15,"국어 공부를 봐줄 쌤 좀 구해주세요, 학교 담임 말고 다른 분으로요.",EXPERT,professor,신규 위험군('쌤'+'담임' 둘 다 포함하지만 '담임 말고 다른 분'으로 명시적 배제 — 이 세트 전체 중 가장 강한 대조 신호),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 1:1 맞춤 교육을 담당하는 교수(과외) 서비스를 호출하겠습니다.",
+16,화학 산화환원반응 넘 헷갈리는데 좀 봐주실수있나요?ㅠ,EXPERT,professor,신규 안전군(띄어쓰기 오류·구어체 축약 — 강건성 테스트),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 교수님을 호출하겠습니다.",
+17,편입 준비 중인데 물리학과 전공 시험을 대비해서 도와주세요.,EXPERT,professor,신규 대조군(K-12 아닌 성인·대학 맥락 — professor가 초중고 전용이 아님을 재확인),PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 물리학과 편입 전공 시험 대비를 위해 교수님(1:1 맞춤교육)을 호출하겠습니다.",
+18,이번 학기 과학 수업 설계를 도와주세요.,EXPERT,teacher,"신규 부정대조군(negative control) — 화자 본인이 교사이고 '수업 설계' 자문을 구하는 경우, professor(학습자용 1:1 지도)가 아니라 teacher가 정답",PASS,LIVE-FAIL,기대 [EXPERT: teacher] vs 실제 [EXPERT: professor],"[EXPERT: professor]김민준님, 교수(1:1 맞춤교육)를 호출하겠습니다.",
+19,수학 숙제도 있고 과학 숙제도 있어서 오늘 안에 다 봐주실 수 있나요?,EXPERT,professor,"신규(복합 과목 동시 요청 — STEP-1은 professor로 명확, STEP-2에서 단일 리프로 못 좁혀질 가능성이 진짜 시험 대상)",PASS,LIVE-PASS,[EXPERT: professor] 일치,"[EXPERT: professor]
+{USER_NAME}님, 1:1 맞춤 교육을 담당하는 교수님을 호출하겠습니다.",
+20,이번 수능 국어 영역 시험 일정이 언제인지 알고 싶어요.,GWP,kedu,신규 부정대조군(negative control) — 개인 지도 위임 의도가 없는 순수 제도 정보(시험 일정) 질문,PASS,LIVE-PASS,[GWP: kedu] 일치,"[GWP: kedu] 김민준님, K-School을 호출하겠습니다.",
