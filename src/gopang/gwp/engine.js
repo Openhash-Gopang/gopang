@@ -113,6 +113,30 @@ export async function _gwpLaunch(service, context, _preTab = null, facts = null)
   let _tabHandle = (_preTab && !_preTab.closed) ? _preTab : window.open('about:blank', '_blank');
   setGwpTab(_tabHandle);
 
+  // ★ 2026-08-11 신설 — service.url이 없는(type:'tool'/'inline') 항목이
+  // 호출부의 라우팅 사각지대(구식 [GWP: id] 오출력 등)를 뚫고 여기까지
+  // 오면, 바로 아래 new URL(null)이 TypeError를 던지고 그 예외가 호출부
+  // catch에서 조용히 삼켜지며 방금 연 about:blank 탭만 방치되는 사고가
+  // 실사에서 재현됐다(call-ai.js의 _parseAgentTags 쪽에 1차 가드를
+  // 추가했지만, 이 함수 자체도 계약을 명시적으로 지키도록 방어한다 —
+  // "url 없는 서비스는 탭을 열지 않는다"는 이 함수의 최소 불변식이어야
+  // 한다). 탭을 닫고 안내 버블만 남긴 뒤 조용히 반환한다.
+  if (!service?.url) {
+    console.warn('[GWP] url 없는 서비스가 _gwpLaunch로 호출됨(호출부 라우팅 오류) — 탭 방치 방지를 위해 중단:', service?.id);
+    if (_tabHandle && typeof _tabHandle.close === 'function' && !_tabHandle.closed) {
+      _tabHandle.close();
+    }
+    setGwpTab(null);
+    setGwpActive(false);
+    setGwpService(null);
+    appendBubble('ai',
+      `${svcIcon} <b>${svcName}</b>은(는) 새 탭 없이 내부적으로 처리되는 서비스입니다. ` +
+      `잠시 후 다시 시도해 주세요.`,
+      true
+    );
+    return;
+  }
+
   const svcUrl = new URL(service.url);
   svcUrl.searchParams.set('gwp',      '1');
   svcUrl.searchParams.set('token',    _USER?.ipv6 || _USER?.guid || '');

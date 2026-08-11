@@ -4335,6 +4335,40 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
           console.warn(`[GWP] '${svcId}'는 type:switch인데 SWITCH_SP_LOADERS에 로더가 없어 자동복구 불가.`);
           if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
         }
+      } else if (svcDef && (svcDef.type === 'tool' || svcDef.type === 'inline')) {
+        // ★ 2026-08-11 신설 — kestate/ktelecom(type:switch)과 동일한 계열의
+        // 사고: url이 없는 TOOL/INLINE 항목(tool-web-search, ksearch,
+        // tool-calculator 등, gwp-registry.js 참조)이 구식 [GWP: id]
+        // 문법으로 잘못 호출되면, 아래 범용 분기(else if (svcDef))가
+        // _gwpLaunch()를 무조건 실행 — _preTab을 about:blank로 먼저 띄운
+        // 뒤 new URL(service.url)에서 TypeError(engine.js)를 내고, 그
+        // 예외가 바깥 catch(4382행 부근)에 조용히 삼켜지면서 about:blank
+        // 탭만 방치된 채 끝난다(실사 재현: "제주대학교에 ai연구센터가
+        // 있는지 알아봐 줘" → 웹 검색 의도 표명 후 빈 탭). switch와
+        // 달리 이 항목들은 SWITCH_SP_LOADERS 가드에 걸리지 않아 지금껏
+        // 무방비였다 — 이 분기가 그 사각지대를 메운다.
+        console.warn(`[GWP] '${svcId}'는 type:${svcDef.type}(탭 대상 아님)인데 구식 [GWP: id] 문법으로 호출됨 — 자동복구 시도.`);
+        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+        const cleanedReplyTool = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
+        if (bubble) _updateStreamBubble(bubble, cleanedReplyTool);
+        if (svcId === 'tool-web-search') {
+          // 정상 실행부(_handleWebSearchTag, 2105행)를 재사용 — 새로
+          // 검색 로직을 만들지 않는다. 이용자의 원문 발화를 그대로
+          // 검색어로 써서 [WEB_SEARCH: query=...] 형식을 합성한다.
+          const q = (userText || '').trim();
+          if (q) {
+            _handleWebSearchTag(`[WEB_SEARCH: query=${q}]`, bubble, callAI, userText)
+              .catch(e => console.warn('[GWP] tool-web-search 자동복구 실패(무시):', e.message));
+          } else {
+            console.warn('[GWP] tool-web-search 자동복구 불가 — userText 비어있음.');
+          }
+        } else {
+          // ksearch(§0-F 핸드오프 경로는 2026-08-04부로 AC 태그 목록에서
+          // 제거됨 — AC-PRO-CORE_v1_7.txt 참조), tool-calculator 등 아직
+          // 전용 자동복구가 없는 항목 — 조용히 끊는 대신 최소한 탭 방치는
+          // 막는다(로그만 남기고 AC 자신의 응답으로 이어가게 둔다).
+          console.warn(`[GWP] '${svcId}' 전용 자동복구 미구현 — 탭 정리만 수행.`);
+        }
       } else if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         const cleanedReply = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
