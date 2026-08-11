@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모임 — 혼디</title>
+<script src="https://cdn.jsdelivr.net/gh/Openhash-Gopang/gopang@main/gopang-wallet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:#f5f5f5;color:#111;min-height:100dvh;padding:20px}
+.wrap{max-width:520px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px}
+.sub{font-size:12.5px;color:#6b7280;margin-bottom:20px;line-height:1.6}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin-bottom:14px}
+.card label{display:block;font-size:12.5px;color:#6b7280;margin-bottom:6px}
+.card input,.card textarea{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
+.submit-btn{width:100%;padding:12px;border:none;border-radius:10px;background:#111;color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.submit-btn:disabled{background:#d1d5db;cursor:not-allowed}
+.item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.item-title{font-size:14px;font-weight:600}
+.item-cat{display:inline-block;font-size:11px;color:#6b7280;background:#f3f4f6;border-radius:99px;padding:2px 8px;margin-top:4px}
+.item-desc{font-size:12.5px;color:#374151;margin-top:6px;line-height:1.5}
+.item-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.item-members{font-size:11.5px;color:#9ca3af}
+.join-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit}
+.join-btn:hover{background:#f9fafb}
+.empty{padding:24px;text-align:center;color:#9ca3af;font-size:13px}
+.err{color:#9B1C1C;font-size:12.5px;margin-top:8px}
+.note{background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>모임</h1>
+  <div class="sub">관심사 기반 모임을 만들고 참여하세요.</div>
+  <div class="note">⚠️ 알고리즘 자동 매칭은 아직 없습니다 — 사용자가 직접 만든 모임 목록입니다. 참여 후 실제 대화는 혼디 채팅으로 이어가세요.</div>
+
+  <div class="card">
+    <label>모임 이름</label>
+    <input id="f-title" type="text" placeholder="예: 제주 등산 모임">
+    <label>카테고리</label>
+    <input id="f-category" type="text" placeholder="예: 운동, 독서, 육아">
+    <label>소개(선택)</label>
+    <textarea id="f-desc" rows="2" placeholder="어떤 모임인지 소개해 주세요"></textarea>
+    <button class="submit-btn" id="submit-btn" onclick="createGroup()">모임 만들기</button>
+    <div class="err" id="err" style="display:none"></div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+let userGuid = null;
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s ?? '');
+  return div.innerHTML;
+}
+
+async function waitForWallet(timeoutMs = 5000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    if (window.gopangWallet?.guid) return { guid: window.gopangWallet.guid };
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { guid: null };
+}
+
+async function loadGroups() {
+  const list = document.getElementById('list');
+  list.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  try {
+    const res = await fetch(`${WORKER_URL}/community/groups/list`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+    renderGroups(data.groups || []);
+  } catch (e) {
+    list.innerHTML = `<div class="empty">조회 실패: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderGroups(groups) {
+  const list = document.getElementById('list');
+  if (!groups.length) { list.innerHTML = `<div class="empty">아직 모임이 없습니다. 첫 모임을 만들어보세요.</div>`; return; }
+  list.innerHTML = groups.map(g => `
+    <div class="item">
+      <div class="item-title">${escapeHtml(g.title)}</div>
+      <span class="item-cat">${escapeHtml(g.category || '기타')}</span>
+      ${g.description ? `<div class="item-desc">${escapeHtml(g.description)}</div>` : ''}
+      <div class="item-foot">
+        <span class="item-members">참여 ${g.member_count || 1}명</span>
+        <button class="join-btn" onclick="joinGroup('${g.id}')">참여하기</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function createGroup() {
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  if (!userGuid) { err.textContent = '지갑 정보를 아직 불러오지 못했습니다.'; err.style.display = 'block'; return; }
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { err.textContent = '모임 이름을 입력해 주세요.'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${WORKER_URL}/community/groups/create`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: userGuid, title,
+        category: document.getElementById('f-category').value.trim(),
+        description: document.getElementById('f-desc').value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-category').value = '';
+    document.getElementById('f-desc').value = '';
+    loadGroups();
+  } catch (e) {
+    err.textContent = '생성 실패: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function joinGroup(id) {
+  try {
+    const res = await fetch(`${WORKER_URL}/community/groups/join`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: id }),
+    });
+    if (!res.ok) throw new Error('참여 실패');
+    loadGroups();
+  } catch (e) { alert(e.message); }
+}
+
+(async function init() {
+  const w = await waitForWallet();
+  userGuid = w.guid;
+  loadGroups();
+})();
+</script>
+</body>
+</html>

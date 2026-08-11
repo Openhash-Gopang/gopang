@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일정 관리 — 혼디</title>
+<script src="https://cdn.jsdelivr.net/gh/Openhash-Gopang/gopang@main/gopang-wallet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:#f5f5f5;color:#111;min-height:100dvh;padding:20px}
+.wrap{max-width:520px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px}
+.sub{font-size:12.5px;color:#6b7280;margin-bottom:20px;line-height:1.6}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin-bottom:14px}
+.card label{display:block;font-size:12.5px;color:#6b7280;margin-bottom:6px}
+.card input,.card textarea{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
+.submit-btn{width:100%;padding:12px;border:none;border-radius:10px;background:#111;color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.submit-btn:disabled{background:#d1d5db;cursor:not-allowed}
+.item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.item.done{opacity:.5}
+.item-title{font-size:14px;font-weight:600}
+.item-time{font-size:12px;color:#6b7280;margin-top:2px}
+.item-desc{font-size:12.5px;color:#374151;margin-top:4px;line-height:1.5}
+.item-actions{display:flex;gap:6px;flex-shrink:0}
+.item-actions button{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:5px 9px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.item-actions button:hover{background:#f9fafb}
+.empty{padding:24px;text-align:center;color:#9ca3af;font-size:13px}
+.err{color:#9B1C1C;font-size:12.5px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>일정 관리</h1>
+  <div class="sub">개인 일정을 등록하고 관리하세요.</div>
+
+  <div class="card">
+    <label>제목</label>
+    <input id="f-title" type="text" placeholder="예: 건강검진 예약">
+    <label>일시</label>
+    <input id="f-when" type="datetime-local">
+    <label>메모(선택)</label>
+    <textarea id="f-desc" rows="2" placeholder="메모"></textarea>
+    <button class="submit-btn" id="submit-btn" onclick="saveItem()">일정 추가</button>
+    <div class="err" id="err" style="display:none"></div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+let userGuid = null;
+
+function fmt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s ?? '');
+  return div.innerHTML;
+}
+
+async function waitForWallet(timeoutMs = 5000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    if (window.gopangWallet?.guid) return { guid: window.gopangWallet.guid };
+    if (window.gopangWalletNeedsSetup) return { guid: null, reason: 'setup_needed' };
+    if (window.gopangWalletLocked) return { guid: null, reason: 'locked' };
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { guid: null, reason: 'timeout' };
+}
+
+async function loadItems() {
+  const list = document.getElementById('list');
+  if (!userGuid) { list.innerHTML = `<div class="empty">지갑 준비 중…</div>`; return; }
+  list.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  try {
+    const res = await fetch(`${WORKER_URL}/schedule/list?${new URLSearchParams({ guid: userGuid })}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+    renderItems(data.items || []);
+  } catch (e) {
+    list.innerHTML = `<div class="empty">조회 실패: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderItems(items) {
+  const list = document.getElementById('list');
+  if (!items.length) { list.innerHTML = `<div class="empty">등록된 일정이 없습니다.</div>`; return; }
+  list.innerHTML = items.map(it => `
+    <div class="item ${it.status === 'done' ? 'done' : ''}">
+      <div>
+        <div class="item-title">${escapeHtml(it.title)}</div>
+        <div class="item-time">${escapeHtml(fmt(it.scheduled_at))}</div>
+        ${it.description ? `<div class="item-desc">${escapeHtml(it.description)}</div>` : ''}
+      </div>
+      <div class="item-actions">
+        ${it.status !== 'done' ? `<button onclick="markDone('${it.id}')">완료</button>` : ''}
+        <button onclick="deleteItem('${it.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveItem() {
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  if (!userGuid) { err.textContent = '지갑 정보를 아직 불러오지 못했습니다.'; err.style.display = 'block'; return; }
+  const title = document.getElementById('f-title').value.trim();
+  const when = document.getElementById('f-when').value;
+  if (!title) { err.textContent = '제목을 입력해 주세요.'; err.style.display = 'block'; return; }
+  if (!when) { err.textContent = '일시를 선택해 주세요.'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${WORKER_URL}/schedule/save`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: userGuid, title,
+        description: document.getElementById('f-desc').value.trim(),
+        scheduled_at: new Date(when).toISOString(),
+        status: 'upcoming',
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-when').value = '';
+    document.getElementById('f-desc').value = '';
+    loadItems();
+  } catch (e) {
+    err.textContent = '등록 실패: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function markDone(id) {
+  try {
+    const res = await fetch(`${WORKER_URL}/schedule/save`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, guid: userGuid, status: 'done' }),
+    });
+    if (!res.ok) throw new Error('업데이트 실패');
+    loadItems();
+  } catch (e) { alert(e.message); }
+}
+
+async function deleteItem(id) {
+  if (!confirm('이 일정을 삭제할까요?')) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/schedule/delete`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) throw new Error('삭제 실패');
+    loadItems();
+  } catch (e) { alert(e.message); }
+}
+
+(async function init() {
+  const w = await waitForWallet();
+  if (w.guid) { userGuid = w.guid; loadItems(); }
+  else { document.getElementById('list').innerHTML = `<div class="empty">지갑을 확인할 수 없습니다 — 혼디 앱 안에서 열어주세요.</div>`; }
+})();
+</script>
+</body>
+</html>

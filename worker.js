@@ -2740,6 +2740,286 @@ async function handleReviewReplySubmit(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설)
+// 이전엔 대응 서비스가 전혀 없던 완전 신규 영역. seller_reviews와 동일
+// MVP 컨벤션(guid 소유, 엄격한 인증 없음).
+// ═══════════════════════════════════════════════════════════
+
+async function handleScheduleList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`user_guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/citizen_schedule/records?filter=${filter}&sort=scheduled_at&perPage=200`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SCHEDULE_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleScheduleSave(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const isUpdate = !!body.id;
+  const status = (body.status || 'upcoming').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!isUpdate && !(body.title || '').trim()) return _err(400, 'MISSING_TITLE', 'title 필수', corsHeaders);
+  if (!isUpdate && !body.scheduled_at) return _err(400, 'MISSING_SCHEDULED_AT', 'scheduled_at 필수', corsHeaders);
+  if (!['upcoming', 'done', 'cancelled'].includes(status)) return _err(400, 'INVALID_STATUS', 'status는 upcoming/done/cancelled 중 하나', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    // 부분 업데이트 — 넘어온 필드만 patch(상태만 바꾸는 호출이 다른 값을
+    // 지우지 않도록. biz_staff_tasks와 동일 원칙).
+    const payload = { status };
+    if (body.title !== undefined) payload.title = (body.title || '').trim();
+    if (body.description !== undefined) payload.description = (body.description || '').trim() || null;
+    if (body.scheduled_at !== undefined) payload.scheduled_at = body.scheduled_at;
+    if (!isUpdate) {
+      payload.user_guid = guid;
+      payload.title = (body.title || '').trim();
+      payload.scheduled_at = body.scheduled_at;
+      payload.created_at = new Date().toISOString();
+    }
+    const url = isUpdate
+      ? `${L1_DEFAULT}/api/collections/citizen_schedule/records/${body.id}`
+      : `${L1_DEFAULT}/api/collections/citizen_schedule/records`;
+    const res = await fetch(url, {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, item: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SCHEDULE_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleScheduleDelete(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const id = (body.id || '').trim();
+  if (!id) return _err(400, 'MISSING_ID', 'id 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/citizen_schedule/records/${id}`, {
+      method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+    return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SCHEDULE_DELETE_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 메일과 문서 송수신 — 시민 티어 신규 항목 (2026-08-11 신설, 발송만)
+//
+// ⚠️ 범위 한정: 이번엔 "발송"만 구현했다. "수신"(외부 이메일함을 혼디
+// 안에서 읽기)은 IMAP 또는 Gmail 등 외부 제공자의 OAuth 연동이 필요한
+// 별도 프로젝트 규모라 이번 범위에 넣지 않았다 — 지어낸 수신함을
+// 보여주지 않는다.
+//
+// 이메일 발송 제공자는 Resend(https://resend.com)를 가정했다 — 임의
+// 선택이며, 실제로는 어느 발송 API를 쓸지 결정 후 RESEND_API_KEY
+// secret을 설정해야 한다(다른 제공자로 바꾸면 이 함수만 교체하면 됨).
+// ═══════════════════════════════════════════════════════════
+
+async function handleMailSend(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const to = (body.to || '').trim();
+  const subject = (body.subject || '').trim();
+  const text = (body.text || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return _err(400, 'INVALID_TO', '수신자 이메일 주소가 올바르지 않습니다', corsHeaders);
+  if (!subject) return _err(400, 'MISSING_SUBJECT', 'subject 필수', corsHeaders);
+  if (!text) return _err(400, 'MISSING_TEXT', 'text 필수', corsHeaders);
+  if (!env.RESEND_API_KEY) return _err(500, 'MAIL_KEY_MISSING', 'RESEND_API_KEY secret 미설정', corsHeaders);
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        // ★ 발신 도메인은 Resend에 별도 인증 등록이 필요 — 미등록이면
+        // 이 호출 자체가 실패한다(발신 주소는 배포 시 확정할 것).
+        from: env.MAIL_FROM_ADDRESS || 'hondi@hondi.net',
+        to: [to], subject,
+        text: `${text}\n\n— 이 메일은 혼디(Hondi) 사용자가 대신 발송을 요청해 전송되었습니다.`,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+
+    _dlog(env, JSON.stringify({ tag: 'MAIL_SENT', guid, to, subject: subject.slice(0, 50), ts: new Date().toISOString() }));
+    return new Response(JSON.stringify({ ok: true, id: data.id || null }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'MAIL_SEND_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 사회적 활동 관리 · 모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설)
+//
+// ⚠️ 범위 한정: "AI가 알고리즘으로 나에게 맞는 모임을 찾아준다"는
+// 매칭 데이터(위치·관심사·일정 교차분석)가 없어 이번엔 하지 않는다.
+// 대신 실제로 만들 수 있는 것 — 관심사 기반 모임(글로 생성·검색·참여
+// 의사 표시)을 만든다. "추천"은 이 목록을 사용자 관심사에 맞게 AI가
+// 골라 보여주는 수준까지만(클라이언트가 태그로 필터링, 서버는 원 데이터만
+// 제공 — 알고리즘 매칭 아님).
+// ═══════════════════════════════════════════════════════════
+
+async function handleGroupList(request, url, env, corsHeaders) {
+  const category = (url.searchParams.get('category') || '').trim();
+  try {
+    const token = await _l1AdminToken(env);
+    let filter = "status='open'";
+    if (category) filter += ` && category='${category}'`;
+    const res = await fetch(`${L1_DEFAULT}/api/collections/community_groups/records?filter=${encodeURIComponent(filter)}&sort=-created_at&perPage=100`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', groups: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'GROUP_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleGroupCreate(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const title = (body.title || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!title) return _err(400, 'MISSING_TITLE', 'title 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/community_groups/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creator_guid: guid, title,
+        category: (body.category || '기타').trim(),
+        description: (body.description || '').trim() || null,
+        status: 'open', member_count: 1,
+        created_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, group: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'GROUP_CREATE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// POST /community/groups/join — 참여 의사만 기록(카운트 +1). 실제 채팅
+// 연결은 기존 고팡 P2P 메시징(사용자 간 채팅)으로 넘어간다 — 이 엔드포인트가
+// 새 채팅 시스템을 만들지는 않는다.
+async function handleGroupJoin(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const groupId = (body.group_id || '').trim();
+  if (!groupId) return _err(400, 'MISSING_GROUP_ID', 'group_id 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const getRes = await fetch(`${L1_DEFAULT}/api/collections/community_groups/records/${groupId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!getRes.ok) throw new Error(`HTTP ${getRes.status}`);
+    const group = await getRes.json();
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/community_groups/records/${groupId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_count: (group.member_count || 0) + 1 }),
+    });
+    if (!patchRes.ok) throw new Error(`HTTP ${patchRes.status}`);
+    const updated = await patchRes.json();
+    return new Response(JSON.stringify({ ok: true, group: updated }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'GROUP_JOIN_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 시민 신고(안전신문고식) — 시민 티어 신규 항목 (2026-08-11 신설)
+// K-Cleaner(fiil-kcleaner, 환경쓰레기)와 동일 패턴을 교통위반·바가지
+// 요금 등 다른 민원 범주로 확장한다. Hondi가 직접 관공서로 접수를
+// 대행하지는 않는다(그건 법적 대리 행위 소지가 있음) — 신고 내용을
+// 구조화해 정리해주고, 실제 접수는 안전신문고(safepatrol.go.kr) 등
+// 정식 채널로 안내한다.
+// ═══════════════════════════════════════════════════════════
+
+const CITIZEN_REPORT_CATEGORIES = ['traffic_violation', 'overcharging', 'illegal_parking', 'other'];
+
+async function handleCitizenReportSubmit(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const category = (body.category || '').trim();
+  const description = (body.description || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!CITIZEN_REPORT_CATEGORIES.includes(category)) return _err(400, 'INVALID_CATEGORY', `category는 ${CITIZEN_REPORT_CATEGORIES.join('/')} 중 하나`, corsHeaders);
+  if (!description) return _err(400, 'MISSING_DESCRIPTION', 'description 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/citizen_reports/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_guid: guid, category, description: description.slice(0, 2000),
+        location_text: (body.location_text || '').trim() || null,
+        occurred_at: body.occurred_at || null,
+        created_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({
+      ok: true, report: rec,
+      guidance: '이 기록은 참고용 정리본입니다. 실제 신고 접수는 안전신문고(safepatrol.go.kr) 앱/웹에서 진행해 주세요 — 혼디는 관공서에 직접 접수를 대행하지 않습니다.',
+    }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'CITIZEN_REPORT_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleCitizenReportList(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`user_guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/citizen_reports/records?filter=${filter}&sort=-created_at&perPage=100`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, reports: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'CITIZEN_REPORT_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 구독 티어 · 월정기 결제 스케줄러 — 공통 선결과제 (2026-08-11 신설)
 //
 // 지난 조사에서 확인된 공백: profiles 스키마에 "이번 달 기본/프리미엄
@@ -3060,6 +3340,151 @@ async function _runMonthlyBillingSweep(env) {
     } catch (e) {
       console.error('[SubscriptionBilling] 개별 처리 실패(건너뜀):', sub.user_guid, e.message);
     }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 재무제표·경영진단·매출분석·재무계획 — 사업자 티어 "스코프만" 해소
+// (2026-08-11, 주피터 지시). 이전엔 K-Business SP B1 자문 수준뿐이었고
+// 실제 회계데이터 연동이 전혀 없었다 — 여기서는 K-Market에 이미 쌓여있는
+// 실거래(order_queue)를 근거로 실제 매출 현황을 집계한다.
+//
+// ⚠️ 정직한 한계: 이건 완전한 "재무제표"(대차대조표+손익계산서)가 아니다.
+// 대차대조표(자산·부채)에 필요한 은행 잔액·대출·고정자산 데이터를 Hondi가
+// 가지고 있지 않다. 매출(revenue)은 실거래 기반 확정치이지만, 이익
+// (profit)은 판매자가 원가(cost_price, 위 마이그레이션으로 추가된 선택
+// 필드)를 입력한 상품에 한해서만 계산된다 — 입력 안 하면 매출까지만
+// 보여주고 이익은 "원가 미입력"으로 정직하게 표시한다.
+// ═══════════════════════════════════════════════════════════
+
+// GET /biz/finance/revenue-report?guid=&days=30
+async function handleFinanceRevenueReport(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  const windowDays = Math.min(Math.max(parseInt(url.searchParams.get('days') || '30', 10) || 30, 1), 365);
+
+  let products, orders;
+  try {
+    const token = await _l1AdminToken(env);
+    const sinceIso = new Date(Date.now() - windowDays * 86400000).toISOString();
+    [products, orders] = await Promise.all([
+      _l1ListSellerProducts(env, guid),
+      (async () => {
+        const filter = encodeURIComponent(`seller_guid='${guid}' && queued_at>='${sinceIso}'`);
+        const res = await fetch(`${L1_DEFAULT}/api/collections/order_queue/records?filter=${filter}&perPage=500`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`order_queue 조회 실패 HTTP ${res.status}`);
+        const data = await res.json().catch(() => ({ items: [] }));
+        return data.items || [];
+      })(),
+    ]);
+  } catch (e) {
+    return _err(502, 'FINANCE_DATA_FETCH_FAILED', e.message, corsHeaders);
+  }
+
+  const priceByProduct = new Map();
+  const costByProduct = new Map();
+  const nameByProduct = new Map();
+  let costMissingCount = 0;
+  for (const p of products) {
+    const pid = p.product_id || p.id;
+    priceByProduct.set(pid, Number(p.price) || 0);
+    nameByProduct.set(pid, p.name || pid);
+    if (typeof p.cost_price === 'number') costByProduct.set(pid, p.cost_price);
+    else costMissingCount++;
+  }
+
+  let totalRevenue = 0, totalOrders = 0, totalGrossProfit = 0, grossProfitTrackable = true;
+  const byProduct = new Map(); // pid → {name, qty, revenue, cost, hasCost}
+
+  for (const o of orders) {
+    let items;
+    try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch (e) { items = []; }
+    totalOrders++;
+    for (const it of items) {
+      const pid = it.id || it.product_id;
+      const qty = Number(it.quantity) || 0;
+      const unitPrice = priceByProduct.has(pid) ? priceByProduct.get(pid) : (Number(it.price) || 0);
+      const lineRevenue = unitPrice * qty;
+      totalRevenue += lineRevenue;
+
+      const hasCost = costByProduct.has(pid);
+      const lineCost = hasCost ? costByProduct.get(pid) * qty : null;
+      if (hasCost) totalGrossProfit += (lineRevenue - lineCost);
+      else grossProfitTrackable = false;
+
+      const prev = byProduct.get(pid) || { name: nameByProduct.get(pid) || pid, qty: 0, revenue: 0, hasCost };
+      prev.qty += qty; prev.revenue += lineRevenue;
+      byProduct.set(pid, prev);
+    }
+  }
+
+  const productBreakdown = [...byProduct.entries()]
+    .map(([pid, v]) => ({ product_id: pid, ...v }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // 재무계획(단순 추세 투영) — 최근 windowDays 매출을 일평균으로 환산해
+  // 다음 windowDays를 "추세가 유지된다면" 가정으로 단순 투영한다. 계절성·
+  // 이벤트는 반영 못 한다는 점을 응답에 명시한다.
+  const dailyAvgRevenue = totalRevenue / windowDays;
+  const projectedNextPeriod = Math.round(dailyAvgRevenue * windowDays);
+
+  return new Response(JSON.stringify({
+    source: 'live', guid, window_days: windowDays,
+    revenue_statement: {
+      total_revenue_krw: totalRevenue,
+      total_orders: totalOrders,
+      avg_order_value_krw: totalOrders ? Math.round(totalRevenue / totalOrders) : 0,
+      product_breakdown: productBreakdown.slice(0, 30),
+    },
+    gross_profit: grossProfitTrackable
+      ? { total_gross_profit_krw: Math.round(totalGrossProfit), basis: '전 상품 원가(cost_price) 입력됨' }
+      : { total_gross_profit_krw: null, basis: `일부/전체 상품에 원가(cost_price) 미입력(${costMissingCount}개) — 이익 계산 불가, 매출만 제공` },
+    simple_projection: {
+      note: '최근 추세를 단순 연장한 참고치입니다. 계절성·이벤트·신제품 출시 등은 반영하지 않습니다.',
+      projected_next_period_revenue_krw: projectedNextPeriod,
+    },
+    vat_reference_note: '부가세 등 실제 세무 신고는 이 매출 통계를 참고자료로만 활용하고, 실제 신고서 작성·제출은 홈택스에서 직접 진행하거나 세무사와 상담하세요 — 혼디는 자동 신고를 대행하지 않습니다.',
+  }), { headers: corsHeaders });
+}
+
+// POST /biz/products/set-cost-price — {guid, product_id, cost_price}
+// handleCatalogSync(서명 필요, 전체 배열 교체/병합)와 별개의 경량 엔드포인트
+// — 원가 한 필드만 고치는 데 지갑 서명까지 요구하면 마찰이 크다. 다른
+// 신규 엔드포인트들과 동일한 MVP 신뢰 수준(guid 소유 주장을 그대로 신뢰).
+async function handleSetProductCostPrice(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const productId = (body.product_id || '').trim();
+  const costPrice = Number(body.cost_price);
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!productId) return _err(400, 'MISSING_PRODUCT_ID', 'product_id 필수', corsHeaders);
+  if (!Number.isFinite(costPrice) || costPrice < 0) return _err(400, 'INVALID_COST_PRICE', 'cost_price는 0 이상 숫자', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`seller_guid='${guid}' && product_id='${productId}'`);
+    const findRes = await fetch(`${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!findRes.ok) throw new Error(`HTTP ${findRes.status}`);
+    const found = await findRes.json().catch(() => ({ items: [] }));
+    const rec = found.items?.[0];
+    if (!rec) return _err(404, 'PRODUCT_NOT_FOUND', '해당 상품을 찾을 수 없습니다(guid·product_id 확인)', corsHeaders);
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cost_price: costPrice }),
+    });
+    if (!patchRes.ok) throw new Error(`HTTP ${patchRes.status}`);
+    const updated = await patchRes.json();
+    return new Response(JSON.stringify({ ok: true, product: updated }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'SET_COST_PRICE_FAILED', e.message, corsHeaders);
   }
 }
 
@@ -9849,12 +10274,28 @@ export default {
     if (pathname === '/biz/reviews/list' && request.method === 'GET') return handleReviewList(request, url, env, corsHeaders);
     if (pathname === '/biz/reviews/reply-draft' && request.method === 'GET') return handleReviewReplyDraft(request, url, env, corsHeaders);
     if (pathname === '/biz/reviews/reply' && request.method === 'POST') return handleReviewReplySubmit(request, env, corsHeaders);
+    // ── 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설) ──
+    if (pathname === '/schedule/list' && request.method === 'GET') return handleScheduleList(request, url, env, corsHeaders);
+    if (pathname === '/schedule/save' && request.method === 'POST') return handleScheduleSave(request, env, corsHeaders);
+    if (pathname === '/schedule/delete' && request.method === 'POST') return handleScheduleDelete(request, env, corsHeaders);
+    // ── 메일 발송(수신은 미구현) — 시민 티어 신규 항목 (2026-08-11 신설) ──
+    if (pathname === '/mail/send' && request.method === 'POST') return handleMailSend(request, env, corsHeaders);
+    // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
+    if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
+    if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
+    if (pathname === '/community/groups/join' && request.method === 'POST') return handleGroupJoin(request, env, corsHeaders);
+    // ── 시민 신고(안전신문고식) — 시민 티어 신규 항목 (2026-08-11 신설) ──
+    if (pathname === '/citizen/reports/submit' && request.method === 'POST') return handleCitizenReportSubmit(request, env, corsHeaders);
+    if (pathname === '/citizen/reports/list' && request.method === 'GET') return handleCitizenReportList(request, url, env, corsHeaders);
     // ── 구독 티어 · 월정기 결제 — 공통 선결과제 (2026-08-11 신설) ──
     if (pathname === '/subscription/subscribe' && request.method === 'POST') return handleSubscribe(request, env, corsHeaders);
     if (pathname === '/subscription/status' && request.method === 'GET') return handleSubscriptionStatus(request, url, env, corsHeaders);
     if (pathname === '/subscription/professor-usage' && request.method === 'GET') return handleProfessorUsageStatus(request, url, env, corsHeaders);
     if (pathname === '/subscription/professor-usage/consume' && request.method === 'POST') return handleProfessorUsageConsume(request, env, corsHeaders);
     // ── 사업자 티어 확장 — 재고관리·공급망·인사·채용·업무일정 (2026-08-11 신설) ──
+    // ── 재무제표·경영진단·매출분석·재무계획 (2026-08-11 신설) ──
+    if (pathname === '/biz/finance/revenue-report' && request.method === 'GET') return handleFinanceRevenueReport(request, url, env, corsHeaders);
+    if (pathname === '/biz/products/set-cost-price' && request.method === 'POST') return handleSetProductCostPrice(request, env, corsHeaders);
     if (pathname === '/biz/inventory/reorder-suggestions' && request.method === 'GET') return handleInventoryReorderSuggestions(request, url, env, corsHeaders);
     if (pathname === '/biz/suppliers/list' && request.method === 'GET') return handleSupplierList(request, url, env, corsHeaders);
     if (pathname === '/biz/suppliers/save' && request.method === 'POST') return handleSupplierUpsert(request, env, corsHeaders);
@@ -14993,6 +15434,24 @@ const KLAW_USER_DAILY_KRW_LIMIT   = 300;    // 1인 1일 한도(원)
 const KLAW_GLOBAL_DAILY_KRW_LIMIT = 30000;  // 계정 전체 1일 예산 상한(원) — 공유 계정 보호
 const KLAW_USER_DAILY_STEP_LIMIT  = 3;      // 1인 1일 "판결 생성"(STEP 0~C) 횟수 한도
 
+// ═══════════════════════════════════════════════════════════
+// K-Law 건당 정가 과금 — 2026-08-11 신설(주피터 지시)
+// K_SERVICE_MONETIZATION_v1_0.md §2 가격표를 코드로 강제한다. 지금까지는
+// 이 표가 문서에만 있고 실제로는 판결 생성도 다른 채팅과 동일하게 토큰
+// 사용량 과금이었다(위 KLAW_TIER_MODELS 기반) — 그 상태를 그대로 두되,
+// client가 claim_amount_krw(소송가액)를 함께 보내는 "판결 생성"(step_cycle
+// && claim_amount_krw 유효) 요청에 한해 소송가액 구간별 정액을 대신
+// 청구한다. claim_amount_krw가 없으면(구버전 클라이언트·일반 상담 등)
+// 기존 토큰 과금으로 안전하게 폴백한다 — 하위호환 100%.
+// ═══════════════════════════════════════════════════════════
+function _klawFlatFeeForClaimAmount(claimAmountKrw) {
+  const amt = Number(claimAmountKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  if (amt <= 30_000_000)      return { tier: '소액',       fee: 10_000 };
+  if (amt <= 500_000_000)     return { tier: '일반 민사',  fee: 25_000 }; // 2~3만원 구간의 중간값
+  return                             { tier: '고액/복잡',  fee: 75_000 }; // 5~10만원 구간의 중간값
+}
+
 function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
 const _KLAW_KV_TTL = 60 * 60 * 30; // 30시간 — 자정 경계 안전마진을 둔 1일 리셋
 
@@ -15014,8 +15473,23 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, tier, messages, max_tokens, stream, step_cycle, currentLocation } = body || {};
+  const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  // ── 전문직 티어(all_services_free) 요금 면제 — 2026-08-11 신설 ──
+  // 지금까지 SUBSCRIPTION_TIERS.professional.all_services_free 플래그가
+  // 판정만 되고 실제 개별 서비스 과금 로직 어디서도 확인되지 않고
+  // 있었다(§PRICING_TIER_FINAL 문서 §5-1에서 지적된 공백) — K-Law가
+  // 그 첫 연동이다. 실패(조회 오류 등)해도 과금 자체를 막지는 않는다
+  // (무료 판정 실패로 유료 사용자가 과금되는 쪽이, 반대의 매출 누락보다
+  // 사용자 신뢰 관점에서 덜 나쁘다는 기존 코드베이스 관례를 따름 —
+  // 단, 이 경우엔 반대로 "면제해줘야 하는데 못 해줌"이 방향이라 향후
+  // 별도 사후 정산 절차가 필요할 수 있음).
+  let _klawFreeTier = false;
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    _klawFreeTier = !!SUBSCRIPTION_TIERS[sub?.tier]?.all_services_free;
+  } catch (e) { /* 미구독/조회실패 → 유료로 간주(보수적) */ }
 
   // UNIVERSAL-INTEGRITY·UNIVERSAL-common 서버측 강제 주입(2026-07-04 신설,
   // 2026-07-20 UNIVERSAL-common 추가) — K-Law는 클라이언트가 시스템 메시지를
@@ -15098,17 +15572,48 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 
   const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
   const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
+  // 2026-08-11 신설 — 이번 호출이 "정액 판결 생성"에 해당하는지 미리 판정.
+  // step_cycle(=STEP0, 판결 생성의 첫 호출)이면서 claim_amount_krw가 유효한
+  // 숫자로 왔을 때만 정액 과금 대상 — 그 외(일반 상담, 구버전 클라이언트)는
+  // 기존 토큰 과금 그대로.
+  const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
   // (2026-07-28 신설 — GDC 연동) recordStep(판결 시뮬레이션 횟수 카운트)에
   // 더해, 실사용량만큼 GDC 잔액에서도 차감한다. 두 부수효과를 하나의
   // onAfterRecord 콜백에 묶는다 — _recordAiUsage는 콜백 하나만 받는다.
-  const settleKlaw = (usage) => bill => Promise.all([
-    recordStep(),
-    _settleAiUsage(env, guid, bill, {
+  //
+  // 2026-08-11 수정 — 과금 갈래 3방향:
+  //   ① 전문직 티어(all_services_free) → GDC 차감 자체를 건너뛴다(무료).
+  //   ② 정액 판결 생성(_klawFlatFee 판정됨) → bill(토큰 기반 견적)을 쓰지
+  //      않고 소송가액 구간 정액을 그대로 청구한다. bill은 내부 원가 로그
+  //      용도로만 _recordAiUsage가 그대로 계산·기록한다(과금엔 미사용).
+  //   ③ 그 외(일반 상담 등) → 기존과 동일하게 토큰 기반 종량 과금.
+  const settleKlaw = (usage) => async (bill) => {
+    await recordStep();
+    if (_klawFreeTier) {
+      _dlog(env, JSON.stringify({ tag: 'KLAW_CHARGE_SKIPPED_FREE_TIER', guid, ts: new Date().toISOString() }));
+      return;
+    }
+    if (_klawFlatFee) {
+      const chargeResult = await _chargeGdcForAiUsage(env, {
+        guid, krwAmount: _klawFlatFee.fee, serviceId: 'klaw-verdict',
+        memo: `K-Law 가상 판결문 생성(${_klawFlatFee.tier}, 소송가액 ${Number(claim_amount_krw).toLocaleString('ko-KR')}원)`,
+      });
+      if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
+        await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+      }
+      _dlog(env, JSON.stringify({
+        tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw,
+        feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: !!chargeResult?.ok,
+        ts: new Date().toISOString(),
+      }));
+      return;
+    }
+    await _settleAiUsage(env, guid, bill, {
       serviceId: 'klaw', model: backendModel,
       hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
       outTokens: usage?.completion_tokens,
-    }),
-  ]);
+    });
+  };
 
   if (isStream) {
     const [forClient, forUsage] = res.body.tee();
