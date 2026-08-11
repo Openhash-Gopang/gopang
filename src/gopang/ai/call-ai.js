@@ -4351,22 +4351,50 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
         const cleanedReplyTool = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
         if (bubble) _updateStreamBubble(bubble, cleanedReplyTool);
+        const q = (userText || '').trim();
         if (svcId === 'tool-web-search') {
           // 정상 실행부(_handleWebSearchTag, 2105행)를 재사용 — 새로
-          // 검색 로직을 만들지 않는다. 이용자의 원문 발화를 그대로
-          // 검색어로 써서 [WEB_SEARCH: query=...] 형식을 합성한다.
-          const q = (userText || '').trim();
+          // 검색 로직을 만들지 않는다. cleanedReplyTool을 태그 앞에
+          // 그대로 붙여 합성한다 — _handleWebSearchTag 내부의
+          // _stripInternalTags(fullReply)가 [WEB_SEARCH:...] 태그만
+          // 걷어내고 cleanedReplyTool은 그대로 남기므로, 방금 위에서
+          // 세팅한 버블 내용("웹에서 확인해서…" 등)이 "웹 검색 중…"으로
+          // 바뀌기 전까지 자연스럽게 이어진다(맥락 유실 방지).
           if (q) {
-            _handleWebSearchTag(`[WEB_SEARCH: query=${q}]`, bubble, callAI, userText)
+            _handleWebSearchTag(`${cleanedReplyTool}\n\n[WEB_SEARCH: query=${q}]`, bubble, callAI, userText)
               .catch(e => console.warn('[GWP] tool-web-search 자동복구 실패(무시):', e.message));
           } else {
             console.warn('[GWP] tool-web-search 자동복구 불가 — userText 비어있음.');
           }
+        } else if (svcId === 'ksearch') {
+          // ★ 2026-08-11 신설 — ksearch 전용 자동복구.
+          // 예전엔 [KSEARCH_HANDOFF]로 AC→K-Search 직접 위임이 가능했지만,
+          // 2026-08-04 AC-PRO-CORE §CORE ②·§ORCHESTRATION 개정으로 그
+          // 경로는 AC의 태그 목록에서 완전히 빠졌다(AC-PRO-CORE_v1_7.txt
+          // §CATALOG 하단 "[2026-08-04 제거]" 주석 참조) — 지금은 §CATALOG
+          // 표 밖 대상(특정 인물·기관·업체 탐색 등)이 전부 [CALL_KINTENT]
+          // 하나로 수렴하고, K-Search 위임은 K-Compose 내부 로직이
+          // 전담한다. 즉 AC가 구식 [GWP: ksearch]를 냈다는 건 §CATALOG
+          // 판단은 맞았는데(표 밖 대상) §ORCHESTRATION 진입([CALL_KINTENT]
+          // 발화)이 새고 있다는 신호 — KSEARCH_HANDOFF로 되돌리는 게
+          // 아니라 정상 오케스트레이션 진입점인 [CALL_KINTENT]로
+          // 밀어넣는 게 맞는 복구다. _handleOrchestrationTags(1165행)의
+          // 기존 CALL_KINTENT 처리부(1417행, _forwardSwitchSP(_loadKIntentSP,
+          // 'K-Intent') 경유)를 그대로 재사용 — 새 오케스트레이션 경로를
+          // 만들지 않는다.
+          if (q) {
+            _handleOrchestrationTags(`${cleanedReplyTool}\n\n[CALL_KINTENT: query=${q}]`, bubble, callAI, userText)
+              .catch(e => console.warn('[GWP] ksearch→CALL_KINTENT 자동복구 실패(무시):', e.message));
+          } else {
+            console.warn('[GWP] ksearch 자동복구 불가 — userText 비어있음.');
+          }
         } else {
-          // ksearch(§0-F 핸드오프 경로는 2026-08-04부로 AC 태그 목록에서
-          // 제거됨 — AC-PRO-CORE_v1_7.txt 참조), tool-calculator 등 아직
-          // 전용 자동복구가 없는 항목 — 조용히 끊는 대신 최소한 탭 방치는
-          // 막는다(로그만 남기고 AC 자신의 응답으로 이어가게 둔다).
+          // tool-calculator 등 아직 전용 실행부가 없는 항목(gwp-registry.js
+          // 상 fn: null 그대로 방치된 상태) — 지어낸 복구 경로로 임시
+          // 땜질하지 않는다. 조용히 끊는 대신 최소한 탭 방치는 막고
+          // (로그만 남기고 AC 자신의 응답으로 이어가게 둔다), 실사에서
+          // 재현 빈도가 확인되면 그때 전용 [CALCULATE: expr=...] 태그와
+          // 실행부를 별도로 설계해야 한다.
           console.warn(`[GWP] '${svcId}' 전용 자동복구 미구현 — 탭 정리만 수행.`);
         }
       } else if (svcDef) {
