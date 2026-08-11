@@ -710,6 +710,10 @@ section.section[data-tab].tab-active { display: block; }
 .sc-msg { display: flex; gap: 9px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .sc-msg:last-child { border-bottom: none; }
 .sc-msg.ai { background: #fafffe; margin: 0 -18px; padding: 12px 18px; }
+/* 2026-08-11 신설 — 미니 카드에서 심층 사례 문서로 연결하는 하단 링크 */
+.sc-more { padding: 10px 18px 14px; border-top: 1px solid var(--border); }
+.sc-more a { font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 600; color: var(--brand-dk); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.sc-more a:hover { text-decoration: underline; }
 .sc-av { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #475569; margin-top: 1px; font-family: 'Pretendard', sans-serif; }
 .sc-msg.ai .sc-av { background: var(--brand); color: #fff; }
 .sc-who { font-size: 10.5px; font-family: 'Pretendard', sans-serif; color: var(--text4); margin-bottom: 3px; }
@@ -1922,6 +1926,7 @@ document.addEventListener("DOMContentLoaded", function () {
           <div class="sc-msg"><div class="sc-av">이</div><div><div class="sc-who">이서연 변호사</div><div class="sc-txt">(검토 완료) 서명했어.</div></div></div>
           <div class="sc-msg ai"><div class="sc-av">AI</div><div><div class="sc-who">혼디</div><div class="sc-txt">제출 완료했습니다. 접수번호는 PDV와 사건관리부에 기록했고, 다음 기일은 3주 뒤로 예상됩니다.</div></div></div>
         </div>
+        <div class="sc-more"><a href="reports/hondi-legal-arbitration-scenario.html" target="_blank" rel="noopener">→ 이 사례 전체 보기 (혼디넷 서비스 사례 연구 · K-Law)</a></div>
       </div>
 
       <!-- 공무원 -->
