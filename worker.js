@@ -3490,6 +3490,100 @@ async function handleSetProductCostPrice(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// 혼디 숫자코드 무수수료 결제(POS) — 사업자 티어 스코프만 항목 해소
+// (2026-08-11, 주피터 지시). hondi-digit-code.js(코드 인코딩·시각 렌더링)와
+// gopang-wallet.js sendGdc({purpose:'purchase'})는 이미 성숙했지만,
+// "이 숫자코드 = 어느 판매자" 매핑이 없어 실제로 이어붙일 수 없었다.
+// 여기서는 그 매핑(할당·조회·조회 후 실제 결제는 클라이언트의 기존
+// sendGdc()가 그대로 처리 — 새 송금 로직을 만들지 않는다)만 담당한다.
+// ═══════════════════════════════════════════════════════════
+
+function _randomShortId() {
+  // 10자리(0000000000~9999999999) — hondi-digit-code.js의 DIGIT_COUNT=10과
+  // 동일 범위. crypto.getRandomValues로 균등분포 생성 후 10자리로 패딩.
+  const buf = new Uint32Array(2);
+  crypto.getRandomValues(buf);
+  const n = (BigInt(buf[0]) << 32n | BigInt(buf[1])) % 10_000_000_000n;
+  return n.toString().padStart(10, '0');
+}
+
+// GET /pay/code/mine?guid=&business_name= — 판매자 본인 코드 조회(없으면
+// 새로 발급, business_name이 오면 갱신).
+// ★ 2026-08-11 설계 정정: 처음엔 별도 payment_codes 컬렉션을 새로 만들려
+// 했으나, profiles.digit_code_id(2026-07-15 유니크 인덱스까지 이미 있음
+// — hondi-digit-scanner.js lookupDigitProfile이 이미 이 필드로 조회하는
+// 관례가 존재)를 발견해 그걸 그대로 재사용하도록 바꿨다. 새 테이블을
+// 만들면 "코드=신원"이라는 기존 설계와 별개로 "코드=결제대상"이라는
+// 두 번째 진실의 원천이 생겨 혼란만 커진다.
+async function handlePayCodeMine(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  const businessName = (url.searchParams.get('business_name') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    let rec = await _l1FindProfileByGuid(env, guid);
+    if (!rec) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
+
+    if (businessName && businessName !== rec.name) {
+      const patchRes = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${rec.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: businessName }),
+      });
+      if (patchRes.ok) rec = await patchRes.json();
+    }
+
+    if (rec.digit_code_id) {
+      return new Response(JSON.stringify({ ok: true, short_id: rec.digit_code_id, business_name: rec.name || null }), { headers: corsHeaders });
+    }
+
+    // 신규 발급 — 유니크 인덱스 충돌 시(극히 드묾) 재시도
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const shortId = _randomShortId();
+      const patchRes = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${rec.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ digit_code_id: shortId }),
+      });
+      if (patchRes.ok) {
+        const updated = await patchRes.json();
+        return new Response(JSON.stringify({ ok: true, short_id: updated.digit_code_id, business_name: updated.name || null }), { headers: corsHeaders });
+      }
+      if (patchRes.status !== 400) throw new Error(`HTTP ${patchRes.status}`);
+    }
+    return _err(500, 'CODE_ASSIGN_FAILED', '코드 발급에 반복 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+  } catch (e) {
+    return _err(502, 'PAY_CODE_MINE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// GET /pay/code/resolve?short_id= — 구매자가 코드 입력 시 판매자 정보로 변환.
+// hondi-digit-scanner.js lookupDigitProfile과 동일 조회(digit_code_id) —
+// 결제 확인 시엔 서버(worker.js)를 거치는 편이 클라이언트 직접 L1 조회보다
+// 프록시 로그·향후 남용 방지 훅을 걸기 쉬워 별도 서버 엔드포인트로 둔다.
+async function handlePayCodeResolve(request, url, env, corsHeaders) {
+  const shortId = (url.searchParams.get('short_id') || '').trim();
+  if (!/^[0-9]{10}$/.test(shortId)) return _err(400, 'INVALID_SHORT_ID', '10자리 숫자 코드를 입력해 주세요', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`digit_code_id='${shortId}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const rec = data.items?.[0];
+    if (!rec) return _err(404, 'CODE_NOT_FOUND', '등록되지 않은 코드입니다', corsHeaders);
+    return new Response(JSON.stringify({ ok: true, seller_guid: rec.guid, business_name: rec.name || '(상호명 미등록)' }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'PAY_CODE_RESOLVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 사업자 티어 확장(2026-08-11, 주피터 지시) — 재고관리(JIT)·공급망관리·
 // 인사관리·채용관리·직원 업무 및 일정관리. seller_products/seller_reviews와
 // 동일한 MVP 컨벤션(guid 소유, 엄격한 인증 없음, 느슨한 참조).
@@ -10296,6 +10390,9 @@ export default {
     // ── 재무제표·경영진단·매출분석·재무계획 (2026-08-11 신설) ──
     if (pathname === '/biz/finance/revenue-report' && request.method === 'GET') return handleFinanceRevenueReport(request, url, env, corsHeaders);
     if (pathname === '/biz/products/set-cost-price' && request.method === 'POST') return handleSetProductCostPrice(request, env, corsHeaders);
+    // ── 혼디 숫자코드 무수수료 결제(POS) — 사업자 티어 마지막 항목 (2026-08-11 신설) ──
+    if (pathname === '/pay/code/mine' && request.method === 'GET') return handlePayCodeMine(request, url, env, corsHeaders);
+    if (pathname === '/pay/code/resolve' && request.method === 'GET') return handlePayCodeResolve(request, url, env, corsHeaders);
     if (pathname === '/biz/inventory/reorder-suggestions' && request.method === 'GET') return handleInventoryReorderSuggestions(request, url, env, corsHeaders);
     if (pathname === '/biz/suppliers/list' && request.method === 'GET') return handleSupplierList(request, url, env, corsHeaders);
     if (pathname === '/biz/suppliers/save' && request.method === 'POST') return handleSupplierUpsert(request, env, corsHeaders);

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>결제받기 — 혼디</title>
+<script src="https://cdn.jsdelivr.net/gh/Openhash-Gopang/gopang@main/gopang-wallet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:#f5f5f5;color:#111;min-height:100dvh;padding:20px}
+.wrap{max-width:480px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px}
+.sub{font-size:12.5px;color:#6b7280;margin-bottom:20px;line-height:1.6}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:14px;text-align:center}
+.card input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit;text-align:center}
+#code-canvas-wrap{margin:16px 0}
+#code-canvas-wrap img{max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px}
+.code-digits{font-size:22px;letter-spacing:4px;font-weight:700;margin-top:10px;font-family:'SF Mono',monospace}
+.submit-btn{width:100%;padding:12px;border:none;border-radius:10px;background:#111;color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;color:#1e40af;margin-bottom:14px;line-height:1.6}
+.err{color:#9B1C1C;font-size:12.5px;margin-top:8px}
+.empty{padding:24px;text-align:center;color:#9ca3af;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>결제받기</h1>
+  <div class="sub">이 코드를 손님께 보여주시면 GDC로 결제받을 수 있습니다.</div>
+  <div class="note">카드 수수료가 없습니다 — GDC 지갑 간 직접 이체입니다.</div>
+
+  <div class="card">
+    <input id="f-bizname" type="text" placeholder="상호명(선택)" onblur="updateBizName()">
+    <div id="code-canvas-wrap"><div class="empty">코드를 불러오는 중…</div></div>
+    <div class="err" id="err" style="display:none"></div>
+  </div>
+</div>
+
+<script type="module">
+import { generateDigitCodeDataURL } from '/src/gopang/ai/hondi-digit-code.js';
+
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+let userGuid = null;
+
+async function waitForWallet(timeoutMs = 5000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    if (window.gopangWallet?.guid) return { guid: window.gopangWallet.guid };
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { guid: null };
+}
+
+async function loadCode(businessName = '') {
+  const wrap = document.getElementById('code-canvas-wrap');
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  if (!userGuid) { wrap.innerHTML = `<div class="empty">지갑을 확인할 수 없습니다 — 혼디 앱 안에서 열어주세요.</div>`; return; }
+  try {
+    const params = new URLSearchParams({ guid: userGuid });
+    if (businessName) params.set('business_name', businessName);
+    const res = await fetch(`${WORKER_URL}/pay/code/mine?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'HTTP ' + res.status);
+    if (data.business_name) document.getElementById('f-bizname').value = data.business_name;
+    const dataUrl = await generateDigitCodeDataURL(BigInt(data.short_id));
+    wrap.innerHTML = `<img src="${dataUrl}" alt="혼디 코드"><div class="code-digits">${data.short_id.match(/.{1,2}/g).join(' ')}</div>`;
+  } catch (e) {
+    err.textContent = '코드 조회 실패: ' + e.message;
+    err.style.display = 'block';
+    wrap.innerHTML = '';
+  }
+}
+
+window.updateBizName = function () {
+  loadCode(document.getElementById('f-bizname').value.trim());
+};
+
+(async function init() {
+  const w = await waitForWallet();
+  userGuid = w.guid;
+  loadCode();
+})();
+</script>
+</body>
+</html>

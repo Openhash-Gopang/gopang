@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코드로 결제 — 혼디</title>
+<script src="https://cdn.jsdelivr.net/gh/Openhash-Gopang/gopang@main/gopang-wallet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:#f5f5f5;color:#111;min-height:100dvh;padding:20px}
+.wrap{max-width:480px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px}
+.sub{font-size:12.5px;color:#6b7280;margin-bottom:20px;line-height:1.6}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin-bottom:14px}
+.card label{display:block;font-size:12.5px;color:#6b7280;margin-bottom:6px}
+.card input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
+#f-code{font-family:'SF Mono',monospace;letter-spacing:2px;text-align:center;font-size:18px}
+.seller-info{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;font-size:13.5px;color:#166534;margin-bottom:12px;display:none}
+.submit-btn{width:100%;padding:12px;border:none;border-radius:10px;background:#111;color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.submit-btn:disabled{background:#d1d5db;cursor:not-allowed}
+.err{color:#9B1C1C;font-size:12.5px;margin-top:8px}
+.ok{color:#166534;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>코드로 결제</h1>
+  <div class="sub">판매자의 혼디 코드(10자리 숫자)를 입력하세요.</div>
+
+  <div class="card">
+    <label>혼디 코드(10자리)</label>
+    <input id="f-code" type="text" inputmode="numeric" maxlength="10" placeholder="0000000000" oninput="onCodeInput()">
+    <div class="seller-info" id="seller-info"></div>
+
+    <label>결제 금액(GDC)</label>
+    <input id="f-amount" type="number" placeholder="예: 15000">
+    <label>품목/메모</label>
+    <input id="f-memo" type="text" placeholder="예: 아메리카노 2잔">
+
+    <button class="submit-btn" id="submit-btn" onclick="doPay()" disabled>결제하기</button>
+    <div class="err" id="err" style="display:none"></div>
+    <div class="ok" id="ok" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+let resolvedSellerGuid = null;
+let resolveTimer = null;
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s ?? '');
+  return div.innerHTML;
+}
+
+async function waitForWallet(timeoutMs = 5000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    if (window.gopangWallet?.guid) return { guid: window.gopangWallet.guid };
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { guid: null };
+}
+
+function onCodeInput() {
+  const input = document.getElementById('f-code');
+  input.value = input.value.replace(/\D/g, '').slice(0, 10);
+  const info = document.getElementById('seller-info');
+  const btn = document.getElementById('submit-btn');
+  resolvedSellerGuid = null;
+  btn.disabled = true;
+  info.style.display = 'none';
+
+  clearTimeout(resolveTimer);
+  if (input.value.length !== 10) return;
+  resolveTimer = setTimeout(resolveCode, 300);
+}
+
+async function resolveCode() {
+  const code = document.getElementById('f-code').value;
+  const info = document.getElementById('seller-info');
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    const res = await fetch(`${WORKER_URL}/pay/code/resolve?${new URLSearchParams({ short_id: code })}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || '등록되지 않은 코드입니다');
+    resolvedSellerGuid = data.seller_guid;
+    info.textContent = `받는 사람: ${data.business_name}`;
+    info.style.display = 'block';
+    document.getElementById('submit-btn').disabled = false;
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+}
+
+async function doPay() {
+  const err = document.getElementById('err');
+  const ok = document.getElementById('ok');
+  err.style.display = 'none'; ok.style.display = 'none';
+  if (!window.gopangWallet?.guid) { err.textContent = '지갑 정보를 아직 불러오지 못했습니다.'; err.style.display = 'block'; return; }
+  if (!resolvedSellerGuid) { err.textContent = '코드를 먼저 확인해 주세요.'; err.style.display = 'block'; return; }
+  const amount = Number(document.getElementById('f-amount').value);
+  const memo = document.getElementById('f-memo').value.trim();
+  if (!(amount > 0)) { err.textContent = '결제 금액을 입력해 주세요.'; err.style.display = 'block'; return; }
+  if (!memo) { err.textContent = '품목/메모를 입력해 주세요(결제 대금은 메모 필수).'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  try {
+    await window.gopangWallet.sendGdc({ toGuid: resolvedSellerGuid, amount, memo, purpose: 'purchase' });
+    ok.textContent = '결제가 완료되었습니다.';
+    ok.style.display = 'block';
+  } catch (e) {
+    err.textContent = '결제 실패: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+(async function init() {
+  await waitForWallet();
+})();
+</script>
+</body>
+</html>
