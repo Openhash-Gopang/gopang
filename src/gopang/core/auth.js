@@ -2783,25 +2783,28 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     'last_updated_at':  now,
   };
 
-  // PATCH /profile은 worker.js 미지원 — Supabase 직접 접근
+  // PATCH /profile은 worker.js 미지원 — 브라우저가 L1 PocketBase를 직접
+  // 찾아서(find) PATCH한다. 옛 Supabase 직접접근 폴백을 없애고, 이 파일
+  // 2201-2205행에서 이미 쓰고 있는 것과 정확히 같은 find-then-PATCH
+  // 패턴으로 교체했다(profiles 컬렉션은 이미 공개 write 규칙이라 admin
+  // 토큰 불필요 — L1_URL을 인증 없이 직접 두드리는 다른 호출부와 동일).
   {
-    const { _SUPABASE_URL, _SUPABASE_KEY } = await import('./state.js');
-    if (_SUPABASE_URL && _SUPABASE_KEY) {
-      await fetch(
-        `${_SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(ipv6)}`,
-        {
-          method:  'PATCH',
-          headers: {
-            'apikey':        _SUPABASE_KEY,
-            'Authorization': `Bearer ${_SUPABASE_KEY}`,
-            'Content-Type':  'application/json',
-            'Prefer':        'return=minimal',
-          },
-          body: JSON.stringify({
-            extra: { public: { finance: { fs: fsInit } } },
-          }),
-        }
-      ).catch(e => console.warn('[PDV] fs 초기화 Supabase fallback 실패:', e.message));
+    try {
+      const filter = encodeURIComponent(`guid='${ipv6.replace(/'/g, "\\'")}'`);
+      const getRes = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const getData = await getRes.json();
+      const existingId = getData.items?.[0]?.id;
+      if (existingId) {
+        await fetch(`${L1_URL}/${existingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extra: { public: { finance: { fs: fsInit } } } }),
+        });
+      } else {
+        console.warn('[PDV] fs 초기화 실패 — L1에서 guid로 프로필을 못 찾음:', ipv6);
+      }
+    } catch (e) {
+      console.warn('[PDV] fs 초기화 L1 PATCH 실패:', e.message);
     }
   }
 

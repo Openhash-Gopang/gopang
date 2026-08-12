@@ -193,6 +193,13 @@ export function _parseKCleanerReply(text) {
 
 // ── Supabase reports 행 업데이트 — 전체 파싱 데이터 저장 ──────
 export async function _updateFiilReport(reportId, parsed) {
+  // ★ 2026-08-12 — 위 pdv/record.js와 동일 사유(state.js TODO 참조).
+  // fiil-kcleaner의 reports 테이블이 L1 PocketBase 어느 컬렉션에
+  // 대응하는지 확정 전까지 비활성.
+  if (!_SUPABASE_URL || !_SUPABASE_KEY) {
+    console.error('[K-Cleaner] _updateFiilReport 비활성 — reports의 PocketBase 목적지 미확정(TODO, state.js 참조)');
+    return;
+  }
   try {
     const res = await fetch(
       _SUPABASE_URL + '/rest/v1/reports?id=eq.' + reportId + '&select=analysis,cost&limit=1',

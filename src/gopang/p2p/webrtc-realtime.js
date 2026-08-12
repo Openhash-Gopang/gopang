@@ -5,8 +5,14 @@
  */
 
 const L1_BASE = 'https://l1-hanlim.hondi.net';
-const SB_WS   = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
-const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+// ★ 2026-08-12 — Supabase anon key 시크릿 유출 사고로 값 제거. 이 파일
+// 자체 주석대로 주 경로(L1 PocketBase SSE, p2p-chat.js)는 이 값과 무관하게
+// 계속 동작한다 — 여기서 비활성화되는 건 폴백 경로 하나뿐이다. Supabase
+// Realtime(WebSocket)은 REST API와 프로토콜이 달라 단순 URL 치환으로
+// PocketBase SSE와 못 바꾼다 — 폴백을 PocketBase SSE 폴링 재시도 등으로
+// 재설계할지는 별도 판단 필요(TODO, 급하지 않음 — 주 경로가 이미 대체재).
+const SB_WS  = '';
+const SB_KEY = '';
 
 let _active  = false;
 let _cleanup = null;
@@ -15,6 +21,10 @@ export function isRealtimeActive() { return _active; }
 
 export function startRealtimeSignal(myGuid, onSignal) {
   if (_cleanup) { _cleanup(); _cleanup = null; }
+  if (!SB_WS || !SB_KEY) {
+    console.warn('[Realtime WS] 폴백 비활성 — Supabase 시크릿 제거됨(주 경로는 L1 SSE, 정상 동작)');
+    return () => {};
+  }
   _cleanup = _startSupabaseWS(myGuid, onSignal); // Supabase WS만 사용 (SSE는 p2p-chat.js에서)
   return () => { if (_cleanup) { _cleanup(); _cleanup = null; } };
 }
