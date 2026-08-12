@@ -5016,6 +5016,26 @@ async function _callAIInner(userText, imageFile = null, _preTab = null, modelTie
 
   } catch (err) {
     hideTyping();
+    // ★ 2026-08-12 신설 — 실사로 발견: send-message.js가 매 발화마다
+    // window.open('', '_blank')로 미리 예약해 두는 _preTab은 지금까지
+    // _parseAgentTags(4975행 부근, try 블록 안쪽)가 실행돼야만 닫히거나
+    // 실제 URL로 이동했다. 그런데 스트리밍 중 예외가 나서 _parseAgentTags
+    // 호출 전에 이 catch로 빠지면(재현: "로그인 상태를 확인해 봐" →
+    // 응답이 문장 중간에서 끊기며 about:blank 탭만 방치) 이 catch 블록
+    // 어디에도 _preTab 정리 코드가 없어 방치됐다. AbortError 조기 반환
+    // 경로도 포함해 항상 먼저 정리한다. cross-origin으로 이미 이동한
+    // 탭(_gwpLaunch가 먼저 성공한 뒤 그 다음 단계에서 예외가 난 드문
+    // 경우)은 .location.href 읽기 자체가 SecurityError를 던지므로,
+    // 그 경우엔 "이미 이동했다"로 간주해 건드리지 않는다(무의미한 탭
+    // 강제 종료로 이미 열린 하위 서비스를 사용자 모르게 닫는 사고 방지).
+    try {
+      if (_preTab && !_preTab.closed) {
+        let stillBlank = true;
+        try { stillBlank = (_preTab.location.href === 'about:blank'); }
+        catch (_) { stillBlank = false; } // cross-origin = 이미 다른 곳으로 이동함
+        if (stillBlank) _preTab.close();
+      }
+    } catch (_) { /* 탭 정리는 부가 기능 — 실패해도 본 오류 처리는 계속 */ }
     if (err.name === 'AbortError') {
       console.log('[AI] 응답 생성이 중지되었습니다 (사용자 요청)');
       document.querySelector('.bubble-ai.streaming')?.classList.remove('streaming');
