@@ -10648,6 +10648,8 @@ export default {
     if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
     // 2026-08-10 신설 — 방식B(PG 가상계좌) 자동 확정 웹훅.
     if (pathname === '/biz/charge-webhook-pg' && request.method === 'POST') return handleChargeWebhookPG(request, env, corsHeaders);
+    // 2026-08-12 신설 — 방식C(관리자 폰 알림 캡처) 자동 확정.
+    if (pathname === '/biz/charge-confirm-notification' && request.method === 'POST') return handleChargeConfirmNotification(request, env, corsHeaders);
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
@@ -12897,6 +12899,96 @@ function _extractChargeMatchCodeFromText(text) {
   // 입금자명/적요 어디에 있든(예: "홍길동HD482910") HDxxxxxx 6자리 패턴만 뽑는다.
   const m = String(text).match(/HD\d{6}/);
   return m ? m[0] : null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 방식 C — 안드로이드 알림 캡처 자동 확정 (2026-08-12 신설)
+//
+// 오픈뱅킹 계약(방식A)·PG 가맹계약(방식B)이 아직 없는 지금 규모에서,
+// "관리자 폰에 뜨는 은행 앱 푸시·입금 SMS를 그대로 서버로 전달"하는
+// 가장 저비용 자동화 경로. 관리자 폰에 설치하는 안드로이드 알림
+// 리스너 앱(NotificationListenerService + SMS BroadcastReceiver, 별도
+// 저장소 hondi-charge-notifier 참고)이 원문 텍스트를 그대로 이 엔드포인트로
+// 전달하면, 파싱은 여기(서버) 한 곳에서만 한다 — 은행 알림 문구가 바뀌어도
+// 앱을 재배포할 필요 없이 이 정규식만 고치면 되도록 하기 위함.
+//
+// 멱등성: 안드로이드 NotificationListenerService는 같은 알림이 갱신(update)
+// 되면 onNotificationPosted가 다시 불릴 수 있고, SMS도 드물게 중복 브로드
+// 캐스트가 온다 — notification_key(안드로이드 StatusBarNotification.getKey()
+// 또는 SMS는 "sender+body+timestamp" 조합 클라이언트에서 생성)를
+// external_tx_id로 그대로 재사용해 _mintAndRecordCharge의 기존 멱등성
+// 체크(외부 tx id 중복 시 재민팅 안 함)에 편승한다 — 별도 로직 불필요.
+// ═══════════════════════════════════════════════════════════
+
+// 은행 앱 푸시·입금 SMS에서 흔히 쓰이는 금액 표기 패턴을 최대한 넓게 커버.
+// "10,000원 입금", "입금 10,000원", "1만원 입금" 등 — 콤마 유무·앞뒤 순서
+// 둘 다 대응. 매칭코드처럼 정확히 한 가지 포맷만 고집할 수 없는 이유는
+// 은행마다(카카오뱅크/토스/국민은행 등) 알림 문구가 제각각이기 때문.
+function _extractKrwAmountFromText(text) {
+  if (!text) return null;
+  const s = String(text);
+  // "1,234,567원" 형태 — 입금/출금 문맥 단어가 근처에 있는 것 우선.
+  const nearDeposit = s.match(/입금[^0-9]{0,10}([\d,]+)\s*원/) || s.match(/([\d,]+)\s*원[^가-힣]{0,5}입금/);
+  const raw = nearDeposit ? nearDeposit[1] : (s.match(/([\d,]{4,})\s*원/) || [])[1];
+  if (!raw) return null;
+  const n = Number(raw.replace(/,/g, ''));
+  return (n > 0) ? n : null;
+}
+
+// POST /biz/charge-confirm-notification — 관리자 전용(알림 리스너 앱이 호출).
+// body: { secret, raw_text, notification_key, source: 'app_push'|'sms',
+//         app_package, krw_amount(선택 — 없으면 raw_text에서 자동 추출),
+//         depositor_name(선택) }
+async function handleChargeConfirmNotification(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { secret, raw_text, notification_key, source, app_package, krw_amount, depositor_name } = body;
+  if (secret !== _adminActionSecret(env)) return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+  if (!raw_text) return _err(400, 'MISSING_FIELD', 'raw_text 필수', corsHeaders);
+  if (!notification_key) return _err(400, 'MISSING_FIELD', 'notification_key 필수(멱등성 키)', corsHeaders);
+
+  const code = _extractChargeMatchCodeFromText(raw_text);
+  if (!code) {
+    // 매칭코드를 못 찾으면 자동 처리 대상이 아니다 — 관리자 수동 확인(charge-admin.html)로
+    // 폴백. 여기서 오류로 취급하지 않는 이유: 알림 리스너는 은행 앱의 온갖 알림을
+    // (잔액조회·이벤트 알림 등) 무차별로 전달할 수 있고, 그중 실제 입금 알림만
+    // 골라내는 게 이 코드의 역할이다 — 나머지는 조용히 무시하는 게 정상 동작이다.
+    console.info(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_NO_MATCH_CODE', source, app_package, ts: new Date().toISOString() }));
+    return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_MATCH_CODE_FOUND' }), { status: 200, headers: corsHeaders });
+  }
+
+  const amount = (Number(krw_amount) > 0) ? Number(krw_amount) : _extractKrwAmountFromText(raw_text);
+  if (!amount) {
+    console.warn(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_NO_AMOUNT', code, source, ts: new Date().toISOString() }));
+    return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_AMOUNT_FOUND', match_code: code }), { status: 200, headers: corsHeaders });
+  }
+
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`match_code='${code}' && status='pending'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, { headers });
+    const data = await res.json().catch(() => ({ items: [] }));
+    const pendingRec = data.items && data.items[0];
+    if (!pendingRec) {
+      console.warn(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CODE_NO_PENDING', code, ts: new Date().toISOString() }));
+      return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_PENDING_REQUEST', match_code: code }), { status: 200, headers: corsHeaders });
+    }
+
+    const result = await _mintAndRecordCharge(env, {
+      existingRequestId: pendingRec.id, guid: pendingRec.guid,
+      krwAmount: amount, depositorName: depositor_name || '',
+      memo: `알림캡처(${source || 'unknown'}${app_package ? ':' + app_package : ''})`,
+      channel: 'auto_notification_capture', confirmedBy: 'system:notification_capture',
+      externalTxId: notification_key,
+    });
+    if (!result.ok) {
+      console.error(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CONFIRM_FAILED', code, result, ts: new Date().toISOString() }));
+    }
+    return _chargeCoreResultToResponse({ ...result, matched: !!result.ok, match_code: code }, corsHeaders);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
 }
 
 async function _pollOpenBankingAutoConfirm(env) {
@@ -15541,12 +15633,27 @@ const KLAW_USER_DAILY_STEP_LIMIT  = 3;      // 1인 1일 "판결 생성"(STEP 0~
 // 청구한다. claim_amount_krw가 없으면(구버전 클라이언트·일반 상담 등)
 // 기존 토큰 과금으로 안전하게 폴백한다 — 하위호환 100%.
 // ═══════════════════════════════════════════════════════════
+// ── K-Law 사건단위 하이브리드 정액과금 (2026-08-12 개정 — 주피터 지시) ──
+// 기존 3단계(소액/일반/고액) 고정 티어를 8단계로 세분화 — 소송가액이
+// 커질수록 정액을 차등 적용하되, 여전히 "정액"이다(퍼센트 연동 아님).
+// 사건단위 중복방지(klaw_case_charges — 같은 사건은 재생성 몇 번이든
+// 최초 확정 금액 그대로)는 이 함수와 독립적으로 동작하므로 변경 없음.
+const KLAW_CLAIM_FEE_SCHEDULE = [
+  { max: 10_000_000,  tier: '~1천만원',      fee: 5_000  },
+  { max: 30_000_000,  tier: '1천만~3천만원',  fee: 10_000 },
+  { max: 100_000_000, tier: '3천만~1억원',    fee: 15_000 },
+  { max: 300_000_000, tier: '1억~3억원',      fee: 25_000 },
+  { max: 500_000_000, tier: '3억~5억원',      fee: 35_000 },
+  { max: 1_000_000_000, tier: '5억~10억원',   fee: 50_000 },
+  { max: 3_000_000_000, tier: '10억~30억원',  fee: 70_000 },
+  { max: Infinity,    tier: '30억원 초과',    fee: 100_000 },
+];
+
 function _klawFlatFeeForClaimAmount(claimAmountKrw) {
   const amt = Number(claimAmountKrw);
   if (!Number.isFinite(amt) || amt < 0) return null;
-  if (amt <= 30_000_000)      return { tier: '소액',       fee: 10_000 };
-  if (amt <= 500_000_000)     return { tier: '일반 민사',  fee: 25_000 }; // 2~3만원 구간의 중간값
-  return                             { tier: '고액/복잡',  fee: 75_000 }; // 5~10만원 구간의 중간값
+  const bucket = KLAW_CLAIM_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
 }
 
 function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
@@ -15566,11 +15673,57 @@ async function _klawSpendAdd(env, key, amount) {
   } catch (e) { console.warn('[KLaw] 지출 기록 실패:', e.message); }
 }
 
-async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
+// ── K-Law 사건단위 정액과금 중복방지 (2026-08-12 신설) ──────────────
+// klaw_case_charges에 (guid, case_id) 조합을 유일키로 기록해 "이 사건은
+// 이미 결제됐는지"를 판정한다. case_id가 없으면(구버전 클라이언트) 이
+// 판정 자체를 건너뛰고 기존처럼 매 호출 과금한다 — 하위호환.
+async function _klawFindCaseCharge(env, guid, caseId) {
+  if (!caseId) return null;
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`guid='${guid}' && case_id='${caseId}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records?filter=${filter}&perPage=1`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  return (data.items && data.items[0]) || null;
+}
+
+async function _klawCreateCaseCharge(env, { guid, caseId, claimAmountKrw, feeKrw, feeTier, mintContentHash }) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        guid, case_id: caseId, claim_amount_krw: claimAmountKrw || 0,
+        fee_krw: feeKrw, fee_tier: feeTier, verdict_count: 1,
+        mint_content_hash: mintContentHash || '',
+      }),
+    });
+  } catch (e) {
+    // 결제(mint)는 이미 끝난 뒤라 여기 실패는 "다음 재생성부터 다시 과금될
+    // 수 있다"는 의미다(원장 기록 실패) — 결제 자체를 되돌리진 않되 크게 로그.
+    console.error(JSON.stringify({ tag: 'KLAW_CASE_CHARGE_RECORD_FAILED', guid, caseId, error: e.message, ts: new Date().toISOString() }));
+  }
+}
+
+async function _klawBumpCaseRegen(env, recordId, currentCount) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ verdict_count: (currentCount || 1) + 1, last_regen_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    console.warn('[KLaw] 재생성 카운트 갱신 실패(무시 — 과금 판정에는 영향 없음):', e.message);
+  }
+}
+
+
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, currentLocation } = body || {};
+  const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, case_id, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
   // ── 전문직 티어(all_services_free) 요금 면제 — 2026-08-11 신설 ──
@@ -15691,6 +15844,22 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       return;
     }
     if (_klawFlatFee) {
+      // 2026-08-12 신설 — 사건단위 중복방지. case_id가 있으면 먼저 이 사건이
+      // 이미 결제됐는지 확인한다: 있으면 재생성으로 간주해 GDC 차감을
+      // 건너뛰고 카운트만 올린다. case_id가 없으면(구버전 klaw 클라이언트)
+      // 판정 자체를 생략하고 기존처럼 매번 과금한다(하위호환).
+      const existingCase = case_id ? await _klawFindCaseCharge(env, guid, case_id) : null;
+
+      if (existingCase) {
+        await _klawBumpCaseRegen(env, existingCase.id, existingCase.verdict_count);
+        _dlog(env, JSON.stringify({
+          tag: 'KLAW_FLAT_FEE_FREE_REGEN', guid, caseId: case_id,
+          feeTier: existingCase.fee_tier, verdictCount: (existingCase.verdict_count || 1) + 1,
+          ts: new Date().toISOString(),
+        }));
+        return;
+      }
+
       const chargeResult = await _chargeGdcForAiUsage(env, {
         guid, krwAmount: _klawFlatFee.fee, serviceId: 'klaw-verdict',
         memo: `K-Law 가상 판결문 생성(${_klawFlatFee.tier}, 소송가액 ${Number(claim_amount_krw).toLocaleString('ko-KR')}원)`,
@@ -15698,8 +15867,18 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
         await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
       }
+      if (chargeResult?.ok && case_id) {
+        // 결제 성공 + case_id가 있을 때만 원장에 기록 — 다음 재생성부터
+        // 무료 처리되도록 하는 근거 레코드. case_id 없으면(구버전) 애초에
+        // 재생성 구분이 불가하므로 기록도 하지 않는다(매번 과금이 정상 동작).
+        await _klawCreateCaseCharge(env, {
+          guid, caseId: case_id, claimAmountKrw: claim_amount_krw,
+          feeKrw: _klawFlatFee.fee, feeTier: _klawFlatFee.tier,
+          mintContentHash: chargeResult.tx_hash || '',
+        });
+      }
       _dlog(env, JSON.stringify({
-        tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw,
+        tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw, caseId: case_id || null,
         feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: !!chargeResult?.ok,
         ts: new Date().toISOString(),
       }));
