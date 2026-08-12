@@ -393,7 +393,7 @@ async function createDeptTaskCore(env, params, deps, opts = {}) {
     originChain = [], pubkey = null, signature = null,
   } = params;
   const { authoritativeAgency = null } = opts;
-  const { _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask } = deps;
+  const { _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask, _l1CreateDeptTaskEvent } = deps;
 
   if (!requesterType || !requesterId) return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'requester_type/requester_id 필수' };
   if (!targetType || !targetId)       return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'target_type/target_id 필수' };
@@ -438,6 +438,15 @@ async function createDeptTaskCore(env, params, deps, opts = {}) {
     return { ok: false, reason: 'DEPT_TASK_CREATE_FAILED', httpStatus: 502, detail: e.message };
   }
 
+  // Pathfinder 계측(2026-08-13 신설) — 실패해도 본 흐름(dept_task 생성)은 막지 않는다
+  if (_l1CreateDeptTaskEvent) {
+    try {
+      await _l1CreateDeptTaskEvent(env, {
+        task_id: record.id, from_status: null, to_status: 'requested', at: new Date().toISOString(),
+      });
+    } catch (e) { console.warn('[pathfinder] event log failed', e); }
+  }
+
   return { ok: true, taskId: record.id, status: 'requested' };
 }
 
@@ -470,7 +479,7 @@ async function handleDeptTaskCreate(request, env, corsHeaders, deps) {
  * "안 하는 일" 원칙을 코드로도 강제한다.
  */
 async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
-  const { _err, _l1UpdateDeptTask } = deps;
+  const { _err, _l1UpdateDeptTask, _l1GetDeptTask, _l1CreateDeptTaskEvent } = deps;
   let body;
   try { body = await request.json(); } catch {
     return _err(400, 'INVALID_JSON', '요청 본문이 올바르지 않습니다.', corsHeaders);
@@ -479,12 +488,32 @@ async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
   const ALLOWED = new Set(['acknowledged', 'in_progress', 'completed', 'rejected']);
   if (!ALLOWED.has(status)) return _err(400, 'INVALID_STATUS', `status는 ${[...ALLOWED].join('/')} 중 하나여야 합니다`, corsHeaders);
 
+  // Pathfinder 계측(2026-08-13 신설) — PATCH 전에 현재 status를 읽어 from_status로 쓴다.
+  // 조회 실패해도 본 흐름은 계속(from_status만 null로 기록됨).
+  let fromStatus = null;
+  if (_l1GetDeptTask) {
+    try {
+      const before = await _l1GetDeptTask(env, taskId);
+      fromStatus = before?.status || null;
+    } catch { /* 무시 */ }
+  }
+
   let record;
   try {
     record = await _l1UpdateDeptTask(env, taskId, { status, result_note });
   } catch (e) {
     return _err(502, 'DEPT_TASK_UPDATE_FAILED', e.message, corsHeaders);
   }
+
+  // Pathfinder 계측 — 실패해도 본 흐름(상태 전이 자체)은 이미 성공했으므로 응답은 막지 않는다
+  if (_l1CreateDeptTaskEvent) {
+    try {
+      await _l1CreateDeptTaskEvent(env, {
+        task_id: taskId, from_status: fromStatus, to_status: status, at: new Date().toISOString(),
+      });
+    } catch (e) { console.warn('[pathfinder] event log failed', e); }
+  }
+
   return new Response(JSON.stringify({ ok: true, task_id: taskId, status }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }

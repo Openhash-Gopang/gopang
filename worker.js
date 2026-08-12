@@ -10771,10 +10771,10 @@ export default {
 
     // ── 부서/기관/사업자 간 업무지시 큐 (2026-07-12 신설, B그룹 대응) ──
     if (pathname === '/gov/dept-task' && request.method === 'POST')
-      return handleDeptTaskCreate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask });
+      return handleDeptTaskCreate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask, _l1CreateDeptTaskEvent });
     if (pathname.startsWith('/gov/dept-task/') && request.method === 'PATCH') {
       const taskId = pathname.replace('/gov/dept-task/', '');
-      return handleDeptTaskUpdate(request, env, corsHeaders, taskId, { _err, _l1UpdateDeptTask });
+      return handleDeptTaskUpdate(request, env, corsHeaders, taskId, { _err, _l1UpdateDeptTask, _l1GetDeptTask, _l1CreateDeptTaskEvent });
     }
 
     // ── ai-setup (AI 비서 설정) ─────────────────────────────
@@ -21040,6 +21040,33 @@ async function _l1UpdateDeptTask(env, taskId, patch) {
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
     throw new Error(`dept_tasks 갱신 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// ── dept_task_events(Pathfinder 계측 로그) L1 헬퍼 (2026-08-13 신설) ──
+// dept_tasks 자체의 PATCH 로직은 건드리지 않는다 — 이 두 함수는 별도
+// 컬렉션에 한 행만 추가한다. 실패해도 dept_tasks 업데이트 자체를
+// 막지 않도록 호출부(dept-task-handler.js)에서 반드시 try/catch로 감쌀 것.
+async function _l1GetDeptTask(env, taskId) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records/${taskId}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null; // 조회 실패는 로깅 스킵 사유일 뿐 — 상위에서 판단
+  return res.json();
+}
+
+async function _l1CreateDeptTaskEvent(env, { task_id, from_status, to_status, at, actor_hash }) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_task_events/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task_id, from_status: from_status || null, to_status, at, actor_hash: actor_hash || null }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`dept_task_events 생성 실패 (HTTP ${res.status}): ${errText}`);
   }
   return res.json();
 }
