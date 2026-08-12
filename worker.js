@@ -2740,6 +2740,72 @@ async function handleReviewReplySubmit(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// K-Insurance 보험료 산출 결과 — Supabase→PocketBase 이관 (2026-08-12)
+// 원래 insurance/js/report.js가 Supabase에 직접 접근하던 걸 이쪽으로
+// 이전. citizen_schedule과 동일 MVP 컨벤션(guid 소유, API 규칙 null).
+// ═══════════════════════════════════════════════════════════
+
+async function handleInsuranceCalcLatest(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  const periodStart = (url.searchParams.get('period_start') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    let filter = `user_guid='${guid}'`;
+    if (periodStart) filter += ` && period_start='${periodStart}'`;
+    const perPage = periodStart ? 5 : 1;
+    const q = `filter=${encodeURIComponent(filter)}&sort=-calc_at&perPage=${perPage}`;
+    const res = await fetch(`${L1_DEFAULT}/api/collections/insurance_calc_results/records?${q}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ source: 'live', guid, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'INSURANCE_CALC_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleInsuranceCalcSave(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const calcId = (body.calc_id || '').trim();
+  const userGuid = (body.user_guid || '').trim();
+  if (!calcId) return _err(400, 'MISSING_CALC_ID', 'calc_id 필수', corsHeaders);
+  if (!userGuid) return _err(400, 'MISSING_USER_GUID', 'user_guid 필수', corsHeaders);
+  if (!body.period_start || !body.period_end) return _err(400, 'MISSING_PERIOD', 'period_start/period_end 필수', corsHeaders);
+  if (body.monthly_total === undefined || body.monthly_total === null) return _err(400, 'MISSING_MONTHLY_TOTAL', 'monthly_total 필수', corsHeaders);
+  if (!body.calc_at) return _err(400, 'MISSING_CALC_AT', 'calc_at 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      calc_id:       calcId,
+      user_guid:     userGuid,
+      period_start:  body.period_start,
+      period_end:    body.period_end,
+      monthly_total: body.monthly_total,
+      risk_profile:  body.risk_profile || '',
+      calc_data:     body.calc_data || {},
+      pdv_entry_id:  body.pdv_entry_id || '',
+      model:         body.model || 'deepseek-v4-pro',
+      calc_at:       body.calc_at,
+    };
+    const res = await fetch(`${L1_DEFAULT}/api/collections/insurance_calc_results/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, item: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'INSURANCE_CALC_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설)
 // 이전엔 대응 서비스가 전혀 없던 완전 신규 영역. seller_reviews와 동일
 // MVP 컨벤션(guid 소유, 엄격한 인증 없음).
@@ -10369,6 +10435,8 @@ export default {
     if (pathname === '/biz/reviews/reply-draft' && request.method === 'GET') return handleReviewReplyDraft(request, url, env, corsHeaders);
     if (pathname === '/biz/reviews/reply' && request.method === 'POST') return handleReviewReplySubmit(request, env, corsHeaders);
     // ── 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설) ──
+    if (pathname === '/insurance/calc-results' && request.method === 'GET') return handleInsuranceCalcLatest(request, url, env, corsHeaders);
+    if (pathname === '/insurance/calc-results' && request.method === 'POST') return handleInsuranceCalcSave(request, env, corsHeaders);
     if (pathname === '/schedule/list' && request.method === 'GET') return handleScheduleList(request, url, env, corsHeaders);
     if (pathname === '/schedule/save' && request.method === 'POST') return handleScheduleSave(request, env, corsHeaders);
     if (pathname === '/schedule/delete' && request.method === 'POST') return handleScheduleDelete(request, env, corsHeaders);
