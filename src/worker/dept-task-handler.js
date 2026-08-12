@@ -101,6 +101,10 @@ const DEPT_TASK_TAXONOMY = {
     'national:laborimprove', 'national:laborrel', 'national:mma', 'national:nhis', 'national:nps',
     'national:police', 'national:port', 'national:post', 'national:pps', 'national:probation',
     'national:prosecution', 'national:radio', 'national:tax', 'national:veterans', 'national:weather',
+    // 2026-08-13 추가 — GOV_TASK↔dept_tasks 연결(Pathfinder) 작업 중 발견된 누락.
+    // REQUIRED_DOCUMENTS_REGISTRY(worker.js)의 'kcc'(방송통신위원회)가
+    // 이 taxonomy에 대응 항목이 없어 AGENCY_TO_DEPT_TARGET 매핑이 불가능했다.
+    'national:kcc',
   ]),
   'k-service': new Set([
     // worker.js SP_DELEGATION_REGISTRY와 동일 목록 — 두 레지스트리가 갈라지지

@@ -17068,6 +17068,17 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
   },
 };
 
+// ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
+// REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
+// target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
+// 뜻이므로 dept_task 생성을 건너뛴다(누락이 GOV_TASK 접수 자체를 막지
+// 않도록 — 아래 handleGovTaskSubmit 호출부 참고). REQUIRED_DOCUMENTS_REGISTRY에
+// 새 agency:task_key를 등록할 때는 이 표에도 대응 항목을 함께 추가할 것.
+const AGENCY_TO_DEPT_TARGET = {
+  kcc:   { target_type: 'national', target_id: 'national:kcc' },
+  court: { target_type: 'national', target_id: 'national:court' },
+};
+
 // ── 신규 기관/업무 판단절차 (agency/task_key 미등록 시) ──────────────
 // kgov(SP-10_kpublic)가 REQUIRED_DOCUMENTS_REGISTRY에 없는 요청을 받으면:
 //   1. 웹검색 도구(SP-10_kpublic 상위 UNIVERSAL-common U8 원칙에 따라
@@ -17452,10 +17463,50 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
     console.warn('[GovTaskSubmit] PDV 기록 실패 — 접수 판정 자체는 반환하되 감사로그 없이 진행됨을 로그로 남김');
   }
 
+  // ── GOV_TASK → dept_task 자동 생성 (2026-08-13 신설, Pathfinder 계측 연결) ──
+  // status==='accepted'일 때만: 서류가 다 갖춰졌으니 내부 처리로 넘긴다.
+  // requesterType을 'k-service'로 둔 이유 — _authoritativeCheck는
+  // requesterType이 dept/org가 아니면 무조건 통과시킨다(citizen/business만
+  // 서명 검증 대상). GOV_TASK 제출 자체에는 아직 시민 서명이 없으므로,
+  // "GOV_TASK 시스템(k-service:public)이 접수를 확인하고 내부 부서에
+  // 위임한다"는 모델로 시민 서명 요구 없이 안전하게 서버 내부 호출한다.
+  // 실패해도 시민에게 보여줄 접수 응답 자체는 막지 않는다(아래 catch).
+  let deptTaskId = null;
+  if (status === 'accepted') {
+    const target = AGENCY_TO_DEPT_TARGET[agency];
+    if (!target) {
+      console.warn(`[GovTaskSubmit] AGENCY_TO_DEPT_TARGET에 '${agency}' 매핑 없음 — dept_task 생성 건너뜀`);
+    } else {
+      try {
+        const deptResult = await createDeptTaskCore(env, {
+          requesterType: 'k-service', requesterId: 'k-service:public',
+          requesterLabel: 'GOV_TASK 자동접수',
+          targetType: target.target_type, targetId: target.target_id,
+          taskType: task_key,
+          directive: `시민 제출 서류 접수 완료 — 내부 처리 요망 (접수번호: ${receiptNo})`,
+          payload: {
+            origin_pdv_report_id: pdvReportId,
+            origin_guid: guid,
+            agency, task_key,
+            documents_matched: matchedDocs.map(d => d.id),
+          },
+          originChain: [],
+        }, {
+          _err, _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask, _l1CreateDeptTaskEvent,
+        });
+        if (deptResult.ok) deptTaskId = deptResult.taskId;
+        else console.warn('[GovTaskSubmit] dept_task 생성 실패:', deptResult.reason, deptResult.detail);
+      } catch (e) {
+        console.warn('[GovTaskSubmit] dept_task 생성 예외:', e.message);
+      }
+    }
+  }
+
   return new Response(JSON.stringify({
     ok: true,
     status,
     receipt_no: receiptNo,
+    dept_task_id: deptTaskId,
     // ★ 2026-07-12 신설 — 강제 면책 필드. AC가 사용자에게 언급하는 걸
     // "잊을 수 있는" 방식(프롬프트 지시만으로는 누락 가능)이 아니라,
     // 이 응답을 읽는 모든 클라이언트 코드가 항상 이 필드를 받도록 만든다.
