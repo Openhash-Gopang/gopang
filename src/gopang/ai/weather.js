@@ -1,15 +1,17 @@
 /**
  * ai/weather.js — 날씨·해양기상·역지오코딩·현장보고서
  */
-import { CFG } from '../core/config.js';
+import { PROXY } from '../core/state.js';
 
+// ★2026-08-12 — Kakao REST 키 브라우저 노출 문제로 직접 호출 제거.
+// hondi-proxy(worker.js)의 /geocode 엔드포인트가 이미 env.KAKAO_REST_KEY로
+// 서버사이드 호출 중이며 raw Kakao 응답을 그대로 돌려주므로 아래 파싱
+// 로직은 그대로 재사용 가능. README_SECRETS_INCIDENT.md 참조.
 export async function _reverseGeocode(lat, lng) {
-  if (!CFG.kakaoKey || !lat || !lng) return null;
+  if (!lat || !lng) return null;
   try {
-    const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json` +
-                `?x=${lng}&y=${lat}&input_coord=WGS84`;
+    const url = `${PROXY}/geocode?lat=${lat}&lng=${lng}`;
     const res = await fetch(url, {
-      headers: { 'Authorization': `KakaoAK ${CFG.kakaoKey}` },
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) {

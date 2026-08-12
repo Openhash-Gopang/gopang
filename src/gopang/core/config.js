@@ -58,7 +58,6 @@ export function _providerOf(model) {
 export const CFG = {
   apiKey:    '',
   geminiKey: '',
-  kakaoKey:  '66648ca49f126d8752b33d542789ac56',
   endpoint:  'https://hondi-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-flash',
   // ── 다중 LLM 순차 페일오버 ───────────────────────────────
