@@ -2806,6 +2806,358 @@ async function handleInsuranceCalcSave(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// K-Law(klaw 저장소) — Supabase→PocketBase 이관 (2026-08-13)
+// desktop.html/benchmark.html/dashboard.html/board.html이 직접 Supabase
+// REST(rest/v1) 또는 supabase-js SDK(.from())로 접근하던 4개 테이블을
+// 이쪽으로 이전. klaw_cases/klaw_benchmark/klaw_sessions 컬렉션은 동시
+// 세션이 만든 pb_migrations/1787300002~004(feat/klaw-pocketbase-collections
+// 브랜치, 커밋 5754b1ee)를 그대로 채택했고, klaw_admin_users만 이 세션에서
+// 신설(1787400001). 인증 없는 공개 MVP 컨벤션(insurance_calc_results와
+// 동일) — klaw 자체가 고팡 wallet 서명 인증 체계 밖의 별도 guid/기기지문
+// 시스템이라 handleTxHistory류의 서명 인증은 적용하지 않는다.
+// ═══════════════════════════════════════════════════════════
+
+const KLAW_ADMIN_USERS_COLLECTION = 'klu0000adminus';
+const KLAW_CASES_COLLECTION       = 'klc0000000cases';
+const KLAW_BENCHMARK_COLLECTION   = 'klb0000benchmk';
+const KLAW_SESSIONS_COLLECTION    = 'kls0000session';
+
+// ── klaw_admin_users ──────────────────────────────────────
+
+async function handleKlawAdminUserByFp(request, url, env, corsHeaders) {
+  const deviceFp = (url.searchParams.get('device_fp') || '').trim();
+  if (!deviceFp) return _err(400, 'MISSING_DEVICE_FP', 'device_fp 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`device_fp='${deviceFp}'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_ADMIN_USERS_COLLECTION}/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const rec = (data.items || [])[0] || null;
+    return new Response(JSON.stringify({
+      ok: true,
+      item: rec ? { guid: rec.guid, device_fp: rec.device_fp, phone: rec.phone || '', is_admin: !!rec.is_admin } : null,
+    }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_ADMIN_USER_LOOKUP_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawAdminUserRegister(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const guid = (body.guid || '').trim();
+  const deviceFp = (body.device_fp || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  if (!deviceFp) return _err(400, 'MISSING_DEVICE_FP', 'device_fp 필수', corsHeaders);
+  // registered_at은 클라이언트가 보내도 무시 — PocketBase 기본 created 시스템 필드로 대체
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_ADMIN_USERS_COLLECTION}/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, device_fp: deviceFp, phone: body.phone || '', is_admin: false }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_ADMIN_USER_REGISTER_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawAdminUserIsAdmin(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_ADMIN_USERS_COLLECTION}/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const rec = (data.items || [])[0] || null;
+    return new Response(JSON.stringify({ ok: true, is_admin: !!(rec && rec.is_admin) }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_ADMIN_USER_IS_ADMIN_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── klaw_cases ────────────────────────────────────────────
+
+async function handleKlawCaseSave(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const caseNo = (body.case_no || '').trim();
+  if (!caseNo) return _err(400, 'MISSING_CASE_NO', 'case_no 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      case_no:        caseNo,
+      source:         body.source || '',
+      case_type:      body.case_type || '',
+      case_type_code: body.case_type_code || '',
+      case_level:     body.case_level || '',
+      case_detail:    body.case_detail || '',
+      case_input:     (body.case_input || '').slice(0, 2000),
+      case_summary:   (body.case_summary || '').slice(0, 500),
+      verdict:        (body.verdict || '').slice(0, 80),
+      confidence:     body.confidence || '',
+      complexity:     body.complexity || '',
+      match_rate:     body.match_rate || '',
+      verdict_type:   body.verdict_type || '',
+      llm_model:      body.llm_model || '',
+      klaw_version:   body.klaw_version || '',
+      reporter:       body.reporter || '',
+      status:         body.status || 'completed',
+    };
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_CASES_COLLECTION}/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, case_no: caseNo, id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_CASE_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// board.html _fetchPage 대응 — status/type(ilike)/model(eq) 필터 +
+// offset/limit 페이지네이션. PocketBase는 offset이 아니라 page+perPage라,
+// 클라이언트가 항상 PAGE_SIZE(30) 배수로 offset을 늘리는 현재 호출
+// 패턴을 전제로 page = floor(offset/limit)+1 로 환산한다.
+async function handleKlawCaseList(request, url, env, corsHeaders) {
+  const status = (url.searchParams.get('status') || '').trim();
+  const type   = (url.searchParams.get('type') || '').trim();
+  const model  = (url.searchParams.get('model') || '').trim();
+  const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
+  const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '30', 10) || 30, 1), 100);
+  const page   = Math.floor(offset / limit) + 1;
+
+  const clauses = [];
+  if (status) clauses.push(`status='${status.replace(/'/g, "\\'")}'`);
+  if (type)   clauses.push(`case_type~'${type.replace(/'/g, "\\'")}'`);
+  if (model)  clauses.push(`llm_model='${model.replace(/'/g, "\\'")}'`);
+  const filter = clauses.length ? clauses.join(' && ') : '';
+
+  try {
+    const token = await _l1AdminToken(env);
+    const q = new URLSearchParams({ sort: '-created', page: String(page), perPage: String(limit) });
+    if (filter) q.set('filter', filter);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_CASES_COLLECTION}/records?${q}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_CASE_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawCaseCount(request, url, env, corsHeaders) {
+  const status = (url.searchParams.get('status') || '').trim();
+  try {
+    const token = await _l1AdminToken(env);
+    const q = new URLSearchParams({ perPage: '1' });
+    if (status) q.set('filter', `status='${status.replace(/'/g, "\\'")}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_CASES_COLLECTION}/records?${q}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ totalItems: 0 }));
+    return new Response(JSON.stringify({ ok: true, count: data.totalItems || 0 }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_CASE_COUNT_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawCaseRecentForAvg(request, url, env, corsHeaders) {
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '500', 10) || 500, 1), 500);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`status='completed'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_CASES_COLLECTION}/records?filter=${filter}&sort=-created&perPage=${limit}&fields=match_rate,created`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_CASE_RECENT_AVG_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── klaw_benchmark ────────────────────────────────────────
+
+async function handleKlawBenchmarkSave(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const caseNo = (body.case_no || '').trim();
+  const klawVersion = (body.klaw_version || '').trim();
+  if (!caseNo) return _err(400, 'MISSING_CASE_NO', 'case_no 필수', corsHeaders);
+  if (!klawVersion) return _err(400, 'MISSING_KLAW_VERSION', 'klaw_version 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      case_no:          caseNo,
+      case_type:        body.case_type || '',
+      case_input:       (body.case_input || '').slice(0, 2000),
+      virtual_verdict:  (body.virtual_verdict || '').slice(0, 8000),
+      summary:          body.summary || '',
+      real_verdict:     (body.real_verdict || '').slice(0, 8000),
+      score_conclusion: body.score_conclusion ?? null,
+      score_law_logic:  body.score_law_logic ?? null,
+      score_detail:     body.score_detail ?? null,
+      score_total:      body.score_total ?? null,
+      grade:            body.grade || '',
+      eval_raw:         (body.eval_raw || '').slice(0, 4000),
+      klaw_version:     klawVersion,
+      llm_model:        body.llm_model || 'deepseek-v4-pro',
+      reporter:         body.reporter || '',
+    };
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_BENCHMARK_COLLECTION}/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_BENCHMARK_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// clearBenchHistory() 대응 — 본인(reporter) 기록 전체 삭제. PocketBase엔
+// 일괄삭제 API가 없어 먼저 id만 조회한 뒤 하나씩 삭제한다(최대 500건).
+async function handleKlawBenchmarkDeleteMine(request, url, env, corsHeaders) {
+  const reporter = (url.searchParams.get('reporter') || '').trim();
+  if (!reporter) return _err(400, 'MISSING_REPORTER', 'reporter 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`reporter='${reporter}'`);
+    const listRes = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_BENCHMARK_COLLECTION}/records?filter=${filter}&perPage=500&fields=id`,
+      { headers }
+    );
+    if (!listRes.ok) throw new Error(`HTTP ${listRes.status}`);
+    const data = await listRes.json().catch(() => ({ items: [] }));
+    const ids = (data.items || []).map(r => r.id);
+    let deleted = 0;
+    for (const id of ids) {
+      const delRes = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_BENCHMARK_COLLECTION}/records/${id}`, {
+        method: 'DELETE', headers,
+      });
+      if (delRes.ok) deleted++;
+    }
+    return new Response(JSON.stringify({ ok: true, deleted }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_BENCHMARK_DELETE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// _loadBenchHistoryFromSupabase() 대응 — 원 코드도 reporter 필터 없이
+// 전역 최신 200건을 가져왔다(x-gopang-ipv6 헤더는 실제 필터에 안 쓰이던
+// 기존 버그) — 동일 동작 유지.
+async function handleKlawBenchmarkList(request, url, env, corsHeaders) {
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '200', 10) || 200, 1), 200);
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_BENCHMARK_COLLECTION}/records?sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_BENCHMARK_LIST_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawBenchmarkDetail(request, url, env, corsHeaders) {
+  const id = (url.searchParams.get('id') || '').trim();
+  if (!id) return _err(400, 'MISSING_ID', 'id 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_BENCHMARK_COLLECTION}/records/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (res.status === 404) return _err(404, 'NOT_FOUND', '기록을 찾을 수 없습니다', corsHeaders);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rec = await res.json();
+    return new Response(JSON.stringify({ ok: true, item: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_BENCHMARK_DETAIL_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ── klaw_sessions ─────────────────────────────────────────
+
+// used_at 필드는 klaw_sessions 컬렉션에 없음(동시 브랜치 마이그레이션에
+// 미포함) — PocketBase 기본 created 시스템 필드로 대체. 클라이언트도
+// r.used_at 대신 r.created를 참조하도록 별도 패치.
+async function handleKlawSessionsHistory(request, url, env, corsHeaders) {
+  const userId = (url.searchParams.get('user_id') || '').trim();
+  if (!userId) return _err(400, 'MISSING_USER_ID', 'user_id 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`user_id='${userId}'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/${KLAW_SESSIONS_COLLECTION}/records?filter=${filter}&sort=-created&perPage=50&fields=klaw_version,llm_model,created`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_SESSIONS_HISTORY_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleKlawSessionsSave(request, env, corsHeaders) {
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
+  const userId = (body.user_id || '').trim();
+  const klawVersion = (body.klaw_version || '').trim();
+  if (!userId) return _err(400, 'MISSING_USER_ID', 'user_id 필수', corsHeaders);
+  if (!klawVersion) return _err(400, 'MISSING_KLAW_VERSION', 'klaw_version 필수', corsHeaders);
+  try {
+    const token = await _l1AdminToken(env);
+    const payload = {
+      user_id:      userId,
+      klaw_version: klawVersion,
+      llm_model:    body.llm_model || '',
+      case_type:    body.case_type || '',
+      case_level:   body.case_level || '',
+      case_summary: (body.case_summary || '').slice(0, 500),
+      verdict:      (body.verdict || '').slice(0, 80),
+      confidence:   body.confidence || '',
+      case_input:   (body.case_input || '').slice(0, 2000),
+    };
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${KLAW_SESSIONS_COLLECTION}/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+    return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_SESSIONS_SAVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설)
 // 이전엔 대응 서비스가 전혀 없던 완전 신규 영역. seller_reviews와 동일
 // MVP 컨벤션(guid 소유, 엄격한 인증 없음).
@@ -10437,6 +10789,24 @@ export default {
     // ── 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/insurance/calc-results' && request.method === 'GET') return handleInsuranceCalcLatest(request, url, env, corsHeaders);
     if (pathname === '/insurance/calc-results' && request.method === 'POST') return handleInsuranceCalcSave(request, env, corsHeaders);
+    // ── K-Law(klaw 저장소) Supabase→PocketBase 이관 (2026-08-13) ──
+    // klaw_admin_users
+    if (pathname === '/klaw/admin-users/by-fp' && request.method === 'GET') return handleKlawAdminUserByFp(request, url, env, corsHeaders);
+    if (pathname === '/klaw/admin-users' && request.method === 'POST') return handleKlawAdminUserRegister(request, env, corsHeaders);
+    if (pathname === '/klaw/admin-users/is-admin' && request.method === 'GET') return handleKlawAdminUserIsAdmin(request, url, env, corsHeaders);
+    // klaw_cases
+    if (pathname === '/klaw/cases' && request.method === 'POST') return handleKlawCaseSave(request, env, corsHeaders);
+    if (pathname === '/klaw/cases/list' && request.method === 'GET') return handleKlawCaseList(request, url, env, corsHeaders);
+    if (pathname === '/klaw/cases/count' && request.method === 'GET') return handleKlawCaseCount(request, url, env, corsHeaders);
+    if (pathname === '/klaw/cases/recent-for-avg' && request.method === 'GET') return handleKlawCaseRecentForAvg(request, url, env, corsHeaders);
+    // klaw_benchmark
+    if (pathname === '/klaw/benchmark' && request.method === 'POST') return handleKlawBenchmarkSave(request, env, corsHeaders);
+    if (pathname === '/klaw/benchmark/mine' && request.method === 'DELETE') return handleKlawBenchmarkDeleteMine(request, url, env, corsHeaders);
+    if (pathname === '/klaw/benchmark/list' && request.method === 'GET') return handleKlawBenchmarkList(request, url, env, corsHeaders);
+    if (pathname === '/klaw/benchmark/detail' && request.method === 'GET') return handleKlawBenchmarkDetail(request, url, env, corsHeaders);
+    // klaw_sessions
+    if (pathname === '/klaw/sessions/history' && request.method === 'GET') return handleKlawSessionsHistory(request, url, env, corsHeaders);
+    if (pathname === '/klaw/sessions' && request.method === 'POST') return handleKlawSessionsSave(request, env, corsHeaders);
     if (pathname === '/schedule/list' && request.method === 'GET') return handleScheduleList(request, url, env, corsHeaders);
     if (pathname === '/schedule/save' && request.method === 'POST') return handleScheduleSave(request, env, corsHeaders);
     if (pathname === '/schedule/delete' && request.method === 'POST') return handleScheduleDelete(request, env, corsHeaders);
