@@ -340,6 +340,13 @@ export async function _submitUserFeedback(feedback) {
  */
 export async function _patchL1LedgerUserHash(blockHash, localHash) {
   if (!blockHash || !localHash) return;
+  // ★ 2026-08-12 — _SUPABASE_URL/_KEY가 시크릿 유출 사고로 값이 비워짐
+  // (state.js 참조). l1_ledger가 L1 PocketBase의 어느 컬렉션에 대응하는지
+  // 확정 전까지는 조용히 실패하는 대신 명확히 실패한다.
+  if (!_SUPABASE_URL || !_SUPABASE_KEY) {
+    console.error('[PDV] _patchL1LedgerUserHash 비활성 — l1_ledger의 PocketBase 목적지 미확정(TODO, state.js 참조)');
+    return;
+  }
   try {
     const res = await fetch(
       _SUPABASE_URL + '/rest/v1/l1_ledger'
@@ -373,6 +380,11 @@ export async function _patchL1LedgerUserHash(blockHash, localHash) {
  */
 export async function _patchPdvChainHeight(sessionId, chainHeight, chainLocalHash, retry = true) {
   if (!sessionId || chainHeight == null) return;
+  // ★ 2026-08-12 — 위 _patchL1LedgerUserHash와 동일 사유(state.js TODO 참조).
+  if (!_SUPABASE_URL || !_SUPABASE_KEY) {
+    console.error('[PDV] _patchPdvChainHeight 비활성 — pdv_log의 PocketBase 목적지 미확정(TODO, state.js 참조)');
+    return;
+  }
   try {
     const res = await fetch(
       _SUPABASE_URL + '/rest/v1/pdv_log'

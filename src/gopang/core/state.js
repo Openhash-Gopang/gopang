@@ -157,8 +157,21 @@ export function setKlawBusy(v)      { _klawBusy      = v; }
 export function setKlawLastCheck(v) { _klawLastCheck = v; }
 
 // ── Supabase ─────────────────────────────────────────────
-export const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
-export const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+// ★ 2026-08-12 — 45개 저장소 시크릿 스캔에서 이 anon key가 openhash-L1-hanlim
+// 포함 최소 12개 저장소 실행 코드에 리터럴로 박혀 공개된 게 발견됨(project
+// ref ebbecjfrwaswbdybbgiu). 값 자체는 즉시 제거한다 — 이미 노출된 키이므로
+// Supabase 대시보드에서 회전도 별도로 필요(코드 수정과 무관하게 필수).
+//
+// 이 상수를 쓰는 4개 파일(_patchL1LedgerUserHash·_patchPdvChainHeight —
+// pdv/record.js, kcleaner.js 리포트 조회, auth.js 옛 폴백 — auth.js는 이미
+// L1 PocketBase 직접 호출로 교체 완료)은 마이그레이션 진행 상태를 아는
+// 사람만 안전하게 PocketBase 목적지를 확정할 수 있어 이번 세션에서 값만
+// 비우고 로직은 그대로 뒀다 — 호출하면 즉시 명확한 에러로 실패한다(예전처럼
+// 조용히 실패하거나, 하물며 노출된 키로 계속 통신하는 것보다 안전).
+// TODO(주피터): l1_ledger/pdv_log/reports 세 테이블이 L1 PocketBase의
+// 어느 컬렉션에 대응하는지 확정 후 pdv/record.js·kcleaner.js 갱신 필요.
+export const _SUPABASE_URL = '';
+export const _SUPABASE_KEY = '';
 
 // ── L1 ───────────────────────────────────────────────────
 export const L1_URL = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
