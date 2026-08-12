@@ -4483,7 +4483,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
 export function resolveGovAgency(trace) {
   return (trace || []).includes('JEJU-NATIONAL-SP') ? 'gov_national' : 'gov_do';
 }
-window.resolveGovAgency = resolveGovAgency;
+if (typeof window !== 'undefined') window.resolveGovAgency = resolveGovAgency;
 
 // ── trace(개발자용 SP 코드 배열) → 사용자용 기관/부서 한글명 (2026-07-23 신설) ──
 // 배경: 상단바 배지가 지금까지 trace.join(' > ')를 그대로 노출해
@@ -4546,7 +4546,7 @@ export function resolveAgencyDisplayName(trace) {
 
   return null; // 특정 안 됨 — 호출부가 "OO도청" 같은 일반 명칭으로 대체
 }
-window.resolveAgencyDisplayName = resolveAgencyDisplayName;
+if (typeof window !== 'undefined') window.resolveAgencyDisplayName = resolveAgencyDisplayName;
 
 // ── 현재 요청의 판별된 도코드 노출 (2026-07-21 신설) ────────────────
 // worker.js가 도별 동적 위임 렌더링(gov_do/gov_national)을 하려면
@@ -4559,7 +4559,7 @@ window.resolveAgencyDisplayName = resolveAgencyDisplayName;
 export function resolveProvinceCode() {
   return _currentResolvedProvinceCode;
 }
-window.resolveProvinceCode = resolveProvinceCode;
+if (typeof window !== 'undefined') window.resolveProvinceCode = resolveProvinceCode;
 
 // ── 경량 도 판별(SP 조립 없이) — 2026-07-21 신설 ────────────────────
 // public/webapp.html처럼 지방행정 SP를 조립할 필요는 없지만(자기
@@ -4576,7 +4576,7 @@ export async function guessProvinceCode(userText, pdvLocationHint = null) {
   return _guessProvinceFromText(userText, sigunguList, emdNameIndex)
     || (pdvLocationHint ? _guessProvinceFromText(pdvLocationHint, sigunguList, emdNameIndex) : null);
 }
-window.guessProvinceCode = guessProvinceCode;
+if (typeof window !== 'undefined') window.guessProvinceCode = guessProvinceCode;
 
 // ── G18(STAFF_REVIEW_GATE) handler_code — LLM 출력이 아니라 trace에서 결정
 // (2026-07-19, 사용자 지적으로 설계 변경) ──────────────────────────────
@@ -4599,7 +4599,7 @@ export function resolveHandlerCodeFromTrace(trace) {
   }
   return null;
 }
-window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
+if (typeof window !== 'undefined') window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
 
 // ★ 2026-08-03 신설 — directCode: K-Search(SP-18)가 profiles 엔티티로
 // 기관을 이미 정확히 특정한 경우(§ENTITY-LAUNCH), 아래 텍스트 추측
@@ -4621,4 +4621,4 @@ export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, 
   };
 }
 
-window.assembleGovSystemPrompt = assembleGovSystemPrompt;
+if (typeof window !== 'undefined') window.assembleGovSystemPrompt = assembleGovSystemPrompt;
