@@ -93,6 +93,14 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
   font-size:13px;line-height:1.7;color:#111}
 .charge-result-box .cr-code{font-size:20px;font-weight:700;letter-spacing:.5px;
   color:#1A73E8;margin:4px 0}
+.cr-code-row{display:flex;align-items:center;gap:10px;margin:4px 0}
+.cr-copy-btn{border:1px solid #1A73E8;color:#1A73E8;background:#fff;border-radius:8px;
+  padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.cr-copy-btn:active{background:#EAF2FE}
+.cr-copy-toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(12px);
+  background:#111;color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:9999}
+.cr-copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .charge-result-box .cr-row{display:flex;justify-content:space-between;gap:10px;
   padding:4px 0;border-bottom:1px dashed #e5e7eb}
 .charge-result-box .cr-row:last-child{border-bottom:none}
@@ -203,8 +211,12 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
       <div class="charge-result-box">
         <div class="cr-row"><span>입금 은행/계좌</span><span id="cr-account"></span></div>
         <div class="cr-row"><span>충전 금액</span><span id="cr-amount"></span></div>
-        <div style="margin-top:10px">보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요</div>
-        <div class="cr-code" id="cr-code"></div>
+        <div style="margin-top:10px">보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요<br>
+          <span style="color:#1A73E8">(신청과 동시에 자동으로 복사해 드렸어요 — 은행 앱에서 붙여넣기만 하면 됩니다)</span></div>
+        <div class="cr-code-row">
+          <div class="cr-code" id="cr-code"></div>
+          <button class="cr-copy-btn" id="cr-copy-btn" onclick="copyMatchCode()">복사</button>
+        </div>
       </div>
       <div class="charge-warn">
         관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통
@@ -403,12 +415,69 @@ async function submitChargeRequest() {
     document.getElementById('cr-code').textContent = data.match_code;
     document.getElementById('charge-step-input').style.display = 'none';
     document.getElementById('charge-step-result').style.display = 'block';
+    // 2026-08-12 신설 — 사용자가 매칭코드를 직접 타이핑하다 오타를 내는
+    // 것을 막기 위해, 코드가 화면에 뜨는 즉시 클립보드에 자동 복사한다.
+    // "충전 신청하기" 버튼 클릭이라는 사용자 제스처 직후(비동기 완료
+    // 시점)라 대부분의 브라우저에서 Clipboard API 권한 문제 없이
+    // 통과하지만, 일부 웹뷰·HTTP(비HTTPS) 환경에서는 실패할 수 있어
+    // try/catch로 감싸고 실패해도 조용히 넘어간다 — 그 경우 화면의
+    // "복사" 버튼(copyMatchCode)이 수동 폴백이 된다.
+    _autoCopyMatchCode(data.match_code);
   } catch (e) {
     alert('충전 신청 중 오류가 발생했습니다: ' + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = '충전 신청하기';
   }
+}
+
+// 2026-08-12 신설 — 매칭코드 자동/수동 복사 헬퍼.
+// _autoCopyMatchCode: submitChargeRequest 성공 직후 자동 호출(사용자
+//   제스처 체인 안에서 실행되므로 대부분 환경에서 권한 프롬프트 없이
+//   통과). 실패해도 화면 문구를 되돌리지 않는다 — 실패 시엔 그냥
+//   "복사" 버튼으로 수동 복사하면 되므로 사용자에게 에러를 보여줄
+//   필요가 없다(자동복사는 편의 기능이지 필수 기능이 아님).
+async function _autoCopyMatchCode(code) {
+  try {
+    await navigator.clipboard.writeText(code);
+    _showCopyToast('코드가 복사됐어요 — 은행 앱에 붙여넣기만 하면 돼요');
+  } catch (e) {
+    console.warn('[charge] 자동 복사 실패(무시 — 수동 복사 버튼으로 대체):', e.message);
+  }
+}
+
+// "복사" 버튼(수동) — 자동복사가 실패했거나, 모달을 닫았다 다시 열어서
+// 코드를 다시 복사하고 싶을 때 쓴다.
+async function copyMatchCode() {
+  const code = document.getElementById('cr-code').textContent;
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    _showCopyToast('코드가 복사됐어요');
+  } catch (e) {
+    // Clipboard API 자체가 막힌 환경(권한 거부, 비HTTPS 등) — 최후
+    // 수단으로 코드를 직접 보여주고 길게 눌러 선택하도록 안내.
+    alert('자동 복사에 실패했어요. 아래 코드를 길게 눌러 직접 복사해 주세요:\n\n' + code);
+  }
+}
+
+let _crToastTimer = null;
+function _showCopyToast(message) {
+  let el = document.getElementById('cr-copy-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cr-copy-toast';
+    el.className = 'cr-copy-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  // 리플로우를 강제해 매번 트랜지션이 다시 재생되도록(연속 복사 시에도
+  // 토스트가 깜빡이며 다시 나타나야 함)
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  clearTimeout(_crToastTimer);
+  _crToastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 async function loadChargeHistory() {
