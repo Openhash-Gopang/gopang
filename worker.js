@@ -15719,7 +15719,7 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
   }
 }
 
-
+async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
@@ -15822,34 +15822,54 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
 
   const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
   const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
-  // 2026-08-11 신설 — 이번 호출이 "정액 판결 생성"에 해당하는지 미리 판정.
-  // step_cycle(=STEP0, 판결 생성의 첫 호출)이면서 claim_amount_krw가 유효한
-  // 숫자로 왔을 때만 정액 과금 대상 — 그 외(일반 상담, 구버전 클라이언트)는
-  // 기존 토큰 과금 그대로.
+  // 2026-08-11 신설, 2026-08-12 수정(사고실험으로 발견 — 아래 settleKlaw
+  // 주석 참고) — 이번 호출이 "정액 판결 생성 사건 흐름"에 속하는지 판정.
+  // case_id 유무로 판정한다(예전엔 step_cycle 하나로만 판정해서 STEP
+  // A/B/C가 여전히 토큰 과금되는 버그가 있었다 — 아래 참고).
   const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
   // (2026-07-28 신설 — GDC 연동) recordStep(판결 시뮬레이션 횟수 카운트)에
   // 더해, 실사용량만큼 GDC 잔액에서도 차감한다. 두 부수효과를 하나의
   // onAfterRecord 콜백에 묶는다 — _recordAiUsage는 콜백 하나만 받는다.
   //
-  // 2026-08-11 수정 — 과금 갈래 3방향:
-  //   ① 전문직 티어(all_services_free) → GDC 차감 자체를 건너뛴다(무료).
-  //   ② 정액 판결 생성(_klawFlatFee 판정됨) → bill(토큰 기반 견적)을 쓰지
-  //      않고 소송가액 구간 정액을 그대로 청구한다. bill은 내부 원가 로그
-  //      용도로만 _recordAiUsage가 그대로 계산·기록한다(과금엔 미사용).
-  //   ③ 그 외(일반 상담 등) → 기존과 동일하게 토큰 기반 종량 과금.
+  // 2026-08-12 재설계(사고실험 docs/klaw_case_billing_thought_experiment_
+  // 2026-08-12.md 발견1로 발견) — 이전 버전(2026-08-11)은 "정액 대상
+  // 판정"을 step_cycle(=STEP0 여부) 하나로만 했다. 그런데 판결 시뮬레이션은
+  // STEP 0~C 총 4번의 /klaw/relay 호출로 이루어지고, stepCycle:true는
+  // STEP0 하나뿐이다(klaw 저장소 runJudgementSim() 참고) — 즉 STEP A/B/C는
+  // 매번 `_klawFlatFee=null`이 되어 ③ 토큰 종량제로 "추가" 과금되고
+  // 있었다. "동일 사건 재생성은 1만T로 해결"이라는 요구사항은 "판결문
+  // 한 편(STEP0~C 전체)"이 정액 대상이라는 뜻이므로, 판정 기준을
+  // case_id 존재 여부로 바꾼다:
+  //   ① 전문직 티어(all_services_free) → 무조건 무료(기존과 동일).
+  //   ② case_id가 있음(신버전 클라이언트, 사건단위 흐름) → STEP 0~C
+  //      어느 단계든 토큰 과금 대상에서 완전히 제외한다. 그중 STEP0
+  //      (step_cycle===true)만 "지금 이 호출에서 결제를 시도할 시점"이며,
+  //      나머지(STEP A/B/C, 또는 이미 결제된 사건의 재생성 STEP0)는
+  //      과금 없이 통과한다(사건기록 조회만 하고 카운트는 STEP0에서만
+  //      올린다 — 시나리오 5~8, 12~13 참고).
+  //   ③ case_id가 없음(구버전 클라이언트) → 기존과 동일하게 STEP0만
+  //      매번 정액 과금 시도, STEP A/B/C는 토큰 종량제(하위호환 — 신버전
+  //      전환 전까지는 이 혼재 상태가 그대로 유지된다는 뜻이기도 하다).
+  //   ④ 그 외(일반 상담 등, case_id도 claim_amount_krw도 없음) → 기존과
+  //      동일하게 토큰 기반 종량 과금.
+  const _klawIsCaseFlow = !!case_id;
   const settleKlaw = (usage) => async (bill) => {
     await recordStep();
     if (_klawFreeTier) {
       _dlog(env, JSON.stringify({ tag: 'KLAW_CHARGE_SKIPPED_FREE_TIER', guid, ts: new Date().toISOString() }));
       return;
     }
-    if (_klawFlatFee) {
-      // 2026-08-12 신설 — 사건단위 중복방지. case_id가 있으면 먼저 이 사건이
-      // 이미 결제됐는지 확인한다: 있으면 재생성으로 간주해 GDC 차감을
-      // 건너뛰고 카운트만 올린다. case_id가 없으면(구버전 klaw 클라이언트)
-      // 판정 자체를 생략하고 기존처럼 매번 과금한다(하위호환).
-      const existingCase = case_id ? await _klawFindCaseCharge(env, guid, case_id) : null;
 
+    if (_klawIsCaseFlow) {
+      // STEP A/B/C(step_cycle=false) — 이 사건의 결제는 STEP0에서만
+      // 처리한다. 여기서는 아무 과금도 하지 않고 그대로 통과한다.
+      if (!step_cycle) {
+        _dlog(env, JSON.stringify({ tag: 'KLAW_CASE_FLOW_STEP_SKIP_BILLING', guid, caseId: case_id, ts: new Date().toISOString() }));
+        return;
+      }
+
+      // 여기부터는 STEP0 + case_id 있음 — 사건단위 중복방지 판정.
+      const existingCase = await _klawFindCaseCharge(env, guid, case_id);
       if (existingCase) {
         await _klawBumpCaseRegen(env, existingCase.id, existingCase.verdict_count);
         _dlog(env, JSON.stringify({
@@ -15860,6 +15880,18 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
         return;
       }
 
+      if (!_klawFlatFee) {
+        // claim_amount_krw가 없거나 무효인데 사건단위 흐름(case_id 있음)인
+        // 이례적 상황 — 사고실험 시나리오 13. 지어낸 금액으로 과금하지
+        // 않고, 그렇다고 예측 불가한 토큰 종량제로 폴백하지도 않는다(사건
+        // 흐름 안에서 갑자기 다른 과금 방식이 섞이면 더 혼란스럽다) —
+        // 과금 자체를 보류하고 로그만 남긴다. 이 로그가 잦으면
+        // claim_amount 추출 실패율이 높다는 뜻이므로 klaw 클라이언트의
+        // 인터뷰 SP나 후속 확인 UX를 점검해야 한다(매출 누락 리스크).
+        console.warn(JSON.stringify({ tag: 'KLAW_CASE_FLOW_NO_VALID_AMOUNT', guid, caseId: case_id, claimAmountKrw: claim_amount_krw, ts: new Date().toISOString() }));
+        return;
+      }
+
       const chargeResult = await _chargeGdcForAiUsage(env, {
         guid, krwAmount: _klawFlatFee.fee, serviceId: 'klaw-verdict',
         memo: `K-Law 가상 판결문 생성(${_klawFlatFee.tier}, 소송가액 ${Number(claim_amount_krw).toLocaleString('ko-KR')}원)`,
@@ -15867,10 +15899,7 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
       if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
         await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
       }
-      if (chargeResult?.ok && case_id) {
-        // 결제 성공 + case_id가 있을 때만 원장에 기록 — 다음 재생성부터
-        // 무료 처리되도록 하는 근거 레코드. case_id 없으면(구버전) 애초에
-        // 재생성 구분이 불가하므로 기록도 하지 않는다(매번 과금이 정상 동작).
+      if (chargeResult?.ok) {
         await _klawCreateCaseCharge(env, {
           guid, caseId: case_id, claimAmountKrw: claim_amount_krw,
           feeKrw: _klawFlatFee.fee, feeTier: _klawFlatFee.tier,
@@ -15878,12 +15907,32 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
         });
       }
       _dlog(env, JSON.stringify({
-        tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw, caseId: case_id || null,
+        tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw, caseId: case_id,
         feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: !!chargeResult?.ok,
         ts: new Date().toISOString(),
       }));
       return;
     }
+
+    // ③ case_id 없는 구버전 클라이언트 — STEP0만 매번 정액 시도(폴백,
+    // 사건단위 중복방지 불가), STEP A/B/C는 ④로 흘러 토큰 종량제.
+    if (_klawFlatFee) {
+      const chargeResult = await _chargeGdcForAiUsage(env, {
+        guid, krwAmount: _klawFlatFee.fee, serviceId: 'klaw-verdict',
+        memo: `K-Law 가상 판결문 생성(${_klawFlatFee.tier}, 소송가액 ${Number(claim_amount_krw).toLocaleString('ko-KR')}원) [구버전 클라이언트 — 사건단위 미지원]`,
+      });
+      if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
+        await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+      }
+      _dlog(env, JSON.stringify({
+        tag: 'KLAW_FLAT_FEE_CHARGED_LEGACY_NO_CASE_ID', guid, claimAmountKrw: claim_amount_krw,
+        feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: !!chargeResult?.ok,
+        ts: new Date().toISOString(),
+      }));
+      return;
+    }
+
+    // ④ 그 외 — 기존과 동일한 토큰 기반 종량 과금.
     await _settleAiUsage(env, guid, bill, {
       serviceId: 'klaw', model: backendModel,
       hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
