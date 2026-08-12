@@ -10749,6 +10749,7 @@ export default {
     if (pathname === '/biz/claims/ack' && request.method === 'POST') return handleClaimsAck(request, env, corsHeaders);
     if (pathname === '/biz/settle-ledger' && request.method === 'POST') return handleSettleLedger(request, env, corsHeaders);
     if (pathname === '/biz/financials' && request.method === 'GET') return handleFinancialsGet(request, env, corsHeaders);
+    if (pathname === '/pdv/my-records' && request.method === 'GET') return handlePdvMyRecords(request, env, corsHeaders);
     if (pathname === '/biz/tx-history' && request.method === 'GET') return handleTxHistory(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
@@ -21728,6 +21729,60 @@ async function handleFinancialsGet(request, env, corsHeaders) {
 // 있으면(즉 다른 사용자들의 거래가 그 사이에 아주 많았으면) 누락될 수
 // 있다는 걸 명시한다(truncated 플래그로 알림).
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// GET /pdv/my-records — 본인 PDV 기록 조회 (2026-08-12 신설)
+// K-Market webapp.html의 pdv_log 화면(Supabase 직접조회)을 대체.
+// pdv_records는 이미 존재하는 플랫폼 전역 PDV 저장소(/pdv/report가
+// 쓰는 곳) — 여기서는 자기 자신의 guid로만 필터해서 읽기 전용 조회만
+// 제공한다. summary_6w(JSON 문자열)를 서버에서 파싱해 where/how/why를
+// 최상위 필드(location/how/why)로 평탄화 — 클라이언트는 그대로 렌더링만.
+// handleTxHistory와 동일한 서명 인증(guid+pubkey+signature+ts) 원칙.
+// ═══════════════════════════════════════════════════════════
+async function handlePdvMyRecords(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  const limit     = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 50);
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, ts, sigMsg: `pdv-my-records:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/pdv_records/records?filter=${filter}&sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const items = (data.items || []).map(rec => {
+      let sixw = {};
+      try { sixw = JSON.parse(rec.summary_6w || '{}'); } catch { sixw = {}; }
+      return {
+        id:           rec.id,
+        created_at:   rec.created,
+        report_id:    rec.report_id,
+        service_id:   rec.svc || rec.reporter_svc || '',
+        record_type:  rec.type || '',
+        summary:      rec.summary || '',
+        location:     sixw.where || '',
+        how:          sixw.how   || '',
+        why:          sixw.why   || '',
+      };
+    });
+    return new Response(JSON.stringify({ ok: true, guid, items }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'PDV_MY_RECORDS_FAILED', e.message, corsHeaders);
+  }
+}
+
+
 async function handleTxHistory(request, env, corsHeaders) {
   const url = new URL(request.url);
   const guid      = url.searchParams.get('guid');
