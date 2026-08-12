@@ -10648,6 +10648,8 @@ export default {
     if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
     // 2026-08-10 신설 — 방식B(PG 가상계좌) 자동 확정 웹훅.
     if (pathname === '/biz/charge-webhook-pg' && request.method === 'POST') return handleChargeWebhookPG(request, env, corsHeaders);
+    // 2026-08-12 신설 — 방식C(관리자 폰 알림 캡처) 자동 확정.
+    if (pathname === '/biz/charge-confirm-notification' && request.method === 'POST') return handleChargeConfirmNotification(request, env, corsHeaders);
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
@@ -12897,6 +12899,96 @@ function _extractChargeMatchCodeFromText(text) {
   // 입금자명/적요 어디에 있든(예: "홍길동HD482910") HDxxxxxx 6자리 패턴만 뽑는다.
   const m = String(text).match(/HD\d{6}/);
   return m ? m[0] : null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 방식 C — 안드로이드 알림 캡처 자동 확정 (2026-08-12 신설)
+//
+// 오픈뱅킹 계약(방식A)·PG 가맹계약(방식B)이 아직 없는 지금 규모에서,
+// "관리자 폰에 뜨는 은행 앱 푸시·입금 SMS를 그대로 서버로 전달"하는
+// 가장 저비용 자동화 경로. 관리자 폰에 설치하는 안드로이드 알림
+// 리스너 앱(NotificationListenerService + SMS BroadcastReceiver, 별도
+// 저장소 hondi-charge-notifier 참고)이 원문 텍스트를 그대로 이 엔드포인트로
+// 전달하면, 파싱은 여기(서버) 한 곳에서만 한다 — 은행 알림 문구가 바뀌어도
+// 앱을 재배포할 필요 없이 이 정규식만 고치면 되도록 하기 위함.
+//
+// 멱등성: 안드로이드 NotificationListenerService는 같은 알림이 갱신(update)
+// 되면 onNotificationPosted가 다시 불릴 수 있고, SMS도 드물게 중복 브로드
+// 캐스트가 온다 — notification_key(안드로이드 StatusBarNotification.getKey()
+// 또는 SMS는 "sender+body+timestamp" 조합 클라이언트에서 생성)를
+// external_tx_id로 그대로 재사용해 _mintAndRecordCharge의 기존 멱등성
+// 체크(외부 tx id 중복 시 재민팅 안 함)에 편승한다 — 별도 로직 불필요.
+// ═══════════════════════════════════════════════════════════
+
+// 은행 앱 푸시·입금 SMS에서 흔히 쓰이는 금액 표기 패턴을 최대한 넓게 커버.
+// "10,000원 입금", "입금 10,000원", "1만원 입금" 등 — 콤마 유무·앞뒤 순서
+// 둘 다 대응. 매칭코드처럼 정확히 한 가지 포맷만 고집할 수 없는 이유는
+// 은행마다(카카오뱅크/토스/국민은행 등) 알림 문구가 제각각이기 때문.
+function _extractKrwAmountFromText(text) {
+  if (!text) return null;
+  const s = String(text);
+  // "1,234,567원" 형태 — 입금/출금 문맥 단어가 근처에 있는 것 우선.
+  const nearDeposit = s.match(/입금[^0-9]{0,10}([\d,]+)\s*원/) || s.match(/([\d,]+)\s*원[^가-힣]{0,5}입금/);
+  const raw = nearDeposit ? nearDeposit[1] : (s.match(/([\d,]{4,})\s*원/) || [])[1];
+  if (!raw) return null;
+  const n = Number(raw.replace(/,/g, ''));
+  return (n > 0) ? n : null;
+}
+
+// POST /biz/charge-confirm-notification — 관리자 전용(알림 리스너 앱이 호출).
+// body: { secret, raw_text, notification_key, source: 'app_push'|'sms',
+//         app_package, krw_amount(선택 — 없으면 raw_text에서 자동 추출),
+//         depositor_name(선택) }
+async function handleChargeConfirmNotification(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { secret, raw_text, notification_key, source, app_package, krw_amount, depositor_name } = body;
+  if (secret !== _adminActionSecret(env)) return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+  if (!raw_text) return _err(400, 'MISSING_FIELD', 'raw_text 필수', corsHeaders);
+  if (!notification_key) return _err(400, 'MISSING_FIELD', 'notification_key 필수(멱등성 키)', corsHeaders);
+
+  const code = _extractChargeMatchCodeFromText(raw_text);
+  if (!code) {
+    // 매칭코드를 못 찾으면 자동 처리 대상이 아니다 — 관리자 수동 확인(charge-admin.html)로
+    // 폴백. 여기서 오류로 취급하지 않는 이유: 알림 리스너는 은행 앱의 온갖 알림을
+    // (잔액조회·이벤트 알림 등) 무차별로 전달할 수 있고, 그중 실제 입금 알림만
+    // 골라내는 게 이 코드의 역할이다 — 나머지는 조용히 무시하는 게 정상 동작이다.
+    console.info(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_NO_MATCH_CODE', source, app_package, ts: new Date().toISOString() }));
+    return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_MATCH_CODE_FOUND' }), { status: 200, headers: corsHeaders });
+  }
+
+  const amount = (Number(krw_amount) > 0) ? Number(krw_amount) : _extractKrwAmountFromText(raw_text);
+  if (!amount) {
+    console.warn(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_NO_AMOUNT', code, source, ts: new Date().toISOString() }));
+    return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_AMOUNT_FOUND', match_code: code }), { status: 200, headers: corsHeaders });
+  }
+
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`match_code='${code}' && status='pending'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, { headers });
+    const data = await res.json().catch(() => ({ items: [] }));
+    const pendingRec = data.items && data.items[0];
+    if (!pendingRec) {
+      console.warn(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CODE_NO_PENDING', code, ts: new Date().toISOString() }));
+      return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_PENDING_REQUEST', match_code: code }), { status: 200, headers: corsHeaders });
+    }
+
+    const result = await _mintAndRecordCharge(env, {
+      existingRequestId: pendingRec.id, guid: pendingRec.guid,
+      krwAmount: amount, depositorName: depositor_name || '',
+      memo: `알림캡처(${source || 'unknown'}${app_package ? ':' + app_package : ''})`,
+      channel: 'auto_notification_capture', confirmedBy: 'system:notification_capture',
+      externalTxId: notification_key,
+    });
+    if (!result.ok) {
+      console.error(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CONFIRM_FAILED', code, result, ts: new Date().toISOString() }));
+    }
+    return _chargeCoreResultToResponse({ ...result, matched: !!result.ok, match_code: code }, corsHeaders);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
 }
 
 async function _pollOpenBankingAutoConfirm(env) {
