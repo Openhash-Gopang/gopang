@@ -166,6 +166,25 @@ function _chargeBankAccountInfo(env) {
   return env.CHARGE_BANK_ACCOUNT_INFO || '(관리자 설정 필요) 은행명 미설정 / 계좌번호 미설정 / 예금주 미설정';
 }
 
+// 2026-08-12 신설 — 알림 캡처(방식C) 계좌 일치 검증용. CHARGE_BANK_ACCOUNT_INFO는
+// "은행명 / 계좌번호 / 예금주" 형식의 자유 텍스트라 엄격한 파싱은 못 하지만,
+// 그 안에서 가장 길게 이어지는 숫자(하이픈 포함) 토큰을 계좌번호로 간주하고
+// 뒷자리 4자리만 뽑는다. 은행 알림·SMS는 계좌번호 전체가 아니라 뒷자리
+// 일부만(마스킹된 채로) 보여주는 경우가 흔해서, 전체 일치가 아니라
+// "뒷자리 4자리가 알림 텍스트 어딘가에 나타나는가"를 기준으로 삼는다 —
+// 엄격하진 않지만 "완전히 다른 계좌로 온 입금을 걸러내는" 목적엔 충분하다.
+function _chargeBankAccountLastDigits(env) {
+  const info = env.CHARGE_BANK_ACCOUNT_INFO;
+  if (!info) return null; // 관리자가 아직 설정 안 함 — 검증 자체를 건너뛰게(fail-open) 아래에서 처리
+  const numericTokens = info.match(/[\d-]{4,}/g) || [];
+  if (numericTokens.length === 0) return null;
+  // 가장 긴 토큰을 계좌번호로 간주(예금주 전화번호 등 다른 숫자가 섞여
+  // 있어도 보통 계좌번호가 가장 길다).
+  const longest = numericTokens.reduce((a, b) => (b.replace(/-/g, '').length > a.replace(/-/g, '').length ? b : a));
+  const digitsOnly = longest.replace(/-/g, '');
+  return digitsOnly.length >= 4 ? digitsOnly.slice(-4) : null;
+}
+
 // (2026-07-14: 관리자 전용 액션 — /biz/charge-list, /biz/charge-confirm
 //  인증. handlePushBroadcast의 DEPLOY_PUSH_SECRET과 동일 관례.)
 // 2026-07-25: 하드코딩된 폴백 시크릿('hondi-dev-admin-2026') 제거.
@@ -12955,6 +12974,23 @@ async function handleChargeConfirmNotification(request, env, corsHeaders) {
     // 골라내는 게 이 코드의 역할이다 — 나머지는 조용히 무시하는 게 정상 동작이다.
     console.info(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_NO_MATCH_CODE', source, app_package, ts: new Date().toISOString() }));
     return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_MATCH_CODE_FOUND' }), { status: 200, headers: corsHeaders });
+  }
+
+  // 2026-08-12 신설 — 계좌 일치 검증. 관리자 폰의 은행 앱이 혼디 지정
+  // 계좌 하나만 연결돼 있다면 이 검증 없이도 안전하지만, 개인 계좌가
+  // 같이 연결돼 있는 경우 "매칭코드처럼 보이는 문자열이 우연히 개인
+  // 입금 알림에 섞여 들어오는" 극히 낮은 확률의 오매칭까지 막기 위한
+  // 이중 방어선이다. CHARGE_BANK_ACCOUNT_INFO를 아직 설정 안 한
+  // 환경(로컬 개발 등)에서는 검증 자체를 건너뛴다(fail-open) — 이
+  // 채널의 1차 방어선은 어차피 매칭코드이고, 계좌 검증 미설정 때문에
+  // 알림 캡처 전체가 막히는 것이 더 나쁘다.
+  const expectedLastDigits = _chargeBankAccountLastDigits(env);
+  if (expectedLastDigits && !raw_text.includes(expectedLastDigits)) {
+    console.warn(JSON.stringify({
+      tag: 'NOTIFICATION_CAPTURE_ACCOUNT_MISMATCH', code, source, app_package,
+      expectedLastDigits, ts: new Date().toISOString(),
+    }));
+    return new Response(JSON.stringify({ ok: true, matched: false, reason: 'ACCOUNT_MISMATCH', match_code: code }), { status: 200, headers: corsHeaders });
   }
 
   const amount = (Number(krw_amount) > 0) ? Number(krw_amount) : _extractKrwAmountFromText(raw_text);
