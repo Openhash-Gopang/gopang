@@ -17486,7 +17486,6 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
           directive: `시민 제출 서류 접수 완료 — 내부 처리 요망 (접수번호: ${receiptNo})`,
           payload: {
             origin_pdv_report_id: pdvReportId,
-            origin_guid: guid,
             agency, task_key,
             documents_matched: matchedDocs.map(d => d.id),
           },
