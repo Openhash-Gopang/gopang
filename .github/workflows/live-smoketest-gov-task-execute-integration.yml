@@ -1,0 +1,71 @@
+name: Live Smoketest — GOV_TASK_SUBMIT_REQUEST Integration (K-Execute)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_gov_task_execute_integration_20260813.json)"
+        required: false
+        default: ""
+      system_prompt:
+        description: "System prompt file (blank = prompts/SP-22_kexecute_v1.5.txt)"
+        required: false
+        default: ""
+      include_fixtures:
+        description: "true면 픽스처 의존 시나리오(no=1,2,8)도 강제 실행 — atom_rows에 테스트 픽스처가 미리 시드돼 있어야 의미 있음"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+jobs:
+  run-gov-task-execute-integration-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run GOV_TASK_SUBMIT_REQUEST integration live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_gov_task_execute_integration_20260813.json"; fi
+          SP="${{ github.event.inputs.system_prompt }}"
+          if [ -z "$SP" ]; then SP="../../prompts/SP-22_kexecute_v1.5.txt"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "scenarios=$SCEN system_prompt=$SP out=$OUT"
+          ARGS="--scenarios $SCEN --system-prompt $SP --out $OUT --resume"
+          if [ "${{ github.event.inputs.include_fixtures }}" = "true" ]; then
+            ARGS="$ARGS --include-fixtures"
+          fi
+          python3 gov_task_execute_live_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-gov-task-execute-integration
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: GOV_TASK_SUBMIT_REQUEST integration live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-gov-task-execute-integration
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-gov-task-execute-integration-results
+          path: results/

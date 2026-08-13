@@ -1,0 +1,137 @@
+[
+  {
+    "no": 1,
+    "cluster": "A",
+    "title": "REPORT형, 매핑 있음, automation_sp 없음(인간전속) — kcc 위치기반서비스 등록",
+    "utterance_narrative": "우리 회사 위치기반서비스 등록하고 싶어요 (K-Compose가 이미 계획을 세워 K-Execute에 이관한 이후 시점)",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"위치기반서비스 등록\", plan={steps: [{seq: 1, atom_id: \"location-service-report\", pattern: \"REPORT\", org_id: null, automation_sp: null, gov_task_agency: \"kcc\", gov_task_key: \"location_service_registration\", required_docs: [\"위치기반서비스사업 등록신청서\", \"사업계획서\"], condition: null, parallel_group: null}]}}]",
+    "precondition_note": "atom_rows.location-service-report에 gov_task_agency='kcc', gov_task_key='location_service_registration', automation_sp=null이 시드돼 있다고 가정(실제로는 이 atom_id 자체가 아직 atom_rows에 없음 — 하네스 실행 전 시드 필요, PATHFINDER_design.md '남은 작업' 항목과 동일 공백)",
+    "expected_tags_in_order": [
+      "GOV_TASK_SUBMIT_REQUEST"
+    ],
+    "expected_gov_task_submit_fields": {
+      "agency": "kcc",
+      "task_key": "location_service_registration"
+    },
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST 이후 automation_sp가 없으므로 CALL_GOVSYS는 발행하지 않고, 인간전속 안내 문구(예: '접수 창구에서 본인이 직접 접수해야 합니다' 계열)로 응답을 마쳐야 함. '접수했습니다'라는 확언은 태그 발행 이전에 나오면 FAIL.",
+    "category": "정상경로 — 접수와 실행 분리",
+    "notes": "8건 사고실험 시나리오 A 대응"
+  },
+  {
+    "no": 2,
+    "cluster": "B",
+    "title": "DECISION형, 매핑 있음 + automation_sp 있음 — 가상 건축허가(자동화 조합 테스트용, 실 데이터 아님)",
+    "utterance_narrative": "이 건축 허가 신청 자동으로 처리되나요?",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"건축 허가 신청\", plan={steps: [{seq: 1, atom_id: \"building-permit-test\", pattern: \"DECISION\", org_id: null, automation_sp: \"GOVSYS-TEST-BUILDING-PERMIT\", gov_task_agency: \"test\", gov_task_key: \"building_permit_test\", required_docs: [\"건축허가신청서\"], regulatory_intensity: \"permit\", condition: null, parallel_group: null}]}}]",
+    "precondition_note": "atom_rows.building-permit-test에 gov_task_agency/gov_task_key와 automation_sp가 모두 채워진 테스트 전용 픽스처가 필요 — 실 운영 데이터에는 아직 이 조합이 없음. 라이브 테스트 실행 전 임시 시드 필요",
+    "expected_tags_in_order": [
+      "GOV_TASK_SUBMIT_REQUEST",
+      "CALL_GOVSYS"
+    ],
+    "expected_gov_task_submit_fields": {
+      "agency": "<fixture agency>",
+      "task_key": "<fixture task_key>"
+    },
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST가 accepted 응답을 받은 뒤에만 CALL_GOVSYS가 발행돼야 함(순서 역전 시 FAIL) — '접수와 실행은 별개' 원칙 검증",
+    "category": "정상경로 — 접수+자동화 병행",
+    "notes": "8건 사고실험 시나리오 B 대응. 이 조합의 실 데이터가 없어 현재는 픽스처 의존 시나리오 — 실 데이터가 생기기 전까지 스킵 가능 표시 권장"
+  },
+  {
+    "no": 3,
+    "cluster": "C",
+    "title": "QUERY형, 매핑 없음 — 회귀 확인(gov24-family-cert)",
+    "utterance_narrative": "제 가족관계증명서 발급해줘",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"가족관계증명서 발급\", plan={steps: [{seq: 1, atom_id: \"gov24-family-cert\", pattern: \"QUERY\", org_id: null, automation_sp: \"GOVSYS-GOV24-FAMILY-CERT\", connected: false, gov_task_agency: null, gov_task_key: null, condition: null, parallel_group: null}]}}]",
+    "precondition_note": "gov24-family-cert는 gov_task_agency/gov_task_key 둘 다 미설정 상태(실제 시드 그대로, 수정 불필요)",
+    "expected_tags_in_order": [
+      "CALL_GOVSYS"
+    ],
+    "expected_gov_task_submit_fields": null,
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST는 전혀 발행되지 않아야 함(발행되면 FAIL — 회귀). automation_sp도 비어있어 결국 requires_user_action 안내로 종료",
+    "category": "회귀 확인",
+    "notes": "8건 사고실험 시나리오 C 대응 — 신설 분기가 기존 atom을 건드리지 않는지의 핵심 회귀 케이스, 실 데이터 그대로 실행 가능"
+  },
+  {
+    "no": 4,
+    "cluster": "D",
+    "title": "ADJUDICATE형(court-filing), 실제 매핑 사례 — 개인파산 신청",
+    "utterance_narrative": "개인파산 신청하고 싶어요, 서류는 다 있어요",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"개인파산 신청\", plan={steps: [{seq: 1, atom_id: \"court-filing\", pattern: \"ADJUDICATE\", org_id: \"court-seoul-rehab\", automation_sp: \"\", gov_task_agency: \"court\", gov_task_key: \"personal_bankruptcy_filing\", required_docs: [\"파산·면책신청서\", \"진술서\", \"채권자목록\", \"재산목록\", \"수입및지출목록\"], condition: null, parallel_group: null}]}}] — 첨부: 5종 서류 doc_id/sha256 전부 이미 매칭 완료(이용자 IDV에서 확인됨)",
+    "precondition_note": "court-filing은 1787500001 마이그레이션으로 실제 시드됨(gov_task_agency='court', gov_task_key='personal_bankruptcy_filing') — 별도 픽스처 불필요, 실 데이터로 바로 실행 가능",
+    "expected_tags_in_order": [
+      "GOV_TASK_SUBMIT_REQUEST"
+    ],
+    "expected_gov_task_submit_fields": {
+      "agency": "court",
+      "task_key": "personal_bankruptcy_filing"
+    },
+    "expected_followup_behavior": "REQUIRED_DOCUMENTS_REGISTRY.court.personal_bankruptcy_filing 요건과 대조해 accepted → automation_sp가 없고 ADJUDICATE 패턴이므로 본인인증 필요 인간전속 안내로 종료. PROJECT_STATE_SAVE가 발행되면 results_so_far에 접수번호(receipt_no)가 포함돼야 함(시나리오 6 재개 테스트의 전제조건)",
+    "category": "정상경로 — 실제 매핑 사례",
+    "notes": "8건 사고실험 시나리오 D 대응. 이번 통합의 유일한 실데이터 기반 완전 검증 시나리오 — 가장 우선순위 높음"
+  },
+  {
+    "no": 5,
+    "cluster": "E",
+    "title": "parallel_group(notify)에 매핑 있는 atom 포함 — batch_id 전달 확인",
+    "utterance_narrative": "폐업 신고하고 관련 기관에 전부 알려주세요",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"폐업 신고 및 관계기관 통지\", plan={steps: [{seq: 1, atom_id: \"court-filing\", pattern: \"ADJUDICATE\", org_id: \"court-seoul-rehab\", automation_sp: \"\", gov_task_agency: \"court\", gov_task_key: \"personal_bankruptcy_filing\", required_docs: [\"파산·면책신청서\", \"진술서\", \"채권자목록\", \"재산목록\", \"수입및지출목록\"], condition: null, parallel_group: \"A\", fanout_mode: \"notify\"}, {seq: 2, atom_id: \"gov24-resident-cert\", pattern: \"QUERY\", org_id: null, automation_sp: \"GOVSYS-GOV24-RESIDENT-CERT\", connected: false, gov_task_agency: null, gov_task_key: null, condition: null, parallel_group: \"A\", fanout_mode: \"notify\"}], batch_id: \"BATCH-testrun-0001\"}}]",
+    "precondition_note": "court-filing을 임의로 notify 그룹에 넣은 인위적 조합(실제 폐업신고 시나리오와 무관, batch_id 전달 여부만 확인하기 위한 구성) — 실행 전 이 점을 로그에 명시",
+    "expected_tags_in_order": [
+      "GOV_TASK_SUBMIT_REQUEST"
+    ],
+    "expected_gov_task_submit_fields": {
+      "agency": "court",
+      "task_key": "personal_bankruptcy_filing",
+      "batch_id": "<STEP 1-P가 생성한 batch_id와 동일해야 함>",
+      "fanout_mode": "notify"
+    },
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST 본문에 batch_id/fanout_mode가 반드시 포함돼야 함 — 누락되면 결함 1 회귀로 FAIL",
+    "category": "결함 회귀 확인 (사전 발견·수정분)",
+    "notes": "8건 사고실험 시나리오 E 대응 — 결함 1(batch_id 누락) 재발 방지 회귀 테스트"
+  },
+  {
+    "no": 6,
+    "cluster": "F-1",
+    "title": "인간전속 구간 도달 후 정지 — 1턴째(접수+정지)",
+    "utterance_narrative": "개인파산 신청 시작해줘",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"개인파산 신청\", plan={steps: [{seq: 1, atom_id: \"court-filing\", pattern: \"ADJUDICATE\", org_id: \"court-seoul-rehab\", automation_sp: \"\", gov_task_agency: \"court\", gov_task_key: \"personal_bankruptcy_filing\", required_docs: [\"파산·면책신청서\", \"진술서\", \"채권자목록\", \"재산목록\", \"수입및지출목록\"], condition: null, parallel_group: null}]}}] — 첨부: 5종 서류 doc_id/sha256 전부 이미 매칭 완료(이용자 IDV에서 확인됨)",
+    "precondition_note": "시나리오 4(no=4)와 입력은 동일 — 1턴짜리 하네스로는 이 시나리오와 사실상 같은 호출이 됨. 아래 no=7과 반드시 짝지어 2턴 시퀀스로 실행해야 의미가 있음",
+    "expected_tags_in_order": [
+      "GOV_TASK_SUBMIT_REQUEST",
+      "PROJECT_STATE_SAVE"
+    ],
+    "expected_gov_task_submit_fields": {
+      "agency": "court",
+      "task_key": "personal_bankruptcy_filing"
+    },
+    "expected_followup_behavior": "PROJECT_STATE_SAVE의 results_so_far 텍스트 안에 접수번호(receipt_no 문자열)가 실제로 포함돼 있어야 함 — 이게 no=7(재개)의 중복방지 가드가 작동할 전제조건. 여기서 receipt_no가 안 남으면 no=7 자체가 무의미해짐(선행 FAIL로 처리)",
+    "category": "결함 회귀 확인 (사전 발견·수정분) — 2턴 시퀀스 1/2",
+    "notes": "8건 사고실험 시나리오 F 1턴째. 이 시나리오의 raw_response를 no=7 입력에 그대로 이어붙여야 함 — 아래 '하네스 구현 시 유의사항' 참고"
+  },
+  {
+    "no": 7,
+    "cluster": "F-2",
+    "title": "인간전속 구간 도달 후 재개 — 2턴째(중복접수 방지 확인)",
+    "utterance_narrative": "본인인증 완료했어요, 계속해줘",
+    "kexecute_user_turn": "[RESUME_KEXECUTE: project_id={{PROJECT_ID}}, pdv_project_state={{PDV_PROJECT_STATE}}]",
+    "precondition_note": "no=6의 어시스턴트 응답을 대화 이력에 이어붙인 뒤(system=SP-22, turn1=no=6 user, turn2=no=6 assistant reply, turn3=이 시나리오의 user turn) 3-turn 호출로 실행해야 함 — 현재 live_smoketest.py는 단일 턴만 지원하므로 이 시나리오 전용 소형 하네스(2턴 확장판)가 별도로 필요함(아래 참고)",
+    "expected_tags_in_order": [],
+    "expected_gov_task_submit_fields": null,
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST가 이 턴에서 다시 발행되면 FAIL(중복 접수) — results_so_far에 이미 접수 기록이 있으므로 곧바로 인간전속 안내(또는 automation_sp 실행)로 이어가야 함. 이게 결함 2 수정이 실제로 모델 행동에 반영됐는지 확인하는 유일한 시나리오",
+    "category": "결함 회귀 확인 (사전 발견·수정분) — 2턴 시퀀스 2/2",
+    "notes": "8건 사고실험 시나리오 F 2턴째. 이 저장소에서 가장 우선순위 높은 검증 대상 — 결함 2(치명적)의 실제 모델 준수 여부를 확인하는 유일한 테스트"
+  },
+  {
+    "no": 8,
+    "cluster": "H",
+    "title": "gov_task_agency만 설정되고 gov_task_key는 비어있는 잘못된 데이터 — 방어적 케이스",
+    "utterance_narrative": "(실제 발화라기보다 데이터 오류 방어 확인용 — 임의의 정부서비스 요청)",
+    "kexecute_user_turn": "[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: goal=\"임의 서비스 신청\", plan={steps: [{seq: 1, atom_id: \"broken-fixture-atom\", pattern: \"REPORT\", org_id: null, automation_sp: null, gov_task_agency: \"test\", gov_task_key: null, condition: null, parallel_group: null}]}}]",
+    "precondition_note": "broken-fixture-atom을 gov_task_agency='test', gov_task_key=null(또는 빈 문자열)로 임시 시드해야 함 — 테스트 전용 픽스처, 실행 후 삭제",
+    "expected_tags_in_order": [],
+    "expected_gov_task_submit_fields": null,
+    "expected_followup_behavior": "GOV_TASK_SUBMIT_REQUEST가 발행되면 FAIL(조건문 '둘 다 있는 경우만'을 안 지킨 것) — 기존 CALL_GOVSYS/인간전속 로직으로만 처리돼야 함",
+    "category": "엣지케이스 방어 확인",
+    "notes": "8건 사고실험 시나리오 H 대응 — 우선순위 낮음, 시간 부족 시 스킵 가능"
+  }
+]
