@@ -17521,7 +17521,8 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     task_name:   '위치기반서비스사업 등록(신고)',
     legal_basis: '위치정보의 보호 및 이용 등에 관한 법률 제9조',
     documents: [
-      { id: 'biz_reg',         name: '사업자등록증 사본',                 required: true,  acquisition: 'gov24' },
+      { id: 'biz_reg',         name: '사업자등록증 사본',                 required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.business_registration', max_age_days: null }, // ★ 2026-08-13: kcc 안내(정부24/전자민원센터)에 "최근 N개월 이내 발급분" 명시 규정 미확인 — null은 발급일만 확인, 재확인되면 수치로 교체
       { id: 'biz_plan',        name: '위치기반서비스사업 사업계획서',       required: true,  acquisition: 'user_authored' },
       { id: 'privacy_policy',  name: '개인위치정보 처리방침',              required: true,  acquisition: 'user_authored' },
       { id: 'protection_plan', name: '개인위치정보 보호조치 이행계획서',    required: true,  acquisition: 'user_authored' },
@@ -17559,9 +17560,12 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'statement',         name: '진술서',                           required: true,  acquisition: 'user_authored' },
       { id: 'creditor_list',     name: '채권자목록',                        required: true,  acquisition: 'user_authored' },
       { id: 'asset_list',        name: '재산목록',                          required: true,  acquisition: 'user_authored' },
-      { id: 'resident_cert',     name: '주민등록초본(주소변동내역 포함)',    required: true,  acquisition: 'gov24' },
-      { id: 'family_cert',       name: '가족관계증명서',                    required: true,  acquisition: 'gov24' },
-      { id: 'tax_cert',          name: '지방세 세목별 과세증명서(5년)',     required: true,  acquisition: 'gov24' },
+      { id: 'resident_cert',     name: '주민등록초본(주소변동내역 포함)',    required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.resident_registration_transcript', max_age_days: 90 }, // ★ 2026-08-13: 법정 유효기간 규정은 없으나(개인파산 실무 관행), 법원 제출서류 일반원칙상 "제출일 기준 1~3개월 이내 발급분" 요구가 통상적 — 3개월(90일)로 보수적 설정, 관할 법원별 상이할 수 있어 §REQUIRED-DOCUMENTS 3단계와 동일하게 재확인 시 정정 필요
+      { id: 'family_cert',       name: '가족관계증명서',                    required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.family_relation', max_age_days: 90 }, // ★ 2026-08-13: resident_cert와 동일 근거(법원 제출서류 일반 관행)
+      { id: 'tax_cert',          name: '지방세 세목별 과세증명서(5년)',     required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.local_tax_payment', max_age_days: 90 }, // ★ 2026-08-13: resident_cert와 동일 근거. 증명 대상 기간(과거 5년)과 발급 신선도(90일)는 별개 개념 — 혼동 주의
       { id: 'income_proof',      name: '소득 관련 소명자료(급여명세서 등)', required: true,  acquisition: 'user_authored' },
     ],
     note: '법원이 사건별로 추가 소명자료를 요구할 수 있음(개인파산 및 면책신청사건의 처리에 관한 예규 §1의2③) — 접수 후에도 보완 요청 가능성을 반드시 안내할 것.',
@@ -17612,6 +17616,22 @@ const AGENCY_TO_DEPT_TARGET = {
 //                        "발급받아 오세요"로 안내하면 틀린 안내가 된다.
 //   'external_insurer'— 정부기관도 정부24도 아닌 제3자(보험사)에게서 받는
 //                        서류.
+//
+// idv_type / max_age_days (2026-08-13 신설 — 혼디 패스포트 원리 적용):
+//   acquisition:'gov24' 문서에만 붙인다. §REQUIRED-DOCUMENTS 2단계가 정부24
+//   안내로 넘어가기 전에 사용자 로컬 IDV(gopang_idv_vault, Openhash-Gopang/
+//   passport 저장소)를 먼저 조회해 이미 보관된 credential이 있으면 재발급
+//   요구 없이 즉시 사용한다 — "정부가 서명 발급 → 혼디는 원본 그대로 보관·
+//   재제출"이라는 passport 핵심 모델을 여기 연결하는 지점.
+//   - idv_type: IDV credential의 `type` 배열 값(credential-schema.json).
+//     새 문서 추가 시 새 타입을 또 만들지 말고 우선 기존 idv.identity.*/
+//     idv.cert.* 목록에서 재사용 가능한지 확인할 것(같은 개념 별도
+//     레지스트리 중복 생성 패턴 반복 금지 — §RESOLUTION-TIER 폐기 전례 참고).
+//   - max_age_days: 발급기관이 아니라 **이 agency:task_key(제출받는 기관)**가
+//     요구하는 신선도 기준. 통일된 법정 기준이 없는 경우가 많아(예:
+//     주민등록초본은 법령상 유효기간 없음) 레지스트리에 없으면 §REQUIRED-
+//     DOCUMENTS 3단계와 동일하게 임의 추측 없이 웹검색으로 확인할 것.
+//     미확인 상태는 null(발급일만 확인, 신선도 미검사)로 둔다.
 
 // RESOLUTION_TIER_REGISTRY — 폐기됨 (2026-07-16 당일 신설 → 당일 폐기)
 // 신설 당시 org_profiles/atom_rows(이미 라이브, K-Compose SP-20이 소비)와
