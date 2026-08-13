@@ -940,6 +940,24 @@ section.section[data-tab].tab-active { display: block; }
       </svg>
     </button>
     <div class="sb-submenu" id="submenu-dev-docs">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_SUMMARY_PATHFINDER_GOVTASK_LIVE_VERIFY_20260813_v1_0.html" target="_blank">
+      <!-- 2026-08-13 신설 — 인수인계 검증(origin_guid 잔존·가명화 검증
+           섹션 유실 2건 발견·수정) → PDV 기록 범위 확장(기관/부서/직원
+           측) → 시민 요청 시나리오 4건 → Pathfinder와 기존 K-Intent~
+           K-Report 오케스트레이션이 실은 분리된 두 실행 트랙(procedure_
+           maps/atom_rows/CALL_GOVSYS vs REQUIRED_DOCUMENTS_REGISTRY/
+           GOV_TASK_SUBMIT_REQUEST)이었다는 발견 → atom_rows.gov_task_
+           agency/gov_task_key 신설 + SP-22 통합 구현 → 8건 텍스트
+           사고실험(결함 2건) → main 반영 + 전용 라이브 스모크테스트
+           하네스·워크플로 신설 → 실제 DeepSeek 라이브 실행에서 텍스트
+           추적이 못 잡은 진짜 결함(PROJECT_STATE_SAVE 누락) 발견해
+           call-ai.js까지 수정 → 재실행 전건 PASS 검증까지 완주. 새
+           항목은 이 섹션 맨 위(최신)에 넣을 것. -->
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <span class="sb-item-label">Pathfinder ↔ AI비서 통합 + 라이브 검증(0813, 실결함 3건 발견·수정)</span>
+    </a>
     <a class="sb-item sb-subitem" href="./docs/HONDI_TEST_PLAN_v1_0.html" target="_blank">
       <!-- 2026-08-11 신설 — GWP orphan-tab 사각지대 버그(커밋 e4904ac/
            3dfee94, tool-web-search·ksearch가 구식 [GWP:id] 오출력 시
