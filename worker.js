@@ -16147,55 +16147,186 @@ async function _klawSpendAdd(env, key, amount) {
 // klaw_case_charges에 (guid, case_id) 조합을 유일키로 기록해 "이 사건은
 // 이미 결제됐는지"를 판정한다. case_id가 없으면(구버전 클라이언트) 이
 // 판정 자체를 건너뛰고 기존처럼 매 호출 과금한다 — 하위호환.
-async function _klawFindCaseCharge(env, guid, caseId) {
-  if (!caseId) return null;
+// ═══════════════════════════════════════════════════════════
+// K-서비스 공용 "건당 정액과금" 모듈 (2026-08-13 신설)
+// ═══════════════════════════════════════════════════════════
+// K-Law에서 검증된 패턴(선점 후 처리, guid 락, 완료/이탈/환불)을 16개
+// K-서비스가 공통으로 쓸 수 있게 일반화한다. 컬렉션 스키마·필드명은
+// 서비스별로 그대로 유지한다(예: klaw_case_charges는 이번에 전혀
+// 안 건드림 — 운영 데이터·필드명 보존이 정책 결정 사항이었음). 아래
+// 레지스트리가 범용 파라미터 이름 ↔ 서비스별 실제 필드명을 매핑한다.
+//
+// 새 서비스 추가 방법: K_SERVICE_BILLING_REGISTRY에 항목 하나 등록
+// (컬렉션명·필드매핑·요금표 함수)하면 끝 — 아래 범용 함수들은 전부
+// 그대로 재사용된다. 요금표(feeSchedule)는 가격 정책 결정 사항이라
+// 이 리팩터에서 K-Law 외에는 임의로 채우지 않았다 — 서비스별 담당자
+// 확정 필요(TODO로 표시).
+//
+// ⚠ guid 락은 서비스 무관이다(_kServiceTryAcquireGuidLock). GDC 잔액은
+// 사용자당 하나(전 서비스 공유)라서, 락도 서비스별로 나뉘면 안 된다 —
+// 나뉘면 K-Law 락과 K-Tax 락이 서로를 못 보고 각자 통과해버려 사건3
+// (TOCTOU 잔액 초과 인출)이 서비스 간에도 재발한다.
+const K_SERVICE_BILLING_REGISTRY = {
+  klaw: {
+    collection: 'klaw_case_charges',
+    feeSchedule: _klawFlatFeeForClaimAmount,
+    fields: { unitId: 'case_id', unitAmount: 'claim_amount_krw', regenCount: 'verdict_count' },
+  },
+  // ── 14개 K-서비스 (2026-08-13 컬렉션 생성 완료, 1787800001 마이그레이션) ──
+  // feeSchedule은 전부 null(TODO) — 가격 정책은 각 서비스 담당자 확정 필요,
+  // 이 리팩터에서 금액을 임의로 채우지 않았다.
+  tax:       { collection: 'tax_case_charges',       feeSchedule: null },
+  health:    { collection: 'health_case_charges',    feeSchedule: null },
+  police:    { collection: 'police_case_charges',    feeSchedule: null },
+  emergency: { collection: 'e119_case_charges',      feeSchedule: null },
+  democracy: { collection: 'democracy_case_charges', feeSchedule: null },
+  insurance: { collection: 'insurance_case_charges', feeSchedule: null },
+  traffic:   { collection: 'traffic_case_charges',   feeSchedule: null },
+  logistics: { collection: 'logistics_case_charges', feeSchedule: null },
+  public:    { collection: 'public_case_charges',    feeSchedule: null },
+  school:    { collection: 'school_case_charges',    feeSchedule: null },
+  market:    { collection: 'market_case_charges',    feeSchedule: null },
+  stock:     { collection: 'stock_case_charges',     feeSchedule: null },
+  cleaner:   { collection: 'cleaner_case_charges',   feeSchedule: null },
+  business:  { collection: 'business_case_charges',  feeSchedule: null },
+
+  // ── 전문가 AI 페르소나 11개 그룹 (505개 개별 페르소나를 패밀리/카테고리
+  // 단위로 통합, requiresPersonaId: true — 레코드에 persona_id를 같이 저장) ──
+  // feeSchedule은 "그룹 공통 함수(personaId를 받아 그룹 내에서 분기)"가
+  // 될 수도 있고, 개별 페르소나별로 다른 금액을 원하면 personaId 기준
+  // lookup 테이블 함수로 만들면 된다 — 둘 다 담당자가 정할 정책이라
+  // 지금은 null(TODO)로 둔다.
+  'persona-lawyer':          { collection: 'persona_lawyer_charges',          feeSchedule: null, requiresPersonaId: true },
+  'persona-physician':       { collection: 'persona_physician_charges',       feeSchedule: null, requiresPersonaId: true },
+  'persona-professor':       { collection: 'persona_professor_charges',       feeSchedule: null, requiresPersonaId: true },
+  'persona-accountant':      { collection: 'persona_accountant_charges',      feeSchedule: null, requiresPersonaId: true },
+  'persona-patent-attorney': { collection: 'persona_patent_attorney_charges', feeSchedule: null, requiresPersonaId: true },
+  'persona-core-law':        { collection: 'persona_core_law_charges',        feeSchedule: null, requiresPersonaId: true },
+  'persona-core-fin':        { collection: 'persona_core_fin_charges',        feeSchedule: null, requiresPersonaId: true },
+  'persona-core-health':     { collection: 'persona_core_health_charges',     feeSchedule: null, requiresPersonaId: true },
+  'persona-core-edu':        { collection: 'persona_core_edu_charges',        feeSchedule: null, requiresPersonaId: true },
+  'persona-core-eng':        { collection: 'persona_core_eng_charges',        feeSchedule: null, requiresPersonaId: true },
+  'persona-core-misc':       { collection: 'persona_core_misc_charges',       feeSchedule: null, requiresPersonaId: true },
+};
+
+// 개별 페르소나 키(예: 'lawyer-criminal') → 소속 그룹(예: 'lawyer') 매핑.
+// src/gopang/ai/expert-registry-{physician,lawyer,professor,core}.js의
+// parentKey·category 메타데이터를 그대로 반영해 생성했다(임의 분류 아님).
+// 505개 전부 등록돼 있다 — 새 페르소나 추가 시 이 맵도 같이 갱신해야 한다.
+const K_SERVICE_PERSONA_GROUP_MAP = {'accountant':'accountant','accountant-audit':'accountant','accountant-due-diligence':'accountant','accountant-forensic':'accountant','accountant-ifrs':'accountant','accountant-internal-control':'accountant','accountant-ipo':'accountant','accountant-nonprofit-public':'accountant','accountant-restructuring':'accountant','accountant-valuation':'accountant','advanced-practice-nurse':'core-health','advisor':'core-fin','appraiser':'core-law','architect':'core-eng','chef':'core-misc','childcare-teacher':'core-edu','clinical-psychologist':'core-edu','curator':'core-edu','customs-broker':'core-law','dental-hygienist':'core-health','dental-technician':'core-health','dentist':'core-health','dietitian':'core-health','electrical-safety-engineer':'core-eng','financial-planner':'core-fin','fire-safety-manager':'core-eng','gas-safety-engineer':'core-eng','hairdresser':'core-misc','health-educator':'core-health','industrial-safety-consultant':'core-eng','judicial-scrivener':'core-law','labor-attorney':'core-law','landscape-engineer':'core-eng','lawyer':'lawyer','lawyer-administrative':'lawyer','lawyer-antitrust':'lawyer','lawyer-arbitration':'lawyer','lawyer-auction':'lawyer','lawyer-broadcasting':'lawyer','lawyer-civil':'lawyer','lawyer-collection':'lawyer','lawyer-commercial':'lawyer','lawyer-constitutional':'lawyer','lawyer-construction':'lawyer','lawyer-corporate':'lawyer','lawyer-criminal':'lawyer','lawyer-damages':'lawyer','lawyer-energy':'lawyer','lawyer-entertainment':'lawyer','lawyer-environmental':'lawyer','lawyer-execution':'lawyer','lawyer-expropriation':'lawyer','lawyer-family':'lawyer','lawyer-finance':'lawyer','lawyer-foodpharma':'lawyer','lawyer-government-contract':'lawyer','lawyer-guardianship':'lawyer','lawyer-immigration':'lawyer','lawyer-inheritance':'lawyer','lawyer-insolvency':'lawyer','lawyer-insurance':'lawyer','lawyer-international-arbitration':'lawyer','lawyer-international-relations':'lawyer','lawyer-international-transactions':'lawyer','lawyer-it':'lawyer','lawyer-juvenile':'lawyer','lawyer-legislation':'lawyer','lawyer-maritime':'lawyer','lawyer-military':'lawyer','lawyer-overseas-investment':'lawyer','lawyer-realestate':'lawyer','lawyer-redevelopment':'lawyer','lawyer-religious':'lawyer','lawyer-school-violence':'lawyer','lawyer-securities':'lawyer','lawyer-shipbuilding':'lawyer','lawyer-sports':'lawyer','lawyer-startup':'lawyer','lawyer-trade':'lawyer','lawyer-traffic':'lawyer','librarian':'core-edu','lifelong-educator':'core-edu','loss-adjuster':'core-law','marine-engineer':'core-eng','marine-pilot':'core-eng','medical-lab-technologist':'core-health','mental-health-professional':'core-edu','midwife':'core-health','naval-architect':'core-eng','navigation-officer':'core-eng','nurse':'core-health','occupational-therapist':'core-health','optician':'core-health','paramedic':'core-health','patent-attorney':'patent-attorney','patent-attorney-bio-pharma':'patent-attorney','patent-attorney-chemistry-materials':'patent-attorney','patent-attorney-design':'patent-attorney','patent-attorney-ip-strategy':'patent-attorney','patent-attorney-it-software':'patent-attorney','patent-attorney-licensing':'patent-attorney','patent-attorney-mechanical-electrical':'patent-attorney','patent-attorney-pct-international':'patent-attorney','patent-attorney-trademark':'patent-attorney','patent-attorney-trial-litigation':'patent-attorney','pharmacist':'core-health','physical-therapist':'core-health','physician':'physician','physician-anesthesiology':'physician','physician-cardiothoracic':'physician','physician-dermatology':'physician','physician-emergency':'physician','physician-ent':'physician','physician-internal-medicine':'physician','physician-lab-medicine':'physician','physician-neurology':'physician','physician-nuclear-medicine':'physician','physician-obgyn':'physician','physician-occupational':'physician','physician-ophthalmology':'physician','physician-orthopedics':'physician','physician-pathology':'physician','physician-pediatrics':'physician','physician-plastic':'physician','physician-preventive':'physician','physician-psychiatry':'physician','physician-radiation-oncology':'physician','physician-radiology':'physician','physician-rehabilitation':'physician','physician-surgery':'physician','physician-urology':'physician','professional-engineer':'core-eng','professor':'professor','professor-accounting':'professor','professor-administrativelaw':'professor','professor-advertising':'professor','professor-aerospace':'professor','professor-agriculture-fishery-series':'professor','professor-agrobiosystems':'professor','professor-agroecology':'professor','professor-ai-engineering':'professor','professor-algebra':'professor','professor-analysis':'professor','professor-analyticalchemistry':'professor','professor-animalhealth':'professor','professor-animalscience':'professor','professor-animation':'professor','professor-anthropology':'professor','professor-anthropology-series':'professor','professor-appliedarts-series':'professor','professor-appliedfinearts':'professor','professor-appliedstatistics':'professor','professor-archaeologicalanthropology':'professor','professor-archaeology':'professor','professor-architecturalengineering':'professor','professor-architecture':'professor','professor-areastudies':'professor','professor-arthistory':'professor','professor-artspeeducation':'professor','professor-astronomy':'professor','professor-automotive':'professor','professor-aviation':'professor','professor-beautyart':'professor','professor-biochemistry':'professor','professor-bioengineering':'professor','professor-biology':'professor','professor-biology-series':'professor','professor-biomedengineering':'professor','professor-biopsychology':'professor','professor-biostatistics':'professor','professor-biotechnology':'professor','professor-broadcasting-entertainment':'professor','professor-business':'professor','professor-business-economics':'professor','professor-business-series':'professor','professor-careereducation':'professor','professor-cellbiology':'professor','professor-ceramics':'professor','professor-chembio':'professor','professor-chemeng-energy-series':'professor','professor-chemicalengineering':'professor','professor-chemistry':'professor','professor-chemistry-series':'professor','professor-childfamilystudies':'professor','professor-chinese':'professor','professor-circuittheory':'professor','professor-civilengineering':'professor','professor-civillaw':'professor','professor-civilprocedure':'professor','professor-classicalchinese':'professor','professor-clinicalhealth':'professor','professor-clinicalpsychology':'professor','professor-clothing':'professor','professor-cognitivepsychology':'professor','professor-comics':'professor','professor-commerciallaw':'professor','professor-comparativepolitics':'professor','professor-competitionlaw':'professor','professor-composition':'professor','professor-computerarchitecture':'professor','professor-computernetworks':'professor','professor-computerscience':'professor','professor-computerscience-series':'professor','professor-condensedmatter':'professor','professor-constitutionallaw':'professor','professor-construction':'professor','professor-consumerscience':'professor','professor-contemporarymusic':'professor','professor-controlengineering':'professor','professor-counselingpsychology':'professor','professor-craft':'professor','professor-creativewriting':'professor','professor-criminallaw':'professor','professor-criminalprocedure':'professor','professor-cropscience':'professor','professor-culinaryscience':'professor','professor-culturalanthropology':'professor','professor-culturalsociology':'professor','professor-culturalstudies':'professor','professor-dance':'professor','professor-dance-pe-series':'professor','professor-database':'professor','professor-datastructures':'professor','professor-dent-conservative':'professor','professor-dent-omfs':'professor','professor-dent-oralmedicine':'professor','professor-dent-oralpathology':'professor','professor-dent-oralradiology':'professor','professor-dent-orthodontics':'professor','professor-dent-pediatricdentistry':'professor','professor-dent-periodontics':'professor','professor-dent-preventivedentistry':'professor','professor-dent-prosthodontics':'professor','professor-dentistry-academic':'professor','professor-dentistry-specialty-series':'professor','professor-design':'professor','professor-developmentalbiology':'professor','professor-developmentalpsychology':'professor','professor-diffeq':'professor','professor-disasterprevention':'professor','professor-discretemath':'professor','professor-dynamics':'professor','professor-earlychildhoodeducation':'professor','professor-earthscience':'professor','professor-easternhistory':'professor','professor-easternphilosophy':'professor','professor-ecology':'professor','professor-econometrics':'professor','professor-economichistory':'professor','professor-economics':'professor','professor-economics-series':'professor','professor-education':'professor','professor-education-series':'professor','professor-electrical':'professor','professor-electrical-computer':'professor','professor-electrical-series':'professor','professor-electricalmachinery':'professor','professor-electromagnetism':'professor','professor-electronics':'professor','professor-elementaryeducation':'professor','professor-energyengineering':'professor','professor-engineeringeducation':'professor','professor-english':'professor','professor-environmentalengineering':'professor','professor-environmentallaw':'professor','professor-environmentalscience':'professor','professor-epistemology':'professor','professor-ethics':'professor','professor-ethics-series':'professor','professor-ethicstheory':'professor','professor-familysociology':'professor','professor-film':'professor','professor-financeinsurance':'professor','professor-finearts':'professor','professor-finearts-series':'professor','professor-fisheries':'professor','professor-fluidmechanics':'professor','professor-foodengineering':'professor','professor-forestry':'professor','professor-french':'professor','professor-game':'professor','professor-generalengineering':'professor','professor-generalhumanities':'professor','professor-generallanguage':'professor','professor-generalmusic':'professor','professor-generalpractical':'professor','professor-generalscience':'professor','professor-generalsocialscience':'professor','professor-genetics':'professor','professor-geography':'professor','professor-geography-series':'professor','professor-geometrytopology':'professor','professor-german':'professor','professor-gis':'professor','professor-healtheducation':'professor','professor-healthmgmt':'professor','professor-herbalpharmacy':'professor','professor-history':'professor','professor-history-series':'professor','professor-homeeconomics-series':'professor','professor-housingstudies':'professor','professor-hrorganization':'professor','professor-humangeography':'professor','professor-humanities':'professor','professor-industrial-safety-series':'professor','professor-industrialengineering':'professor','professor-industrialorganization':'professor','professor-inorganicchemistry':'professor','professor-instrumental':'professor','professor-international':'professor','professor-internationalbusiness':'professor','professor-internationaleconomics':'professor','professor-internationallaw':'professor','professor-internationalpolitics':'professor','professor-iopsychology':'professor','professor-iplaw':'professor','professor-japanese':'professor','professor-kmed-acupuncture':'professor','professor-kmed-eentderm':'professor','professor-kmed-internalmedicine':'professor','professor-kmed-neuropsychiatry':'professor','professor-kmed-obgyn':'professor','professor-kmed-pediatrics':'professor','professor-kmed-rehab':'professor','professor-kmed-sasang':'professor','professor-korean':'professor','professor-koreanhistory':'professor','professor-koreanmedicine':'professor','professor-koreanmedicine-specialty-series':'professor','professor-koreanmusic':'professor','professor-koreanpolitics':'professor','professor-laboreconomics':'professor','professor-laborlaw':'professor','professor-landscapearchitecture':'professor','professor-language-literature':'professor','professor-languageeducation':'professor','professor-law':'professor','professor-law-series':'professor','professor-libraryscience':'professor','professor-linguisticanthropology':'professor','professor-linguistics':'professor','professor-logic':'professor','professor-machinedesign':'professor','professor-macroeconomics':'professor','professor-marketing':'professor','professor-materials':'professor','professor-materials-series':'professor','professor-math':'professor','professor-math-series':'professor','professor-mathematicalstatistics':'professor','professor-mathphys':'professor','professor-mechanical':'professor','professor-mechanical-eng':'professor','professor-mechanicaleng-series':'professor','professor-mechanicsphysics':'professor','professor-mechatronics':'professor','professor-med-anesthesiology':'professor','professor-med-dermatology':'professor','professor-med-emergencymedicine':'professor','professor-med-familymedicine':'professor','professor-med-generalsurgery':'professor','professor-med-internalmedicine':'professor','professor-med-labmedicine':'professor','professor-med-neurology':'professor','professor-med-neurosurgery':'professor','professor-med-nuclearmedicine':'professor','professor-med-obgyn':'professor','professor-med-occupationalmedicine':'professor','professor-med-ophthalmology':'professor','professor-med-orthopedics':'professor','professor-med-otolaryngology':'professor','professor-med-pathology':'professor','professor-med-pediatrics':'professor','professor-med-plasticsurgery':'professor','professor-med-preventivemedicine':'professor','professor-med-psychiatry':'professor','professor-med-radiationoncology':'professor','professor-med-radiology':'professor','professor-med-rehabmedicine':'professor','professor-med-thoracicsurgery':'professor','professor-med-tuberculosis':'professor','professor-med-urology':'professor','professor-mediastudies':'professor','professor-medicalscience':'professor','professor-medicine':'professor','professor-medicine-series':'professor','professor-medicine-specialty-series':'professor','professor-metallurgy':'professor','professor-metaphysics':'professor','professor-microbiology':'professor','professor-microeconomics':'professor','professor-militaryscience':'professor','professor-mis':'professor','professor-misc-series':'professor','professor-molecularbiology':'professor','professor-monetaryeconomics':'professor','professor-music-series':'professor','professor-musicology':'professor','professor-navalengineering':'professor','professor-newmaterials':'professor','professor-nursing':'professor','professor-nursing-series':'professor','professor-nutrition':'professor','professor-oceanography':'professor','professor-operatingsystems':'professor','professor-operationsmgmt':'professor','professor-optics':'professor','professor-opticsphysics':'professor','professor-organicchemistry':'professor','professor-otherasianlanguages':'professor','professor-othereuropeanlanguages':'professor','professor-particlephysics':'professor','professor-pharmacy':'professor','professor-pharmacy-series':'professor','professor-photography':'professor','professor-physicalchemistry':'professor','professor-physicaleducation':'professor','professor-physicalgeography':'professor','professor-physics':'professor','professor-physics-series':'professor','professor-physiologybio':'professor','professor-policystudies':'professor','professor-politicaltheory':'professor','professor-politics':'professor','professor-politics-series':'professor','professor-polymerengineering':'professor','professor-powerengineering':'professor','professor-predental':'professor','professor-prekoreanmed':'professor','professor-premed':'professor','professor-premedical-series':'professor','professor-prevet':'professor','professor-probabilitytheory':'professor','professor-psychology':'professor','professor-psychology-series':'professor','professor-publicadministration':'professor','professor-publicfinance':'professor','professor-publichealth':'professor','professor-publichealth-series':'professor','professor-quantummechanics':'professor','professor-railwaycontrol':'professor','professor-railwayengineering':'professor','professor-realestate':'professor','professor-rehabilitation':'professor','professor-religiousstudies':'professor','professor-russian':'professor','professor-safetyengineering':'professor','professor-scienceeducation':'professor','professor-secretarial':'professor','professor-semiconductor':'professor','professor-shipnavigation':'professor','professor-skincare':'professor','professor-socialpsychology':'professor','professor-socialscience':'professor','professor-socialstudieseducation':'professor','professor-socialwelfare':'professor','professor-sociology':'professor','professor-sociology-series':'professor','professor-software':'professor','professor-solidmechanics':'professor','professor-sound':'professor','professor-spanish':'professor','professor-specialeducation':'professor','professor-statistics':'professor','professor-statistics-series':'professor','professor-strategy':'professor','professor-stratification':'professor','professor-taxlaw':'professor','professor-telecommunications':'professor','professor-textileengineering':'professor','professor-theater':'professor','professor-theater-film-series':'professor','professor-theoreticalsociology':'professor','professor-theoryofcomputation':'professor','professor-thermalstatphysics':'professor','professor-thermodynamics':'professor','professor-tourism':'professor','professor-tradedistribution':'professor','professor-trafficsystems':'professor','professor-transportation-series':'professor','professor-uav':'professor','professor-urbanengineering':'professor','professor-urbansociology':'professor','professor-veterinary':'professor','professor-videoart':'professor','professor-vocal':'professor','professor-westernhistory':'professor','professor-westernphilosophy':'professor','radiologic-technologist':'core-health','real-estate-agent':'core-misc','sanitarian':'core-health','school-counselor':'core-edu','security-engineer':'core-misc','social-worker':'core-edu','speech-language-pathologist':'core-health','sports-instructor':'core-misc','surveying-engineer':'core-eng','tax-accountant':'core-fin','teacher':'core-edu','tour-guide':'core-misc','traditional-medicine-doctor':'core-health','translator-interpreter':'core-misc','veterinarian':'core-health','weather-forecaster':'core-eng','youth-counselor':'core-edu'};
+
+// personaId(예: 'lawyer-criminal')로 실제 과금에 쓸 serviceId(예:
+// 'persona-lawyer')를 알아낸다. 매핑에 없는 미지의 personaId는 null —
+// 호출부가 이 경우 과금을 건너뛰거나 에러 처리해야 한다(추측으로 아무
+// 그룹에나 편입시키지 않음).
+function _kServicePersonaGroupId(personaId) {
+  const group = K_SERVICE_PERSONA_GROUP_MAP[personaId];
+  return group ? `persona-${group}` : null;
+}
+
+function _kServiceFields(serviceId) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  return cfg ? { unitId: 'unit_id', unitAmount: 'unit_amount_krw', regenCount: 'regen_count', ...cfg.fields } : null;
+}
+
+function _kServiceFlatFee(serviceId, unitAmount, personaId = null) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  if (!cfg?.feeSchedule) return null;
+  // 페르소나 그룹은 "동일 과금 정책, 금액은 페르소나마다 다름" 정책이라
+  // feeSchedule 함수가 personaId를 보고 내부에서 분기하는 걸 전제한다
+  // (예: function lawyerFee(unitAmount, personaId) { return LAWYER_FEE_TABLE[personaId] ?? DEFAULT; }).
+  // K-Law처럼 personaId가 없는 서비스의 feeSchedule은 이 두 번째 인자를
+  // 그냥 무시하면 된다 — 기존 _klawFlatFeeForClaimAmount(unitAmount) 시그니처와 호환됨.
+  return cfg.feeSchedule(unitAmount, personaId);
+}
+
+async function _kServiceFindCharge(env, serviceId, guid, unitId, personaId = null) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  if (!cfg || !unitId) return null;
+  const f = _kServiceFields(serviceId);
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
-  const filter = encodeURIComponent(`guid='${guid}' && case_id='${caseId}'`);
-  const res = await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records?filter=${filter}&perPage=1`, { headers });
+  let filter = `guid='${guid}' && ${f.unitId}='${unitId}'`;
+  // 페르소나 그룹 테이블은 여러 페르소나가 공유하므로 persona_id도 같이
+  // 걸어야 한다 — 안 그러면 다른 페르소나가 우연히 같은 unitId(세션 ID)를
+  // 써도 "이미 결제된 사건"으로 오판할 위험이 있다.
+  if (cfg.requiresPersonaId) {
+    if (!personaId) return null; // persona_id 필수 서비스인데 안 왔으면 조회 자체가 불가
+    filter += ` && persona_id='${personaId}'`;
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records?filter=${encodeURIComponent(filter)}&perPage=1`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
   return (data.items && data.items[0]) || null;
 }
 
 // ★ 2026-08-13 재설계 — "확인 후 처리" 대신 "선점 후 처리"로 전환해
-// 이중과금 레이스 창구를 원천 차단한다. (guid, case_id) 유일 인덱스
-// (1787600001 마이그레이션)에 대한 INSERT 성공 여부 자체를 원자적
-// 락으로 쓴다 — 두 요청이 거의 동시에 도착해도 SQLite가 INSERT를
-// 직렬화하므로 둘 중 하나만 성공한다.
-async function _klawTryReserveCaseCharge(env, { guid, caseId, claimAmountKrw }) {
+// 이중과금 레이스 창구를 원천 차단한다. (guid, unitId) 유일 인덱스에
+// 대한 INSERT 성공 여부 자체를 원자적 락으로 쓴다.
+// ── 사고실험 사건3 대응 — guid 단위 결제 진행 락 (서비스 무관, 위 설명 참고) ──
+const _K_SERVICE_GUID_LOCK_TTL = 10; // 초 — 이 락은 DeepSeek 호출 전체가
+// 아니라 "잔액 사전확인 → 사건 선점"까지의 짧은 구간만 감싼다(호출부
+// 참고). 그 구간은 PocketBase 왕복 1~2회 수준이라 10초면 충분한 여유고,
+// 실제 생성 시간(수십 초 가능)을 이 락이 막지 않는다.
+async function _kServiceTryAcquireGuidLock(env, guid) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return true; // KV 미설정 환경(로컬 등)에서는 락 없이 통과 — 방어 실패보다 서비스 불가가 더 나쁨
+  const key = `k:billing_lock:${guid}`; // 서비스명 없음 — 의도적(전 서비스 GDC 잔액 공유 보호)
+  try {
+    const existing = await kv.get(key);
+    if (existing) return false;
+    await kv.put(key, '1', { expirationTtl: _K_SERVICE_GUID_LOCK_TTL });
+    return true;
+  } catch (e) {
+    console.warn('[K-Service] guid 락 확보 실패(락 없이 통과 — 방어 실패보다 서비스 불가가 더 나쁨):', e.message);
+    return true;
+  }
+}
+async function _kServiceReleaseGuidLock(env, guid) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return;
+  try { await kv.delete(`k:billing_lock:${guid}`); }
+  catch (e) { console.warn('[K-Service] guid 락 해제 실패(TTL로 자동 해제됨, 무시):', e.message); }
+}
+
+async function _kServiceTryReserveCharge(env, serviceId, { guid, unitId, unitAmount, personaId = null }) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  const f = _kServiceFields(serviceId);
+  if (cfg.requiresPersonaId && !personaId) {
+    console.error(JSON.stringify({ tag: 'KSERVICE_CHARGE_RESERVE_MISSING_PERSONA_ID', serviceId, guid, unitId, ts: new Date().toISOString() }));
+    return { reserved: false, record: null, error: 'MISSING_PERSONA_ID' };
+  }
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   try {
-    const res = await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records`, {
-      method: 'POST', headers,
-      body: JSON.stringify({
-        guid, case_id: caseId, claim_amount_krw: claimAmountKrw || 0,
-        // fee_krw=0/fee_tier=''는 "예약됨, 아직 결제 확정 전" 상태를
-        // 뜻한다 — _klawFinalizeCaseCharge가 결제 성공 후 채운다. 이
-        // 필드가 아직 비어있어도 레코드의 '존재' 자체가 락 역할을 하므로
-        // 다른 요청의 중복방지 판정에는 지장 없다.
-        fee_krw: 0, fee_tier: '', verdict_count: 1, mint_content_hash: '',
-      }),
+    const body = {
+      guid, [f.unitId]: unitId, [f.unitAmount]: unitAmount || 0,
+      // fee_krw=0/fee_tier=''는 "예약됨, 아직 결제 확정 전" 상태를 뜻한다
+      // — _kServiceFinalizeCharge가 결제 성공 후 채운다. 이 필드가
+      // 아직 비어있어도 레코드의 '존재' 자체가 락 역할을 하므로 다른
+      // 요청의 중복방지 판정에는 지장 없다.
+      fee_krw: 0, fee_tier: '', [f.regenCount]: 1, mint_content_hash: '',
+    };
+    if (cfg.requiresPersonaId) body.persona_id = personaId;
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records`, {
+      method: 'POST', headers, body: JSON.stringify(body),
     });
-    if (res.ok) {
-      const rec = await res.json();
-      return { reserved: true, record: rec };
-    }
+    if (res.ok) { const rec = await res.json(); return { reserved: true, record: rec }; }
     // 실패 원인(유일 인덱스 위반 vs 다른 오류)을 굳이 구분하지 않는다 —
-    // 어느 쪽이든 호출부가 _klawFindCaseCharge로 재조회해 처리하므로
+    // 어느 쪽이든 호출부가 _kServiceFindCharge로 재조회해 처리하므로
     // 결과적으로 동일하게 안전하게 수렴한다.
     return { reserved: false, record: null };
   } catch (e) {
-    console.error(JSON.stringify({ tag: 'KLAW_CASE_RESERVE_ERROR', guid, caseId, error: e.message, ts: new Date().toISOString() }));
+    console.error(JSON.stringify({ tag: 'KSERVICE_CHARGE_RESERVE_ERROR', serviceId, guid, unitId, error: e.message, ts: new Date().toISOString() }));
     return { reserved: false, record: null, error: e.message };
   }
 }
 
-async function _klawFinalizeCaseCharge(env, recordId, { feeKrw, feeTier, mintContentHash }) {
+async function _kServiceFinalizeCharge(env, serviceId, recordId, { feeKrw, feeTier, mintContentHash }) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   try {
-    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
+    await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records/${recordId}`, {
       method: 'PATCH', headers,
       body: JSON.stringify({ fee_krw: feeKrw, fee_tier: feeTier, mint_content_hash: mintContentHash || '' }),
     });
@@ -16203,50 +16334,52 @@ async function _klawFinalizeCaseCharge(env, recordId, { feeKrw, feeTier, mintCon
     // 결제(mint)는 이미 성공한 뒤라, 여기 실패는 fee_krw=0인 채로 레코드가
     // 남는다는 뜻이다 — 존재 자체는 여전히 락으로 유효(중복과금 방지는
     // 안 깨짐), 다만 사후 정산 조회 시 금액이 비어보일 수 있어 크게 로그.
-    console.error(JSON.stringify({ tag: 'KLAW_CASE_FINALIZE_FAILED', recordId, error: e.message, ts: new Date().toISOString() }));
+    console.error(JSON.stringify({ tag: 'KSERVICE_CHARGE_FINALIZE_FAILED', serviceId, recordId, error: e.message, ts: new Date().toISOString() }));
   }
 }
 
-async function _klawReleaseCaseChargeReservation(env, recordId) {
+async function _kServiceReleaseChargeReservation(env, serviceId, recordId) {
   // 예약엔 성공했는데 실제 GDC 과금이 실패했을 때 호출 — 예약을 롤백해
   // 이 사건이 "결제된 적 없는데 결제됨으로 영구 고정"되는 걸 막는다
   // (안 그러면 다음 재생성 시도가 매번 무료 재생성으로 오판된다).
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
   try {
-    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
-      method: 'DELETE', headers,
-    });
+    await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records/${recordId}`, { method: 'DELETE', headers });
   } catch (e) {
-    console.error(JSON.stringify({ tag: 'KLAW_CASE_RESERVATION_ROLLBACK_FAILED', recordId, error: e.message, ts: new Date().toISOString() }));
+    console.error(JSON.stringify({ tag: 'KSERVICE_CHARGE_RESERVATION_ROLLBACK_FAILED', serviceId, recordId, error: e.message, ts: new Date().toISOString() }));
   }
 }
 
-async function _klawBumpCaseRegen(env, recordId, currentCount) {
+async function _kServiceBumpRegen(env, serviceId, recordId, currentCount) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  const f = _kServiceFields(serviceId);
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   try {
-    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
+    await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records/${recordId}`, {
       method: 'PATCH', headers,
-      body: JSON.stringify({ verdict_count: (currentCount || 1) + 1, last_regen_at: new Date().toISOString() }),
+      body: JSON.stringify({ [f.regenCount]: (currentCount || 1) + 1, last_regen_at: new Date().toISOString() }),
     });
   } catch (e) {
-    console.warn('[KLaw] 재생성 카운트 갱신 실패(무시 — 과금 판정에는 영향 없음):', e.message);
+    console.warn('[K-Service] 재생성 카운트 갱신 실패(무시 — 과금 판정에는 영향 없음):', e.message);
   }
 }
 
-// ── 사고실험 사건7 대응 (2026-08-13 신설, 정책 결정: 즉시 환불) ──────
-// STEP0 결제 후 STEP C까지 도달하지 못하고 이탈한 "미완결 유료 사건"을
-// 즉시 환불한다. 두 경로에서 온다:
-//   ① 클라이언트가 STEP C 렌더링을 정상 완료 → POST /klaw/case/complete
-//      → completed_at만 채우고 끝(환불 없음).
-//   ② 사용자가 STEP0~B 사이에 페이지를 벗어남 → beforeunload/pagehide에서
-//      navigator.sendBeacon으로 POST /klaw/case/abandon → 이 함수가
-//      completed_at이 비어있고 fee_krw > 0인 걸 확인 후 즉시 mint로 환불.
+// ── 사고실험 사건7 대응 (2026-08-13, 정책 결정: 즉시 환불) ──────────
+// 결제 후 완료(completed_at)까지 도달하지 못하고 이탈한 "미완결 유료
+// 사건"을 즉시 환불한다. 두 경로에서 온다:
+//   ① 클라이언트가 정상 완료 → POST .../unit/complete → completed_at만
+//      채우고 끝(환불 없음).
+//   ② 사용자가 중간에 페이지를 벗어남 → pagehide에서 navigator.
+//      sendBeacon으로 POST .../unit/abandon → 이 함수가 completed_at이
+//      비어있고 fee_krw > 0인 걸 확인 후 즉시 mint로 환불.
 // 브라우저 크래시·강제종료 등으로 beacon 자체가 못 나가는 경우는 이
 // 즉시 경로로 못 잡는다 — 그런 잔여 케이스는 범위 밖(운영자가 필요 시
 // completed_at IS NULL AND refunded_at IS NULL 쿼리로 별도 조회 가능).
-async function _klawRefundIncompleteCase(env, record) {
+async function _kServiceRefundIncompleteUnit(env, serviceId, record) {
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
   const feeKrw = Number(record.fee_krw || 0);
   if (record.refunded_at || record.completed_at || !(feeKrw > 0)) {
     return { refunded: false, reason: 'not_eligible' };
@@ -16258,20 +16391,20 @@ async function _klawRefundIncompleteCase(env, record) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       guid: record.guid, krw_amount: feeKrw, secret: _mintSecret(env),
-      memo: `klaw_refund:미완결 사건 환불 (case_id=${record.case_id}, 원거래=${record.mint_content_hash || 'unknown'})`,
+      memo: `k_service_refund:${serviceId} 미완결 사건 환불 (record=${record.id}, 원거래=${record.mint_content_hash || 'unknown'})`,
     }),
   }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
 
   if (!mintRes.ok) {
     console.error(JSON.stringify({
-      tag: 'KLAW_REFUND_MINT_FAILED', guid: record.guid, caseId: record.case_id,
+      tag: 'KSERVICE_REFUND_MINT_FAILED', serviceId, guid: record.guid, recordId: record.id,
       feeKrw, error: mintRes.error, ts: new Date().toISOString(),
     }));
     return { refunded: false, reason: 'mint_failed', error: mintRes.error };
   }
 
   try {
-    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${record.id}`, {
+    await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records/${record.id}`, {
       method: 'PATCH', headers, body: JSON.stringify({ refunded_at: new Date().toISOString() }),
     });
   } catch (e) {
@@ -16280,15 +16413,78 @@ async function _klawRefundIncompleteCase(env, record) {
     // mint는 tx_hash 없이 매번 새 블록이라 멱등성이 없으므로, 이 실패는
     // 크게 로그로 남겨 운영자가 인지하게 한다.
     console.error(JSON.stringify({
-      tag: 'KLAW_REFUND_MARK_FAILED_POSSIBLE_DUPLICATE_RISK', guid: record.guid,
-      caseId: record.case_id, error: e.message, ts: new Date().toISOString(),
+      tag: 'KSERVICE_REFUND_MARK_FAILED_POSSIBLE_DUPLICATE_RISK', serviceId, guid: record.guid,
+      recordId: record.id, error: e.message, ts: new Date().toISOString(),
     }));
   }
 
   console.log(JSON.stringify({
-    tag: 'KLAW_REFUND_OK', guid: record.guid, caseId: record.case_id, feeKrw, ts: new Date().toISOString(),
+    tag: 'KSERVICE_REFUND_OK', serviceId, guid: record.guid, recordId: record.id, feeKrw, ts: new Date().toISOString(),
   }));
   return { refunded: true, feeKrw };
+}
+
+// POST /kservice/:serviceId/unit/complete, /kservice/:serviceId/unit/abandon
+// — 향후 서비스가 늘어날 때를 위한 범용 엔드포인트(현재는 라우팅 안 함,
+// 새 서비스 등록 시 라우터에 추가). 범용 파라미터는 {guid, unit_id}.
+async function handleKServiceUnitComplete(bodyText, serviceId, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+  const { guid, unit_id } = body || {};
+  if (!guid || !unit_id) return _err(400, 'MISSING_FIELD', 'guid/unit_id 필수', corsHeaders);
+  const existing = await _kServiceFindCharge(env, serviceId, guid, unit_id);
+  if (!existing) return new Response(JSON.stringify({ ok: true, noted: 'no_charge_record' }), { headers: corsHeaders });
+  const cfg = K_SERVICE_BILLING_REGISTRY[serviceId];
+  const token = await _l1AdminToken(env);
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/${cfg.collection}/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed_at: new Date().toISOString() }),
+    });
+  } catch (e) { console.warn('[K-Service] completed_at 기록 실패:', e.message); }
+  return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+}
+async function handleKServiceUnitAbandon(bodyText, serviceId, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return new Response('{}', { headers: corsHeaders }); }
+  const { guid, unit_id } = body || {};
+  if (!guid || !unit_id) return new Response('{}', { headers: corsHeaders });
+  const existing = await _kServiceFindCharge(env, serviceId, guid, unit_id);
+  if (existing) await _kServiceRefundIncompleteUnit(env, serviceId, existing);
+  return new Response('{}', { headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Law 전용 얇은 래퍼 — 위 범용 모듈을 serviceId='klaw'로 호출한다.
+// handleKlawRelay 안의 기존 호출부(_klawFindCaseCharge(env, guid, caseId)
+// 등)를 하나도 안 건드리기 위해 함수 이름·시그니처를 그대로 유지했다.
+// 즉 "로직은 공용화, 데이터(klaw_case_charges)는 그대로 유지" 정책을
+// 코드 이름은 안 바꾸고 본문만 위임하는 방식으로 만족시킨다.
+// ═══════════════════════════════════════════════════════════
+async function _klawFindCaseCharge(env, guid, caseId) {
+  return _kServiceFindCharge(env, 'klaw', guid, caseId);
+}
+async function _klawTryAcquireGuidLock(env, guid) {
+  return _kServiceTryAcquireGuidLock(env, guid);
+}
+async function _klawReleaseGuidLock(env, guid) {
+  return _kServiceReleaseGuidLock(env, guid);
+}
+async function _klawTryReserveCaseCharge(env, { guid, caseId, claimAmountKrw }) {
+  return _kServiceTryReserveCharge(env, 'klaw', { guid, unitId: caseId, unitAmount: claimAmountKrw });
+}
+async function _klawFinalizeCaseCharge(env, recordId, opts) {
+  return _kServiceFinalizeCharge(env, 'klaw', recordId, opts);
+}
+async function _klawReleaseCaseChargeReservation(env, recordId) {
+  return _kServiceReleaseChargeReservation(env, 'klaw', recordId);
+}
+async function _klawBumpCaseRegen(env, recordId, currentCount) {
+  return _kServiceBumpRegen(env, 'klaw', recordId, currentCount);
+}
+async function _klawRefundIncompleteCase(env, record) {
+  return _kServiceRefundIncompleteUnit(env, 'klaw', record);
 }
 
 // POST /klaw/case/complete — {guid, case_id} — STEP C 렌더링 완료 시 클라이언트가 호출
@@ -16429,6 +16625,24 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // 막을 이유가 없다(비용 없는 재생성은 계속 즉시 되어야 함).
   const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
   const _klawIsCaseFlow = !!case_id;
+  // 사고실험 사건3 대응 — 이 요청이 실제로 결제를 시도할 가능성이 있는
+  // 경우에만 guid 락을 잡는다(무료 티어·재생성·비결제 호출은 방해하지
+  // 않음). 진짜 확정 결제는 DeepSeek 응답 이후 settleKlaw에서 일어나므로,
+  // 락은 거기서 결제 시도가 끝날 때(성공/실패/스킵 불문) 해제한다 —
+  // handleKlawRelay 하단 settleKlaw 정의부의 _klawGuidLockGuid/
+  // _klawGuidLockHeld 참고.
+  let _klawGuidLockHeld = false;
+  if (!_klawFreeTier && step_cycle && _klawFlatFee) {
+    _klawGuidLockHeld = await _klawTryAcquireGuidLock(env, guid);
+    if (!_klawGuidLockHeld) {
+      _dlog(env, JSON.stringify({ tag: 'KLAW_GUID_LOCK_BUSY', guid, caseId: case_id, ts: new Date().toISOString(), ...meta }));
+      return new Response(JSON.stringify({
+        error: 'KLAW_BILLING_IN_PROGRESS',
+        message: '다른 판결 생성이 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+      }), { status: 409, headers: corsHeaders });
+    }
+  }
+  try {
   if (!_klawFreeTier && step_cycle && _klawFlatFee) {
     let _klawWillChargeNow = true; // 기본: 이번 호출에서 실제로 청구 시도됨
     if (_klawIsCaseFlow) {
@@ -16440,6 +16654,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       const _klawBalanceKRW = await _l1GetBalanceKRW(guid);
       if (_klawBalanceKRW === null) {
         console.warn(JSON.stringify({ tag: 'KLAW_PREFLIGHT_BALANCE_CHECK_FAILED', guid, caseId: case_id, ts: new Date().toISOString(), ...meta }));
+        if (_klawGuidLockHeld) await _klawReleaseGuidLock(env, guid);
         return _err(502, 'GDC_BALANCE_CHECK_FAILED', '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
       }
       if (_klawBalanceKRW < _klawFlatFee.fee) {
@@ -16448,13 +16663,22 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
           requiredKrw: _klawFlatFee.fee, balanceKrw: _klawBalanceKRW, feeTier: _klawFlatFee.tier,
           ts: new Date().toISOString(),
         }));
+        if (_klawGuidLockHeld) await _klawReleaseGuidLock(env, guid);
         return new Response(JSON.stringify({
           error: 'GDC_INSUFFICIENT_BALANCE',
           message: `이 사건(소송가액 구간: ${_klawFlatFee.tier})의 판결 생성 요금은 ${_klawFlatFee.fee.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다. 충전 후 다시 이용해 주세요.`,
           required_krw: _klawFlatFee.fee, balance_krw: Math.round(_klawBalanceKRW),
         }), { status: 402, headers: corsHeaders });
       }
+    } else if (_klawGuidLockHeld) {
+      // 무료 재생성으로 확정 — 실제 결제 시도가 없으므로 락을 여기서 바로 푼다.
+      await _klawReleaseGuidLock(env, guid);
+      _klawGuidLockHeld = false;
     }
+  }
+  } catch (e) {
+    if (_klawGuidLockHeld) await _klawReleaseGuidLock(env, guid);
+    throw e;
   }
 
   const isStream = !!stream;
@@ -16522,6 +16746,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   //   ④ 그 외(일반 상담 등, case_id도 claim_amount_krw도 없음) → 기존과
   //      동일하게 토큰 기반 종량 과금.
   const settleKlaw = (usage) => async (bill) => {
+   try {
     await recordStep();
     if (_klawFreeTier) {
       _dlog(env, JSON.stringify({ tag: 'KLAW_CHARGE_SKIPPED_FREE_TIER', guid, ts: new Date().toISOString() }));
@@ -16637,6 +16862,17 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
       outTokens: usage?.completion_tokens,
     });
+   } finally {
+    // 사고실험 사건3 대응 — 이 요청에서 guid 락을 잡았다면(위 사전확인
+    // 단계에서 실제 결제 시도가 있었던 경우) 결제 흐름이 어떻게
+    // 끝나든(성공/실패/중간 return 전부) 여기서 반드시 해제한다.
+    // 안 그러면 이후 이 사용자의 새 사건이 TTL(10초) 동안 계속
+    // "결제 진행 중"으로 오판되어 막힌다.
+    if (_klawGuidLockHeld) {
+      await _klawReleaseGuidLock(env, guid);
+      _klawGuidLockHeld = false;
+    }
+   }
   };
 
   if (isStream) {
@@ -16657,6 +16893,11 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
       spendKeys: [userKey, globalKey], onAfterRecord: settleKlaw(data.usage),
     });
+  } else if (_klawGuidLockHeld) {
+    // usage 자체가 응답에 없는 극단적 경우 — settleKlaw가 아예 안 불려서
+    // 락이 TTL(10초)까지 안 풀릴 수 있으므로 여기서 직접 해제한다.
+    await _klawReleaseGuidLock(env, guid);
+    _klawGuidLockHeld = false;
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
 }
