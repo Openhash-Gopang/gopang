@@ -11394,6 +11394,8 @@ export default {
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/klaw/case/complete')        return handleKlawCaseComplete(bodyText, env, corsHeaders);
+    if (pathname === '/klaw/case/abandon')         return handleKlawCaseAbandon(bodyText, env, corsHeaders);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
@@ -16116,7 +16118,15 @@ function _klawFlatFeeForClaimAmount(claimAmountKrw) {
   return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
 }
 
-function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
+function _todayKey() {
+  // 2026-08-13 수정(사고실험 사건9 — 정책 결정: KST 기준으로 변경) —
+  // 이전엔 UTC 자정 기준이라 실제 리셋 시점이 한국시간 오전 9시였다.
+  // 한국 서비스이므로 사용자가 자연스럽게 기대하는 "자정 지나면 초기화"와
+  // 일치시킨다. 30시간 TTL로 만료되는 구조라 기존 UTC 키와 충돌 없이
+  // 그날부터 자연 전환된다.
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+} // KST(UTC+9) 자정 기준 일 단위 리셋
 const _KLAW_KV_TTL = 60 * 60 * 30; // 30시간 — 자정 경계 안전마진을 둔 1일 리셋
 
 async function _klawSpendGet(env, key) {
@@ -16225,12 +16235,123 @@ async function _klawBumpCaseRegen(env, recordId, currentCount) {
   }
 }
 
+// ── 사고실험 사건7 대응 (2026-08-13 신설, 정책 결정: 즉시 환불) ──────
+// STEP0 결제 후 STEP C까지 도달하지 못하고 이탈한 "미완결 유료 사건"을
+// 즉시 환불한다. 두 경로에서 온다:
+//   ① 클라이언트가 STEP C 렌더링을 정상 완료 → POST /klaw/case/complete
+//      → completed_at만 채우고 끝(환불 없음).
+//   ② 사용자가 STEP0~B 사이에 페이지를 벗어남 → beforeunload/pagehide에서
+//      navigator.sendBeacon으로 POST /klaw/case/abandon → 이 함수가
+//      completed_at이 비어있고 fee_krw > 0인 걸 확인 후 즉시 mint로 환불.
+// 브라우저 크래시·강제종료 등으로 beacon 자체가 못 나가는 경우는 이
+// 즉시 경로로 못 잡는다 — 그런 잔여 케이스는 범위 밖(운영자가 필요 시
+// completed_at IS NULL AND refunded_at IS NULL 쿼리로 별도 조회 가능).
+async function _klawRefundIncompleteCase(env, record) {
+  const feeKrw = Number(record.fee_krw || 0);
+  if (record.refunded_at || record.completed_at || !(feeKrw > 0)) {
+    return { refunded: false, reason: 'not_eligible' };
+  }
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      guid: record.guid, krw_amount: feeKrw, secret: _mintSecret(env),
+      memo: `klaw_refund:미완결 사건 환불 (case_id=${record.case_id}, 원거래=${record.mint_content_hash || 'unknown'})`,
+    }),
+  }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+
+  if (!mintRes.ok) {
+    console.error(JSON.stringify({
+      tag: 'KLAW_REFUND_MINT_FAILED', guid: record.guid, caseId: record.case_id,
+      feeKrw, error: mintRes.error, ts: new Date().toISOString(),
+    }));
+    return { refunded: false, reason: 'mint_failed', error: mintRes.error };
+  }
+
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${record.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ refunded_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    // 환불(mint) 자체는 이미 성공한 뒤라 사용자 잔액은 정상 — refunded_at
+    // 기록만 실패하면 최악의 경우 재환불 시도가 한 번 더 들어올 수 있다.
+    // mint는 tx_hash 없이 매번 새 블록이라 멱등성이 없으므로, 이 실패는
+    // 크게 로그로 남겨 운영자가 인지하게 한다.
+    console.error(JSON.stringify({
+      tag: 'KLAW_REFUND_MARK_FAILED_POSSIBLE_DUPLICATE_RISK', guid: record.guid,
+      caseId: record.case_id, error: e.message, ts: new Date().toISOString(),
+    }));
+  }
+
+  console.log(JSON.stringify({
+    tag: 'KLAW_REFUND_OK', guid: record.guid, caseId: record.case_id, feeKrw, ts: new Date().toISOString(),
+  }));
+  return { refunded: true, feeKrw };
+}
+
+// POST /klaw/case/complete — {guid, case_id} — STEP C 렌더링 완료 시 클라이언트가 호출
+async function handleKlawCaseComplete(bodyText, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+  const { guid, case_id } = body || {};
+  if (!guid || !case_id) return _err(400, 'MISSING_FIELD', 'guid/case_id 필수', corsHeaders);
+
+  const existing = await _klawFindCaseCharge(env, guid, case_id);
+  if (!existing) return new Response(JSON.stringify({ ok: true, noted: 'no_charge_record' }), { headers: corsHeaders });
+
+  const token = await _l1AdminToken(env);
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    console.warn('[KLaw] completed_at 기록 실패:', e.message);
+  }
+  return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+}
+
+// POST /klaw/case/abandon — {guid, case_id} — 이탈 시 sendBeacon으로 호출,
+// 미완결 유료 사건이면 즉시 환불한다. sendBeacon은 응답을 못 읽으므로
+// 항상 200을 반환한다(클라이언트가 결과를 확인할 방법이 없음을 전제로
+// 서버 로그만으로 감사).
+async function handleKlawCaseAbandon(bodyText, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return new Response('{}', { headers: corsHeaders }); }
+  const { guid, case_id } = body || {};
+  if (!guid || !case_id) return new Response('{}', { headers: corsHeaders });
+
+  const existing = await _klawFindCaseCharge(env, guid, case_id);
+  if (existing) await _klawRefundIncompleteCase(env, existing);
+  return new Response('{}', { headers: corsHeaders });
+}
+
 async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
   const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, case_id, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  // ── 구버전 클라이언트(캐시된 옛 webapp.html) 즉시 차단 ──────────────
+  // (2026-08-13 신설 — 사고실험 사건6, 정책 결정: 감지 즉시 429)
+  // 판결 생성 티어(klaw-pro)는 현재 클라이언트라면 STEP0~C 전 구간에서
+  // 항상 case_id를 실어 보낸다(_ensureCaseId, klaw 저장소 runJudgementSim
+  // 참고). case_id가 없다는 건 브라우저가 case_id 도입 이전에 캐시된
+  // 페이지를 계속 쓰고 있다는 뜻 — 이 경우 STEP A/B/C가 매번 토큰
+  // 종량제로 별도 과금되는(정액제보다 비싼) 하위호환 경로로 새는데,
+  // 사용자는 이 사실을 전혀 알 수 없다. 함수 맨 앞에서 즉시 차단해
+  // DeepSeek 호출뿐 아니라 이어지는 UNIVERSAL 레이어 fetch·구독 조회
+  // 등 불필요한 부수 비용도 전부 건너뛴다.
+  if (tier === 'klaw-pro' && !case_id) {
+    _dlog(env, JSON.stringify({ tag: 'KLAW_LEGACY_CLIENT_BLOCKED', guid, ts: new Date().toISOString(), ...meta }));
+    return _err(429, 'KLAW_CLIENT_OUTDATED',
+      '페이지가 오래된 버전으로 캐시되어 있습니다. 새로고침(Ctrl+Shift+R 또는 Cmd+Shift+R) 후 다시 시도해 주세요.',
+      corsHeaders);
+  }
 
   // ── 전문직 티어(all_services_free) 요금 면제 — 2026-08-11 신설 ──
   // 지금까지 SUBSCRIPTION_TIERS.professional.all_services_free 플래그가
