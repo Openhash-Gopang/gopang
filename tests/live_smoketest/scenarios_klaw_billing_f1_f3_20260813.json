@@ -1,0 +1,51 @@
+[
+  {
+    "no": 1,
+    "title": "F3 — GDC 잔액 0원(신규 미충전 guid), 소송가액 1,500만원(10,000원 tier) → 사전 차단",
+    "finding": "F3",
+    "requires_funded_guid": false,
+    "claim_amount_krw": 15000000,
+    "expected_fee_krw": null,
+    "expected_http_status": 402,
+    "expected_error": "GDC_INSUFFICIENT_BALANCE",
+    "max_elapsed_seconds_soft": 5,
+    "reuse_case_from": null,
+    "notes": "사고실험 시나리오4 재현 — F3 수정 전에는 이 요청이 DeepSeek까지 실제로 호출된 뒤 사후에만 결제가 실패했다. F3 수정 후에는 DeepSeek 호출 자체가 나가지 않아야 하므로, 402 상태코드뿐 아니라 응답 속도(수 초 이내)도 간접 증거로 함께 기록한다(하드 판정 아님, 로그 참고용)."
+  },
+  {
+    "no": 2,
+    "title": "F1 — 소송가액 0원(형사사건 유형, 청구금액 미입력), 신규 사건 → 최소 tier(5,000원) 고정 부과",
+    "finding": "F1",
+    "requires_funded_guid": true,
+    "claim_amount_krw": 0,
+    "expected_fee_krw": 5000,
+    "expected_http_status": 200,
+    "expected_error": null,
+    "reuse_case_from": null,
+    "notes": "사고실험 시나리오3 재현 — F1 수정 전에는 webapp.html이 0을 null로 치환해 서버가 KLAW_CASE_FLOW_NO_VALID_AMOUNT로 무과금 처리했다. F1 수정 후에는 0이 그대로 전달되어 최소 tier(~1천만원 구간, 5,000원)가 정확히 부과되어야 한다. --funded-guid 잔액이 balance-status 조회 전후로 정확히 5,000원 줄어드는지로 판정한다."
+  },
+  {
+    "no": 3,
+    "title": "F3 회귀 확인 — 충분한 잔액 보유 guid, 소송가액 1,200만원(10,000원 tier), 신규 사건 → 정상 과금",
+    "finding": "F3",
+    "requires_funded_guid": true,
+    "claim_amount_krw": 12000000,
+    "expected_fee_krw": 10000,
+    "expected_http_status": 200,
+    "expected_error": null,
+    "reuse_case_from": null,
+    "notes": "F3의 사전 잔액 확인 게이트가 '잔액이 충분한 정상 사용자'까지 막아버리는 회귀가 없는지 확인. 정상적으로 200과 함께 10,000원이 정확히 차감돼야 한다."
+  },
+  {
+    "no": 4,
+    "title": "재생성 무료 확인 — 시나리오3과 동일 case_id로 재생성(STEP0 재호출) → 추가 과금 없음",
+    "finding": "F3",
+    "requires_funded_guid": true,
+    "claim_amount_krw": 12000000,
+    "expected_fee_krw": 0,
+    "expected_http_status": 200,
+    "expected_error": null,
+    "reuse_case_from": 3,
+    "notes": "이미 결제된 사건(시나리오3에서 만든 case_id)을 재생성 버튼처럼 다시 STEP0 호출. F3의 사전 잔액 확인이 '이미 결제된 사건'을 정확히 감지해 잔액 확인 자체를 건너뛰는지 확인 — 이 시점에 잔액이 이미 줄어든 상태라도(시나리오2·3 차감분) 통과해야 하며, 추가 차감은 0원이어야 한다."
+  }
+]

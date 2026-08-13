@@ -1,0 +1,67 @@
+name: Live Smoketest — K-Law GDC Billing (F1/F3)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_klaw_billing_f1_f3_20260813.json)"
+        required: false
+        default: ""
+      funded_guid:
+        description: "GDC 잔액 5만원 이상 보유한 테스트 guid (비워두면 유료 시나리오는 LIVE-SKIPPED)"
+        required: false
+        default: ""
+      worker_base:
+        description: "worker.js(hondi-proxy) base URL"
+        required: false
+        default: "https://hondi-proxy.tensor-city.workers.dev"
+
+permissions:
+  contents: write
+
+jobs:
+  run-klaw-billing-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run K-Law GDC billing live smoketest
+        working-directory: tests/live_smoketest
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_klaw_billing_f1_f3_20260813.json"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "scenarios=$SCEN out=$OUT"
+          ARGS="--scenarios $SCEN --out $OUT --worker-base ${{ github.event.inputs.worker_base || 'https://hondi-proxy.tensor-city.workers.dev' }} --resume"
+          if [ -n "${{ github.event.inputs.funded_guid }}" ]; then
+            ARGS="$ARGS --funded-guid ${{ github.event.inputs.funded_guid }}"
+          fi
+          python3 klaw_billing_live_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-klaw-billing
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: K-Law GDC billing live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-klaw-billing
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-klaw-billing-results
+          path: results/
