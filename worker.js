@@ -16225,9 +16225,49 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // (2026-07-28 신설 — 주피터 지시: K-Law도 GDC 지갑 연동) 위 일일 KRW
   // 캡(KLAW_USER_DAILY_KRW_LIMIT 등)은 그대로 유지하되(폭주 방지 1차
   // 방어선), 그와 별개로 무료 한도 소진 후에는 GDC 잔액도 확인한다 —
-  // callDeepSeek과 동일한 게이트를 공유(_gdcFreeQuotaGate).
+  // callDeepSeek과 동일한 게이트를 공유(_gdcFreeQuotaGate). 단,
+  // FREE_QUOTA_ENFORCEMENT_ENABLED=false인 동안은 이 게이트가 사실상
+  // 항상 통과이므로(사고실험 F3 발견), K-Law 사건단위 정액과금에
+  // 한해서는 아래에서 별도로 사전 잔액을 확인한다.
   const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
   if (_gateBlocked) return _gateBlocked;
+
+  // ── K-Law 정액과금 사전 잔액 확인 (2026-08-13 신설 — 사고실험 F3 대응) ──
+  // _klawFlatFee/_klawIsCaseFlow는 claim_amount_krw/case_id만으로 계산되는
+  // 순수 함수라 DeepSeek 응답을 기다릴 필요가 없다 — 여기서 미리 계산해,
+  // "이번 STEP0가 실제로 정액 청구를 시도할 시점"인지 먼저 판정한다.
+  // 이미 결제된 사건의 무료 재생성·전문직 무료 티어는 여기서 과금이
+  // 일어나지 않으므로 잔액 확인도 건너뛴다 — DeepSeek 호출 자체를
+  // 막을 이유가 없다(비용 없는 재생성은 계속 즉시 되어야 함).
+  const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
+  const _klawIsCaseFlow = !!case_id;
+  if (!_klawFreeTier && step_cycle && _klawFlatFee) {
+    let _klawWillChargeNow = true; // 기본: 이번 호출에서 실제로 청구 시도됨
+    if (_klawIsCaseFlow) {
+      // 사건단위 흐름 — 이미 결제된 사건이면(재생성) 이번엔 청구가 없다.
+      const _existingCase = await _klawFindCaseCharge(env, guid, case_id);
+      if (_existingCase) _klawWillChargeNow = false;
+    }
+    if (_klawWillChargeNow) {
+      const _klawBalanceKRW = await _l1GetBalanceKRW(guid);
+      if (_klawBalanceKRW === null) {
+        console.warn(JSON.stringify({ tag: 'KLAW_PREFLIGHT_BALANCE_CHECK_FAILED', guid, caseId: case_id, ts: new Date().toISOString(), ...meta }));
+        return _err(502, 'GDC_BALANCE_CHECK_FAILED', '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+      }
+      if (_klawBalanceKRW < _klawFlatFee.fee) {
+        _dlog(env, JSON.stringify({
+          tag: 'KLAW_PREFLIGHT_INSUFFICIENT_BALANCE', guid, caseId: case_id,
+          requiredKrw: _klawFlatFee.fee, balanceKrw: _klawBalanceKRW, feeTier: _klawFlatFee.tier,
+          ts: new Date().toISOString(),
+        }));
+        return new Response(JSON.stringify({
+          error: 'GDC_INSUFFICIENT_BALANCE',
+          message: `이 사건(소송가액 구간: ${_klawFlatFee.tier})의 판결 생성 요금은 ${_klawFlatFee.fee.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다. 충전 후 다시 이용해 주세요.`,
+          required_krw: _klawFlatFee.fee, balance_krw: Math.round(_klawBalanceKRW),
+        }), { status: 402, headers: corsHeaders });
+      }
+    }
+  }
 
   const isStream = !!stream;
   const payload = { model: backendModel, messages: messagesWithIntegrity, stream: isStream };
@@ -16265,7 +16305,9 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // 주석 참고) — 이번 호출이 "정액 판결 생성 사건 흐름"에 속하는지 판정.
   // case_id 유무로 판정한다(예전엔 step_cycle 하나로만 판정해서 STEP
   // A/B/C가 여전히 토큰 과금되는 버그가 있었다 — 아래 참고).
-  const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
+  // ★ 2026-08-13 — _klawFlatFee/_klawIsCaseFlow는 이제 위쪽 사전 잔액
+  // 확인 블록에서 이미 계산됐다(F3 대응). 여기서 다시 선언하지 않고
+  // 그 값을 그대로 재사용한다 — 같은 함수 스코프라 클로저로 접근 가능.
   // (2026-07-28 신설 — GDC 연동) recordStep(판결 시뮬레이션 횟수 카운트)에
   // 더해, 실사용량만큼 GDC 잔액에서도 차감한다. 두 부수효과를 하나의
   // onAfterRecord 콜백에 묶는다 — _recordAiUsage는 콜백 하나만 받는다.
@@ -16291,7 +16333,6 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   //      전환 전까지는 이 혼재 상태가 그대로 유지된다는 뜻이기도 하다).
   //   ④ 그 외(일반 상담 등, case_id도 claim_amount_krw도 없음) → 기존과
   //      동일하게 토큰 기반 종량 과금.
-  const _klawIsCaseFlow = !!case_id;
   const settleKlaw = (usage) => async (bill) => {
     await recordStep();
     if (_klawFreeTier) {
