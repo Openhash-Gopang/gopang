@@ -11397,6 +11397,19 @@ export default {
     if (pathname === '/klaw/case/complete')        return handleKlawCaseComplete(bodyText, env, corsHeaders);
     if (pathname === '/klaw/case/abandon')         return handleKlawCaseAbandon(bodyText, env, corsHeaders);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/journey/quote')            return handleJourneyQuote(bodyText, env, corsHeaders);
+    if (pathname === '/journey/approve')          return handleJourneyApprove(bodyText, env, corsHeaders);
+    if (pathname === '/journey/complete')         return handleJourneyComplete(bodyText, env, corsHeaders);
+    if (pathname === '/gov/case/complete') {
+      let b; try { b = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+      if (!b?.agency) return _err(400, 'MISSING_FIELD', 'agency 필수', corsHeaders);
+      return handleKServiceUnitComplete(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
+    }
+    if (pathname === '/gov/case/abandon') {
+      let b; try { b = JSON.parse(bodyText); } catch { return new Response('{}', { headers: corsHeaders }); }
+      if (!b?.agency) return new Response('{}', { headers: corsHeaders });
+      return handleKServiceUnitAbandon(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
+    }
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
     if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
@@ -16268,6 +16281,262 @@ function _kPublicFlatFee(_unused) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 혼디 실행대행(여정) 정액과금 모듈 (2026-08-13, 주피터 승인)
+// ═══════════════════════════════════════════════════════════
+// K-서비스처럼 "1회 호출=1과금"이 아니라, 여러 기관을 조율하는 하나의
+// 목적(개인파산·면책, 상속, 창업인허가 등)을 "여정" 단위로 1회만
+// 과금한다. 정책: 선승인·후불제(수행 전 승인 → 완료 시 차감), 완료
+// 전 중단은 완전 무과금(별도 환불 로직 불필요 — 애초에 차감이 안
+// 일어나므로).
+
+const JOURNEY_TIER_SCHEDULE = [
+  { max: 2,  tier: 'Tier 1 (단순)',   fee: 1_000  },
+  { max: 4,  tier: 'Tier 2 (경미)',   fee: 3_000  },
+  { max: 7,  tier: 'Tier 3 (복합)',   fee: 10_000 },
+  { max: 10, tier: 'Tier 4 (고난도)', fee: 30_000 },
+];
+function _journeyTierForScore(score) {
+  const s = Number(score);
+  if (!Number.isFinite(s) || s < 0) return null;
+  const b = JOURNEY_TIER_SCHEDULE.find(x => s <= x.max);
+  return b ? { tier: b.tier, fee: b.fee } : null;
+}
+
+// journey_type_key 캐시 조회. 없으면 null(호출부가 LLM 신규평가로 넘어감).
+async function _journeyComplexityFromCache(env, journeyTypeKey) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`journey_type_key='${journeyTypeKey}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/journey_complexity_cache/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const rec = (data.items && data.items[0]) || null;
+  // scope_boundary(대행 범위 종료 조건)가 비어있으면 캐시를 신뢰하지
+  // 않는다 — 이 유형은 애초에 "언제 끝나는지" 정의가 안 된 채 저장된
+  // 것이라, 재평가(및 담당자의 scope_boundary 확정)가 먼저 필요하다.
+  if (rec && !rec.scope_boundary) return null;
+  return rec;
+}
+
+// LLM 4축 평가(캐시 미스 시). 원문 사고실험에서 확인된 원칙 그대로:
+// ① axis_agencies는 "혼디 백엔드 연동 호출 수" 기준(사용자 체감 기관
+//   수 아님 — 안심상속처럼 정부가 이미 통합한 서비스는 0점).
+// ② scope_boundary(대행 범위 종료 조건)를 반드시 함께 산정 — 없으면
+//   "여정 종료 시점 미정" 유형(어린이집 대기·형사고소 진행상황 등)이라
+//   이 틀 자체를 적용하면 안 된다는 신호.
+async function _journeyEvaluateComplexity(env, { journeyTypeKey, userRequestText }) {
+  const prompt = `사용자 요청: "${userRequestText}"
+
+이 요청이 혼디(여러 국가기관·기관을 조율하는 AI 실행대행 플랫폼)가
+처리할 "여정(journey)"이라고 가정하고, 아래 4축으로 복잡도를 평가하라.
+
+① axis_agencies (0~3점): 혼디가 실제로 개별 연동 호출해야 하는 백엔드
+   기관 수 기준(사용자가 원래 가야 했던 기관 수가 아님 — 정부가 이미
+   통합 API로 묶어둔 서비스는 낮게 평가).
+   1개=0 / 2~3개=1 / 4~6개=2 / 7개 이상=3
+② axis_duration (0~3점): 예상 소요기간. ~1주=0 / ~1개월=1 / ~6개월=2 / 6개월 초과=3
+③ axis_legal_process (0~2점): 법적 절차·심리 개입. 없음=0 / 서면심사만=1 / 대면 심문·재판 등=2
+④ axis_doc_types (0~2점): 필요 서류 유형 수. ~3종=0 / 4~7종=1 / 8종 이상=2
+
+추가로 scope_boundary를 반드시 명시하라 — "혼디의 대행 범위가 어디서
+끝나는지"를 한 문장으로. 종료 시점을 정의할 수 없는 유형(예: 대기자
+순번제, 결과가 무기한 열려있는 신고·수사)이면 scope_boundary를 빈
+문자열로 두고 unresolvable: true를 표시하라.
+
+JSON만 출력(다른 텍스트 없이):
+{"axis_agencies":N,"axis_duration":N,"axis_legal_process":N,"axis_doc_types":N,"scope_boundary":"...","unresolvable":false}`;
+
+  let parsed;
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat', stream: false, temperature: 0,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await res.json();
+    const raw = data?.choices?.[0]?.message?.content || '{}';
+    parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+  } catch (e) {
+    console.error(JSON.stringify({ tag: 'JOURNEY_COMPLEXITY_EVAL_FAILED', journeyTypeKey, error: e.message, ts: new Date().toISOString() }));
+    return null;
+  }
+  if (parsed.unresolvable || !parsed.scope_boundary) {
+    // 종료 시점 미정 유형 — 이 틀 적용 대상이 아님. 캐시에 저장하지 않는다.
+    return { unresolvable: true };
+  }
+  const score = (parsed.axis_agencies || 0) + (parsed.axis_duration || 0)
+    + (parsed.axis_legal_process || 0) + (parsed.axis_doc_types || 0);
+  const tierInfo = _journeyTierForScore(score);
+  if (!tierInfo) return null;
+
+  // 캐시 저장(다음 동일 유형부터 즉시 히트)
+  try {
+    const token = await _l1AdminToken(env);
+    await fetch(`${L1_DEFAULT}/api/collections/journey_complexity_cache/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        journey_type_key: journeyTypeKey,
+        axis_agencies: parsed.axis_agencies || 0, axis_duration: parsed.axis_duration || 0,
+        axis_legal_process: parsed.axis_legal_process || 0, axis_doc_types: parsed.axis_doc_types || 0,
+        complexity_score: score, tier: tierInfo.tier, scope_boundary: parsed.scope_boundary,
+        sample_count: 1, drift_accum: 0, last_verified_at: new Date().toISOString(),
+      }),
+    });
+  } catch (e) {
+    console.warn('[Journey] 복잡도 캐시 저장 실패(무시 — 다음에도 재평가만 될 뿐):', e.message);
+  }
+  return {
+    axis_agencies: parsed.axis_agencies || 0, axis_duration: parsed.axis_duration || 0,
+    axis_legal_process: parsed.axis_legal_process || 0, axis_doc_types: parsed.axis_doc_types || 0,
+    complexity_score: score, tier: tierInfo.tier, scope_boundary: parsed.scope_boundary,
+  };
+}
+
+// POST /journey/quote — {guid, journey_id, journey_type_key, user_request_text}
+// 캐시 조회 → 미스 시 LLM 평가 → journey_charges에 status='quoted'로 기록.
+async function handleJourneyQuote(bodyText, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+  const { guid, journey_id, journey_type_key, user_request_text } = body || {};
+  if (!guid || !journey_id || !journey_type_key) {
+    return _err(400, 'MISSING_FIELD', 'guid/journey_id/journey_type_key 필수', corsHeaders);
+  }
+
+  let complexity = await _journeyComplexityFromCache(env, journey_type_key);
+  if (!complexity) {
+    complexity = await _journeyEvaluateComplexity(env, { journeyTypeKey: journey_type_key, userRequestText: user_request_text || '' });
+    if (!complexity) return _err(502, 'JOURNEY_COMPLEXITY_EVAL_FAILED', '복잡도 평가에 실패했습니다.', corsHeaders);
+    if (complexity.unresolvable) {
+      return new Response(JSON.stringify({
+        ok: false, error: 'JOURNEY_SCOPE_UNRESOLVABLE',
+        message: '이 요청은 대행 범위(종료 시점)를 명확히 정의할 수 없어 여정형 정액과금 대상이 아닙니다. 개별 조회형 서비스로 이용해 주세요.',
+      }), { status: 422, headers: corsHeaders });
+    }
+  }
+  const tierInfo = _journeyTierForScore(complexity.complexity_score);
+  if (!tierInfo) return _err(502, 'JOURNEY_TIER_LOOKUP_FAILED', '', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const rec = await fetch(`${L1_DEFAULT}/api/collections/journey_charges/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      guid, journey_id, journey_type_key,
+      quoted_tier: tierInfo.tier, quoted_fee_krw: tierInfo.fee, status: 'quoted',
+    }),
+  }).then(r => r.json()).catch(e => ({ error: e.message }));
+
+  return new Response(JSON.stringify({
+    ok: true, journey_id, tier: tierInfo.tier, fee_krw: tierInfo.fee,
+    scope_boundary: complexity.scope_boundary || null,
+  }), { headers: corsHeaders });
+}
+
+// POST /journey/approve — {guid, journey_id} — 잔액 사전확인만 하고
+// 아직 차감하지 않는다(선승인·후불제). 승인 이후에만 실제 기관 호출
+// (여정 실행)을 시작하도록 클라이언트가 이 응답을 게이트로 써야 한다.
+async function handleJourneyApprove(bodyText, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+  const { guid, journey_id } = body || {};
+  if (!guid || !journey_id) return _err(400, 'MISSING_FIELD', 'guid/journey_id 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${guid}' && journey_id='${journey_id}'`);
+  const found = await fetch(`${L1_DEFAULT}/api/collections/journey_charges/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ items: [] }));
+  const rec = (found.items && found.items[0]) || null;
+  if (!rec) return _err(404, 'JOURNEY_NOT_FOUND', '', corsHeaders);
+  if (rec.status !== 'quoted') {
+    return new Response(JSON.stringify({ ok: true, already: rec.status }), { headers: corsHeaders });
+  }
+
+  const balance = await _l1GetBalanceKRW(guid);
+  if (balance === null) return _err(502, 'GDC_BALANCE_CHECK_FAILED', '', corsHeaders);
+  if (balance < rec.quoted_fee_krw) {
+    return new Response(JSON.stringify({
+      ok: false, error: 'GDC_INSUFFICIENT_BALANCE',
+      message: `이 여정(${rec.quoted_tier})의 예상 요금은 ${rec.quoted_fee_krw.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다 — 완료 시 실제 차감되므로 그 전까지 충전해 주세요.`,
+      required_krw: rec.quoted_fee_krw, balance_krw: Math.round(balance),
+    }), { status: 402, headers: corsHeaders });
+  }
+
+  await fetch(`${L1_DEFAULT}/api/collections/journey_charges/records/${rec.id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'approved', approved_at: new Date().toISOString() }),
+  });
+  return new Response(JSON.stringify({ ok: true, approved: true, journey_id, quoted_fee_krw: rec.quoted_fee_krw }), { headers: corsHeaders });
+}
+
+// POST /journey/complete — {guid, journey_id, actual_axis_agencies?, actual_axis_duration?,
+//   actual_axis_legal_process?, actual_axis_doc_types?} — 완료 시 실제
+// 차감이 여기서 처음이자 유일하게 일어난다. 실측 복잡도가 견적보다
+// 낮으면 낮은 요금으로, 높으면(가격보호 원칙) 견적 그대로 청구하고
+// 상향분은 청구하지 않는다(재동의 절차는 이번 범위 밖 — 필요 시 별도
+// /journey/reapprove 설계). 완료 전 중단은 이 엔드포인트 자체가 절대
+// 호출되지 않으므로 완전 무과금이 자연히 성립한다.
+async function handleJourneyComplete(bodyText, env, corsHeaders) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+  const { guid, journey_id, actual_axis_agencies, actual_axis_duration, actual_axis_legal_process, actual_axis_doc_types } = body || {};
+  if (!guid || !journey_id) return _err(400, 'MISSING_FIELD', 'guid/journey_id 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${guid}' && journey_id='${journey_id}'`);
+  const found = await fetch(`${L1_DEFAULT}/api/collections/journey_charges/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ items: [] }));
+  const rec = (found.items && found.items[0]) || null;
+  if (!rec) return _err(404, 'JOURNEY_NOT_FOUND', '', corsHeaders);
+  if (rec.status === 'completed') {
+    return new Response(JSON.stringify({ ok: true, already_completed: true }), { headers: corsHeaders });
+  }
+  if (rec.status !== 'approved') {
+    return _err(409, 'JOURNEY_NOT_APPROVED', '승인되지 않은 여정은 완료 처리(및 청구)할 수 없습니다.', corsHeaders);
+  }
+
+  // 실측 축이 전달됐으면 재평가, 아니면 견적 그대로 확정.
+  let actualTierInfo = { tier: rec.quoted_tier, fee: rec.quoted_fee_krw };
+  if ([actual_axis_agencies, actual_axis_duration, actual_axis_legal_process, actual_axis_doc_types].some(v => v != null)) {
+    const actualScore = (actual_axis_agencies ?? 0) + (actual_axis_duration ?? 0)
+      + (actual_axis_legal_process ?? 0) + (actual_axis_doc_types ?? 0);
+    const computed = _journeyTierForScore(actualScore);
+    if (computed) {
+      // 가격보호: 견적보다 비싸지는 상향 조정은 자동 적용하지 않는다
+      // (재동의 필요 — 이번 범위 밖). 하향은 그대로 반영.
+      actualTierInfo = computed.fee <= rec.quoted_fee_krw ? computed : { tier: rec.quoted_tier, fee: rec.quoted_fee_krw };
+    }
+  }
+
+  const chargeResult = await _chargeGdcForAiUsage(env, {
+    guid, krwAmount: actualTierInfo.fee, serviceId: 'journey-execution',
+    memo: `혼디 실행대행 여정 완료(${actualTierInfo.tier}, journey_id=${journey_id})`,
+  });
+  if (!chargeResult?.ok) {
+    console.error(JSON.stringify({ tag: 'JOURNEY_CHARGE_FAILED', guid, journeyId: journey_id, ts: new Date().toISOString() }));
+    return _err(502, 'JOURNEY_CHARGE_FAILED', '결제 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+  }
+  if (typeof chargeResult.balance_after === 'number') {
+    await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+  }
+
+  const nowIso = new Date().toISOString();
+  await fetch(`${L1_DEFAULT}/api/collections/journey_charges/records/${rec.id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status: 'completed', actual_tier: actualTierInfo.tier, actual_fee_krw: actualTierInfo.fee,
+      charged_at: nowIso, completed_at: nowIso, mint_content_hash: chargeResult.tx_hash || '',
+    }),
+  });
+
+  return new Response(JSON.stringify({ ok: true, charged_krw: actualTierInfo.fee, tier: actualTierInfo.tier }), { headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
 // 전문가 AI 페르소나 11개 그룹 요금표 (2026-08-13, 주피터 승인)
 // ═══════════════════════════════════════════════════════════
 // "여타 K-서비스·페르소나는 K-Law 과금 정책을 자신의 것으로 변형하여
@@ -18802,7 +19071,8 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation,
+    unit_id, unit_amount_krw, tier_hint, case_cycle } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -18840,6 +19110,80 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   }
   if (userSpent >= GOV_USER_DAILY_KRW_LIMIT) {
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+
+  // ── 전문직 티어(all_services_free) 요금 면제 (K-Law와 동일 패턴 재사용) ──
+  let _klawFreeTier = false; // 변수명은 K-Law 원본과 통일 유지(공용 헬퍼가 이 이름을 참조하지 않지만, 코드 검색 일관성 위해)
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    _klawFreeTier = !!SUBSCRIPTION_TIERS[sub?.tier]?.all_services_free;
+  } catch (e) { /* 미구독/조회실패 → 유료로 간주(보수적) */ }
+
+  // ── K-서비스 건당 정액과금 (2026-08-13 신설) ─────────────────────
+  // K-Law(handleKlawRelay)에서 검증된 패턴을 K_SERVICE_BILLING_REGISTRY
+  // 경유로 재사용한다. 342개 국가기관 중 실제로 요금표가 등록된 agency
+  // (tax/health/police/insurance/traffic/logistics/public — 위 레지스트리
+  // 참고, emergency/democracy는 의도적으로 무과금)에서만, 그리고
+  // 클라이언트가 case_cycle:true로 "이번 턴이 사건 종결 턴"이라고 명시한
+  // 경우에만 동작한다. case_cycle이 없으면(대부분의 일반 대화 턴) 이
+  // 블록은 완전히 건너뛴다 — 기존 토큰 종량제(billGovCall)만 그대로 적용.
+  const _govBillCfg = K_SERVICE_BILLING_REGISTRY[agency];
+  let _govGuidLockHeld = false;
+  let _govChargeReserve = null; // { reserved, record } — settle 단계에서 확정/롤백에 사용
+  let _govWillChargeNow = false;
+  if (!_klawFreeTier && case_cycle && _govBillCfg?.feeSchedule && unit_id) {
+    const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
+    const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
+    if (_govFlatFee) {
+      _govGuidLockHeld = await _kServiceTryAcquireGuidLock(env, guid);
+      if (!_govGuidLockHeld) {
+        return new Response(JSON.stringify({
+          error: 'KLAW_BILLING_IN_PROGRESS', // 코드는 K-Law와 통일(클라이언트 공용 처리 위해)
+          message: '다른 요청이 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+        }), { status: 409, headers: corsHeaders });
+      }
+      try {
+        const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
+        if (_existing) {
+          _govWillChargeNow = false; // 이미 결제된 사건 — 무료 재처리
+        } else {
+          const _govBalanceKRW = await _l1GetBalanceKRW(guid);
+          if (_govBalanceKRW === null) {
+            await _kServiceReleaseGuidLock(env, guid);
+            return _err(502, 'GDC_BALANCE_CHECK_FAILED', '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+          }
+          if (_govBalanceKRW < _govFlatFee.fee) {
+            await _kServiceReleaseGuidLock(env, guid);
+            return new Response(JSON.stringify({
+              error: 'GDC_INSUFFICIENT_BALANCE',
+              message: `이 처리(${_govFlatFee.tier})의 요금은 ${_govFlatFee.fee.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다.`,
+              required_krw: _govFlatFee.fee, balance_krw: Math.round(_govBalanceKRW),
+            }), { status: 402, headers: corsHeaders });
+          }
+          _govChargeReserve = await _kServiceTryReserveCharge(env, agency, { guid, unitId: unit_id, unitAmount: unit_amount_krw });
+          if (!_govChargeReserve.reserved) {
+            // 선점 실패 = 방금 다른 요청이 같은 unit_id를 먼저 선점(레이스) —
+            // 재조회해서 "이미 결제된 사건"으로 수렴 처리.
+            const _raced = await _kServiceFindCharge(env, agency, guid, unit_id);
+            if (_raced) { _govWillChargeNow = false; }
+            else {
+              await _kServiceReleaseGuidLock(env, guid);
+              return _err(502, 'GOV_CASE_RESERVE_FAILED', '처리 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+            }
+          } else {
+            _govWillChargeNow = true;
+          }
+        }
+      } catch (e) {
+        if (_govGuidLockHeld) await _kServiceReleaseGuidLock(env, guid);
+        throw e;
+      }
+      if (!_govWillChargeNow && _govGuidLockHeld) {
+        // 무료 재처리로 확정 — 실제 결제 시도가 없으므로 락을 여기서 바로 푼다.
+        await _kServiceReleaseGuidLock(env, guid);
+        _govGuidLockHeld = false;
+      }
+    }
   }
 
   // (2026-07-28 신설 — 주피터 지시: 정부기관(342개) 릴레이도 GDC 지갑
@@ -18931,7 +19275,52 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 단계(_callDelegationTarget 포함)가 이 헬퍼 하나를 거치므로, 여기
   // 한 곳만 고치면 위임 여부와 무관하게 동일하게 적용된다.
   const billGovCall = (usage, via) => {
-    if (!usage) return;
+    // 사고실험 사건3 대응 — 이 요청에서 guid 락을 잡았다면(위 사전확인
+    // 단계에서 실제 결제 시도가 있었던 경우) usage 유무와 무관하게
+    // 반드시 여기서 해제한다. K-Law(settleKlaw)의 try/finally와 달리
+    // 이 함수는 여러 지점에서 호출될 수 있어(스트림/비스트림) early
+    // return 경로마다 직접 처리한다.
+    const releaseGovGuidLock = () => { if (_govGuidLockHeld) { _govGuidLockHeld = false; return _kServiceReleaseGuidLock(env, guid); } };
+
+    if (!usage) { releaseGovGuidLock(); return; }
+
+    // K-서비스 건당 정액과금 확정/롤백 (2026-08-13 신설, K-Law settleKlaw와 동일 패턴)
+    const _finalizeGovCharge = async () => {
+      if (!_govBillCfg?.feeSchedule || !unit_id || !case_cycle) return;
+      try {
+        if (_govWillChargeNow && _govChargeReserve?.reserved) {
+          const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
+          const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
+          const chargeResult = await _chargeGdcForAiUsage(env, {
+            guid, krwAmount: _govFlatFee.fee, serviceId: `${agency}-case`,
+            memo: `K-${agency} 처리(${_govFlatFee.tier}, unit_id=${unit_id})`,
+          });
+          if (chargeResult?.ok) {
+            if (typeof chargeResult.balance_after === 'number') {
+              await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+            }
+            await _kServiceFinalizeCharge(env, agency, _govChargeReserve.record.id, {
+              feeKrw: _govFlatFee.fee, feeTier: _govFlatFee.tier, mintContentHash: chargeResult.tx_hash || '',
+            });
+          } else {
+            // 결제 실패 — 예약 롤백(다음 시도가 무료 재처리로 오판되지 않게)
+            await _kServiceReleaseChargeReservation(env, agency, _govChargeReserve.record.id);
+            console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FAILED', agency, guid, unitId: unit_id, ts: new Date().toISOString() }));
+          }
+        } else if (!_govWillChargeNow) {
+          // 무료 재처리(이미 결제된 사건) — 재처리 카운트만 갱신
+          const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
+          if (_existing) await _kServiceBumpRegen(env, agency, _existing.id, _existing.regen_count);
+        }
+      } catch (e) {
+        console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FINALIZE_ERROR', agency, guid, unitId: unit_id, error: e.message, ts: new Date().toISOString() }));
+      } finally {
+        await releaseGovGuidLock();
+      }
+    };
+    const _finalizeTask = _finalizeGovCharge();
+    if (ctx?.waitUntil) ctx.waitUntil(_finalizeTask); else _finalizeTask.catch(() => {});
+
     _recordAiUsage(env, ctx, {
       guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
