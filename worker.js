@@ -3156,6 +3156,25 @@ async function handleKlawSessionsSave(request, env, corsHeaders) {
   }
 }
 
+// 2026-08-13 신설 — 사고실험 F2 대응. handleKlawRelay와 동일한 stepKey
+// 계산식(klaw:steps:${guid}:${day})을 그대로 재사용해, "재생성 버튼도
+// 오늘 3회 한도를 소진시킨다"는 사실을 클라이언트가 미리 보여줄 수
+// 있게 한다. 이 조회 자체는 카운트를 늘리지 않는다(읽기 전용).
+async function handleKlawQuota(request, url, env, corsHeaders) {
+  const guid = (url.searchParams.get('guid') || '').trim();
+  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  try {
+    const day = _todayKey();
+    const stepKey = `klaw:steps:${guid}:${day}`;
+    const used = await _klawSpendGet(env, stepKey);
+    const limit = KLAW_USER_DAILY_STEP_LIMIT;
+    const remaining = Math.max(0, limit - used);
+    return new Response(JSON.stringify({ ok: true, used, limit, remaining }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'KLAW_QUOTA_LOOKUP_FAILED', e.message, corsHeaders);
+  }
+}
+
 
 // ═══════════════════════════════════════════════════════════
 // 일정 관리(캘린더) — 시민 티어 신규 항목 (2026-08-11 신설)
@@ -10807,6 +10826,8 @@ export default {
     // klaw_sessions
     if (pathname === '/klaw/sessions/history' && request.method === 'GET') return handleKlawSessionsHistory(request, url, env, corsHeaders);
     if (pathname === '/klaw/sessions' && request.method === 'POST') return handleKlawSessionsSave(request, env, corsHeaders);
+    // 2026-08-13 신설 — 사고실험 F2 대응(일일 판결 생성 잔여 횟수 조회)
+    if (pathname === '/klaw/quota' && request.method === 'GET') return handleKlawQuota(request, url, env, corsHeaders);
     if (pathname === '/schedule/list' && request.method === 'GET') return handleScheduleList(request, url, env, corsHeaders);
     if (pathname === '/schedule/save' && request.method === 'POST') return handleScheduleSave(request, env, corsHeaders);
     if (pathname === '/schedule/delete' && request.method === 'POST') return handleScheduleDelete(request, env, corsHeaders);
