@@ -16118,6 +16118,167 @@ function _klawFlatFeeForClaimAmount(claimAmountKrw) {
   return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
 }
 
+// ═══════════════════════════════════════════════════════════
+// K-서비스 14개 요금표 (2026-08-13, 주피터 승인 — SP 원문 조사 후 제안,
+// 그대로 반영)
+// ═══════════════════════════════════════════════════════════
+//
+// A그룹 — 산출물에 내재된 금액이 있어 K-Law와 동일하게 "금액 구간표"
+// 방식을 쓴다(unitAmount = 그 금액, KRW). 티어 임계값은 K-Law보다 낮게
+// 잡았다 — K-Law(가상판결)는 소송 실익과 직결돼 체감가치가 크지만,
+// 이쪽은 "세액 산정·견적·보험료 계산"처럼 실무자가 몇 분이면 하는
+// 계산 보조 성격이라 체감가치가 상대적으로 낮다고 판단했다.
+
+const K_TAX_FEE_SCHEDULE = [
+  { max: 500_000,      tier: '~50만원',        fee: 3_000  },
+  { max: 5_000_000,    tier: '50만~500만원',    fee: 8_000  },
+  { max: 50_000_000,   tier: '500만~5000만원',  fee: 15_000 },
+  { max: 500_000_000,  tier: '5000만~5억원',    fee: 30_000 },
+  { max: Infinity,     tier: '5억원 초과',      fee: 50_000 },
+];
+function _kTaxFlatFee(taxAmountKrw) {
+  const amt = Number(taxAmountKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const bucket = K_TAX_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
+}
+
+const K_INSURANCE_FEE_SCHEDULE = [
+  { max: 10_000,     tier: '~1만원(연보험료)',   fee: 2_000  },
+  { max: 50_000,     tier: '1만~5만원',          fee: 5_000  },
+  { max: 200_000,    tier: '5만~20만원',         fee: 10_000 },
+  { max: 1_000_000,  tier: '20만~100만원',       fee: 20_000 },
+  { max: Infinity,   tier: '100만원 초과',       fee: 35_000 },
+];
+function _kInsuranceFlatFee(premiumKrw) {
+  const amt = Number(premiumKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const bucket = K_INSURANCE_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
+}
+
+const K_STOCK_FEE_SCHEDULE = [
+  { max: 10_000_000,    tier: '~1천만원(자산규모)', fee: 5_000  },
+  { max: 100_000_000,   tier: '1천만~1억원',        fee: 10_000 },
+  { max: 1_000_000_000, tier: '1억~10억원',         fee: 20_000 },
+  { max: 5_000_000_000, tier: '10억~50억원',        fee: 40_000 },
+  { max: Infinity,      tier: '50억원 초과',        fee: 60_000 },
+];
+function _kStockFlatFee(assetAmountKrw) {
+  const amt = Number(assetAmountKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const bucket = K_STOCK_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
+}
+
+// 과태료 이의신청 한정 — K-Traffic의 다른 기능(운전면허 안내, 노선 조회
+// 등)은 금액 개념이 없어 이 요금표 적용 대상이 아니다. 클라이언트가
+// 어느 서브기능을 호출했는지는 unitId/메타데이터로 구분해야 하며,
+// 과태료 이의신청이 아닌 호출에 이 함수를 적용하면 안 된다(호출부 책임).
+const K_TRAFFIC_FEE_SCHEDULE = [
+  { max: 50_000,   tier: '~5만원(과태료)', fee: 2_000  },
+  { max: 200_000,  tier: '5만~20만원',     fee: 4_000  },
+  { max: 500_000,  tier: '20만~50만원',    fee: 7_000  },
+  { max: Infinity, tier: '50만원 초과',    fee: 10_000 },
+];
+function _kTrafficFlatFee(fineAmountKrw) {
+  const amt = Number(fineAmountKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const bucket = K_TRAFFIC_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
+}
+
+const K_CLEANER_FEE_SCHEDULE = [
+  { max: 100_000,   tier: '~10만원(수거견적)', fee: 3_000  },
+  { max: 500_000,   tier: '10만~50만원',       fee: 6_000  },
+  { max: 2_000_000, tier: '50만~200만원',      fee: 12_000 },
+  { max: Infinity,  tier: '200만원 초과',      fee: 20_000 },
+];
+function _kCleanerFlatFee(quoteAmountKrw) {
+  const amt = Number(quoteAmountKrw);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const bucket = K_CLEANER_FEE_SCHEDULE.find(b => amt <= b.max);
+  return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
+}
+
+// B그룹 — 금액이 아니라 산출물의 질적 등급으로만 나뉜다. unitAmount
+// 자리에 숫자 대신 등급 문자열(tierHint)을 받는다 — 호출부(클라이언트)가
+// 이번 요청이 어느 등급인지 결정해 보낸다. 등급이 없거나 못 알아들으면
+// (오탈자·구버전 클라이언트 등) 항상 더 싼 쪽으로 기본값을 잡는다 —
+// "잔액 확인 실패 시 유료로 간주"(서비스 연속성 우선) 관례와는 반대
+// 방향인데, 여기선 클라이언트 실수로 사용자가 의도보다 비싸게 과금되는
+// 걸 막는 게 더 중요하다고 판단했다(원인이 다른 종류의 실패이므로
+// 기본값 방향도 다르게 잡는 게 맞다).
+
+const K_HEALTH_FEE_TABLE = {
+  simple:   { tier: '단순 증상 확인',           fee: 0     },
+  detailed: { tier: '정밀 분석(복수 감별진단)', fee: 3_000 },
+};
+function _kHealthFlatFee(tierHint) {
+  const t = K_HEALTH_FEE_TABLE[tierHint] || K_HEALTH_FEE_TABLE.simple;
+  return { tier: t.tier, fee: t.fee };
+}
+
+const K_POLICE_FEE_TABLE = {
+  basic:    { tier: '신고접수·위험도 산정',           fee: 0      },
+  complete: { tier: '형사소송 자료 준비까지 완주',    fee: 10_000 },
+};
+function _kPoliceFlatFee(tierHint) {
+  const t = K_POLICE_FEE_TABLE[tierHint] || K_POLICE_FEE_TABLE.basic;
+  return { tier: t.tier, fee: t.fee };
+}
+
+const K_SCHOOL_FEE_TABLE = {
+  consult: { tier: '단순 학습 상담',               fee: 1_000 },
+  career:  { tier: '진로설계 보고서(역량평가 포함)', fee: 5_000 },
+};
+function _kSchoolFlatFee(tierHint) {
+  const t = K_SCHOOL_FEE_TABLE[tierHint] || K_SCHOOL_FEE_TABLE.consult;
+  return { tier: t.tier, fee: t.fee };
+}
+
+// ⚠ 미확정 — SP 원문(SP-13_klogistics_v3_0.txt)에서 화물가액 등 금액
+// 기준을 확인하지 못해 잠정적으로 B그룹 처리했다. 실제로 화물가액을
+// 다루는 서브기능이 있다면 A그룹(K_TRAFFIC_FEE_SCHEDULE과 같은 금액
+// 구간표)으로 재분류 검토 필요.
+const K_LOGISTICS_FEE_TABLE = {
+  lookup: { tier: '단순 조회',           fee: 500   },
+  report: { tier: '책임귀속 분석 리포트', fee: 5_000 },
+};
+function _kLogisticsFlatFee(tierHint) {
+  const t = K_LOGISTICS_FEE_TABLE[tierHint] || K_LOGISTICS_FEE_TABLE.lookup;
+  return { tier: t.tier, fee: t.fee };
+}
+
+const K_BUSINESS_FEE_TABLE = {
+  document:  { tier: '서류 준비 1건',                 fee: 3_000 },
+  critical:  { tier: '재무제표 확정 등 중요 업무',    fee: 8_000 },
+};
+function _kBusinessFlatFee(tierHint) {
+  const t = K_BUSINESS_FEE_TABLE[tierHint] || K_BUSINESS_FEE_TABLE.document;
+  return { tier: t.tier, fee: t.fee };
+}
+
+// ⚠ 미확정 — 정보 안내 위주라 특정 산출물이 없고, K-119·K-Democracy와
+// 비슷하게 "국가 기본 서비스 안내에 유료화가 부적절할 수 있다"는 우려가
+// 남아있다(제안 시 함께 보고함). 일단 제안한 500원 균일가로 반영하되,
+// 이 판단은 재검토 여지를 열어둔다.
+function _kPublicFlatFee(_unused) {
+  return { tier: '민원 안내', fee: 500 };
+}
+
+// C그룹 — 이 틀 자체를 적용하지 않기로 결정(2026-08-13, 주피터 승인).
+// feeSchedule을 null로 유지해 K_SERVICE_BILLING_REGISTRY 등록 시
+// "가격 미정(TODO)"이 아니라 "의도적으로 무과금"임을 아래 각 항목에
+// 명시한다:
+//   - emergency(K-119): 인명 안전 직결 — 응급상황에 결제창이 개입하면
+//     안 된다. 절대 과금 금지.
+//   - democracy(K-Democracy): 시민 거버넌스 참여(안건 제안·투표)에
+//     요금을 매기면 거버넌스 정당성이 훼손된다. 무과금 유지.
+//   - market(K-Market/K-Commerce): 이미 자체 수수료 체계(비용연동
+//     차등수수료, docs/K-Market_Architecture_Master_v1.0.md #26)가
+//     설계 완료 상태 — 이 틀을 얹으면 이중과금이 된다. 적용 대상 제외.
+
 function _todayKey() {
   // 2026-08-13 수정(사고실험 사건9 — 정책 결정: KST 기준으로 변경) —
   // 이전엔 UTC 자정 기준이라 실제 리셋 시점이 한국시간 오전 9시였다.
@@ -16175,20 +16336,20 @@ const K_SERVICE_BILLING_REGISTRY = {
   // ── 14개 K-서비스 (2026-08-13 컬렉션 생성 완료, 1787800001 마이그레이션) ──
   // feeSchedule은 전부 null(TODO) — 가격 정책은 각 서비스 담당자 확정 필요,
   // 이 리팩터에서 금액을 임의로 채우지 않았다.
-  tax:       { collection: 'tax_case_charges',       feeSchedule: null },
-  health:    { collection: 'health_case_charges',    feeSchedule: null },
-  police:    { collection: 'police_case_charges',    feeSchedule: null },
-  emergency: { collection: 'e119_case_charges',      feeSchedule: null },
-  democracy: { collection: 'democracy_case_charges', feeSchedule: null },
-  insurance: { collection: 'insurance_case_charges', feeSchedule: null },
-  traffic:   { collection: 'traffic_case_charges',   feeSchedule: null },
-  logistics: { collection: 'logistics_case_charges', feeSchedule: null },
-  public:    { collection: 'public_case_charges',    feeSchedule: null },
-  school:    { collection: 'school_case_charges',    feeSchedule: null },
-  market:    { collection: 'market_case_charges',    feeSchedule: null },
-  stock:     { collection: 'stock_case_charges',     feeSchedule: null },
-  cleaner:   { collection: 'cleaner_case_charges',   feeSchedule: null },
-  business:  { collection: 'business_case_charges',  feeSchedule: null },
+  tax:       { collection: 'tax_case_charges',       feeSchedule: _kTaxFlatFee },       // A그룹 — 세액 기준
+  health:    { collection: 'health_case_charges',    feeSchedule: _kHealthFlatFee },    // B그룹 — 등급(tierHint) 기준
+  police:    { collection: 'police_case_charges',    feeSchedule: _kPoliceFlatFee },    // B그룹
+  emergency: { collection: 'e119_case_charges',      feeSchedule: null },               // C그룹 — 인명안전, 절대 과금 금지
+  democracy: { collection: 'democracy_case_charges', feeSchedule: null },               // C그룹 — 거버넌스 참여, 무과금 유지
+  insurance: { collection: 'insurance_case_charges', feeSchedule: _kInsuranceFlatFee }, // A그룹 — 산정보험료 기준
+  traffic:   { collection: 'traffic_case_charges',   feeSchedule: _kTrafficFlatFee },   // A그룹 — 과태료 이의신청 한정(다른 서브기능엔 미적용, 호출부 책임)
+  logistics: { collection: 'logistics_case_charges', feeSchedule: _kLogisticsFlatFee }, // B그룹(잠정) — 화물가액 기준 미확인, 재분류 검토 필요
+  public:    { collection: 'public_case_charges',    feeSchedule: _kPublicFlatFee },    // 미확정 — 무과금 전환 검토 여지 있음(제안 시 보고)
+  school:    { collection: 'school_case_charges',    feeSchedule: _kSchoolFlatFee },    // B그룹
+  market:    { collection: 'market_case_charges',    feeSchedule: null },               // C그룹 — 자체 수수료 체계 있음, 이중과금 방지 위해 제외
+  stock:     { collection: 'stock_case_charges',     feeSchedule: _kStockFlatFee },     // A그룹 — 분석대상 자산규모 기준
+  cleaner:   { collection: 'cleaner_case_charges',   feeSchedule: _kCleanerFlatFee },   // A그룹 — 수거견적 기준
+  business:  { collection: 'business_case_charges',  feeSchedule: _kBusinessFlatFee },  // B그룹
 
   // ── 전문가 AI 페르소나 11개 그룹 (505개 개별 페르소나를 패밀리/카테고리
   // 단위로 통합, requiresPersonaId: true — 레코드에 persona_id를 같이 저장) ──
