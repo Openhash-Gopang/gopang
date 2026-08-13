@@ -2589,6 +2589,11 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
               issuanceDate: cred.issuanceDate, issuer_name: cred.issuer?.name || null,
               contentHash: cred._contentHash || null,
               verificationTier: cred._verificationTier || 'signature_verified',
+              // 2026-08-13 추가 — 사용자가 저장 시 idv_type을 잘못 골랐을
+              // 가능성(오분류)을 모델이 최소한이라도 걸러낼 수 있도록
+              // 본문 미리보기를 함께 전달한다. storeCredential() 경로
+              // (검증된 credential)는 이 필드가 없을 수 있음 — null 허용.
+              extractedTextPreview: cred.credentialSubject?.extractedTextPreview || null,
             });
           }
         } catch (e) {
@@ -2600,9 +2605,15 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
       await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP 결과 수신 — schema: ${JSON.stringify(data.schema)}. ` +
         `로컬 IDV 조회 결과, 아래 idv_type들은 이미 유효한 credential이 있어 재발급 요구 없이 ` +
         `즉시 서류로 사용 가능합니다(§IDV-자동첨부 원칙): ${JSON.stringify(matched)}. ` +
-        `matched 배열에 없는 acquisition:'gov24' 문서는 기존과 동일하게 §공문서 발급 안내(정부24)로 ` +
-        `안내하세요. matched 항목을 GOV_TASK_SUBMIT_REQUEST에 포함할 때는 documents[]에 doc_id와 함께 ` +
-        `idv_ref:true, sha256 자리에 contentHash를 사용하세요(원본 파일을 별도로 요구하지 마세요).]`);
+        `matched 각 항목의 extractedTextPreview가 있으면 반드시 훑어보고, 그 내용이 doc_id/idv_type이 ` +
+        `가리키는 서류와 명백히 다르면(예: idv_type은 가족관계증명서인데 본문이 사업자등록증 내용) ` +
+        `그 항목은 matched에서 무시하고 사용자에게 "IDV에 저장된 서류 종류가 실제와 다른 것 같다"고 ` +
+        `알린 뒤 §공문서 발급 안내로 폴백하세요(사용자가 저장 시 종류를 잘못 골랐을 수 있음 — 저장 자체는 ` +
+        `검증 없이 이뤄지므로 이 교차검증이 유일한 안전장치입니다). ` +
+        `matched 배열에 없는(또는 위 사유로 무시한) acquisition:'gov24' 문서는 기존과 동일하게 ` +
+        `§공문서 발급 안내(정부24)로 안내하세요. matched 항목을 GOV_TASK_SUBMIT_REQUEST에 포함할 때는 ` +
+        `documents[]에 doc_id와 함께 idv_ref:true, sha256 자리에 contentHash를 사용하세요` +
+        `(원본 파일을 별도로 요구하지 마세요).]`);
     } catch (e) {
       await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP 서버 호출 실패(${e.message}) — ` +
         `IDV 조회 없이 기존 §REQUIRED-DOCUMENTS 2단계(정부24 안내)로 진행하세요.]`);

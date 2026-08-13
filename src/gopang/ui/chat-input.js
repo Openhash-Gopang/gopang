@@ -301,8 +301,12 @@ export function mountChatInput(container, config = {}) {
     attachPreview.hidden = false;
     // IDV 저장은 "이 파일 하나가 어떤 서류인지" 사용자가 직접 골라야
     // 하는 UI라 다중 첨부 시 어느 파일에 대응시킬지 모호해진다 —
-    // 1개 첨부일 때만 노출한다.
+    // 1개 첨부일 때만 노출한다. 폼이 이미 열려 있었는데 파일이 추가돼
+    // 1개가 아니게 된 경우도 함께 닫는다(2026-08-13 수정 — 버튼은
+    // 숨겨졌는데 이미 열려있던 폼은 그대로 남아 "어떤 파일이 저장될지"
+    // 헷갈리는 문제가 있었음).
     idvSaveBtn.hidden = _attachedFiles.length !== 1;
+    if (idvSaveBtn.hidden) { idvSaveForm.hidden = true; idvSaveStatus.textContent = ''; }
   }
   function _clearAttachPreview() {
     _attachedFiles = [];
