@@ -67,7 +67,11 @@ def call_klaw_relay(worker_base, guid, case_id, claim_amount_krw):
     }
     t0 = time.time()
     try:
-        res = requests.post(f"{worker_base}/klaw/relay", json=body, timeout=90)
+        # worker.js AI_PROXY_PATHS 보호 — Origin 헤더 없는 요청은 403
+        # FORBIDDEN_NO_ORIGIN으로 차단된다(ALLOWED_ORIGINS 목록 중 klaw
+        # 서비스 도메인 사용).
+        headers = {"Origin": "https://klaw.hondi.net"}
+        res = requests.post(f"{worker_base}/klaw/relay", json=body, headers=headers, timeout=90)
         elapsed = time.time() - t0
         try:
             data = res.json()
