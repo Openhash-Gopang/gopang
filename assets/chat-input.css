@@ -38,6 +38,34 @@
   margin-left:auto;background:none;border:none;cursor:pointer;
   color:#9CA3AF;font-size:14px;line-height:1;padding:2px 4px;
 }
+.chat-input-root .ci-attach-idv-save{
+  flex-shrink:0;background:none;border:1px solid var(--brand-primary);
+  color:var(--brand-primary-dark);border-radius:8px;cursor:pointer;
+  font-size:11px;font-weight:600;padding:3px 8px;
+}
+.chat-input-root .ci-attach-idv-save[hidden]{ display:none; }
+
+/* ── IDV 저장 폼 — 첨부 미리보기 바로 아래, 필요할 때만 노출 ────────── */
+.chat-input-root .ci-idv-save-form{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin:0 12px 6px;padding:8px 10px;
+  background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;
+  font-size:12px;
+}
+.chat-input-root .ci-idv-save-form[hidden]{ display:none; }
+.chat-input-root .ci-idv-type,
+.chat-input-root .ci-idv-issuance-date{
+  font-size:12px;padding:4px 6px;border:1px solid #D1D5DB;border-radius:6px;
+}
+.chat-input-root .ci-idv-save-confirm{
+  background:var(--brand-primary);color:#fff;border:none;border-radius:6px;
+  padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;
+}
+.chat-input-root .ci-idv-save-confirm:disabled{ opacity:.6;cursor:default; }
+.chat-input-root .ci-idv-save-cancel{
+  background:none;border:none;color:#9CA3AF;font-size:12px;cursor:pointer;
+}
+.chat-input-root .ci-idv-save-status{ font-size:11px;color:#6B7280; }
 
 /* ── 입력 카드 — 2단 구성: textarea(윗줄 전체) + 툴바(아랫줄, 좌/우) ── */
 .chat-input-root .ci-card{

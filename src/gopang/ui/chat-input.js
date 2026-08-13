@@ -117,7 +117,21 @@ function _buildMarkup(cfg) {
   return `
 <div class="ci-attach-preview" hidden>
   <span class="ci-attach-name"></span>
+  <button type="button" class="ci-attach-idv-save" title="이 서류를 IDV에 저장(다음에 자동 재사용)">IDV 저장</button>
   <button type="button" class="ci-attach-remove" aria-label="첨부 취소">✕</button>
+</div>
+<div class="ci-idv-save-form" hidden>
+  <select class="ci-idv-type">
+    <option value="">서류 종류 선택…</option>
+    <option value="idv.cert.business_registration">사업자등록증</option>
+    <option value="idv.cert.resident_registration_transcript">주민등록초본</option>
+    <option value="idv.cert.family_relation">가족관계증명서</option>
+    <option value="idv.cert.local_tax_payment">지방세 세목별 과세증명서</option>
+  </select>
+  <input type="date" class="ci-idv-issuance-date" title="발급일(서류에 적힌 날짜)">
+  <button type="button" class="ci-idv-save-confirm">저장</button>
+  <button type="button" class="ci-idv-save-cancel">취소</button>
+  <span class="ci-idv-save-status"></span>
 </div>
 <div class="ci-card">
   <textarea class="ci-input" rows="1" placeholder="${cfg.placeholder}"></textarea>
@@ -244,6 +258,13 @@ export function mountChatInput(container, config = {}) {
   const attachPreview    = $('.ci-attach-preview');
   const attachNameEl     = $('.ci-attach-name');
   const attachRemoveBtn  = $('.ci-attach-remove');
+  const idvSaveBtn       = $('.ci-attach-idv-save');
+  const idvSaveForm      = $('.ci-idv-save-form');
+  const idvTypeSel       = $('.ci-idv-type');
+  const idvDateInput     = $('.ci-idv-issuance-date');
+  const idvSaveConfirm   = $('.ci-idv-save-confirm');
+  const idvSaveCancel    = $('.ci-idv-save-cancel');
+  const idvSaveStatus    = $('.ci-idv-save-status');
 
   let _generating = false;
   let _attachedFiles = [];
@@ -278,12 +299,20 @@ export function mountChatInput(container, config = {}) {
     attachNameEl.textContent = _attachedFiles.length > 1
       ? `${_attachedFiles.length}개 파일: ${names}` : names;
     attachPreview.hidden = false;
+    // IDV 저장은 "이 파일 하나가 어떤 서류인지" 사용자가 직접 골라야
+    // 하는 UI라 다중 첨부 시 어느 파일에 대응시킬지 모호해진다 —
+    // 1개 첨부일 때만 노출한다.
+    idvSaveBtn.hidden = _attachedFiles.length !== 1;
   }
   function _clearAttachPreview() {
     _attachedFiles = [];
     attachPreview.hidden = true;
     fileInput.value = '';
     cameraInput.value = '';
+    idvSaveForm.hidden = true;
+    idvTypeSel.value = '';
+    idvDateInput.value = '';
+    idvSaveStatus.textContent = '';
     _syncState();
   }
   async function _addAttachedFile(file) {
@@ -320,6 +349,59 @@ export function mountChatInput(container, config = {}) {
   fileInput.addEventListener('change', (e) => Array.from(e.target.files || []).forEach(_addAttachedFile));
   cameraInput.addEventListener('change', (e) => Array.from(e.target.files || []).forEach(_addAttachedFile));
   attachRemoveBtn.addEventListener('click', _clearAttachPreview);
+
+  // ── IDV 저장 (2026-08-13 신설) — 정부24 등에서 이미 발급받아 첨부한
+  // 서류를 로컬 IDV(gopang_idv_vault)에 저장해 다음에 kgov가 자동
+  // 재사용하도록(GOV_TASK_SCHEMA_LOOKUP → findFreshCredential) 만든다.
+  // storeCredential()(발급기관 서명 검증)이 아니라 storeRawDocument()
+  // (사용자 업로드, 미검증 등급)를 쓴다 — 이유는 idv-store.js 주석 참고.
+  idvSaveBtn.addEventListener('click', () => {
+    idvSaveForm.hidden = !idvSaveForm.hidden;
+    idvSaveStatus.textContent = '';
+  });
+  idvSaveCancel.addEventListener('click', () => {
+    idvSaveForm.hidden = true;
+    idvSaveStatus.textContent = '';
+  });
+  idvSaveConfirm.addEventListener('click', async () => {
+    const idvType = idvTypeSel.value;
+    const dateVal = idvDateInput.value; // 'YYYY-MM-DD' (input type=date)
+    if (!idvType || !dateVal) {
+      idvSaveStatus.textContent = '서류 종류와 발급일을 모두 선택하세요.';
+      return;
+    }
+    const f = _attachedFiles[0];
+    if (!f) { idvSaveStatus.textContent = '첨부된 파일이 없습니다.'; return; }
+
+    idvSaveConfirm.disabled = true;
+    idvSaveStatus.textContent = '저장 중…';
+    try {
+      // sha256 계산이 아직 안 끝났을 수 있어(첨부 직후 바로 클릭한 경우) 기다린다.
+      if (f._hashPromise) await f._hashPromise.catch(() => null);
+      if (!f.sha256) {
+        idvSaveStatus.textContent = '파일 해시 계산 실패 — 저장할 수 없습니다.';
+        return;
+      }
+      const { storeRawDocument } = await import('../idv/idv-store.js');
+      const result = await storeRawDocument({
+        idvType,
+        issuanceDate: new Date(dateVal + 'T00:00:00').toISOString(),
+        name: f.name,
+        sha256: f.sha256,
+        extractedText: f.extractedText || null,
+      });
+      idvSaveStatus.textContent = result.ok ? '저장됨 ✓' : `실패: ${result.reason || '알 수 없는 오류'}`;
+      if (result.ok) {
+        setTimeout(() => { idvSaveForm.hidden = true; idvSaveStatus.textContent = ''; }, 1500);
+      }
+    } catch (e) {
+      console.warn('[ChatInput] IDV 저장 실패:', e.message);
+      idvSaveStatus.textContent = `실패: ${e.message}`;
+    } finally {
+      idvSaveConfirm.disabled = false;
+    }
+  });
+
 
   // ── 전송 ───────────────────────────────────────────────
   async function _submit() {

@@ -84,6 +84,57 @@ export async function storeCredential(credential, issuerPubKeyB64) {
   });
 }
 
+/**
+ * (2026-08-13 신설) 사용자가 정부24 등에서 이미 발급받아 온 파일을 직접
+ * 업로드해 저장하는 경량 경로. `storeCredential()`은 발급기관의 Ed25519
+ * VC 서명(`proof.proofValue`)을 검증할 수 있어야 하는데, 실제 정부24/
+ * dpaper.kr 발급 문서는 그 형식이 아니라(GPKI 등 별도 체계) 지금 당장은
+ * 검증할 방법이 없다 — dpaper.kr API 연동(Phase 0 로드맵)이 되기 전까지는
+ * 이 함수로 "검증되지 않음" 등급으로만 저장한다.
+ *
+ * ⚠ 오해 방지: 이 함수로 저장한 문서는 정부 서명이 검증된 것이 아니라
+ * "사용자 본인이 업로드했다"는 사실만 기록된다. 다만 현재 시점에서
+ * kgov의 GOV_TASK_SUBMIT_REQUEST 경로 자체도 사용자가 새로 첨부하는
+ * 파일에 대해 정부 서명을 암호학적으로 검증하지 않는다(sha256 형식
+ * 검증뿐, 접수기관의 인간 검토에 의존) — 따라서 이 경로로 저장된
+ * 문서를 나중에 꺼내 쓰는 것은 신뢰 수준상 "그때그때 새로 첨부하는 것과
+ * 동일"하며, 더 낮아지지 않는다. 나중에 dpaper.kr API 연동이 되면
+ * 이 함수 대신 `storeCredential()`(정식 서명 검증)로 이관해야 한다.
+ *
+ * @param {Object} p
+ * @param {string} p.idvType - REQUIRED_DOCUMENTS_REGISTRY 문서 항목의 idv_type과 동일한 값
+ * @param {string} p.issuanceDate - 사용자가 입력한 발급일(ISO date-time)
+ * @param {string} p.name - 원본 파일명(표시용)
+ * @param {string} p.sha256 - chat-input.js에서 이미 계산된 해시(재계산 안 함)
+ * @param {string|null} [p.extractedText] - 본문 추출 결과(있으면 참고용으로 함께 저장)
+ * @param {string|null} [p.issuerNameGuess] - 발급기관 추정명(사용자 입력, 검증되지 않음)
+ * @returns {Promise<{ok:boolean, id?:string, reason?:string}>}
+ */
+export async function storeRawDocument({ idvType, issuanceDate, name, sha256: fileSha256, extractedText = null, issuerNameGuess = null }) {
+  if (!idvType || !issuanceDate || !fileSha256) {
+    return { ok: false, reason: '필수값 누락(idvType/issuanceDate/sha256)' };
+  }
+  const id = `urn:hondi:idv:raw:${fileSha256}`;
+  const db = await openDB();
+  const record = {
+    id,
+    type: ['VerifiableCredential', idvType],
+    issuer: { id: null, name: issuerNameGuess, agencyType: null },
+    issuanceDate,
+    credentialSubject: { holderDid: null, sourceFileName: name, extractedTextPreview: extractedText ? extractedText.slice(0, 500) : null },
+    _status: 'active',
+    _storedAt: new Date().toISOString(),
+    _contentHash: fileSha256,
+    _verificationTier: 'user_uploaded_unverified', // storeCredential()의 검증된 credential과 구분
+  };
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(record);
+    tx.oncomplete = () => resolve({ ok: true, id });
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /** id로 단건 조회 (서명 재검증 없이 로컬 원본 그대로 반환) */
 export async function getCredential(id) {
   const db = await openDB();

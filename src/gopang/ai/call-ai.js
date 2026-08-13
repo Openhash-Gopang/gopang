@@ -2588,6 +2588,7 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
               doc_id: doc.id, idv_type: doc.idv_type,
               issuanceDate: cred.issuanceDate, issuer_name: cred.issuer?.name || null,
               contentHash: cred._contentHash || null,
+              verificationTier: cred._verificationTier || 'signature_verified',
             });
           }
         } catch (e) {
