@@ -2593,9 +2593,19 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
         body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null }),
       });
       const data = await res.json().catch(() => null);
+      // 2026-08-13 명확화 — 라이브 스모크테스트(no=6, gov_task_execute_
+      // live_smoketest.py)에서 실제로 확인된 결함: 이 INTERNAL 메시지만
+      // 받으면 모델이 접수번호 안내로 답을 끝내고 인간전속 구간이어도
+      // [PROJECT_STATE_SAVE: ...]를 안 내는 경우가 있었다(SP-22 STEP1에
+      // "멈추기 직전 반드시 PROJECT_STATE_SAVE" 지침이 있는데도, 이
+      // 후속 턴에서 그 지침을 다시 떠올리지 못한 것으로 보임) — 이 자리에서
+      // 명시적으로 다시 상기시킨다.
       await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST 결과 수신 — receipt_no와 disclaimer, ` +
         `schema_verified 필드는 절대 요약·생략하지 말고 그 의미를 온전히 사용자에게 전달하세요 ` +
-        `(§접수번호 면책문구 참조): ${JSON.stringify(data)}]`);
+        `(§접수번호 면책문구 참조): ${JSON.stringify(data)}. ` +
+        `이어서 이 atom이 인간전속 구간(automation_sp 없음 또는 본인인증 필요)이라면, ` +
+        `SP-22 STEP1 지침대로 안내 문구만 내고 끝내지 말고 반드시 [PROJECT_STATE_SAVE: ...]까지 ` +
+        `낸 뒤 멈추세요 — 이 태그 없이 끝내면 재개 시 이 접수 상태가 유실됩니다.]`);
     } catch (e) {
       await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST 서버 호출 실패(${e.message}) — ` +
         `접수가 실제로 이루어지지 않았음을 사용자에게 명확히 알리세요. ` +
