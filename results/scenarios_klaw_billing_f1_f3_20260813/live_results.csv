@@ -1,0 +1,5 @@
+no,title,finding,verdict,reason,guid,case_id,http_status,elapsed_s,balance_before_krw,balance_after_krw,balance_delta_krw
+1,"F3 — GDC 잔액 0원(신규 미충전 guid), 소송가액 1,500만원(10,000원 tier) → 사전 차단",F3,LIVE-PASS,정상 차단,smoketest-c75a805e-2340-44d4-95c1-7cfeee0aae5b,smoketest-case-c74810e4-6a55-4fc6-8237-e5c755385756,402,2.88,,,
+2,"F1 — 소송가액 0원(형사사건 유형, 청구금액 미입력), 신규 사건 → 최소 tier(5,000원) 고정 부과",F1,LIVE-PASS,차감액 5000원 (기대 5000원),klaw-smoketest-1786592480,smoketest-case-2a365bfc-c488-4e09-9b05-bb69f3587837,200,3.96,20000,15000,5000
+3,"F3 회귀 확인 — 충분한 잔액 보유 guid, 소송가액 1,200만원(10,000원 tier), 신규 사건 → 정상 과금",F3,LIVE-PASS,차감액 10000원 (기대 10000원),klaw-smoketest-1786592480,smoketest-case-fb62d38d-9b13-4d9c-97b1-b3763bef5bc4,200,3.63,15000,5000,10000
+4,재생성 무료 확인 — 시나리오3과 동일 case_id로 재생성(STEP0 재호출) → 추가 과금 없음,F3,LIVE-PASS,차감액 0원 (기대 0원),klaw-smoketest-1786592480,smoketest-case-fb62d38d-9b13-4d9c-97b1-b3763bef5bc4,200,1.69,5000,5000,0

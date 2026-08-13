@@ -1,0 +1,148 @@
+[
+  {
+    "no": 1,
+    "title": "F3 — GDC 잔액 0원(신규 미충전 guid), 소송가액 1,500만원(10,000원 tier) → 사전 차단",
+    "finding": "F3",
+    "verdict": "LIVE-PASS",
+    "reason": "정상 차단",
+    "guid": "smoketest-c75a805e-2340-44d4-95c1-7cfeee0aae5b",
+    "case_id": "smoketest-case-c74810e4-6a55-4fc6-8237-e5c755385756",
+    "http_status": 402,
+    "elapsed_s": 2.88,
+    "response_body": {
+      "error": "GDC_INSUFFICIENT_BALANCE",
+      "message": "이 사건(소송가액 구간: 1천만~3천만원)의 판결 생성 요금은 10,000원입니다. GDC 잔액이 부족합니다. 충전 후 다시 이용해 주세요.",
+      "required_krw": 10000,
+      "balance_krw": 0
+    },
+    "balance_before_krw": null,
+    "balance_after_krw": null,
+    "balance_delta_krw": null
+  },
+  {
+    "no": 2,
+    "title": "F1 — 소송가액 0원(형사사건 유형, 청구금액 미입력), 신규 사건 → 최소 tier(5,000원) 고정 부과",
+    "finding": "F1",
+    "verdict": "LIVE-PASS",
+    "reason": "차감액 5000원 (기대 5000원)",
+    "guid": "klaw-smoketest-1786592480",
+    "case_id": "smoketest-case-2a365bfc-c488-4e09-9b05-bb69f3587837",
+    "http_status": 200,
+    "elapsed_s": 3.96,
+    "response_body": {
+      "id": "8c3c19f6-e99f-4fee-961a-c333873b67f4",
+      "object": "chat.completion",
+      "created": 1786592521,
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "알겠습니다, K-Law GDC 과금 로직 라이브 스모크테스트 정상 동작을 확인했습니다."
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 30183,
+        "completion_tokens": 30,
+        "total_tokens": 30213,
+        "prompt_tokens_details": {
+          "cached_tokens": 30080
+        },
+        "prompt_cache_hit_tokens": 30080,
+        "prompt_cache_miss_tokens": 103
+      },
+      "system_fingerprint": "fp_a18b46594c_prod0820_fp8_kvcache_20260402"
+    },
+    "balance_before_krw": 20000,
+    "balance_after_krw": 15000,
+    "balance_delta_krw": 5000
+  },
+  {
+    "no": 3,
+    "title": "F3 회귀 확인 — 충분한 잔액 보유 guid, 소송가액 1,200만원(10,000원 tier), 신규 사건 → 정상 과금",
+    "finding": "F3",
+    "verdict": "LIVE-PASS",
+    "reason": "차감액 10000원 (기대 10000원)",
+    "guid": "klaw-smoketest-1786592480",
+    "case_id": "smoketest-case-fb62d38d-9b13-4d9c-97b1-b3763bef5bc4",
+    "http_status": 200,
+    "elapsed_s": 3.63,
+    "response_body": {
+      "id": "d4af2bb6-e101-48d4-80f0-b6cdc342d611",
+      "object": "chat.completion",
+      "created": 1786592530,
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "K-Law GDC 과금 로직 스모크테스트를 정상적으로 수신했습니다."
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 30183,
+        "completion_tokens": 22,
+        "total_tokens": 30205,
+        "prompt_tokens_details": {
+          "cached_tokens": 30080
+        },
+        "prompt_cache_hit_tokens": 30080,
+        "prompt_cache_miss_tokens": 103
+      },
+      "system_fingerprint": "fp_a18b46594c_prod0820_fp8_kvcache_20260402"
+    },
+    "balance_before_krw": 15000,
+    "balance_after_krw": 5000,
+    "balance_delta_krw": 10000
+  },
+  {
+    "no": 4,
+    "title": "재생성 무료 확인 — 시나리오3과 동일 case_id로 재생성(STEP0 재호출) → 추가 과금 없음",
+    "finding": "F3",
+    "verdict": "LIVE-PASS",
+    "reason": "차감액 0원 (기대 0원)",
+    "guid": "klaw-smoketest-1786592480",
+    "case_id": "smoketest-case-fb62d38d-9b13-4d9c-97b1-b3763bef5bc4",
+    "http_status": 200,
+    "elapsed_s": 1.69,
+    "response_body": {
+      "id": "e82430b3-21fe-4cb8-93db-1bac62afad8e",
+      "object": "chat.completion",
+      "created": 1786592536,
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "네, K-Law GDC 과금 로직 라이브 스모크테스트 요청을 확인했습니다."
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 30183,
+        "completion_tokens": 25,
+        "total_tokens": 30208,
+        "prompt_tokens_details": {
+          "cached_tokens": 30080
+        },
+        "prompt_cache_hit_tokens": 30080,
+        "prompt_cache_miss_tokens": 103
+      },
+      "system_fingerprint": "fp_a18b46594c_prod0820_fp8_kvcache_20260402"
+    },
+    "balance_before_krw": 5000,
+    "balance_after_krw": 5000,
+    "balance_delta_krw": 0
+  }
+]
