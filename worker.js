@@ -11397,6 +11397,16 @@ export default {
     if (pathname === '/klaw/case/complete')        return handleKlawCaseComplete(bodyText, env, corsHeaders);
     if (pathname === '/klaw/case/abandon')         return handleKlawCaseAbandon(bodyText, env, corsHeaders);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/gov/case/complete') {
+      let b; try { b = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+      if (!b?.agency) return _err(400, 'MISSING_FIELD', 'agency 필수', corsHeaders);
+      return handleKServiceUnitComplete(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
+    }
+    if (pathname === '/gov/case/abandon') {
+      let b; try { b = JSON.parse(bodyText); } catch { return new Response('{}', { headers: corsHeaders }); }
+      if (!b?.agency) return new Response('{}', { headers: corsHeaders });
+      return handleKServiceUnitAbandon(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
+    }
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
     if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
@@ -18688,7 +18698,8 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation,
+    unit_id, unit_amount_krw, tier_hint, case_cycle } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -18726,6 +18737,80 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   }
   if (userSpent >= GOV_USER_DAILY_KRW_LIMIT) {
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+
+  // ── 전문직 티어(all_services_free) 요금 면제 (K-Law와 동일 패턴 재사용) ──
+  let _klawFreeTier = false; // 변수명은 K-Law 원본과 통일 유지(공용 헬퍼가 이 이름을 참조하지 않지만, 코드 검색 일관성 위해)
+  try {
+    const sub = await _l1GetSubscription(env, guid);
+    _klawFreeTier = !!SUBSCRIPTION_TIERS[sub?.tier]?.all_services_free;
+  } catch (e) { /* 미구독/조회실패 → 유료로 간주(보수적) */ }
+
+  // ── K-서비스 건당 정액과금 (2026-08-13 신설) ─────────────────────
+  // K-Law(handleKlawRelay)에서 검증된 패턴을 K_SERVICE_BILLING_REGISTRY
+  // 경유로 재사용한다. 342개 국가기관 중 실제로 요금표가 등록된 agency
+  // (tax/health/police/insurance/traffic/logistics/public — 위 레지스트리
+  // 참고, emergency/democracy는 의도적으로 무과금)에서만, 그리고
+  // 클라이언트가 case_cycle:true로 "이번 턴이 사건 종결 턴"이라고 명시한
+  // 경우에만 동작한다. case_cycle이 없으면(대부분의 일반 대화 턴) 이
+  // 블록은 완전히 건너뛴다 — 기존 토큰 종량제(billGovCall)만 그대로 적용.
+  const _govBillCfg = K_SERVICE_BILLING_REGISTRY[agency];
+  let _govGuidLockHeld = false;
+  let _govChargeReserve = null; // { reserved, record } — settle 단계에서 확정/롤백에 사용
+  let _govWillChargeNow = false;
+  if (!_klawFreeTier && case_cycle && _govBillCfg?.feeSchedule && unit_id) {
+    const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
+    const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
+    if (_govFlatFee) {
+      _govGuidLockHeld = await _kServiceTryAcquireGuidLock(env, guid);
+      if (!_govGuidLockHeld) {
+        return new Response(JSON.stringify({
+          error: 'KLAW_BILLING_IN_PROGRESS', // 코드는 K-Law와 통일(클라이언트 공용 처리 위해)
+          message: '다른 요청이 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+        }), { status: 409, headers: corsHeaders });
+      }
+      try {
+        const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
+        if (_existing) {
+          _govWillChargeNow = false; // 이미 결제된 사건 — 무료 재처리
+        } else {
+          const _govBalanceKRW = await _l1GetBalanceKRW(guid);
+          if (_govBalanceKRW === null) {
+            await _kServiceReleaseGuidLock(env, guid);
+            return _err(502, 'GDC_BALANCE_CHECK_FAILED', '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+          }
+          if (_govBalanceKRW < _govFlatFee.fee) {
+            await _kServiceReleaseGuidLock(env, guid);
+            return new Response(JSON.stringify({
+              error: 'GDC_INSUFFICIENT_BALANCE',
+              message: `이 처리(${_govFlatFee.tier})의 요금은 ${_govFlatFee.fee.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다.`,
+              required_krw: _govFlatFee.fee, balance_krw: Math.round(_govBalanceKRW),
+            }), { status: 402, headers: corsHeaders });
+          }
+          _govChargeReserve = await _kServiceTryReserveCharge(env, agency, { guid, unitId: unit_id, unitAmount: unit_amount_krw });
+          if (!_govChargeReserve.reserved) {
+            // 선점 실패 = 방금 다른 요청이 같은 unit_id를 먼저 선점(레이스) —
+            // 재조회해서 "이미 결제된 사건"으로 수렴 처리.
+            const _raced = await _kServiceFindCharge(env, agency, guid, unit_id);
+            if (_raced) { _govWillChargeNow = false; }
+            else {
+              await _kServiceReleaseGuidLock(env, guid);
+              return _err(502, 'GOV_CASE_RESERVE_FAILED', '처리 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
+            }
+          } else {
+            _govWillChargeNow = true;
+          }
+        }
+      } catch (e) {
+        if (_govGuidLockHeld) await _kServiceReleaseGuidLock(env, guid);
+        throw e;
+      }
+      if (!_govWillChargeNow && _govGuidLockHeld) {
+        // 무료 재처리로 확정 — 실제 결제 시도가 없으므로 락을 여기서 바로 푼다.
+        await _kServiceReleaseGuidLock(env, guid);
+        _govGuidLockHeld = false;
+      }
+    }
   }
 
   // (2026-07-28 신설 — 주피터 지시: 정부기관(342개) 릴레이도 GDC 지갑
@@ -18817,7 +18902,52 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 단계(_callDelegationTarget 포함)가 이 헬퍼 하나를 거치므로, 여기
   // 한 곳만 고치면 위임 여부와 무관하게 동일하게 적용된다.
   const billGovCall = (usage, via) => {
-    if (!usage) return;
+    // 사고실험 사건3 대응 — 이 요청에서 guid 락을 잡았다면(위 사전확인
+    // 단계에서 실제 결제 시도가 있었던 경우) usage 유무와 무관하게
+    // 반드시 여기서 해제한다. K-Law(settleKlaw)의 try/finally와 달리
+    // 이 함수는 여러 지점에서 호출될 수 있어(스트림/비스트림) early
+    // return 경로마다 직접 처리한다.
+    const releaseGovGuidLock = () => { if (_govGuidLockHeld) { _govGuidLockHeld = false; return _kServiceReleaseGuidLock(env, guid); } };
+
+    if (!usage) { releaseGovGuidLock(); return; }
+
+    // K-서비스 건당 정액과금 확정/롤백 (2026-08-13 신설, K-Law settleKlaw와 동일 패턴)
+    const _finalizeGovCharge = async () => {
+      if (!_govBillCfg?.feeSchedule || !unit_id || !case_cycle) return;
+      try {
+        if (_govWillChargeNow && _govChargeReserve?.reserved) {
+          const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
+          const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
+          const chargeResult = await _chargeGdcForAiUsage(env, {
+            guid, krwAmount: _govFlatFee.fee, serviceId: `${agency}-case`,
+            memo: `K-${agency} 처리(${_govFlatFee.tier}, unit_id=${unit_id})`,
+          });
+          if (chargeResult?.ok) {
+            if (typeof chargeResult.balance_after === 'number') {
+              await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+            }
+            await _kServiceFinalizeCharge(env, agency, _govChargeReserve.record.id, {
+              feeKrw: _govFlatFee.fee, feeTier: _govFlatFee.tier, mintContentHash: chargeResult.tx_hash || '',
+            });
+          } else {
+            // 결제 실패 — 예약 롤백(다음 시도가 무료 재처리로 오판되지 않게)
+            await _kServiceReleaseChargeReservation(env, agency, _govChargeReserve.record.id);
+            console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FAILED', agency, guid, unitId: unit_id, ts: new Date().toISOString() }));
+          }
+        } else if (!_govWillChargeNow) {
+          // 무료 재처리(이미 결제된 사건) — 재처리 카운트만 갱신
+          const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
+          if (_existing) await _kServiceBumpRegen(env, agency, _existing.id, _existing.regen_count);
+        }
+      } catch (e) {
+        console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FINALIZE_ERROR', agency, guid, unitId: unit_id, error: e.message, ts: new Date().toISOString() }));
+      } finally {
+        await releaseGovGuidLock();
+      }
+    };
+    const _finalizeTask = _finalizeGovCharge();
+    if (ctx?.waitUntil) ctx.waitUntil(_finalizeTask); else _finalizeTask.catch(() => {});
+
     _recordAiUsage(env, ctx, {
       guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
