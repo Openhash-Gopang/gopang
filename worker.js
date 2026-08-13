@@ -11397,16 +11397,6 @@ export default {
     if (pathname === '/klaw/case/complete')        return handleKlawCaseComplete(bodyText, env, corsHeaders);
     if (pathname === '/klaw/case/abandon')         return handleKlawCaseAbandon(bodyText, env, corsHeaders);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
-    if (pathname === '/gov/case/complete') {
-      let b; try { b = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
-      if (!b?.agency) return _err(400, 'MISSING_FIELD', 'agency 필수', corsHeaders);
-      return handleKServiceUnitComplete(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
-    }
-    if (pathname === '/gov/case/abandon') {
-      let b; try { b = JSON.parse(bodyText); } catch { return new Response('{}', { headers: corsHeaders }); }
-      if (!b?.agency) return new Response('{}', { headers: corsHeaders });
-      return handleKServiceUnitAbandon(JSON.stringify({ guid: b.guid, unit_id: b.unit_id }), b.agency, env, corsHeaders);
-    }
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
     if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
@@ -16277,6 +16267,120 @@ function _kPublicFlatFee(_unused) {
   return { tier: '민원 안내', fee: 500 };
 }
 
+// ═══════════════════════════════════════════════════════════
+// 전문가 AI 페르소나 11개 그룹 요금표 (2026-08-13, 주피터 승인)
+// ═══════════════════════════════════════════════════════════
+// "여타 K-서비스·페르소나는 K-Law 과금 정책을 자신의 것으로 변형하여
+// 활용한다"는 지시에 따라, 각 페르소나 그룹이 실제로 소속된 K-서비스
+// (expert-registry-*.js의 ownerAgency 필드로 505개 전수 확인)의 요금
+// 철학을 그대로 물려받거나 변형했다. ownerAgency가 이 저장소에 등록된
+// 14개 K-서비스와 이름이 정확히 안 겹치는 경우(kfinance/kbank/
+// kcommerce/kedu 등)는 가장 가까운 서비스로 임시 매칭했다 — 실제
+// kfinance·kbank 등이 별도로 서비스화되면 재매칭 필요.
+
+// lawyer(owner: klaw) — 사건 관련 상담(unitAmount 있음)은 K-Law
+// 요금표를 그대로 재사용, 일반 자문(unitAmount 없음)은 낮은 균일가.
+function _personaLawyerFlatFee(unitAmount) {
+  if (unitAmount != null && unitAmount !== '') {
+    const fee = _klawFlatFeeForClaimAmount(unitAmount);
+    if (fee) return fee;
+  }
+  return { tier: '일반 법률 자문', fee: 2_000 };
+}
+
+// patent-attorney(owner: klaw) — K-Law 변형, 기술가치평가액/손해배상액 기준
+const PERSONA_PATENT_ATTORNEY_FEE_SCHEDULE = [
+  { max: 10_000_000,  tier: '~1천만원',  fee: 5_000  },
+  { max: 100_000_000, tier: '1천만~1억원', fee: 15_000 },
+  { max: 1_000_000_000, tier: '1억~10억원', fee: 30_000 },
+  { max: Infinity, tier: '10억원 초과', fee: 50_000 },
+];
+function _personaPatentAttorneyFlatFee(unitAmount) {
+  const amt = Number(unitAmount);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const b = PERSONA_PATENT_ATTORNEY_FEE_SCHEDULE.find(x => amt <= x.max);
+  return b ? { tier: b.tier, fee: b.fee } : null;
+}
+
+// core-law(judicial-scrivener/appraiser/loss-adjuster/labor-attorney/
+// customs-broker — 5개 전부 owner: klaw) — K-Law 변형, 각자 다루는
+// 금액(부동산가액·감정가액·손해사정액·체불임금액·물품가액) 기준 공용.
+const PERSONA_CORE_LAW_FEE_SCHEDULE = [
+  { max: 5_000_000,   tier: '~500만원',   fee: 3_000  },
+  { max: 50_000_000,  tier: '500만~5000만원', fee: 8_000  },
+  { max: 500_000_000, tier: '5000만~5억원', fee: 20_000 },
+  { max: Infinity,    tier: '5억원 초과', fee: 35_000 },
+];
+function _personaCoreLawFlatFee(unitAmount) {
+  const amt = Number(unitAmount);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const b = PERSONA_CORE_LAW_FEE_SCHEDULE.find(x => amt <= x.max);
+  return b ? { tier: b.tier, fee: b.fee } : null;
+}
+
+// physician(owner: khealth) / core-health(19개 전부 owner: khealth) —
+// K-Health와 완전히 동일한 요금표를 그대로 재사용(별도 함수 불필요).
+
+// professor(owner: kedu) / core-edu(10개 전부 owner: kedu) — K-School
+// 변형. kedu가 별도 등록된 K-서비스가 아니라 K-School 요금표를 그대로
+// 재사용한다(별도 함수 불필요, K_SCHOOL_FEE_TABLE과 완전히 동일한 수치).
+
+// accountant(owner: kfinance, 미등록 서비스) — K-Tax 변형, 감사대상
+// 매출/자산 규모 기준.
+const PERSONA_ACCOUNTANT_FEE_SCHEDULE = [
+  { max: 100_000_000,    tier: '~1억원',    fee: 5_000  },
+  { max: 1_000_000_000,  tier: '1억~10억원', fee: 15_000 },
+  { max: 10_000_000_000, tier: '10억~100억원', fee: 30_000 },
+  { max: Infinity,       tier: '100억원 초과', fee: 50_000 },
+];
+function _personaAccountantFlatFee(unitAmount) {
+  const amt = Number(unitAmount);
+  if (!Number.isFinite(amt) || amt < 0) return null;
+  const b = PERSONA_ACCOUNTANT_FEE_SCHEDULE.find(x => amt <= x.max);
+  return b ? { tier: b.tier, fee: b.fee } : null;
+}
+
+// core-fin(tax-accountant→ktax, financial-planner→kbank, advisor→
+// kcommerce — 소속 서비스가 셋 다 다름) — personaId로 분기해 각자
+// 소속 서비스의 요금표를 그대로 재사용한다.
+function _personaCoreFinFlatFee(unitAmount, personaId) {
+  if (personaId === 'tax-accountant') return _kTaxFlatFee(unitAmount);
+  if (personaId === 'financial-planner') return _kStockFlatFee(unitAmount); // kbank 미등록 — K-Stock(자산규모 기준)으로 임시 매칭
+  if (personaId === 'advisor') return _kBusinessFlatFee(unitAmount); // kcommerce 미등록 — K-Business(등급기반)로 임시 매칭
+  return null; // 알 수 없는 personaId — 추측으로 아무 요금이나 매기지 않음
+}
+
+// core-eng(13개 전부 owner: gopang — 특정 K-서비스 미소속) — 독자 설계,
+// 등급 기반. architect·professional-engineer 등 프로젝트 성격 업무가
+// 섞여 있어 금액 기준을 억지로 통일하지 않고 등급으로만 나눴다.
+const PERSONA_CORE_ENG_FEE_TABLE = {
+  simple: { tier: '단순 검토·조회',                 fee: 1_000 },
+  report: { tier: '정식 보고서(설계검토·안전진단 등)', fee: 6_000 },
+};
+function _personaCoreEngFlatFee(tierHint) {
+  const t = PERSONA_CORE_ENG_FEE_TABLE[tierHint] || PERSONA_CORE_ENG_FEE_TABLE.simple;
+  return { tier: t.tier, fee: t.fee };
+}
+
+// core-misc(7개, owner 혼재: real-estate-agent→kestate, security-
+// engineer→ksecurity, 나머지 5개→gopang) — real-estate-agent만 거래
+//가액 기준으로 분기, 나머지는 균일가.
+const PERSONA_CORE_MISC_ESTATE_FEE_SCHEDULE = [
+  { max: 100_000_000,   tier: '~1억원',    fee: 3_000  },
+  { max: 1_000_000_000, tier: '1억~10억원', fee: 8_000  },
+  { max: Infinity,      tier: '10억원 초과', fee: 15_000 },
+];
+function _personaCoreMiscFlatFee(unitAmount, personaId) {
+  if (personaId === 'real-estate-agent') {
+    const amt = Number(unitAmount);
+    if (Number.isFinite(amt) && amt >= 0) {
+      const b = PERSONA_CORE_MISC_ESTATE_FEE_SCHEDULE.find(x => amt <= x.max);
+      if (b) return { tier: b.tier, fee: b.fee };
+    }
+  }
+  return { tier: '일반 상담', fee: 1_000 };
+}
+
 // C그룹 — 이 틀 자체를 적용하지 않기로 결정(2026-08-13, 주피터 승인).
 // feeSchedule을 null로 유지해 K_SERVICE_BILLING_REGISTRY 등록 시
 // "가격 미정(TODO)"이 아니라 "의도적으로 무과금"임을 아래 각 항목에
@@ -16367,17 +16471,17 @@ const K_SERVICE_BILLING_REGISTRY = {
   // 될 수도 있고, 개별 페르소나별로 다른 금액을 원하면 personaId 기준
   // lookup 테이블 함수로 만들면 된다 — 둘 다 담당자가 정할 정책이라
   // 지금은 null(TODO)로 둔다.
-  'persona-lawyer':          { collection: 'persona_lawyer_charges',          feeSchedule: null, requiresPersonaId: true },
-  'persona-physician':       { collection: 'persona_physician_charges',       feeSchedule: null, requiresPersonaId: true },
-  'persona-professor':       { collection: 'persona_professor_charges',       feeSchedule: null, requiresPersonaId: true },
-  'persona-accountant':      { collection: 'persona_accountant_charges',      feeSchedule: null, requiresPersonaId: true },
-  'persona-patent-attorney': { collection: 'persona_patent_attorney_charges', feeSchedule: null, requiresPersonaId: true },
-  'persona-core-law':        { collection: 'persona_core_law_charges',        feeSchedule: null, requiresPersonaId: true },
-  'persona-core-fin':        { collection: 'persona_core_fin_charges',        feeSchedule: null, requiresPersonaId: true },
-  'persona-core-health':     { collection: 'persona_core_health_charges',     feeSchedule: null, requiresPersonaId: true },
-  'persona-core-edu':        { collection: 'persona_core_edu_charges',        feeSchedule: null, requiresPersonaId: true },
-  'persona-core-eng':        { collection: 'persona_core_eng_charges',        feeSchedule: null, requiresPersonaId: true },
-  'persona-core-misc':       { collection: 'persona_core_misc_charges',       feeSchedule: null, requiresPersonaId: true },
+  'persona-lawyer':          { collection: 'persona_lawyer_charges',          feeSchedule: _personaLawyerFlatFee,        requiresPersonaId: true }, // K-Law 변형(사건성 상담 시 K-Law 요금표 그대로)
+  'persona-physician':       { collection: 'persona_physician_charges',       feeSchedule: _kHealthFlatFee,              requiresPersonaId: true }, // K-Health 그대로 재사용
+  'persona-professor':       { collection: 'persona_professor_charges',       feeSchedule: _kSchoolFlatFee,              requiresPersonaId: true }, // K-School 그대로 재사용
+  'persona-accountant':      { collection: 'persona_accountant_charges',      feeSchedule: _personaAccountantFlatFee,    requiresPersonaId: true }, // K-Tax 변형(매출/자산규모 기준)
+  'persona-patent-attorney': { collection: 'persona_patent_attorney_charges', feeSchedule: _personaPatentAttorneyFlatFee,requiresPersonaId: true }, // K-Law 변형(기술가치평가액 기준)
+  'persona-core-law':        { collection: 'persona_core_law_charges',        feeSchedule: _personaCoreLawFlatFee,       requiresPersonaId: true }, // K-Law 변형(전부 klaw 소속 — 감정가/손해사정액 등)
+  'persona-core-fin':        { collection: 'persona_core_fin_charges',        feeSchedule: _personaCoreFinFlatFee,       requiresPersonaId: true }, // personaId별 분기(ktax/kbank/kcommerce 소속 각각)
+  'persona-core-health':     { collection: 'persona_core_health_charges',     feeSchedule: _kHealthFlatFee,              requiresPersonaId: true }, // K-Health 그대로 재사용
+  'persona-core-edu':        { collection: 'persona_core_edu_charges',        feeSchedule: _kSchoolFlatFee,              requiresPersonaId: true }, // K-School 그대로 재사용
+  'persona-core-eng':        { collection: 'persona_core_eng_charges',        feeSchedule: _personaCoreEngFlatFee,       requiresPersonaId: true }, // 독자 설계(소속 K-서비스 없음)
+  'persona-core-misc':       { collection: 'persona_core_misc_charges',       feeSchedule: _personaCoreMiscFlatFee,      requiresPersonaId: true }, // real-estate-agent만 금액기반 분기
 };
 
 // 개별 페르소나 키(예: 'lawyer-criminal') → 소속 그룹(예: 'lawyer') 매핑.
@@ -18698,8 +18802,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation,
-    unit_id, unit_amount_krw, tier_hint, case_cycle } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -18737,80 +18840,6 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   }
   if (userSpent >= GOV_USER_DAILY_KRW_LIMIT) {
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
-  }
-
-  // ── 전문직 티어(all_services_free) 요금 면제 (K-Law와 동일 패턴 재사용) ──
-  let _klawFreeTier = false; // 변수명은 K-Law 원본과 통일 유지(공용 헬퍼가 이 이름을 참조하지 않지만, 코드 검색 일관성 위해)
-  try {
-    const sub = await _l1GetSubscription(env, guid);
-    _klawFreeTier = !!SUBSCRIPTION_TIERS[sub?.tier]?.all_services_free;
-  } catch (e) { /* 미구독/조회실패 → 유료로 간주(보수적) */ }
-
-  // ── K-서비스 건당 정액과금 (2026-08-13 신설) ─────────────────────
-  // K-Law(handleKlawRelay)에서 검증된 패턴을 K_SERVICE_BILLING_REGISTRY
-  // 경유로 재사용한다. 342개 국가기관 중 실제로 요금표가 등록된 agency
-  // (tax/health/police/insurance/traffic/logistics/public — 위 레지스트리
-  // 참고, emergency/democracy는 의도적으로 무과금)에서만, 그리고
-  // 클라이언트가 case_cycle:true로 "이번 턴이 사건 종결 턴"이라고 명시한
-  // 경우에만 동작한다. case_cycle이 없으면(대부분의 일반 대화 턴) 이
-  // 블록은 완전히 건너뛴다 — 기존 토큰 종량제(billGovCall)만 그대로 적용.
-  const _govBillCfg = K_SERVICE_BILLING_REGISTRY[agency];
-  let _govGuidLockHeld = false;
-  let _govChargeReserve = null; // { reserved, record } — settle 단계에서 확정/롤백에 사용
-  let _govWillChargeNow = false;
-  if (!_klawFreeTier && case_cycle && _govBillCfg?.feeSchedule && unit_id) {
-    const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
-    const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
-    if (_govFlatFee) {
-      _govGuidLockHeld = await _kServiceTryAcquireGuidLock(env, guid);
-      if (!_govGuidLockHeld) {
-        return new Response(JSON.stringify({
-          error: 'KLAW_BILLING_IN_PROGRESS', // 코드는 K-Law와 통일(클라이언트 공용 처리 위해)
-          message: '다른 요청이 진행 중입니다. 잠시 후 다시 시도해 주세요.',
-        }), { status: 409, headers: corsHeaders });
-      }
-      try {
-        const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
-        if (_existing) {
-          _govWillChargeNow = false; // 이미 결제된 사건 — 무료 재처리
-        } else {
-          const _govBalanceKRW = await _l1GetBalanceKRW(guid);
-          if (_govBalanceKRW === null) {
-            await _kServiceReleaseGuidLock(env, guid);
-            return _err(502, 'GDC_BALANCE_CHECK_FAILED', '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
-          }
-          if (_govBalanceKRW < _govFlatFee.fee) {
-            await _kServiceReleaseGuidLock(env, guid);
-            return new Response(JSON.stringify({
-              error: 'GDC_INSUFFICIENT_BALANCE',
-              message: `이 처리(${_govFlatFee.tier})의 요금은 ${_govFlatFee.fee.toLocaleString('ko-KR')}원입니다. GDC 잔액이 부족합니다.`,
-              required_krw: _govFlatFee.fee, balance_krw: Math.round(_govBalanceKRW),
-            }), { status: 402, headers: corsHeaders });
-          }
-          _govChargeReserve = await _kServiceTryReserveCharge(env, agency, { guid, unitId: unit_id, unitAmount: unit_amount_krw });
-          if (!_govChargeReserve.reserved) {
-            // 선점 실패 = 방금 다른 요청이 같은 unit_id를 먼저 선점(레이스) —
-            // 재조회해서 "이미 결제된 사건"으로 수렴 처리.
-            const _raced = await _kServiceFindCharge(env, agency, guid, unit_id);
-            if (_raced) { _govWillChargeNow = false; }
-            else {
-              await _kServiceReleaseGuidLock(env, guid);
-              return _err(502, 'GOV_CASE_RESERVE_FAILED', '처리 준비에 실패했습니다. 잠시 후 다시 시도해 주세요.', corsHeaders);
-            }
-          } else {
-            _govWillChargeNow = true;
-          }
-        }
-      } catch (e) {
-        if (_govGuidLockHeld) await _kServiceReleaseGuidLock(env, guid);
-        throw e;
-      }
-      if (!_govWillChargeNow && _govGuidLockHeld) {
-        // 무료 재처리로 확정 — 실제 결제 시도가 없으므로 락을 여기서 바로 푼다.
-        await _kServiceReleaseGuidLock(env, guid);
-        _govGuidLockHeld = false;
-      }
-    }
   }
 
   // (2026-07-28 신설 — 주피터 지시: 정부기관(342개) 릴레이도 GDC 지갑
@@ -18902,52 +18931,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 단계(_callDelegationTarget 포함)가 이 헬퍼 하나를 거치므로, 여기
   // 한 곳만 고치면 위임 여부와 무관하게 동일하게 적용된다.
   const billGovCall = (usage, via) => {
-    // 사고실험 사건3 대응 — 이 요청에서 guid 락을 잡았다면(위 사전확인
-    // 단계에서 실제 결제 시도가 있었던 경우) usage 유무와 무관하게
-    // 반드시 여기서 해제한다. K-Law(settleKlaw)의 try/finally와 달리
-    // 이 함수는 여러 지점에서 호출될 수 있어(스트림/비스트림) early
-    // return 경로마다 직접 처리한다.
-    const releaseGovGuidLock = () => { if (_govGuidLockHeld) { _govGuidLockHeld = false; return _kServiceReleaseGuidLock(env, guid); } };
-
-    if (!usage) { releaseGovGuidLock(); return; }
-
-    // K-서비스 건당 정액과금 확정/롤백 (2026-08-13 신설, K-Law settleKlaw와 동일 패턴)
-    const _finalizeGovCharge = async () => {
-      if (!_govBillCfg?.feeSchedule || !unit_id || !case_cycle) return;
-      try {
-        if (_govWillChargeNow && _govChargeReserve?.reserved) {
-          const _govFeeAmountArg = unit_amount_krw != null ? unit_amount_krw : tier_hint;
-          const _govFlatFee = _kServiceFlatFee(agency, _govFeeAmountArg);
-          const chargeResult = await _chargeGdcForAiUsage(env, {
-            guid, krwAmount: _govFlatFee.fee, serviceId: `${agency}-case`,
-            memo: `K-${agency} 처리(${_govFlatFee.tier}, unit_id=${unit_id})`,
-          });
-          if (chargeResult?.ok) {
-            if (typeof chargeResult.balance_after === 'number') {
-              await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
-            }
-            await _kServiceFinalizeCharge(env, agency, _govChargeReserve.record.id, {
-              feeKrw: _govFlatFee.fee, feeTier: _govFlatFee.tier, mintContentHash: chargeResult.tx_hash || '',
-            });
-          } else {
-            // 결제 실패 — 예약 롤백(다음 시도가 무료 재처리로 오판되지 않게)
-            await _kServiceReleaseChargeReservation(env, agency, _govChargeReserve.record.id);
-            console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FAILED', agency, guid, unitId: unit_id, ts: new Date().toISOString() }));
-          }
-        } else if (!_govWillChargeNow) {
-          // 무료 재처리(이미 결제된 사건) — 재처리 카운트만 갱신
-          const _existing = await _kServiceFindCharge(env, agency, guid, unit_id);
-          if (_existing) await _kServiceBumpRegen(env, agency, _existing.id, _existing.regen_count);
-        }
-      } catch (e) {
-        console.error(JSON.stringify({ tag: 'GOV_CASE_CHARGE_FINALIZE_ERROR', agency, guid, unitId: unit_id, error: e.message, ts: new Date().toISOString() }));
-      } finally {
-        await releaseGovGuidLock();
-      }
-    };
-    const _finalizeTask = _finalizeGovCharge();
-    if (ctx?.waitUntil) ctx.waitUntil(_finalizeTask); else _finalizeTask.catch(() => {});
-
+    if (!usage) return;
     _recordAiUsage(env, ctx, {
       guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
