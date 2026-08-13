@@ -109,11 +109,18 @@ def synthesize_gov_task_response(payload):
 
 def build_internal_feed(sim_response):
     """call-ai.js의 실제 INTERNAL 메시지 문구를 그대로 재현(src/gopang/ai/
-    call-ai.js, GOV_TASK_SUBMIT_REQUEST 처리부)."""
+    call-ai.js, GOV_TASK_SUBMIT_REQUEST 처리부). 2026-08-13 라이브
+    스모크테스트 no=6에서 PROJECT_STATE_SAVE 누락이 실제로 발견돼
+    call-ai.js에 리마인더 문구를 추가했고, 하네스도 동일하게 맞춘다 —
+    이 문구 자체가 실 배포본과 벌어지면 이 하네스가 더 이상 실제 시스템을
+    대변하지 못한다."""
     return (
         "[INTERNAL: GOV_TASK_SUBMIT_REQUEST 결과 수신 — receipt_no와 disclaimer, "
         "schema_verified 필드는 절대 요약·생략하지 말고 그 의미를 온전히 사용자에게 전달하세요 "
-        f"(§접수번호 면책문구 참조): {json.dumps(sim_response, ensure_ascii=False)}]"
+        f"(§접수번호 면책문구 참조): {json.dumps(sim_response, ensure_ascii=False)}. "
+        "이어서 이 atom이 인간전속 구간(automation_sp 없음 또는 본인인증 필요)이라면, "
+        "SP-22 STEP1 지침대로 안내 문구만 내고 끝내지 말고 반드시 [PROJECT_STATE_SAVE: ...]까지 "
+        "낸 뒤 멈추세요 — 이 태그 없이 끝내면 재개 시 이 접수 상태가 유실됩니다.]"
     )
 
 

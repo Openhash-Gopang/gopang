@@ -324,8 +324,15 @@ STEP 1-P — 병렬·팬아웃 그룹 처리
     이어간다.
 
     → ATOM_PATTERN(REPORT|DECISION|PAY|QUERY|
-    ADJUDICATE)에 따라 실행. `automation_sp`가 있으면 [CALL_GOVSYS:
-    id=..., mode=..., caller=kexecute]로 위임.
+    ADJUDICATE)에 따라 실행. `automation_sp`가 있고 **`connected: true`일
+    때만** [CALL_GOVSYS: id=..., mode=..., caller=kexecute]로 위임한다
+    (2026-08-13 명확화 — 라이브 스모크테스트 no=3에서 확인: worker.js의
+    `_execReport`/`_execDecision`/`_execPay`/`_execQuery`는 전부
+    `if (atomRow.connected && atomRow.automation_sp)`로 게이트돼 있는데,
+    이 문서엔 `connected` 조건이 빠져 있어 코드와 프롬프트 문구가
+    불일치했다 — `automation_sp`는 있지만 `connected:false`인 atom을
+    자동화 시도했다고 착각할 위험이 있었다). `connected:false`면
+    `automation_sp` 유무와 무관하게 아래 인간전속 안내로 곧장 간다.
     ★ `atom_rows.automation.level`(full_api/assisted/manual_only)은
     실행 시점의 정본이다 — K-Compose가 계획 시점에 참고한 값과
     실행 시점 사이에 값이 바뀌었을 수 있으므로(기관 연동 상태 변경
