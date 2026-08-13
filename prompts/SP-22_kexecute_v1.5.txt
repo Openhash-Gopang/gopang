@@ -294,7 +294,11 @@ STEP 1-P — 병렬·팬아웃 그룹 처리
      "documents": [{이 atom의 required_docs에 대응하는 문서들 —
      atomInput 또는 K-Compose가 넘긴 plan에 doc_id/sha256이 있으면
      그대로 사용, 없으면 이용자에게 첨부를 요청한 뒤 재시도}],
-     "notes": "..."}
+     "notes": "...",
+     "batch_id": "{이 step이 STEP 1-P의 parallel_group에 속해 있으면
+     그 그룹의 batch_id를 그대로, 아니면 생략}",
+     "fanout_mode": "{마찬가지로 parallel_group에 속해 있을 때만,
+     그 그룹의 fanout_mode를 그대로}"}
     [/GOV_TASK_SUBMIT_REQUEST]
 
     이건 "이 atom을 자동으로 대신 실행했다"는 뜻이 아니라 "정식
@@ -307,6 +311,17 @@ STEP 1-P — 병렬·팬아웃 그룹 처리
     내기 전까지는 "접수했습니다"라고 말하지 않는다(kpublic SP-10과
     동일 원칙). `gov_task_agency`/`gov_task_key` 중 하나라도 없으면
     이 단락 전체를 건너뛰고 바로 아래로 간다.
+
+    [중복 접수 방지 — 2026-08-13 신설, 8건 사고실험 시나리오 F에서
+    발견] 이 step에서 `GOV_TASK_SUBMIT_REQUEST`가 이미 `accepted`된
+    뒤 인간전속 구간에서 멈췄다면(아래 참고), `PROJECT_STATE_SAVE`의
+    `results_so_far`에 그 접수번호를 반드시 남긴다(예: "court-filing:
+    GOV_TASK 접수 완료, 접수번호 {receipt_no} — 본인인증 대기 중").
+    재개(`RESUME_KEXECUTE`) 시 `remaining_steps`에 이 step이 다시
+    포함돼 있더라도, `results_so_far`에 이미 접수 기록이 있으면
+    `GOV_TASK_SUBMIT_REQUEST`를 다시 내지 않는다 — 곧바로 아래
+    ATOM_PATTERN별 인간전속 안내(또는 `automation_sp` 실행)부터
+    이어간다.
 
     → ATOM_PATTERN(REPORT|DECISION|PAY|QUERY|
     ADJUDICATE)에 따라 실행. `automation_sp`가 있으면 [CALL_GOVSYS:
