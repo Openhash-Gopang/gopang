@@ -16147,22 +16147,68 @@ async function _klawFindCaseCharge(env, guid, caseId) {
   return (data.items && data.items[0]) || null;
 }
 
-async function _klawCreateCaseCharge(env, { guid, caseId, claimAmountKrw, feeKrw, feeTier, mintContentHash }) {
+// ★ 2026-08-13 재설계 — "확인 후 처리" 대신 "선점 후 처리"로 전환해
+// 이중과금 레이스 창구를 원천 차단한다. (guid, case_id) 유일 인덱스
+// (1787600001 마이그레이션)에 대한 INSERT 성공 여부 자체를 원자적
+// 락으로 쓴다 — 두 요청이 거의 동시에 도착해도 SQLite가 INSERT를
+// 직렬화하므로 둘 중 하나만 성공한다.
+async function _klawTryReserveCaseCharge(env, { guid, caseId, claimAmountKrw }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   try {
-    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records`, {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records`, {
       method: 'POST', headers,
       body: JSON.stringify({
         guid, case_id: caseId, claim_amount_krw: claimAmountKrw || 0,
-        fee_krw: feeKrw, fee_tier: feeTier, verdict_count: 1,
-        mint_content_hash: mintContentHash || '',
+        // fee_krw=0/fee_tier=''는 "예약됨, 아직 결제 확정 전" 상태를
+        // 뜻한다 — _klawFinalizeCaseCharge가 결제 성공 후 채운다. 이
+        // 필드가 아직 비어있어도 레코드의 '존재' 자체가 락 역할을 하므로
+        // 다른 요청의 중복방지 판정에는 지장 없다.
+        fee_krw: 0, fee_tier: '', verdict_count: 1, mint_content_hash: '',
       }),
     });
+    if (res.ok) {
+      const rec = await res.json();
+      return { reserved: true, record: rec };
+    }
+    // 실패 원인(유일 인덱스 위반 vs 다른 오류)을 굳이 구분하지 않는다 —
+    // 어느 쪽이든 호출부가 _klawFindCaseCharge로 재조회해 처리하므로
+    // 결과적으로 동일하게 안전하게 수렴한다.
+    return { reserved: false, record: null };
   } catch (e) {
-    // 결제(mint)는 이미 끝난 뒤라 여기 실패는 "다음 재생성부터 다시 과금될
-    // 수 있다"는 의미다(원장 기록 실패) — 결제 자체를 되돌리진 않되 크게 로그.
-    console.error(JSON.stringify({ tag: 'KLAW_CASE_CHARGE_RECORD_FAILED', guid, caseId, error: e.message, ts: new Date().toISOString() }));
+    console.error(JSON.stringify({ tag: 'KLAW_CASE_RESERVE_ERROR', guid, caseId, error: e.message, ts: new Date().toISOString() }));
+    return { reserved: false, record: null, error: e.message };
+  }
+}
+
+async function _klawFinalizeCaseCharge(env, recordId, { feeKrw, feeTier, mintContentHash }) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ fee_krw: feeKrw, fee_tier: feeTier, mint_content_hash: mintContentHash || '' }),
+    });
+  } catch (e) {
+    // 결제(mint)는 이미 성공한 뒤라, 여기 실패는 fee_krw=0인 채로 레코드가
+    // 남는다는 뜻이다 — 존재 자체는 여전히 락으로 유효(중복과금 방지는
+    // 안 깨짐), 다만 사후 정산 조회 시 금액이 비어보일 수 있어 크게 로그.
+    console.error(JSON.stringify({ tag: 'KLAW_CASE_FINALIZE_FAILED', recordId, error: e.message, ts: new Date().toISOString() }));
+  }
+}
+
+async function _klawReleaseCaseChargeReservation(env, recordId) {
+  // 예약엔 성공했는데 실제 GDC 과금이 실패했을 때 호출 — 예약을 롤백해
+  // 이 사건이 "결제된 적 없는데 결제됨으로 영구 고정"되는 걸 막는다
+  // (안 그러면 다음 재생성 시도가 매번 무료 재생성으로 오판된다).
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  try {
+    await fetch(`${L1_DEFAULT}/api/collections/klaw_case_charges/records/${recordId}`, {
+      method: 'DELETE', headers,
+    });
+  } catch (e) {
+    console.error(JSON.stringify({ tag: 'KLAW_CASE_RESERVATION_ROLLBACK_FAILED', recordId, error: e.message, ts: new Date().toISOString() }));
   }
 }
 
@@ -16369,18 +16415,6 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
         return;
       }
 
-      // 여기부터는 STEP0 + case_id 있음 — 사건단위 중복방지 판정.
-      const existingCase = await _klawFindCaseCharge(env, guid, case_id);
-      if (existingCase) {
-        await _klawBumpCaseRegen(env, existingCase.id, existingCase.verdict_count);
-        _dlog(env, JSON.stringify({
-          tag: 'KLAW_FLAT_FEE_FREE_REGEN', guid, caseId: case_id,
-          feeTier: existingCase.fee_tier, verdictCount: (existingCase.verdict_count || 1) + 1,
-          ts: new Date().toISOString(),
-        }));
-        return;
-      }
-
       if (!_klawFlatFee) {
         // claim_amount_krw가 없거나 무효인데 사건단위 흐름(case_id 있음)인
         // 이례적 상황 — 사고실험 시나리오 13. 지어낸 금액으로 과금하지
@@ -16393,23 +16427,66 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
         return;
       }
 
+      // ★ 2026-08-13 재설계 — "선점 후 처리". (guid, case_id) 유일
+      // 인덱스에 대한 INSERT 성공 여부를 원자적 락으로 쓴다. 예약에
+      // 성공한 요청만 이 사건의 결제를 맡는다 — 두 요청이 거의 동시에
+      // 도착해도 SQLite가 INSERT를 직렬화하므로 이중 과금이 불가능하다
+      // (라이브 스모크테스트로 재현된 레이스 대응, klaw_case_charges
+      // 테이블 부재 결함 수정과 함께 적용).
+      const reserve = await _klawTryReserveCaseCharge(env, {
+        guid, caseId: case_id, claimAmountKrw: claim_amount_krw,
+      });
+
+      if (!reserve.reserved) {
+        // 선점 실패 — 이미 다른 요청(또는 과거 재생성 이력)이 이 사건을
+        // 선점했다. 그 기록을 찾아 재생성 카운트만 올리고 과금하지 않는다.
+        // 조회까지 실패하면(네트워크 오류 등) 과금 없이 로그만 남기고
+        // 통과한다 — 이중 과금보다는 매출 누락 쪽이 안전한 방향(§기존 관례).
+        const existingCase = await _klawFindCaseCharge(env, guid, case_id);
+        if (existingCase) {
+          await _klawBumpCaseRegen(env, existingCase.id, existingCase.verdict_count);
+          _dlog(env, JSON.stringify({
+            tag: 'KLAW_FLAT_FEE_FREE_REGEN', guid, caseId: case_id,
+            feeTier: existingCase.fee_tier, verdictCount: (existingCase.verdict_count || 1) + 1,
+            ts: new Date().toISOString(),
+          }));
+        } else {
+          console.error(JSON.stringify({
+            tag: 'KLAW_CASE_RESERVE_FAILED_NO_EXISTING_RECORD', guid, caseId: case_id,
+            ts: new Date().toISOString(),
+          }));
+        }
+        return;
+      }
+
+      // 선점 성공 — 이 요청이 이 사건의 "최초 결제 시도"를 맡는다.
       const chargeResult = await _chargeGdcForAiUsage(env, {
         guid, krwAmount: _klawFlatFee.fee, serviceId: 'klaw-verdict',
         memo: `K-Law 가상 판결문 생성(${_klawFlatFee.tier}, 소송가액 ${Number(claim_amount_krw).toLocaleString('ko-KR')}원)`,
       });
-      if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
+
+      if (!chargeResult?.ok) {
+        // 과금 실패 — 예약을 롤백해 다음 시도가 정상적으로 재과금 시도할
+        // 수 있게 한다(안 그러면 이 사건이 "결제된 적 없는데 결제됨으로
+        // 영구 고정"돼 버린다).
+        await _klawReleaseCaseChargeReservation(env, reserve.record.id);
+        _dlog(env, JSON.stringify({
+          tag: 'KLAW_FLAT_FEE_CHARGE_FAILED_RESERVATION_RELEASED', guid, caseId: case_id,
+          feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee,
+          ts: new Date().toISOString(),
+        }));
+        return;
+      }
+
+      if (typeof chargeResult.balance_after === 'number') {
         await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
       }
-      if (chargeResult?.ok) {
-        await _klawCreateCaseCharge(env, {
-          guid, caseId: case_id, claimAmountKrw: claim_amount_krw,
-          feeKrw: _klawFlatFee.fee, feeTier: _klawFlatFee.tier,
-          mintContentHash: chargeResult.tx_hash || '',
-        });
-      }
+      await _klawFinalizeCaseCharge(env, reserve.record.id, {
+        feeKrw: _klawFlatFee.fee, feeTier: _klawFlatFee.tier, mintContentHash: chargeResult.tx_hash || '',
+      });
       _dlog(env, JSON.stringify({
         tag: 'KLAW_FLAT_FEE_CHARGED', guid, claimAmountKrw: claim_amount_krw, caseId: case_id,
-        feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: !!chargeResult?.ok,
+        feeTier: _klawFlatFee.tier, feeKrw: _klawFlatFee.fee, ok: true,
         ts: new Date().toISOString(),
       }));
       return;
