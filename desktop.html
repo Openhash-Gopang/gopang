@@ -940,6 +940,24 @@ section.section[data-tab].tab-active { display: block; }
       </svg>
     </button>
     <div class="sb-submenu" id="submenu-dev-docs">
+    <a class="sb-item sb-subitem" href="./docs/SESSION_SUMMARY_KLAW_GDC_BILLING_20260813_v1_0.html" target="_blank">
+      <!-- 2026-08-13 신설 — K-Law 가상 사건 5건 서사형 사고실험(GDC
+           과금/무료재생성 평가) → 새 발견 4건(F1~F4) → F3(GDC 사전
+           잔액 확인 게이트 부재) 즉시 수정 → F1(비금전 사건 최소요금
+           부과 정책 결정)·F2(재생성 잔여횟수 표시) 구현 → 전용 라이브
+           스모크테스트 하네스 신설(HTTP 상태코드 아니라 GDC 잔액
+           차감액으로 채점) → 실행 중 Origin 헤더 누락 발견·수정 →
+           재검증 중 klaw_case_charges 테이블이 2026-08-11/12 신설 이후
+           DB에 아예 존재한 적 없었다는 결함 발견("동일 사건 재생성
+           무료" 기능이 한 번도 작동한 적 없었음) → F4(이중과금 레이스)
+           실제 재현 → "선점 후 처리" 방식으로 재설계해 레이스 창구
+           원천 제거 → 재검증 4/4 LIVE-PASS. 새 항목은 이 섹션 맨
+           위(최신)에 넣을 것. -->
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      <span class="sb-item-label">K-Law GDC 과금 사고실험 + 라이브 검증(0813, 실결함 3건 발견·수정) ↗</span>
+    </a>
     <a class="sb-item sb-subitem" href="./docs/SESSION_SUMMARY_PATHFINDER_GOVTASK_LIVE_VERIFY_20260813_v1_0.html" target="_blank">
       <!-- 2026-08-13 신설 — 인수인계 검증(origin_guid 잔존·가명화 검증
            섹션 유실 2건 발견·수정) → PDV 기록 범위 확장(기관/부서/직원
