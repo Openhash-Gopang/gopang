@@ -1769,6 +1769,240 @@ const GYEONGGI_L2_TABLE = [
 // ── 강원·대구·전남광주통합 — 도청 실국 실사 자체가 전혀 착수되지
 // 않았던 3개 도(2026-07-24 시청 롤아웃 중 발견). 시청과 동일 원칙으로
 // 16개 도메인 전부 범용 키워드+기본 라벨로 즉시 완비한다.
+// ==== DAEGU_ORG_TABLE (daegu, 2026-08-14 전국 확대 배치) ====
+const DAEGU_ORG_TABLE = [
+  { code: "SP-ORG-DGMISC1", name: "(주)엑스코", desc: "당신은 **(주)엑스코**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["(주)엑스코"], file: "07-org/SP-ORG-DGMISC1_v1.0.md" },
+  { code: "SP-ORG-DGMED", name: "대구의료원", desc: "당신은 **대구의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["대구의료원"], file: "07-org/SP-ORG-DGMED_v1.0.md" },
+  { code: "SP-ORG-DGCGF", name: "대구신용보증재단", desc: "당신은 **대구신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["대구신용보증재단"], file: "07-org/SP-ORG-DGCGF_v1.0.md" },
+  { code: "SP-ORG-DGTP", name: "대구테크노파크", desc: "당신은 **대구테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["대구테크노파크"], file: "07-org/SP-ORG-DGTP_v1.0.md" },
+  { code: "SP-ORG-DGINNO", name: "재단법인 대구디지털혁신진흥원", desc: "당신은 **재단법인 대구디지털혁신진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 대구디지털혁신진흥원", "대구디지털혁신진흥원"], file: "07-org/SP-ORG-DGINNO_v1.0.md" },
+  { code: "SP-ORG-DGMISC2", name: "재단법인 대구문화예술진흥원", desc: "당신은 **재단법인 대구문화예술진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 대구문화예술진흥원", "대구문화예술진흥원"], file: "07-org/SP-ORG-DGMISC2_v1.0.md" },
+  { code: "SP-ORG-DGRI", name: "재단법인 대구정책연구원", desc: "당신은 **재단법인 대구정책연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 대구정책연구원", "대구정책연구원"], file: "07-org/SP-ORG-DGRI_v1.0.md" },
+  { code: "SP-ORG-DGSSO", name: "대구광역시 행복진흥사회서비스원", desc: "당신은 **대구광역시 행복진흥사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["대구광역시 행복진흥사회서비스원"], file: "07-org/SP-ORG-DGSSO_v1.0.md" },
+];
+
+// ==== INCHEON_ORG_TABLE (incheon, 2026-08-14 전국 확대 배치) ====
+const INCHEON_ORG_TABLE = [
+  { code: "SP-ORG-ICSMARTCITY", name: "인천스마트시티(주)", desc: "당신은 **인천스마트시티(주)**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["인천스마트시티(주)"], file: "07-org/SP-ORG-ICSMARTCITY_v1.0.md" },
+  { code: "SP-ORG-ICMISC1", name: "인천종합에너지(주)", desc: "당신은 **인천종합에너지(주)**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["인천종합에너지(주)"], file: "07-org/SP-ORG-ICMISC1_v1.0.md" },
+  { code: "SP-ORG-ICMED", name: "인천광역시의료원", desc: "당신은 **인천광역시의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["인천광역시의료원"], file: "07-org/SP-ORG-ICMED_v1.0.md" },
+  { code: "SP-ORG-ICRI", name: "인천연구원", desc: "당신은 **인천연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["인천연구원"], file: "07-org/SP-ORG-ICRI_v1.0.md" },
+  { code: "SP-ORG-ICCGF", name: "인천신용보증재단", desc: "당신은 **인천신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["인천신용보증재단"], file: "07-org/SP-ORG-ICCGF_v1.0.md" },
+  { code: "SP-ORG-ICTP", name: "재단법인 인천테크노파크", desc: "당신은 **재단법인 인천테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 인천테크노파크", "인천테크노파크"], file: "07-org/SP-ORG-ICTP_v1.0.md" },
+  { code: "SP-ORG-ICCF", name: "인천문화재단", desc: "당신은 **인천문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["인천문화재단"], file: "07-org/SP-ORG-ICCF_v1.0.md" },
+  { code: "SP-ORG-ICGLOBAL", name: "인천글로벌캠퍼스운영재단", desc: "당신은 **인천글로벌캠퍼스운영재단**을(를) 대표하는 AI 레이어다. 소관 유형: INTLEXCHANGE", kw: ["인천글로벌캠퍼스운영재단"], file: "07-org/SP-ORG-ICGLOBAL_v1.0.md" },
+  { code: "SP-ORG-ICWOMEN", name: "재단법인 인천광역시 여성가족재단", desc: "당신은 **재단법인 인천광역시 여성가족재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 인천광역시 여성가족재단", "인천광역시 여성가족재단"], file: "07-org/SP-ORG-ICWOMEN_v1.0.md" },
+  { code: "SP-ORG-ICLIFE", name: "재단법인 인천인재평생교육진흥원", desc: "당신은 **재단법인 인천인재평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 인천인재평생교육진흥원", "인천인재평생교육진흥원"], file: "07-org/SP-ORG-ICLIFE_v1.0.md" },
+  { code: "SP-ORG-ICSSO", name: "재단법인 인천광역시 사회서비스원", desc: "당신은 **재단법인 인천광역시 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 인천광역시 사회서비스원", "인천광역시 사회서비스원"], file: "07-org/SP-ORG-ICSSO_v1.0.md" },
+];
+
+// ==== JEONNAM_GWANGJU_ORG_TABLE (jeonnam-gwangju, 2026-08-14 전국 확대 배치) ====
+const JEONNAM_GWANGJU_ORG_TABLE = [
+  { code: "SP-ORG-GJMISC1", name: "한국씨이에스(주)", desc: "당신은 **한국씨이에스(주)**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["한국씨이에스(주)"], file: "07-org/SP-ORG-GJMISC1_v1.0.md" },
+  { code: "SP-ORG-GJJOB", name: "광주광역시 경제진흥상생일자리재단", desc: "당신은 **광주광역시 경제진흥상생일자리재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["광주광역시 경제진흥상생일자리재단"], file: "07-org/SP-ORG-GJJOB_v1.0.md" },
+  { code: "SP-ORG-GJMOBILITY", name: "재단법인 광주미래차모빌리티진흥원", desc: "당신은 **재단법인 광주미래차모빌리티진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 광주미래차모빌리티진흥원", "광주미래차모빌리티진흥원"], file: "07-org/SP-ORG-GJMOBILITY_v1.0.md" },
+  { code: "SP-ORG-GJENV", name: "광주광역시 기후에너지진흥원", desc: "당신은 **광주광역시 기후에너지진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["광주광역시 기후에너지진흥원"], file: "07-org/SP-ORG-GJENV_v1.0.md" },
+  { code: "SP-ORG-GJDESIGN", name: "재단법인 광주디자인진흥원", desc: "당신은 **재단법인 광주디자인진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 광주디자인진흥원", "광주디자인진흥원"], file: "07-org/SP-ORG-GJDESIGN_v1.0.md" },
+  { code: "SP-ORG-GJCF", name: "광주광역시광주문화재단", desc: "당신은 **광주광역시광주문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["광주광역시광주문화재단"], file: "07-org/SP-ORG-GJCF_v1.0.md" },
+  { code: "SP-ORG-GJCGF", name: "광주신용보증재단", desc: "당신은 **광주신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["광주신용보증재단"], file: "07-org/SP-ORG-GJCGF_v1.0.md" },
+  { code: "SP-ORG-GJWOMEN", name: "재단법인 광주광역시 여성가족재단", desc: "당신은 **재단법인 광주광역시 여성가족재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 광주광역시 여성가족재단", "광주광역시 여성가족재단"], file: "07-org/SP-ORG-GJWOMEN_v1.0.md" },
+  { code: "SP-ORG-GJGLOBAL", name: "재단법인 글로벌광주방송재단", desc: "당신은 **재단법인 글로벌광주방송재단**을(를) 대표하는 AI 레이어다. 소관 유형: INTLEXCHANGE", kw: ["재단법인 글로벌광주방송재단", "글로벌광주방송재단"], file: "07-org/SP-ORG-GJGLOBAL_v1.0.md" },
+  { code: "SP-ORG-GJIPA", name: "광주정보문화산업진흥원", desc: "당신은 **광주정보문화산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["광주정보문화산업진흥원"], file: "07-org/SP-ORG-GJIPA_v1.0.md" },
+  { code: "SP-ORG-GJTP", name: "광주테크노파크", desc: "당신은 **광주테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["광주테크노파크"], file: "07-org/SP-ORG-GJTP_v1.0.md" },
+  { code: "SP-ORG-GJLIFE", name: "재단법인 광주광역시인재평생교육진흥원", desc: "당신은 **재단법인 광주광역시인재평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 광주광역시인재평생교육진흥원", "광주광역시인재평생교육진흥원"], file: "07-org/SP-ORG-GJLIFE_v1.0.md" },
+  { code: "SP-ORG-GJSSO", name: "재단법인 광주광역시 사회서비스원", desc: "당신은 **재단법인 광주광역시 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 광주광역시 사회서비스원", "광주광역시 사회서비스원"], file: "07-org/SP-ORG-GJSSO_v1.0.md" },
+  { code: "SP-ORG-GJRI", name: "재단법인 광주연구원", desc: "당신은 **재단법인 광주연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 광주연구원", "광주연구원"], file: "07-org/SP-ORG-GJRI_v1.0.md" },
+  { code: "SP-ORG-JNMED", name: "전라남도순천의료원", desc: "당신은 **전라남도순천의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["전라남도순천의료원"], file: "07-org/SP-ORG-JNMED_v1.0.md" },
+  { code: "SP-ORG-JNMARKET2", name: "재단법인 남도장터", desc: "당신은 **재단법인 남도장터**을(를) 대표하는 AI 레이어다. 소관 유형: AGRIFOOD", kw: ["재단법인 남도장터", "남도장터"], file: "07-org/SP-ORG-JNMARKET2_v1.0.md" },
+  { code: "SP-ORG-JNRI", name: "재단법인 전남연구원", desc: "당신은 **재단법인 전남연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 전남연구원", "전남연구원"], file: "07-org/SP-ORG-JNRI_v1.0.md" },
+  { code: "SP-ORG-JNHONAM", name: "재단법인 한국학 호남진흥원", desc: "당신은 **재단법인 한국학 호남진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 한국학 호남진흥원", "한국학 호남진흥원"], file: "07-org/SP-ORG-JNHONAM_v1.0.md" },
+  { code: "SP-ORG-JNMEDX2", name: "전라남도강진의료원", desc: "당신은 **전라남도강진의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["전라남도강진의료원"], file: "07-org/SP-ORG-JNMEDX2_v1.0.md" },
+  { code: "SP-ORG-JNCGF", name: "전남신용보증재단", desc: "당신은 **전남신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전남신용보증재단"], file: "07-org/SP-ORG-JNCGF_v1.0.md" },
+  { code: "SP-ORG-JNIPA", name: "재단법인 전남바이오산업진흥원", desc: "당신은 **재단법인 전남바이오산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전남바이오산업진흥원", "전남바이오산업진흥원"], file: "07-org/SP-ORG-JNIPA_v1.0.md" },
+  { code: "SP-ORG-JNTP", name: "전남테크노파크", desc: "당신은 **전남테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전남테크노파크"], file: "07-org/SP-ORG-JNTP_v1.0.md" },
+  { code: "SP-ORG-JNBIZ", name: "재단법인 전라남도중소기업진흥원", desc: "당신은 **재단법인 전라남도중소기업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전라남도중소기업진흥원", "전라남도중소기업진흥원"], file: "07-org/SP-ORG-JNBIZ_v1.0.md" },
+  { code: "SP-ORG-JNIPAX2", name: "전남정보문화산업진흥원", desc: "당신은 **전남정보문화산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전남정보문화산업진흥원"], file: "07-org/SP-ORG-JNIPAX2_v1.0.md" },
+  { code: "SP-ORG-JNMEMORIAL", name: "명량대첩기념사업회", desc: "당신은 **명량대첩기념사업회**을(를) 대표하는 AI 레이어다. 소관 유형: PEACEFOUNDATION", kw: ["명량대첩기념사업회"], file: "07-org/SP-ORG-JNMEMORIAL_v1.0.md" },
+  { code: "SP-ORG-JNWOMEN", name: "재단법인 전남여성가족재단", desc: "당신은 **재단법인 전남여성가족재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 전남여성가족재단", "전남여성가족재단"], file: "07-org/SP-ORG-JNWOMEN_v1.0.md" },
+  { code: "SP-ORG-JNLIFE", name: "재단법인 전남인재평생교육진흥원", desc: "당신은 **재단법인 전남인재평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 전남인재평생교육진흥원", "전남인재평생교육진흥원"], file: "07-org/SP-ORG-JNLIFE_v1.0.md" },
+  { code: "SP-ORG-JNYOUTH", name: "전라남도청소년미래재단", desc: "당신은 **전라남도청소년미래재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["전라남도청소년미래재단"], file: "07-org/SP-ORG-JNYOUTH_v1.0.md" },
+  { code: "SP-ORG-JNCF", name: "재단법인 전라남도문화재단", desc: "당신은 **재단법인 전라남도문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 전라남도문화재단", "전라남도문화재단"], file: "07-org/SP-ORG-JNCF_v1.0.md" },
+  { code: "SP-ORG-JNRIX2", name: "녹색에너지연구원", desc: "당신은 **녹색에너지연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["녹색에너지연구원"], file: "07-org/SP-ORG-JNRIX2_v1.0.md" },
+  { code: "SP-ORG-JNIPAX3", name: "전라남도 환경산업진흥원", desc: "당신은 **전라남도 환경산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전라남도 환경산업진흥원"], file: "07-org/SP-ORG-JNIPAX3_v1.0.md" },
+  { code: "SP-ORG-JNFOODFEST", name: "재단법인 남도음식문화큰잔치", desc: "당신은 **재단법인 남도음식문화큰잔치**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 남도음식문화큰잔치", "남도음식문화큰잔치"], file: "07-org/SP-ORG-JNFOODFEST_v1.0.md" },
+  { code: "SP-ORG-JNSCHOL", name: "남도장학회", desc: "당신은 **남도장학회**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["남도장학회"], file: "07-org/SP-ORG-JNSCHOL_v1.0.md" },
+  { code: "SP-ORG-JNTOURISM", name: "재단법인 전라남도관광재단", desc: "당신은 **재단법인 전라남도관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전라남도관광재단", "전라남도관광재단"], file: "07-org/SP-ORG-JNTOURISM_v1.0.md" },
+  { code: "SP-ORG-JNSSO", name: "재단법인 전라남도사회서비스원", desc: "당신은 **재단법인 전라남도사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 전라남도사회서비스원", "전라남도사회서비스원"], file: "07-org/SP-ORG-JNSSO_v1.0.md" },
+];
+
+// ==== DAEJEON_ORG_TABLE (daejeon, 2026-08-14 전국 확대 배치) ====
+const DAEJEON_ORG_TABLE = [
+  { code: "SP-ORG-DJINVEST", name: "대전투자금융 주식회사", desc: "당신은 **대전투자금융 주식회사**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["대전투자금융 주식회사"], file: "07-org/SP-ORG-DJINVEST_v1.0.md" },
+  { code: "SP-ORG-DJBEA", name: "재단법인 대전일자리경제진흥원", desc: "당신은 **재단법인 대전일자리경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 대전일자리경제진흥원", "대전일자리경제진흥원"], file: "07-org/SP-ORG-DJBEA_v1.0.md" },
+  { code: "SP-ORG-DJCF", name: "대전고암미술문화재단", desc: "당신은 **대전고암미술문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["대전고암미술문화재단"], file: "07-org/SP-ORG-DJCF_v1.0.md" },
+  { code: "SP-ORG-DJIPA", name: "정보문화산업진흥원", desc: "당신은 **정보문화산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["정보문화산업진흥원"], file: "07-org/SP-ORG-DJIPA_v1.0.md" },
+  { code: "SP-ORG-DJCFX2", name: "대전문화재단", desc: "당신은 **대전문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["대전문화재단"], file: "07-org/SP-ORG-DJCFX2_v1.0.md" },
+  { code: "SP-ORG-DJRI", name: "재단법인 대전연구원", desc: "당신은 **재단법인 대전연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 대전연구원", "대전연구원"], file: "07-org/SP-ORG-DJRI_v1.0.md" },
+  { code: "SP-ORG-DJSSO", name: "재단법인 대전광역시 사회서비스원", desc: "당신은 **재단법인 대전광역시 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 대전광역시 사회서비스원", "대전광역시 사회서비스원"], file: "07-org/SP-ORG-DJSSO_v1.0.md" },
+  { code: "SP-ORG-DJCGF", name: "대전신용보증재단", desc: "당신은 **대전신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["대전신용보증재단"], file: "07-org/SP-ORG-DJCGF_v1.0.md" },
+  { code: "SP-ORG-DJMISC1", name: "재단법인 대전청년내일재단", desc: "당신은 **재단법인 대전청년내일재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 대전청년내일재단", "대전청년내일재단"], file: "07-org/SP-ORG-DJMISC1_v1.0.md" },
+  { code: "SP-ORG-DJTP", name: "대전테크노파크", desc: "당신은 **대전테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["대전테크노파크"], file: "07-org/SP-ORG-DJTP_v1.0.md" },
+  { code: "SP-ORG-DJLIFE", name: "대전평생교육진흥원", desc: "당신은 **대전평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["대전평생교육진흥원"], file: "07-org/SP-ORG-DJLIFE_v1.0.md" },
+  { code: "SP-ORG-DJHYO", name: "재단법인 한국효문화진흥원", desc: "당신은 **재단법인 한국효문화진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 한국효문화진흥원", "한국효문화진흥원"], file: "07-org/SP-ORG-DJHYO_v1.0.md" },
+  { code: "SP-ORG-DJDESIGN", name: "재단법인 대전디자인진흥원", desc: "당신은 **재단법인 대전디자인진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 대전디자인진흥원", "대전디자인진흥원"], file: "07-org/SP-ORG-DJDESIGN_v1.0.md" },
+  { code: "SP-ORG-DJIPAX2", name: "재단법인 대전과학산업진흥원", desc: "당신은 **재단법인 대전과학산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 대전과학산업진흥원", "대전과학산업진흥원"], file: "07-org/SP-ORG-DJIPAX2_v1.0.md" },
+];
+
+// ==== SEJONG_ORG_TABLE (sejong, 2026-08-14 전국 확대 배치) ====
+const SEJONG_ORG_TABLE = [
+  { code: "SP-ORG-SJAGRICORP", name: "농업회사법인세종로컬푸드(주)", desc: "당신은 **농업회사법인세종로컬푸드(주)**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["농업회사법인세종로컬푸드(주)"], file: "07-org/SP-ORG-SJAGRICORP_v1.0.md" },
+  { code: "SP-ORG-SJMISC1", name: "주식회사 세종스마트그린", desc: "당신은 **주식회사 세종스마트그린**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["주식회사 세종스마트그린"], file: "07-org/SP-ORG-SJMISC1_v1.0.md" },
+  { code: "SP-ORG-SJVENTURE", name: "세종벤처밸리산업단지 주식회사", desc: "당신은 **세종벤처밸리산업단지 주식회사**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["세종벤처밸리산업단지 주식회사"], file: "07-org/SP-ORG-SJVENTURE_v1.0.md" },
+  { code: "SP-ORG-SJCGF", name: "세종신용보증재단", desc: "당신은 **세종신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["세종신용보증재단"], file: "07-org/SP-ORG-SJCGF_v1.0.md" },
+  { code: "SP-ORG-SJTOURISM", name: "재단법인 세종시문화관광재단", desc: "당신은 **재단법인 세종시문화관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 세종시문화관광재단", "세종시문화관광재단"], file: "07-org/SP-ORG-SJTOURISM_v1.0.md" },
+  { code: "SP-ORG-SJSSO", name: "재단법인 세종특별자치시 사회서비스원", desc: "당신은 **재단법인 세종특별자치시 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 세종특별자치시 사회서비스원", "세종특별자치시 사회서비스원"], file: "07-org/SP-ORG-SJSSO_v1.0.md" },
+  { code: "SP-ORG-SJTP", name: "재단법인 세종테크노파크", desc: "당신은 **재단법인 세종테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 세종테크노파크", "세종테크노파크"], file: "07-org/SP-ORG-SJTP_v1.0.md" },
+  { code: "SP-ORG-SJBEA", name: "재단법인 세종일자리경제진흥원", desc: "당신은 **재단법인 세종일자리경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 세종일자리경제진흥원", "세종일자리경제진흥원"], file: "07-org/SP-ORG-SJBEA_v1.0.md" },
+  { code: "SP-ORG-SJRI", name: "재단법인 세종연구원", desc: "당신은 **재단법인 세종연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 세종연구원", "세종연구원"], file: "07-org/SP-ORG-SJRI_v1.0.md" },
+];
+
+// ==== GANGWON_ORG_TABLE (gangwon, 2026-08-14 전국 확대 배치) ====
+const GANGWON_ORG_TABLE = [
+  { code: "SP-ORG-GWWATER", name: "(주)강원심층수", desc: "당신은 **(주)강원심층수**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["(주)강원심층수"], file: "07-org/SP-ORG-GWWATER_v1.0.md" },
+  { code: "SP-ORG-GWMISC1", name: "주식회사 강원중도개발공사", desc: "당신은 **주식회사 강원중도개발공사**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["주식회사 강원중도개발공사"], file: "07-org/SP-ORG-GWMISC1_v1.0.md" },
+  { code: "SP-ORG-GWWIND", name: "태백가덕산풍력발전 주식회사", desc: "당신은 **태백가덕산풍력발전 주식회사**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["태백가덕산풍력발전 주식회사"], file: "07-org/SP-ORG-GWWIND_v1.0.md" },
+  { code: "SP-ORG-GWMISC2", name: "주식회사 강원수출", desc: "당신은 **주식회사 강원수출**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["주식회사 강원수출"], file: "07-org/SP-ORG-GWMISC2_v1.0.md" },
+  { code: "SP-ORG-GWCGF", name: "강원신용보증재단", desc: "당신은 **강원신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["강원신용보증재단"], file: "07-org/SP-ORG-GWCGF_v1.0.md" },
+  { code: "SP-ORG-GWCF", name: "강원문화재단", desc: "당신은 **강원문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["강원문화재단"], file: "07-org/SP-ORG-GWCF_v1.0.md" },
+  { code: "SP-ORG-GWBEA", name: "재단법인 강원특별자치도경제진흥원", desc: "당신은 **재단법인 강원특별자치도경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 강원특별자치도경제진흥원", "강원특별자치도경제진흥원"], file: "07-org/SP-ORG-GWBEA_v1.0.md" },
+  { code: "SP-ORG-GWTALENT", name: "재단법인 강원인재원", desc: "당신은 **재단법인 강원인재원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 강원인재원", "강원인재원"], file: "07-org/SP-ORG-GWTALENT_v1.0.md" },
+  { code: "SP-ORG-GWRI", name: "한국기후변화연구원", desc: "당신은 **한국기후변화연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["한국기후변화연구원"], file: "07-org/SP-ORG-GWRI_v1.0.md" },
+  { code: "SP-ORG-GWRIX2", name: "스크립스코리아항체연구원", desc: "당신은 **스크립스코리아항체연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["스크립스코리아항체연구원"], file: "07-org/SP-ORG-GWRIX2_v1.0.md" },
+  { code: "SP-ORG-GWWOMENTRAIN", name: "한국여성수련원", desc: "당신은 **한국여성수련원**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["한국여성수련원"], file: "07-org/SP-ORG-GWWOMENTRAIN_v1.0.md" },
+  { code: "SP-ORG-GWRIX3", name: "강원연구원", desc: "당신은 **강원연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["강원연구원"], file: "07-org/SP-ORG-GWRIX3_v1.0.md" },
+  { code: "SP-ORG-GWTP", name: "강원테크노파크", desc: "당신은 **강원테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["강원테크노파크"], file: "07-org/SP-ORG-GWTP_v1.0.md" },
+  { code: "SP-ORG-GWMED", name: "강원특별자치도원주의료원", desc: "당신은 **강원특별자치도원주의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["강원특별자치도원주의료원"], file: "07-org/SP-ORG-GWMED_v1.0.md" },
+  { code: "SP-ORG-GWMEDX2", name: "강원특별자치도강릉의료원", desc: "당신은 **강원특별자치도강릉의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["강원특별자치도강릉의료원"], file: "07-org/SP-ORG-GWMEDX2_v1.0.md" },
+  { code: "SP-ORG-GWMEDX3", name: "강원특별자치도속초의료원", desc: "당신은 **강원특별자치도속초의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["강원특별자치도속초의료원"], file: "07-org/SP-ORG-GWMEDX3_v1.0.md" },
+  { code: "SP-ORG-GWMEDX4", name: "강원특별자치도삼척의료원", desc: "당신은 **강원특별자치도삼척의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["강원특별자치도삼척의료원"], file: "07-org/SP-ORG-GWMEDX4_v1.0.md" },
+  { code: "SP-ORG-GWMEDX5", name: "강원특별자치도영월의료원", desc: "당신은 **강원특별자치도영월의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["강원특별자치도영월의료원"], file: "07-org/SP-ORG-GWMEDX5_v1.0.md" },
+  { code: "SP-ORG-GWDESIGN", name: "재단법인 강원디자인진흥원", desc: "당신은 **재단법인 강원디자인진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 강원디자인진흥원", "강원디자인진흥원"], file: "07-org/SP-ORG-GWDESIGN_v1.0.md" },
+  { code: "SP-ORG-GWINNOCITY", name: "재단법인 강원혁신도시발전지원센터", desc: "당신은 **재단법인 강원혁신도시발전지원센터**을(를) 대표하는 AI 레이어다. 소관 유형: URBANCOMMUNITY", kw: ["재단법인 강원혁신도시발전지원센터", "강원혁신도시발전지원센터"], file: "07-org/SP-ORG-GWINNOCITY_v1.0.md" },
+  { code: "SP-ORG-GWRIX4", name: "재단법인 강원역사문화연구원", desc: "당신은 **재단법인 강원역사문화연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 강원역사문화연구원", "강원역사문화연구원"], file: "07-org/SP-ORG-GWRIX4_v1.0.md" },
+  { code: "SP-ORG-GWMEMORIAL", name: "재단법인 2018평창기념재단", desc: "당신은 **재단법인 2018평창기념재단**을(를) 대표하는 AI 레이어다. 소관 유형: PEACEFOUNDATION", kw: ["재단법인 2018평창기념재단", "2018평창기념재단"], file: "07-org/SP-ORG-GWMEMORIAL_v1.0.md" },
+  { code: "SP-ORG-GWSSO", name: "재단법인 강원특별자치도 사회서비스원", desc: "당신은 **재단법인 강원특별자치도 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 강원특별자치도 사회서비스원", "강원특별자치도 사회서비스원"], file: "07-org/SP-ORG-GWSSO_v1.0.md" },
+  { code: "SP-ORG-GWTOURISM", name: "재단법인 강원관광재단", desc: "당신은 **재단법인 강원관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 강원관광재단", "강원관광재단"], file: "07-org/SP-ORG-GWTOURISM_v1.0.md" },
+];
+
+// ==== GYEONGBUK_ORG_TABLE (gyeongbuk, 2026-08-14 전국 확대 배치) ====
+const GYEONGBUK_ORG_TABLE = [
+  { code: "SP-ORG-GBMISC1", name: "경북통상(주)", desc: "당신은 **경북통상(주)**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["경북통상(주)"], file: "07-org/SP-ORG-GBMISC1_v1.0.md" },
+  { code: "SP-ORG-GBMED", name: "경상북도포항의료원", desc: "당신은 **경상북도포항의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["경상북도포항의료원"], file: "07-org/SP-ORG-GBMED_v1.0.md" },
+  { code: "SP-ORG-GBMEDX2", name: "경상북도김천의료원", desc: "당신은 **경상북도김천의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["경상북도김천의료원"], file: "07-org/SP-ORG-GBMEDX2_v1.0.md" },
+  { code: "SP-ORG-GBMEDX3", name: "경상북도안동의료원", desc: "당신은 **경상북도안동의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["경상북도안동의료원"], file: "07-org/SP-ORG-GBMEDX3_v1.0.md" },
+  { code: "SP-ORG-GBTP", name: "경북테크노파크", desc: "당신은 **경북테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경북테크노파크"], file: "07-org/SP-ORG-GBTP_v1.0.md" },
+  { code: "SP-ORG-GBRI", name: "경북바이오산업연구원", desc: "당신은 **경북바이오산업연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["경북바이오산업연구원"], file: "07-org/SP-ORG-GBRI_v1.0.md" },
+  { code: "SP-ORG-GBBEA", name: "경상북도경제진흥원", desc: "당신은 **경상북도경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경상북도경제진흥원"], file: "07-org/SP-ORG-GBBEA_v1.0.md" },
+  { code: "SP-ORG-GBCGF", name: "경북신용보증재단", desc: "당신은 **경북신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경북신용보증재단"], file: "07-org/SP-ORG-GBCGF_v1.0.md" },
+  { code: "SP-ORG-GBKOREANOLOGY", name: "한국국학진흥원", desc: "당신은 **한국국학진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["한국국학진흥원"], file: "07-org/SP-ORG-GBKOREANOLOGY_v1.0.md" },
+  { code: "SP-ORG-GBCF", name: "경북문화재단", desc: "당신은 **경북문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["경북문화재단"], file: "07-org/SP-ORG-GBCF_v1.0.md" },
+  { code: "SP-ORG-GBENV", name: "경상북도환경연수원", desc: "당신은 **경상북도환경연수원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경상북도환경연수원"], file: "07-org/SP-ORG-GBENV_v1.0.md" },
+  { code: "SP-ORG-GBHAPPY", name: "경북행복재단", desc: "당신은 **경북행복재단**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["경북행복재단"], file: "07-org/SP-ORG-GBHAPPY_v1.0.md" },
+  { code: "SP-ORG-GBWOMEN", name: "경북여성정책개발원", desc: "당신은 **경북여성정책개발원**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["경북여성정책개발원"], file: "07-org/SP-ORG-GBWOMEN_v1.0.md" },
+  { code: "SP-ORG-GBMISC2", name: "재단법인 경상북도인재평생교육재단", desc: "당신은 **재단법인 경상북도인재평생교육재단**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 경상북도인재평생교육재단", "경상북도인재평생교육재단"], file: "07-org/SP-ORG-GBMISC2_v1.0.md" },
+  { code: "SP-ORG-GBDOKDO", name: "재단법인 독도재단", desc: "당신은 **재단법인 독도재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 독도재단", "독도재단"], file: "07-org/SP-ORG-GBDOKDO_v1.0.md" },
+  { code: "SP-ORG-GBAGRI", name: "경상북도 농식품유통교육진흥원", desc: "당신은 **경상북도 농식품유통교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: AGRIFOOD", kw: ["경상북도 농식품유통교육진흥원"], file: "07-org/SP-ORG-GBAGRI_v1.0.md" },
+  { code: "SP-ORG-GBSAEMAUL", name: "재단법인 새마을재단", desc: "당신은 **재단법인 새마을재단**을(를) 대표하는 AI 레이어다. 소관 유형: URBANCOMMUNITY", kw: ["재단법인 새마을재단", "새마을재단"], file: "07-org/SP-ORG-GBSAEMAUL_v1.0.md" },
+  { code: "SP-ORG-GBVETERAN", name: "재단법인 경상북도호국보훈재단", desc: "당신은 **재단법인 경상북도호국보훈재단**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 경상북도호국보훈재단", "경상북도호국보훈재단"], file: "07-org/SP-ORG-GBVETERAN_v1.0.md" },
+  { code: "SP-ORG-GBRIX2", name: "재단법인 경북연구원", desc: "당신은 **재단법인 경북연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 경북연구원", "경북연구원"], file: "07-org/SP-ORG-GBRIX2_v1.0.md" },
+];
+
+// ==== GYEONGNAM_ORG_TABLE (gyeongnam, 2026-08-14 전국 확대 배치) ====
+const GYEONGNAM_ORG_TABLE = [
+  { code: "SP-ORG-GNMISC1", name: "(주)경남무역", desc: "당신은 **(주)경남무역**을(를) 대표하는 AI 레이어다. 소관 유형: PUBENT", kw: ["(주)경남무역"], file: "07-org/SP-ORG-GNMISC1_v1.0.md" },
+  { code: "SP-ORG-GNFUTURE", name: "재단법인 경상남도미래세대재단", desc: "당신은 **재단법인 경상남도미래세대재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 경상남도미래세대재단", "경상남도미래세대재단"], file: "07-org/SP-ORG-GNFUTURE_v1.0.md" },
+  { code: "SP-ORG-GNCGF", name: "경남신용보증재단", desc: "당신은 **경남신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경남신용보증재단"], file: "07-org/SP-ORG-GNCGF_v1.0.md" },
+  { code: "SP-ORG-GNRI", name: "재단법인 경남연구원", desc: "당신은 **재단법인 경남연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 경남연구원", "경남연구원"], file: "07-org/SP-ORG-GNRI_v1.0.md" },
+  { code: "SP-ORG-GNTP", name: "경남테크노파크", desc: "당신은 **경남테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경남테크노파크"], file: "07-org/SP-ORG-GNTP_v1.0.md" },
+  { code: "SP-ORG-GNROBOT", name: "경남로봇랜드재단", desc: "당신은 **경남로봇랜드재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["경남로봇랜드재단"], file: "07-org/SP-ORG-GNROBOT_v1.0.md" },
+  { code: "SP-ORG-GNENV", name: "재단법인 경상남도환경재단", desc: "당신은 **재단법인 경상남도환경재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 경상남도환경재단", "경상남도환경재단"], file: "07-org/SP-ORG-GNENV_v1.0.md" },
+  { code: "SP-ORG-GNMISC2", name: "경남문화예술진흥원", desc: "당신은 **경남문화예술진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["경남문화예술진흥원"], file: "07-org/SP-ORG-GNMISC2_v1.0.md" },
+  { code: "SP-ORG-GNMED", name: "경상남도마산의료원", desc: "당신은 **경상남도마산의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["경상남도마산의료원"], file: "07-org/SP-ORG-GNMED_v1.0.md" },
+  { code: "SP-ORG-GNRIX2", name: "재단법인 경남항노화연구원", desc: "당신은 **재단법인 경남항노화연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 경남항노화연구원", "경남항노화연구원"], file: "07-org/SP-ORG-GNRIX2_v1.0.md" },
+  { code: "SP-ORG-GNSCHOL", name: "경상남도장학회", desc: "당신은 **경상남도장학회**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["경상남도장학회"], file: "07-org/SP-ORG-GNSCHOL_v1.0.md" },
+  { code: "SP-ORG-GNSSO", name: "재단법인 경상남도 사회서비스원", desc: "당신은 **재단법인 경상남도 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 경상남도 사회서비스원", "경상남도 사회서비스원"], file: "07-org/SP-ORG-GNSSO_v1.0.md" },
+  { code: "SP-ORG-GNTOURISM", name: "재단법인 경상남도 관광재단", desc: "당신은 **재단법인 경상남도 관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 경상남도 관광재단", "경상남도 관광재단"], file: "07-org/SP-ORG-GNTOURISM_v1.0.md" },
+  { code: "SP-ORG-GNWOMEN", name: "재단법인 경상남도 여성가족재단", desc: "당신은 **재단법인 경상남도 여성가족재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 경상남도 여성가족재단", "경상남도 여성가족재단"], file: "07-org/SP-ORG-GNWOMEN_v1.0.md" },
+  { code: "SP-ORG-GNBEA", name: "재단법인 경상남도 투자경제진흥원", desc: "당신은 **재단법인 경상남도 투자경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 경상남도 투자경제진흥원", "경상남도 투자경제진흥원"], file: "07-org/SP-ORG-GNBEA_v1.0.md" },
+  { code: "SP-ORG-GNLIFE", name: "재단법인 경상남도인재평생교육진흥원", desc: "당신은 **재단법인 경상남도인재평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 경상남도인재평생교육진흥원", "경상남도인재평생교육진흥원"], file: "07-org/SP-ORG-GNLIFE_v1.0.md" },
+];
+
+// ==== ULSAN_ORG_TABLE (ulsan, 2026-08-14 전국 확대 배치) ====
+const ULSAN_ORG_TABLE = [
+  { code: "SP-ORG-USJOB", name: "재단법인 울산경제일자리진흥원", desc: "당신은 **재단법인 울산경제일자리진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 울산경제일자리진흥원", "울산경제일자리진흥원"], file: "07-org/SP-ORG-USJOB_v1.0.md" },
+  { code: "SP-ORG-USRI", name: "재단법인 울산연구원", desc: "당신은 **재단법인 울산연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 울산연구원", "울산연구원"], file: "07-org/SP-ORG-USRI_v1.0.md" },
+  { code: "SP-ORG-USCGF", name: "울산신용보증재단", desc: "당신은 **울산신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["울산신용보증재단"], file: "07-org/SP-ORG-USCGF_v1.0.md" },
+  { code: "SP-ORG-USTP", name: "울산테크노파크", desc: "당신은 **울산테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["울산테크노파크"], file: "07-org/SP-ORG-USTP_v1.0.md" },
+  { code: "SP-ORG-USSSO", name: "재단법인 울산광역시 복지가족진흥사회서비스원", desc: "당신은 **재단법인 울산광역시 복지가족진흥사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 울산광역시 복지가족진흥사회서비스원", "울산광역시 복지가족진흥사회서비스원"], file: "07-org/SP-ORG-USSSO_v1.0.md" },
+  { code: "SP-ORG-USIPA", name: "울산정보산업진흥원", desc: "당신은 **울산정보산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["울산정보산업진흥원"], file: "07-org/SP-ORG-USIPA_v1.0.md" },
+  { code: "SP-ORG-USTOURISM", name: "재단법인 울산문화관광재단", desc: "당신은 **재단법인 울산문화관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 울산문화관광재단", "울산문화관광재단"], file: "07-org/SP-ORG-USTOURISM_v1.0.md" },
+];
+
+// ==== CHUNGBUK_ORG_TABLE (chungbuk, 2026-08-14 전국 확대 배치) ====
+const CHUNGBUK_ORG_TABLE = [
+  { code: "SP-ORG-CBCF", name: "충북문화재단", desc: "당신은 **충북문화재단**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["충북문화재단"], file: "07-org/SP-ORG-CBCF_v1.0.md" },
+  { code: "SP-ORG-CBRI", name: "재단법인 충청북도역사문화연구원", desc: "당신은 **재단법인 충청북도역사문화연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["재단법인 충청북도역사문화연구원", "충청북도역사문화연구원"], file: "07-org/SP-ORG-CBRI_v1.0.md" },
+  { code: "SP-ORG-CBRIX2", name: "충북연구원", desc: "당신은 **충북연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["충북연구원"], file: "07-org/SP-ORG-CBRIX2_v1.0.md" },
+  { code: "SP-ORG-CBCGF", name: "충북신용보증재단", desc: "당신은 **충북신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["충북신용보증재단"], file: "07-org/SP-ORG-CBCGF_v1.0.md" },
+  { code: "SP-ORG-CBLIFE", name: "재단법인 충북인재평생교육진흥원", desc: "당신은 **재단법인 충북인재평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 충북인재평생교육진흥원", "충북인재평생교육진흥원"], file: "07-org/SP-ORG-CBLIFE_v1.0.md" },
+  { code: "SP-ORG-CBBIZ", name: "충청북도기업진흥원", desc: "당신은 **충청북도기업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["충청북도기업진흥원"], file: "07-org/SP-ORG-CBBIZ_v1.0.md" },
+  { code: "SP-ORG-CBMISC1", name: "재단법인 충북과학기술혁신원", desc: "당신은 **재단법인 충북과학기술혁신원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 충북과학기술혁신원", "충북과학기술혁신원"], file: "07-org/SP-ORG-CBMISC1_v1.0.md" },
+  { code: "SP-ORG-CBMED", name: "충청북도 청주의료원", desc: "당신은 **충청북도 청주의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["충청북도 청주의료원"], file: "07-org/SP-ORG-CBMED_v1.0.md" },
+  { code: "SP-ORG-CBMEDX2", name: "충청북도 충주의료원", desc: "당신은 **충청북도 충주의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["충청북도 충주의료원"], file: "07-org/SP-ORG-CBMEDX2_v1.0.md" },
+  { code: "SP-ORG-CBDORM", name: "충북학사", desc: "당신은 **충북학사**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["충북학사"], file: "07-org/SP-ORG-CBDORM_v1.0.md" },
+  { code: "SP-ORG-CBMISC2", name: "충북여성재단", desc: "당신은 **충북여성재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["충북여성재단"], file: "07-org/SP-ORG-CBMISC2_v1.0.md" },
+  { code: "SP-ORG-CBTP", name: "충북테크노파크", desc: "당신은 **충북테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["충북테크노파크"], file: "07-org/SP-ORG-CBTP_v1.0.md" },
+  { code: "SP-ORG-CBBIO", name: "재단법인오송바이오진흥재단", desc: "당신은 **재단법인오송바이오진흥재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인오송바이오진흥재단", "오송바이오진흥재단"], file: "07-org/SP-ORG-CBBIO_v1.0.md" },
+  { code: "SP-ORG-CBSSO", name: "충청북도사회서비스원", desc: "당신은 **충청북도사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["충청북도사회서비스원"], file: "07-org/SP-ORG-CBSSO_v1.0.md" },
+];
+
+// ==== CHUNGNAM_ORG_TABLE (chungnam, 2026-08-14 전국 확대 배치) ====
+const CHUNGNAM_ORG_TABLE = [
+  { code: "SP-ORG-CNRI", name: "충남연구원", desc: "당신은 **충남연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["충남연구원"], file: "07-org/SP-ORG-CNRI_v1.0.md" },
+  { code: "SP-ORG-CNRIX2", name: "충남역사문화연구원", desc: "당신은 **충남역사문화연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["충남역사문화연구원"], file: "07-org/SP-ORG-CNRIX2_v1.0.md" },
+  { code: "SP-ORG-CNBEA", name: "재단법인 충남경제진흥원", desc: "당신은 **재단법인 충남경제진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 충남경제진흥원", "충남경제진흥원"], file: "07-org/SP-ORG-CNBEA_v1.0.md" },
+  { code: "SP-ORG-CNCONTENT", name: "재단법인 충남콘텐츠진흥원", desc: "당신은 **재단법인 충남콘텐츠진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 충남콘텐츠진흥원", "충남콘텐츠진흥원"], file: "07-org/SP-ORG-CNCONTENT_v1.0.md" },
+  { code: "SP-ORG-CNCGF", name: "충남신용보증재단", desc: "당신은 **충남신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["충남신용보증재단"], file: "07-org/SP-ORG-CNCGF_v1.0.md" },
+  { code: "SP-ORG-CNTOURISM", name: "재단법인 충남문화관광재단", desc: "당신은 **재단법인 충남문화관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 충남문화관광재단", "충남문화관광재단"], file: "07-org/SP-ORG-CNTOURISM_v1.0.md" },
+  { code: "SP-ORG-CNLIFE", name: "재단법인 충남평생교육진흥원", desc: "당신은 **재단법인 충남평생교육진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 충남평생교육진흥원", "충남평생교육진흥원"], file: "07-org/SP-ORG-CNLIFE_v1.0.md" },
+  { code: "SP-ORG-CNMED", name: "천안의료원", desc: "당신은 **천안의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["천안의료원"], file: "07-org/SP-ORG-CNMED_v1.0.md" },
+  { code: "SP-ORG-CNMEDX2", name: "공주의료원", desc: "당신은 **공주의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["공주의료원"], file: "07-org/SP-ORG-CNMEDX2_v1.0.md" },
+  { code: "SP-ORG-CNMEDX3", name: "서산의료원", desc: "당신은 **서산의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["서산의료원"], file: "07-org/SP-ORG-CNMEDX3_v1.0.md" },
+  { code: "SP-ORG-CNMEDX4", name: "홍성의료원", desc: "당신은 **홍성의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["홍성의료원"], file: "07-org/SP-ORG-CNMEDX4_v1.0.md" },
+  { code: "SP-ORG-CNTP", name: "충남테크노파크", desc: "당신은 **충남테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["충남테크노파크"], file: "07-org/SP-ORG-CNTP_v1.0.md" },
+  { code: "SP-ORG-CNSSO", name: "충남사회서비스원", desc: "당신은 **충남사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["충남사회서비스원"], file: "07-org/SP-ORG-CNSSO_v1.0.md" },
+  { code: "SP-ORG-CNCONFUCIAN", name: "재단법인 한국유교문화진흥원", desc: "당신은 **재단법인 한국유교문화진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 한국유교문화진흥원", "한국유교문화진흥원"], file: "07-org/SP-ORG-CNCONFUCIAN_v1.0.md" },
+];
+
+// ==== JEONBUK_ORG_TABLE (jeonbuk, 2026-08-14 전국 확대 배치) ====
+const JEONBUK_ORG_TABLE = [
+  { code: "SP-ORG-JBRI", name: "전북연구원", desc: "당신은 **전북연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["전북연구원"], file: "07-org/SP-ORG-JBRI_v1.0.md" },
+  { code: "SP-ORG-JBMISC1", name: "재단법인 전북특별자치도평생교육장학진흥원", desc: "당신은 **재단법인 전북특별자치도평생교육장학진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: LIFELONGEDU", kw: ["재단법인 전북특별자치도평생교육장학진흥원", "전북특별자치도평생교육장학진흥원"], file: "07-org/SP-ORG-JBMISC1_v1.0.md" },
+  { code: "SP-ORG-JBCGF", name: "전북신용보증재단", desc: "당신은 **전북신용보증재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전북신용보증재단"], file: "07-org/SP-ORG-JBCGF_v1.0.md" },
+  { code: "SP-ORG-JBBEA", name: "재단법인 전북특별자치도경제통상진흥원", desc: "당신은 **재단법인 전북특별자치도경제통상진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전북특별자치도경제통상진흥원", "전북특별자치도경제통상진흥원"], file: "07-org/SP-ORG-JBBEA_v1.0.md" },
+  { code: "SP-ORG-JBTP", name: "전북테크노파크", desc: "당신은 **전북테크노파크**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["전북테크노파크"], file: "07-org/SP-ORG-JBTP_v1.0.md" },
+  { code: "SP-ORG-JBAUTOTECH", name: "자동차융합기술원", desc: "당신은 **자동차융합기술원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["자동차융합기술원"], file: "07-org/SP-ORG-JBAUTOTECH_v1.0.md" },
+  { code: "SP-ORG-JBRIX2", name: "에코융합섬유연구원", desc: "당신은 **에코융합섬유연구원**을(를) 대표하는 AI 레이어다. 소관 유형: RESEARCH", kw: ["에코융합섬유연구원"], file: "07-org/SP-ORG-JBRIX2_v1.0.md" },
+  { code: "SP-ORG-JBWOMEN", name: "재단법인 전북여성가족재단", desc: "당신은 **재단법인 전북여성가족재단**을(를) 대표하는 AI 레이어다. 소관 유형: WOMENFAMILY", kw: ["재단법인 전북여성가족재단", "전북여성가족재단"], file: "07-org/SP-ORG-JBWOMEN_v1.0.md" },
+  { code: "SP-ORG-JBIPA", name: "재단법인 전북바이오융합산업진흥원", desc: "당신은 **재단법인 전북바이오융합산업진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전북바이오융합산업진흥원", "전북바이오융합산업진흥원"], file: "07-org/SP-ORG-JBIPA_v1.0.md" },
+  { code: "SP-ORG-JBMED", name: "전북특별자치도 남원의료원", desc: "당신은 **전북특별자치도 남원의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["전북특별자치도 남원의료원"], file: "07-org/SP-ORG-JBMED_v1.0.md" },
+  { code: "SP-ORG-JBMEDX2", name: "전북특별자치도 군산의료원", desc: "당신은 **전북특별자치도 군산의료원**을(를) 대표하는 AI 레이어다. 소관 유형: MEDICAL", kw: ["전북특별자치도 군산의료원"], file: "07-org/SP-ORG-JBMEDX2_v1.0.md" },
+  { code: "SP-ORG-JBINTL", name: "재단법인 전북국제협력진흥원", desc: "당신은 **재단법인 전북국제협력진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전북국제협력진흥원", "전북국제협력진흥원"], file: "07-org/SP-ORG-JBINTL_v1.0.md" },
+  { code: "SP-ORG-JBTOURISM", name: "재단법인 전북특별자치도문화관광재단", desc: "당신은 **재단법인 전북특별자치도문화관광재단**을(를) 대표하는 AI 레이어다. 소관 유형: ECONIND", kw: ["재단법인 전북특별자치도문화관광재단", "전북특별자치도문화관광재단"], file: "07-org/SP-ORG-JBTOURISM_v1.0.md" },
+  { code: "SP-ORG-JBCONTENT", name: "재단법인 전북특별자치도콘텐츠융합진흥원", desc: "당신은 **재단법인 전북특별자치도콘텐츠융합진흥원**을(를) 대표하는 AI 레이어다. 소관 유형: CULTUREARTS", kw: ["재단법인 전북특별자치도콘텐츠융합진흥원", "전북특별자치도콘텐츠융합진흥원"], file: "07-org/SP-ORG-JBCONTENT_v1.0.md" },
+  { code: "SP-ORG-JBSSO", name: "재단법인 전북특별자치도 사회서비스원", desc: "당신은 **재단법인 전북특별자치도 사회서비스원**을(를) 대표하는 AI 레이어다. 소관 유형: WELFARE", kw: ["재단법인 전북특별자치도 사회서비스원", "전북특별자치도 사회서비스원"], file: "07-org/SP-ORG-JBSSO_v1.0.md" },
+];
+
 const GANGWON_L2_TABLE = _makeGenericL2Entries('gangwon', FULL16_DOMAINS);
 const DAEGU_L2_TABLE = _makeGenericL2Entries('daegu', FULL16_DOMAINS);
 const JEONNAM_GWANGJU_L2_TABLE = _makeGenericL2Entries('jeonnam-gwangju', FULL16_DOMAINS);
@@ -1820,20 +2054,29 @@ const PROVINCE_TABLES = {
   // 채우고, L2가 아예 없던 4개 도(경기·강원·대구·전남광주통합)는 항목
   // 자체를 새로 만들되 l2/national은 정직하게 빈 배열로 남긴다(도청
   // 실국 실사는 별도 작업 — 이 배치는 시/군/구 계층만 다룬다).
-  incheon: { l2: INCHEON_L2_TABLE, city: INCHEON_CITY_TABLE, national: [_makePoliceEntry('incheon')], citydept: INCHEON_CITY_DEPT_TABLE },  // ⚠️ 2026-08 시행 예정(안)
-  daejeon: { l2: DAEJEON_L2_TABLE, city: DAEJEON_CITY_TABLE, national: [_makePoliceEntry('daejeon')], citydept: DAEJEON_CITY_DEPT_TABLE },
-  ulsan: { l2: ULSAN_L2_TABLE, city: ULSAN_CITY_TABLE, national: [_makePoliceEntry('ulsan')], citydept: ULSAN_CITY_DEPT_TABLE },
-  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [_makePoliceEntry('sejong')], citydept: [] },  // 단층제라 시청 계층 자체가 해당 없음
-  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: CHUNGBUK_CITY_TABLE, national: [_makePoliceEntry('chungbuk')], citydept: CHUNGBUK_CITY_DEPT_TABLE },
-  chungnam: { l2: CHUNGNAM_L2_TABLE, city: CHUNGNAM_CITY_TABLE, national: [_makePoliceEntry('chungnam')], citydept: CHUNGNAM_CITY_DEPT_TABLE },
-  jeonbuk: { l2: JEONBUK_L2_TABLE, city: JEONBUK_CITY_TABLE, national: [_makePoliceEntry('jeonbuk')], citydept: JEONBUK_CITY_DEPT_TABLE },
-  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: GYEONGBUK_CITY_TABLE, national: [_makePoliceEntry('gyeongbuk')], citydept: GYEONGBUK_CITY_DEPT_TABLE },  // ⚠️ L2 조직개편 중, 신뢰도 낮음
+  incheon: { l2: INCHEON_L2_TABLE, city: INCHEON_CITY_TABLE, national: [_makePoliceEntry('incheon')], citydept: INCHEON_CITY_DEPT_TABLE,
+    org: INCHEON_ORG_TABLE },  // ⚠️ 2026-08 시행 예정(안)
+  daejeon: { l2: DAEJEON_L2_TABLE, city: DAEJEON_CITY_TABLE, national: [_makePoliceEntry('daejeon')], citydept: DAEJEON_CITY_DEPT_TABLE,
+    org: DAEJEON_ORG_TABLE },
+  ulsan: { l2: ULSAN_L2_TABLE, city: ULSAN_CITY_TABLE, national: [_makePoliceEntry('ulsan')], citydept: ULSAN_CITY_DEPT_TABLE,
+    org: ULSAN_ORG_TABLE },
+  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [_makePoliceEntry('sejong')], citydept: [],
+    org: SEJONG_ORG_TABLE },  // 단층제라 시청 계층 자체가 해당 없음
+  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: CHUNGBUK_CITY_TABLE, national: [_makePoliceEntry('chungbuk')], citydept: CHUNGBUK_CITY_DEPT_TABLE,
+    org: CHUNGBUK_ORG_TABLE },
+  chungnam: { l2: CHUNGNAM_L2_TABLE, city: CHUNGNAM_CITY_TABLE, national: [_makePoliceEntry('chungnam')], citydept: CHUNGNAM_CITY_DEPT_TABLE,
+    org: CHUNGNAM_ORG_TABLE },
+  jeonbuk: { l2: JEONBUK_L2_TABLE, city: JEONBUK_CITY_TABLE, national: [_makePoliceEntry('jeonbuk')], citydept: JEONBUK_CITY_DEPT_TABLE,
+    org: JEONBUK_ORG_TABLE },
+  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: GYEONGBUK_CITY_TABLE, national: [_makePoliceEntry('gyeongbuk')], citydept: GYEONGBUK_CITY_DEPT_TABLE,
+    org: GYEONGBUK_ORG_TABLE },  // ⚠️ L2 조직개편 중, 신뢰도 낮음
   // 2026-07-24 — 진주·창원(+5개 일반구)·산청군 파일럿(2단계) + 나머지 15개
   // 시/군(3단계)을 합친다.
   gyeongnam: { l2: GYEONGNAM_L2_TABLE,
     city: [...GYEONGNAM_CITY_TABLE, ...GYEONGNAM_PHASE3_CITY_TABLE],
     national: [_makePoliceEntry('gyeongnam')],
-    citydept: [...GYEONGNAM_CITY_DEPT_TABLE, ...GYEONGNAM_PHASE3_CITY_DEPT_TABLE] },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
+    citydept: [...GYEONGNAM_CITY_DEPT_TABLE, ...GYEONGNAM_PHASE3_CITY_DEPT_TABLE],
+    org: GYEONGNAM_ORG_TABLE },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
   // ★ 2026-07-24 신설 — 이 4개 도는 도청 실국(L2) 실사가 이전엔 전혀
   // 없었다(PROVINCE_TABLES 항목 자체가 없었음). 시청과 동일 원칙으로
   // 실명 없이도 즉시 작동하는 범용 도메인 키워드+기본 라벨로 16/16 채운다
@@ -1842,9 +2085,12 @@ const PROVINCE_TABLES = {
   gyeonggi: { l2: GYEONGGI_L2_TABLE, city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE,
     // 2026-08-14 추가 — 경기 출자·출연기관(07-org) 전국 확대 배치 23건.
     org: GYEONGGI_ORG_TABLE },
-  gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [_makePoliceEntry('gangwon')], citydept: GANGWON_CITY_DEPT_TABLE },
-  daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [_makePoliceEntry('daegu')], citydept: DAEGU_CITY_DEPT_TABLE },
-  'jeonnam-gwangju': { l2: JEONNAM_GWANGJU_L2_TABLE, city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
+  gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [_makePoliceEntry('gangwon')], citydept: GANGWON_CITY_DEPT_TABLE,
+    org: GANGWON_ORG_TABLE },
+  daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [_makePoliceEntry('daegu')], citydept: DAEGU_CITY_DEPT_TABLE,
+    org: DAEGU_ORG_TABLE },
+  'jeonnam-gwangju': { l2: JEONNAM_GWANGJU_L2_TABLE, city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE,
+    org: JEONNAM_GWANGJU_ORG_TABLE },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
