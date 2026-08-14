@@ -42,7 +42,10 @@ import requests
 DEFAULT_WORKER_BASE = "https://hondi-proxy.tensor-city.workers.dev"
 DEFAULT_PB_BASE = "https://l1-hanlim.hondi.net"
 SIGNAL_PROPAGATION_WAIT_S = 3   # 신호 기록·제안 생성이 fire-and-forget이라 완료 대기
-TEST_AGENCY = "kcc"             # 이미 REQUIRED_DOCUMENTS_REGISTRY/SP가 있는 실제 기관 — SP 로드 실패 방지용
+TEST_AGENCY = "public"          # kgov 자신 — GOV_AGENCIES에 등록된 실제 최상위 기관 코드.
+                                 # "kcc"는 REQUIRED_DOCUMENTS_REGISTRY 안에서만 쓰이는
+                                 # 하위 라벨(kgov가 내부적으로 처리)이지 /gov/relay가
+                                 # 검사하는 GOV_AGENCIES 목록엔 없다 — 실사로 확인.
 
 
 def pb_admin_login(pb_base, email, password):
