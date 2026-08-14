@@ -1,0 +1,6 @@
+[
+  { "no": 1, "title": "일반챗(/deepseek) 단순 메시지 — flash 기대", "endpoint": "deepseek", "complexity": "simple",  "expected_model": "deepseek-v4-flash" },
+  { "no": 2, "title": "일반챗(/deepseek) 복잡 메시지 — pro 기대",   "endpoint": "deepseek", "complexity": "complex", "expected_model": "deepseek-v4-pro" },
+  { "no": 3, "title": "kgov(/gov/relay) 단순 메시지 — flash 기대",  "endpoint": "gov",      "complexity": "simple",  "expected_model": "deepseek-v4-flash" },
+  { "no": 4, "title": "kgov(/gov/relay) 복잡 메시지 — pro 기대",    "endpoint": "gov",      "complexity": "complex", "expected_model": "deepseek-v4-pro" }
+]
