@@ -90,7 +90,12 @@ def call_gov_relay(worker_base, guid, task_key, roundtrips):
     }
     t0 = time.time()
     try:
-        res = requests.post(f"{worker_base}/gov/relay", json=body, timeout=60)
+        # worker.js AI_PROXY_PATHS 보호 — Origin 헤더 없는 요청은 403
+        # FORBIDDEN_NO_ORIGIN으로 차단된다('/gov/relay'도 이 목록에 포함,
+        # klaw 하네스와 동일 이유) — regional-gov.html이 실제로 서비스되는
+        # 도메인(ALLOWED_ORIGINS 목록)을 그대로 사용.
+        headers = {"Origin": "https://hondi.net"}
+        res = requests.post(f"{worker_base}/gov/relay", json=body, headers=headers, timeout=60)
         elapsed = time.time() - t0
         try:
             data = res.json()
@@ -120,16 +125,20 @@ def run_threshold_trigger(sc, worker_base, pb_base, token, guid_prefix):
 
     print(f"    {call_count}회 실제 /gov/relay 호출 중(task_key={task_key})...")
     fail_calls = 0
+    first_failure = None
     for i in range(call_count):
         guid = f"{guid_prefix}-{i}"
         result = call_gov_relay(worker_base, guid, task_key, roundtrips)
         if result["status"] != 200:
             fail_calls += 1
+            if first_failure is None:
+                first_failure = result
         if (i + 1) % 10 == 0:
             print(f"      {i + 1}/{call_count} 완료")
 
     if fail_calls > call_count * 0.2:  # 20% 넘게 실패하면 표본 자체가 신뢰 불가
-        return "LIVE-ERROR", f"{call_count}회 중 {fail_calls}회 HTTP 실패 — 표본 신뢰 불가", task_key, None
+        detail = json.dumps(first_failure, ensure_ascii=False)[:500] if first_failure else "(첫 실패 상세 없음)"
+        return "LIVE-ERROR", f"{call_count}회 중 {fail_calls}회 HTTP 실패 — 표본 신뢰 불가 | 첫 실패: {detail}", task_key, None
 
     print(f"    신호 전파 대기 {SIGNAL_PROPAGATION_WAIT_S}초...")
     time.sleep(SIGNAL_PROPAGATION_WAIT_S)
