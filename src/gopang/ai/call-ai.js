@@ -33,6 +33,7 @@ import { handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId, EXPERT_REGISTRY } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
 import { buildRoutingHintPart } from './routing-hint.js';
+import { findFreshCredential } from '../idv/idv-store.js';
 
 // ═══════════════════════════════════════════════════════════
 // 2026-08-10 신설 — "내 사용량 보여줘" 등 액션 인텐트 → usage.html
@@ -2538,6 +2539,87 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
     const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
     if (_usb) _usb(bubble, text);
   };
+
+  // ── GOV_TASK_SCHEMA_LOOKUP (2026-08-13 신설 — 혼디 패스포트 IDV 연동) ──
+  // kgov(§REQUIRED-DOCUMENTS 2단계)가 이미 등록된 agency:task_key를
+  // 인식했을 때 사용자에게 서류를 요구하기 전에 먼저 이 태그를 낸다.
+  // 새 서버 엔드포인트를 만들지 않고 기존 /gov/task/schema/lookup
+  // (worker.js handleGovTaskSchemaLookup, 2026-07-30 구현됐으나 지금까지
+  // 어떤 클라이언트도 호출한 적 없던 dead code)을 그대로 재사용한다.
+  // 응답의 schema.documents[]에서 acquisition:'gov24' && idv_type이 있는
+  // 항목만 로컬 IDV(gopang_idv_vault)에서 findFreshCredential()로 조회 —
+  // 브라우저 로컬 조회이므로 credentialSubject 원본은 이 함수 밖으로도,
+  // 서버로도 나가지 않는다("서버는 평문을 못 읽는다" 원칙 그대로 유지).
+  const govTaskSchemaLookupMatch = fullReply.match(
+    /\[GOV_TASK_SCHEMA_LOOKUP\]([\s\S]*?)\[\/GOV_TASK_SCHEMA_LOOKUP\]/);
+  if (govTaskSchemaLookupMatch) {
+    console.log('[GovTask] GOV_TASK_SCHEMA_LOOKUP 감지 — /gov/task/schema/lookup 호출 + 로컬 IDV 조회');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskSchemaLookupMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP의 JSON 파싱 실패(${e.message}) — ` +
+        `IDV 조회 없이 기존 §REQUIRED-DOCUMENTS 2단계(정부24 안내)로 바로 진행하세요.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res  = await fetch(`${base}/gov/task/schema/lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!data?.found) {
+        await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP 결과 — 레지스트리에 없음(found:false). ` +
+          `§REQUIRED-DOCUMENTS 3단계(웹검색 후 GOV_TASK_DRAFT_REQUEST)로 진행하세요.]`);
+        return true;
+      }
+
+      // acquisition:'gov24' && idv_type이 있는 문서만 로컬 IDV 조회 대상.
+      const gov24Docs = (data.schema?.documents || []).filter(d => d.acquisition === 'gov24' && d.idv_type);
+      const matched = [];
+      for (const doc of gov24Docs) {
+        try {
+          const cred = await findFreshCredential(doc.idv_type, doc.max_age_days ?? null);
+          if (cred) {
+            matched.push({
+              doc_id: doc.id, idv_type: doc.idv_type,
+              issuanceDate: cred.issuanceDate, issuer_name: cred.issuer?.name || null,
+              contentHash: cred._contentHash || null,
+              verificationTier: cred._verificationTier || 'signature_verified',
+              // 2026-08-13 추가 — 사용자가 저장 시 idv_type을 잘못 골랐을
+              // 가능성(오분류)을 모델이 최소한이라도 걸러낼 수 있도록
+              // 본문 미리보기를 함께 전달한다. storeCredential() 경로
+              // (검증된 credential)는 이 필드가 없을 수 있음 — null 허용.
+              extractedTextPreview: cred.credentialSubject?.extractedTextPreview || null,
+            });
+          }
+        } catch (e) {
+          console.warn('[GovTask] IDV 조회 실패(doc_id=' + doc.id + '):', e.message);
+          // 개별 문서 조회 실패가 전체를 막지 않는다 — 그 문서만 기존 정부24 폴백으로 처리됨.
+        }
+      }
+
+      await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP 결과 수신 — schema: ${JSON.stringify(data.schema)}. ` +
+        `로컬 IDV 조회 결과, 아래 idv_type들은 이미 유효한 credential이 있어 재발급 요구 없이 ` +
+        `즉시 서류로 사용 가능합니다(§IDV-자동첨부 원칙): ${JSON.stringify(matched)}. ` +
+        `matched 각 항목의 extractedTextPreview가 있으면 반드시 훑어보고, 그 내용이 doc_id/idv_type이 ` +
+        `가리키는 서류와 명백히 다르면(예: idv_type은 가족관계증명서인데 본문이 사업자등록증 내용) ` +
+        `그 항목은 matched에서 무시하고 사용자에게 "IDV에 저장된 서류 종류가 실제와 다른 것 같다"고 ` +
+        `알린 뒤 §공문서 발급 안내로 폴백하세요(사용자가 저장 시 종류를 잘못 골랐을 수 있음 — 저장 자체는 ` +
+        `검증 없이 이뤄지므로 이 교차검증이 유일한 안전장치입니다). ` +
+        `matched 배열에 없는(또는 위 사유로 무시한) acquisition:'gov24' 문서는 기존과 동일하게 ` +
+        `§공문서 발급 안내(정부24)로 안내하세요. matched 항목을 GOV_TASK_SUBMIT_REQUEST에 포함할 때는 ` +
+        `documents[]에 doc_id와 함께 idv_ref:true, sha256 자리에 contentHash를 사용하세요` +
+        `(원본 파일을 별도로 요구하지 마세요).]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SCHEMA_LOOKUP 서버 호출 실패(${e.message}) — ` +
+        `IDV 조회 없이 기존 §REQUIRED-DOCUMENTS 2단계(정부24 안내)로 진행하세요.]`);
+    }
+    return true;
+  }
 
   const govTaskDraftMatch = fullReply.match(
     /\[GOV_TASK_DRAFT_REQUEST\]([\s\S]*?)\[\/GOV_TASK_DRAFT_REQUEST\]/);

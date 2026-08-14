@@ -1285,9 +1285,31 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
   if (kv) {
     try { spentBefore = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0'); } catch (e) { /* 조회 실패는 0원 소진으로 보수적 간주 */ }
   }
+
+  // ── 자율 과금 제안 반영(2026-08-13 신설) ──────────────────────
+  // meta.taskKey가 있는 호출부(예: kgov GOV_TASK 처리)에 한해 활성 규칙을
+  // 조회해 billedKRW에 추가 배율을 곱한다. taskKey를 안 넘기는 기존
+  // 호출부는 조회 자체를 안 해 지금까지와 100% 동일하게 동작한다(하위호환).
+  let effectiveBilledKRW = bill.billedKRW;
+  if (meta.taskKey) {
+    const rule = await _getActiveBillingRule(env, meta.taskKey);
+    if (rule && rule.price_multiplier && rule.price_multiplier !== 1) {
+      effectiveBilledKRW = Math.round(bill.billedKRW * rule.price_multiplier * 10000) / 10000;
+    }
+    // 신호 기록·제안 판단은 응답을 지연시키지 않도록 기다리지 않는다
+    // (환경이 waitUntil을 지원하면 그쪽에 맡기는 게 이상적 — 지금은
+    // 단순 fire-and-forget으로 최소 구현).
+    _recordBillingSignal(env, {
+      taskKey: meta.taskKey, serviceId: meta.serviceId, guid,
+      costKrw: bill.apiCostKRW, usedPaidExternalApi: meta.usedPaidExternalApi,
+      govTaskRoundtrips: meta.govTaskRoundtrips,
+    }).catch(() => {});
+    _maybeProposeBillingRule(env, meta.taskKey, meta.serviceId).catch(() => {});
+  }
+
   const remainingFree = Math.max(FREE_QUOTA_KRW_LIMIT - spentBefore, 0);
-  const freePortion   = Math.min(bill.billedKRW, remainingFree);
-  const paidPortion   = bill.billedKRW - freePortion;
+  const freePortion   = Math.min(effectiveBilledKRW, remainingFree);
+  const paidPortion   = effectiveBilledKRW - freePortion;
 
   if (freePortion > 0) await _recordFreeSpend(env, guid, freePortion);
   if (paidPortion > 0) {
@@ -1306,7 +1328,121 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// GDC 가입 축하 충전(Signup Bonus) — SP-GDC-CHARGE-v1_0 §1
+// 자율 과금 제안 시스템 (2026-08-13 신설, 주피터 지시)
+//
+// 배경: 1천만 명 규모에서는 새 task_key가 나올 때마다 관리자에게 물어
+// 과금 여부를 정하는 게 비현실적이다. 기본값은 항상 안전한 쪽(기존
+// 토큰과금 × BILLING_MULTIPLIER_DEFAULT, 변경 없음)이고, 표본이 쌓여야만
+// 혼디가 스스로 배율을 제안한다 — 그것도 완전히 새 숫자를 지어내는 게
+// 아니라 항상 기존 K-서비스 가격 구조(KLAW_TIER_MODELS)에서 보간한다.
+// 제안은 만들어지는 즉시 활성화되어 청구에 반영되고(승인 대기 없음),
+// 관리자는 사후에 배치로 검토해 confirmed/rejected로 정리한다.
+// rejected면 그 task_key로 이미 청구된 건 전부 소급 환불 대상이 된다
+// (billing_signal_events에 남은 guid로 대상자 특정 — 별도 환불 배치
+// 작업 필요, 이번 신설분은 제안·활성화까지만 구현).
+// ═══════════════════════════════════════════════════════════
+const BILLING_PROPOSAL_MIN_SAMPLE = 50;      // 이 미만이면 제안 자체를 안 함(우연한 소수 사례 방지)
+const BILLING_PROPOSAL_MAX_MULTIPLIER = 5;   // 기존 K-서비스 최고가(klaw-pro) 기준 상한 — 폭주 방지
+
+// 신호 기록 — fire-and-forget. 실패해도 본 요청(과금·응답)을 막지 않는다.
+// costKrw는 배율 적용 **전** 원본 원가를 남긴다 — 나중 제안 판단이
+// 이미 배율 적용된 값에 또 배율을 곱하는 걸 막기 위함.
+async function _recordBillingSignal(env, { taskKey, serviceId, guid, costKrw, usedPaidExternalApi, govTaskRoundtrips }) {
+  if (!taskKey || !serviceId) return;
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    await fetch(`${L1_DEFAULT}/api/collections/billing_signal_events/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        task_key: taskKey, service_id: serviceId, guid: guid || '',
+        cost_krw: Math.round((costKrw || 0) * 10000) / 10000,
+        used_paid_external_api: !!usedPaidExternalApi,
+        gov_task_roundtrips: govTaskRoundtrips || 0,
+      }),
+    });
+  } catch (e) {
+    console.warn('[BillingSignal] 기록 실패(무시하고 진행):', e.message);
+  }
+}
+
+// 이 task_key에 이미 활성/확정된 규칙이 있는지 조회. rejected는 제외
+// (거부된 규칙은 다시 기본값으로 돌아간다).
+async function _getActiveBillingRule(env, taskKey) {
+  if (!taskKey) return null;
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`task_key='${taskKey}' && status!='rejected'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/billing_rule_proposals/records?filter=${filter}&perPage=1`, { headers });
+    const data = await res.json().catch(() => ({ items: [] }));
+    return (data.items && data.items[0]) || null;
+  } catch (e) {
+    console.warn('[BillingRule] 조회 실패(기본 과금으로 폴백):', e.message);
+    return null; // 조회 실패는 "규칙 없음"과 동일하게 안전한 기본값으로 처리
+  }
+}
+
+// 표본이 임계치를 넘었는지 확인하고, 아직 제안이 없으면 스스로 만들어
+// 즉시 활성화한다. 기존 K-서비스(KLAW_TIER_MODELS) 가격 구조에서만
+// 보간하며, 완전히 새로운 숫자를 지어내지 않는다.
+async function _maybeProposeBillingRule(env, taskKey, serviceId) {
+  if (!taskKey) return;
+  try {
+    const existing = await _getActiveBillingRule(env, taskKey);
+    if (existing) return; // 이미 규칙이 있으면(활성이든 확정이든) 재제안 안 함
+
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`task_key='${taskKey}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/billing_signal_events/records?filter=${filter}&perPage=200`, { headers });
+    const data = await res.json().catch(() => ({ items: [], totalItems: 0 }));
+    const items = data.items || [];
+    if (items.length < BILLING_PROPOSAL_MIN_SAMPLE) return; // 표본 부족 — 아직 판단 보류
+
+    const avgCostKrw = items.reduce((s, r) => s + (r.cost_krw || 0), 0) / items.length;
+    const paidApiRatio = items.filter(r => r.used_paid_external_api).length / items.length;
+    const avgRoundtrips = items.reduce((s, r) => s + (r.gov_task_roundtrips || 0), 0) / items.length;
+
+    // 보간 규칙(2026-08-13 수정 — 최초 설계의 2단계 분기 버그 제거):
+    // kgov 기본 티어(gov-flash)가 klaw-flash와 완전히 동일한 모델·단가라
+    // "klaw-flash 수준 승격"은 애초에 무의미했다(승격해도 배율이 항상
+    // 1.0으로 나옴 — 실사로 발견). 의미 있는 승격 대상은 klaw-pro 하나뿐.
+    // 왕복 횟수(avgRoundtrips)는 원가(avgCostKrw) 비교를 거치지 않고
+    // 그 자체로 승격 조건이다 — "왕복은 잦은데 원가는 낮은" 절차가
+    // 누락되던 문제를 여기서 없앤다.
+    const klawProPerOutput  = KLAW_TIER_MODELS['klaw-pro'].price.output;
+    const baselinePerOutput = GOV_TIER_MODELS['gov-flash'].price.output; // kgov 기본 티어 자체 단가 — klaw-flash와 우연히 같은 값이지만 의미상 이쪽이 맞는 분모
+
+    let multiplier = 1.0, basedOn = 'default', reasoning = '일반 대화 수준의 원가·왕복 — 배율 변경 없음';
+    const costIsHigh = avgCostKrw >= baselinePerOutput * 2; // 평소보다 2배 이상 원가 — 별도 신호(위 avgCostKrw>=비율 오류를 대체)
+    if (paidApiRatio >= 0.5 || avgRoundtrips >= 3 || costIsHigh) {
+      multiplier = Math.min(klawProPerOutput / baselinePerOutput, BILLING_PROPOSAL_MAX_MULTIPLIER);
+      basedOn = 'klaw-pro';
+      reasoning = `외부 유료 API 호출 비율 ${(paidApiRatio*100).toFixed(0)}%, 평균 왕복 ${avgRoundtrips.toFixed(1)}회, 평균원가 ${avgCostKrw.toFixed(4)}원 — klaw-pro 원가 구조에서 보간`;
+    }
+    multiplier = Math.min(multiplier, BILLING_PROPOSAL_MAX_MULTIPLIER); // 이중 안전장치
+
+    const postHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    await fetch(`${L1_DEFAULT}/api/collections/billing_rule_proposals/records`, {
+      method: 'POST', headers: postHeaders,
+      body: JSON.stringify({
+        task_key: taskKey, status: 'active_pending_review',
+        price_multiplier: Math.round(multiplier * 1000) / 1000,
+        based_on_service: basedOn, sample_size: items.length, reasoning,
+      }),
+    });
+    console.log(JSON.stringify({
+      tag: 'BILLING_RULE_AUTO_PROPOSED', taskKey, serviceId, multiplier, basedOn,
+      sampleSize: items.length, ts: new Date().toISOString(),
+    }));
+  } catch (e) {
+    // 제안 생성 실패는 기본 과금 유지로 안전하게 수렴 — 절대 요청을 막지 않는다.
+    console.warn('[BillingRule] 자동 제안 생성 실패(기본 과금 유지):', e.message);
+  }
+}
+
+
 // (2026-07-23 신설)
 //
 // 가입 직후(핵심 지갑키 등록 시점, handleRegisterKey 신규 등록 분기) 1회,
@@ -17521,7 +17657,8 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     task_name:   '위치기반서비스사업 등록(신고)',
     legal_basis: '위치정보의 보호 및 이용 등에 관한 법률 제9조',
     documents: [
-      { id: 'biz_reg',         name: '사업자등록증 사본',                 required: true,  acquisition: 'gov24' },
+      { id: 'biz_reg',         name: '사업자등록증 사본',                 required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.business_registration', max_age_days: null }, // ★ 2026-08-13: kcc 안내(정부24/전자민원센터)에 "최근 N개월 이내 발급분" 명시 규정 미확인 — null은 발급일만 확인, 재확인되면 수치로 교체
       { id: 'biz_plan',        name: '위치기반서비스사업 사업계획서',       required: true,  acquisition: 'user_authored' },
       { id: 'privacy_policy',  name: '개인위치정보 처리방침',              required: true,  acquisition: 'user_authored' },
       { id: 'protection_plan', name: '개인위치정보 보호조치 이행계획서',    required: true,  acquisition: 'user_authored' },
@@ -17559,9 +17696,12 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'statement',         name: '진술서',                           required: true,  acquisition: 'user_authored' },
       { id: 'creditor_list',     name: '채권자목록',                        required: true,  acquisition: 'user_authored' },
       { id: 'asset_list',        name: '재산목록',                          required: true,  acquisition: 'user_authored' },
-      { id: 'resident_cert',     name: '주민등록초본(주소변동내역 포함)',    required: true,  acquisition: 'gov24' },
-      { id: 'family_cert',       name: '가족관계증명서',                    required: true,  acquisition: 'gov24' },
-      { id: 'tax_cert',          name: '지방세 세목별 과세증명서(5년)',     required: true,  acquisition: 'gov24' },
+      { id: 'resident_cert',     name: '주민등록초본(주소변동내역 포함)',    required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.resident_registration_transcript', max_age_days: 90 }, // ★ 2026-08-13: 법정 유효기간 규정은 없으나(개인파산 실무 관행), 법원 제출서류 일반원칙상 "제출일 기준 1~3개월 이내 발급분" 요구가 통상적 — 3개월(90일)로 보수적 설정, 관할 법원별 상이할 수 있어 §REQUIRED-DOCUMENTS 3단계와 동일하게 재확인 시 정정 필요
+      { id: 'family_cert',       name: '가족관계증명서',                    required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.family_relation', max_age_days: 90 }, // ★ 2026-08-13: resident_cert와 동일 근거(법원 제출서류 일반 관행)
+      { id: 'tax_cert',          name: '지방세 세목별 과세증명서(5년)',     required: true,  acquisition: 'gov24',
+        idv_type: 'idv.cert.local_tax_payment', max_age_days: 90 }, // ★ 2026-08-13: resident_cert와 동일 근거. 증명 대상 기간(과거 5년)과 발급 신선도(90일)는 별개 개념 — 혼동 주의
       { id: 'income_proof',      name: '소득 관련 소명자료(급여명세서 등)', required: true,  acquisition: 'user_authored' },
     ],
     note: '법원이 사건별로 추가 소명자료를 요구할 수 있음(개인파산 및 면책신청사건의 처리에 관한 예규 §1의2③) — 접수 후에도 보완 요청 가능성을 반드시 안내할 것.',
@@ -17612,6 +17752,33 @@ const AGENCY_TO_DEPT_TARGET = {
 //                        "발급받아 오세요"로 안내하면 틀린 안내가 된다.
 //   'external_insurer'— 정부기관도 정부24도 아닌 제3자(보험사)에게서 받는
 //                        서류.
+//
+// idv_type / max_age_days (2026-08-13 신설 — 혼디 패스포트 원리 적용):
+//   acquisition:'gov24' 문서에만 붙인다. §REQUIRED-DOCUMENTS 2단계가 정부24
+//   안내로 넘어가기 전에 사용자 로컬 IDV(gopang_idv_vault, Openhash-Gopang/
+//   passport 저장소)를 먼저 조회해 이미 보관된 credential이 있으면 재발급
+//   요구 없이 즉시 사용한다 — "정부가 서명 발급 → 혼디는 원본 그대로 보관·
+//   재제출"이라는 passport 핵심 모델을 여기 연결하는 지점.
+//   - idv_type: IDV credential의 `type` 배열 값(credential-schema.json).
+//     새 문서 추가 시 새 타입을 또 만들지 말고 우선 기존 idv.identity.*/
+//     idv.cert.* 목록에서 재사용 가능한지 확인할 것(같은 개념 별도
+//     레지스트리 중복 생성 패턴 반복 금지 — §RESOLUTION-TIER 폐기 전례 참고).
+//     ⚠ 등록 전 필수 대조(2026-08-13 v3.21 신설 — 정부24 카탈로그 실사로
+//     "사업자등록증"(발급기관 미상, 실물 스캔)과 "사업자등록증명"(국세청
+//     별도 발급 증명서)처럼 이름이 겹치지만 실제로는 다른 문서인 사례를
+//     발견): 새 문서를 등록하기 전에 ①정확한 발급기관명과 ②정부24상의
+//     정확한 민원명을 이 파일 문서 항목 옆 주석에 그대로 병기할 것. 기존
+//     등록된 항목과 한글 명칭이 부분적으로 겹치면(예: "OO증"↔"OO증명")
+//     실제로 같은 문서인지 발급기관·정부24 링크를 대조해서 확인 —
+//     다르면 idv_type leaf를 명확히 분리한다(예: idv.cert.business_
+//     registration(사업자등록증 사본) vs idv.cert.business_registration_
+//     certificate(사업자등록증명, 국세청 별도 발급) — 후자는 아직 미등록,
+//     실제 필요 시점에 이 규칙대로 분리해서 추가할 것).
+//   - max_age_days: 발급기관이 아니라 **이 agency:task_key(제출받는 기관)**가
+//     요구하는 신선도 기준. 통일된 법정 기준이 없는 경우가 많아(예:
+//     주민등록초본은 법령상 유효기간 없음) 레지스트리에 없으면 §REQUIRED-
+//     DOCUMENTS 3단계와 동일하게 임의 추측 없이 웹검색으로 확인할 것.
+//     미확인 상태는 null(발급일만 확인, 신선도 미검사)로 둔다.
 
 // RESOLUTION_TIER_REGISTRY — 폐기됨 (2026-07-16 당일 신설 → 당일 폐기)
 // 신설 당시 org_profiles/atom_rows(이미 라이브, K-Compose SP-20이 소비)와
@@ -18165,7 +18332,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation, task_key, gov_task_roundtrips } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -18297,12 +18464,19 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     if (!usage) return;
     _recordAiUsage(env, ctx, {
       guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
-      logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
+      logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, task_key, ...meta },
       spendKeys: [userKey, globalKey],
       onAfterRecord: bill => _settleAiUsage(env, guid, bill, {
         serviceId: `gov:${agency}`, model: backendModel,
         hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
         outTokens: usage?.completion_tokens,
+        // 2026-08-13 신설 — 자율 과금 제안 시스템 연결. task_key는
+        // 클라이언트(regional-gov.html)가 GOV_TASK_* 태그에서 뽑아
+        // 요청 본문에 실어 보낸 값 — 없으면(구버전 클라이언트, 또는
+        // task_key가 아직 안 드러난 초기 턴) 기존과 완전히 동일하게
+        // 동작한다(taskKey undefined → _settleAiUsage가 규칙 조회 자체를 생략).
+        taskKey: task_key || undefined,
+        govTaskRoundtrips: gov_task_roundtrips || undefined,
       }),
     });
   };

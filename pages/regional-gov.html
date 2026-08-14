@@ -89,6 +89,13 @@ import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode, resolve
 import { escHtml, appendBubble, appendTyping }
   from '/src/gopang/ui/chat-shell.js';
 import { mountChatInput, THEME_LINE_GREEN } from '/src/gopang/ui/chat-input.js';
+// ★ 2026-08-13 신설 — GOV_TASK_SCHEMA_LOOKUP/DRAFT_REQUEST/SUBMIT_REQUEST
+// 태그 처리(사고실험으로 발견: 이 페이지엔 지금까지 이 처리가 전혀 없어
+// kgov가 이 태그들을 내도 화면에 브라켓 원문이 그대로 노출되거나 무시된
+// 채 끝났다). call-ai.js가 이미 가진 파서·핸들러(_handleGovTaskTags)를
+// 새로 만들지 않고 그대로 재사용한다 — sendFn만 이 페이지의 비-스트리밍
+// 구조에 맞게 새로 만든다(아래 _callAI 내부 참고).
+import { _handleGovTaskTags } from '/src/gopang/ai/call-ai.js';
 // ★ 2026-08-09 신설(주피터 지시 — "사용자의 AI 비서(AC)는 사용자의 발화를
 // 분석하고, 필요하면 사용자의 현재 위치와 주소지 데이터를 라우팅 모듈에
 // 전달해야 합니다") — 이 페이지 파일 상단 주석(§13 대체 관련)이 이미
@@ -172,6 +179,21 @@ function _loadUser() {
 // ── 대화 상태 ──────────────────────────────────────────────────
 let messages = [];
 let _lastAgency = 'gov_do';
+// 2026-08-13 신설 — 자율 과금 제안 시스템 배선. GOV_TASK_SCHEMA_LOOKUP/
+// DRAFT_REQUEST/SUBMIT_REQUEST 태그에서 처음 드러난 task_key를 대화가
+// 끝날 때까지 기억해뒀다가 이후 모든 /gov/relay 호출에 실어 보낸다.
+// task_key가 드러나는 그 턴 자체는 이미 과금이 끝난 뒤라 반영 못 하고
+// 다음 턴부터 반영된다 — 표본 50건 단위 판단엔 무의미한 오차.
+let _lastTaskKey = null;
+let _taskRoundtrips = 0;
+function _extractTaskKeyFromReply(replyText) {
+  const m = replyText.match(/\[GOV_TASK_(?:SCHEMA_LOOKUP|DRAFT_REQUEST|SUBMIT_REQUEST)\]([\s\S]*?)\[\/GOV_TASK_/);
+  if (!m) return null;
+  try {
+    const payload = JSON.parse(m[1].trim());
+    return payload.task_key ? `${payload.agency || _lastAgency}:${payload.task_key}` : null;
+  } catch (e) { return null; }
+}
 
 // 2026-07-23 — 페이지 자체 헤더(구 #top-bar, 초록)를 삭제했다. 이
 // 웹뷰를 감싸는 상위 크롬(제목표시줄)이 이미 있어 헤더가 두 겹으로
@@ -218,7 +240,12 @@ const ci = mountChatInput(document.getElementById('chat-input-slot'), {
       const reply = await _callAI(text, typing);
       typing.remove();
       appendBubble('ai', escHtml(reply).replace(/\n/g, '<br>'));
-      messages.push({ role: 'assistant', content: reply });
+      // 2026-08-13 변경 — messages.push(assistant)를 여기서 하지 않는다.
+      // _callAI 내부에 GOV_TASK 태그 처리 루프가 생기면서, 태그가 여러
+      // 차례 오간 경우 중간 턴들도 messages에 반드시 남아야 모델이 문맥을
+      // 잃지 않는다(§아래 _callAI 주석 참고) — 그 중간 턴 관리와 최종 턴
+      // 관리를 한 곳(_callAI)에서 일관되게 하기 위해 최종 push 책임도
+      // 그쪽으로 옮겼다. 여기서 또 push하면 마지막 턴이 중복 저장된다.
     } catch (e) {
       typing.remove();
       appendBubble('ai', `⚠️ 오류가 발생했습니다: ${escHtml(e.message)}`);
@@ -287,7 +314,7 @@ function _recordRequesterPdv(userText, replyText, agency, provinceCode, trace) {
 
 // ── AI 호출 — jeju.hondi.net이 쓰던 것과 동일한 공용 워커 엔드포인트.
 // 오리진과 무관한 순수 서버 호출이라 그대로 재사용한다. ──────────────
-async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode) {
+async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode, taskKey, taskRoundtrips) {
   const user = _loadUser();
   try {
     const r = await fetch(`${PROXY}/gov/relay`, {
@@ -296,6 +323,14 @@ async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode) {
       body: JSON.stringify({
         guid: user?.ipv6 || null, agency, agencyPrompt, messages: msgs, provinceCode,
         max_tokens: 2000, stream: false, tier: 'gov-flash',
+        // 2026-08-13 신설 — 자율 과금 제안 시스템(worker.js billGovCall)이
+        // task_key 단위로 신호를 쌓으려면 클라이언트가 알려줘야 한다.
+        // 서버는 대화 1턴=1호출 구조라 task_key를 스스로 알 방법이 없음
+        // (GOV_TASK_* 태그에서 처음 드러나는 지점이 클라이언트 쪽이므로).
+        // taskKey가 아직 없으면(대화 초반) 그냥 안 보낸다 — 서버가 이미
+        // undefined를 "규칙 조회 생략"으로 안전하게 처리하도록 짜여있음.
+        task_key: taskKey || undefined,
+        gov_task_roundtrips: taskRoundtrips || undefined,
       }),
     });
     if (!r.ok) {
@@ -387,8 +422,50 @@ async function _callAI(latestUserText, typingEl) {
   document.title = agencyDisplayName ? `${agencyDisplayName} AI`
     : (provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI');
 
-  return _govRelayCompletion(sp, messages, agency, provinceCode).then(async (rawReply) => {
-    const reply = await _consumeStaffReviewGate(rawReply, trace);
+  return _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips).then(async (rawReply) => {
+    // ── GOV_TASK 태그 처리 (2026-08-13 신설) ──────────────────────
+    // 이 페이지는 스트리밍이 아니라 단일 완료 호출이라 call-ai.js의
+    // _callAIInner(스트리밍·bubble 기반)와 구조가 다르다 — 그래서
+    // _handleGovTaskTags 자체(태그 감지·서버 호출 로직)는 그대로
+    // 재사용하되, sendFn만 이 페이지 방식(messages 배열에 직접 push +
+    // _govRelayCompletion 재호출)으로 새로 만든다. bubble은 없으므로
+    // null(내부에서 안전하게 no-op 처리됨).
+    //
+    // 재귀 흐름: rawReply에 태그가 있으면 → INTERNAL 피드백을
+    // messages에 user 턴으로 추가 → 다시 완료 호출 → 새 응답도 태그가
+    // 있으면 반복. 모델이 태그를 계속 내는 이상 상황을 대비해 기존
+    // call-ai.js 메인 루프에는 없는 재귀 깊이 상한(5회)을 새로 뒀다 —
+    // 초과하면 경고 로그만 남기고 마지막 응답을 그대로 사용자에게
+    // 보여준다(무한 루프로 인한 과금 폭주 방지가 태그 미처리보다 우선).
+    let finalReply = rawReply;
+    let depth = 0;
+    const MAX_TAG_DEPTH = 5;
+
+    // task_key가 이번 응답에서 처음 드러났으면 기억해둔다 — 이번 턴
+    // 자체는 이미 과금이 끝났으니 다음 턴부터 반영된다.
+    const _foundKey = _extractTaskKeyFromReply(rawReply);
+    if (_foundKey && _foundKey !== _lastTaskKey) { _lastTaskKey = _foundKey; _taskRoundtrips = 0; }
+
+    async function _tagAwareSend(internalText) {
+      if (depth >= MAX_TAG_DEPTH) {
+        console.warn('[RegionalGov] GOV_TASK 태그 재귀 깊이 상한(' + MAX_TAG_DEPTH + ') 도달 — 중단');
+        return;
+      }
+      depth++;
+      _taskRoundtrips++; // GOV_TASK 왕복 1회 — 자율 과금 제안의 "왕복 잦음" 신호
+      messages.push({ role: 'user', content: internalText });
+      const nextReply = await _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips);
+      messages.push({ role: 'assistant', content: nextReply });
+      finalReply = nextReply; // 태그가 더 없으면 이게 최종 표시될 응답
+      const _foundKey2 = _extractTaskKeyFromReply(nextReply);
+      if (_foundKey2 && _foundKey2 !== _lastTaskKey) { _lastTaskKey = _foundKey2; }
+      await _handleGovTaskTags(nextReply, null, _tagAwareSend, latestUserText);
+    }
+
+    messages.push({ role: 'assistant', content: rawReply }); // 태그 유무와 무관하게 문맥 유지를 위해 먼저 기록
+    await _handleGovTaskTags(rawReply, null, _tagAwareSend, latestUserText);
+
+    const reply = await _consumeStaffReviewGate(finalReply, trace);
     _recordRequesterPdv(latestUserText, reply, agency, provinceCode, trace);
     return reply;
   });
