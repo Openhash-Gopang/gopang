@@ -28,7 +28,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령: 지방자치단체 출자·출연 기관의 운영에 관한 법률(지방출자출연법) + 사회서비스 지원 및 사회서비스원 설립·운영에 관한 법률(사회서비스원법)
 - 기관 구분: 출자출연기관 (도청과 별도 법인격)
-- legal_basis_last_verified: (미검증)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 - 상세: 클래스 템플릿 `SP-ORG-WELFARE-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
 
 ## §0. 상속 및 삽입 위치

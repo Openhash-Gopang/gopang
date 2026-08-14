@@ -23,9 +23,10 @@
 ## §LEGAL-BASIS. 법적 근거
 
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
-- 근거 법령: 클래스 템플릿 `SP-ORG-CULTUREARTS-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조(지방출자출연법 공통 근거 + 개별 조례, 인스턴스 자체는 미검증)
+- 근거 법령: 「지역문화진흥법」제19조 + 대구문화예술진흥원 설립 및 운영 조례(조례번호 미확인)
+- 근거_검증: 2026-08-15 웹서치로 확인
 - 기관 구분: 출연기관 (대구광역시와 별도 법인격)
-- legal_basis_last_verified: 미검증
+- legal_basis_last_verified: 2026-08-15 (법률근거 확인, 일부 조례번호는 미확인 — §6 참조)
 
 ## §0. 상속 및 삽입 위치
 

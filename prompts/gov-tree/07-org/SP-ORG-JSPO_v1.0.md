@@ -28,7 +28,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령: 국민체육진흥법(시·도체육회 법정단체 지위 근거 — 정확한 조항 번호 미검증)
 - 기관 구분: 법정단체(지방출자출연기관·민간 임의단체 어느 쪽도 아닌 제3유형)
-- legal_basis_last_verified: (미검증)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 - 상세: 클래스 템플릿 `SP-ORG-SPORTS-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
 
 ## §0. 상속 및 삽입 위치

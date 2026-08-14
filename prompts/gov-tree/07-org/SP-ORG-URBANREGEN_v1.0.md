@@ -28,7 +28,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령(§LEGAL-BASIS-A, 법률 근거형): 도시재생 활성화 및 지원에 관한 특별법(도시재생지원센터 설치·운영 근거 — 정확한 조항 번호 검증 필요) + 도시재생 활성화 및 지원에 관한 조례
 - 기관 구분: 위탁운영센터(국토교통부 도시재생사업 지역거점)
-- legal_basis_last_verified: (미검증 — 법률명은 확실, 조항 미검증)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 - 상세: 클래스 템플릿 `SP-ORG-URBANCOMMUNITY-TEMPLATE_v1.0.md` §LEGAL-BASIS-A 참조
 
 ## §0. 상속 및 삽입 위치

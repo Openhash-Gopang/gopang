@@ -28,7 +28,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령: 지방자치단체 출자·출연 기관의 운영에 관한 법률(지방출자출연법) + 교통약자의 이동편의 증진법
 - 기관 구분: 위탁운영센터(사단법인, 지방출자출연법 준용 가능성 — 정확한 형태 검증 필요)
-- legal_basis_last_verified: (미검증)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 - 상세: 클래스 템플릿 `SP-ORG-WELFARE-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
 
 ## §0. 상속 및 삽입 위치
