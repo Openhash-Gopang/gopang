@@ -1,6 +1,46 @@
 [
-  { "no": 1, "title": "일반챗(/deepseek) 단순 메시지 — flash 기대", "endpoint": "deepseek", "complexity": "simple",  "expected_model": "deepseek-v4-flash" },
-  { "no": 2, "title": "일반챗(/deepseek) 복잡 메시지 — pro 기대",   "endpoint": "deepseek", "complexity": "complex", "expected_model": "deepseek-v4-pro" },
-  { "no": 3, "title": "kgov(/gov/relay) 단순 메시지 — flash 기대",  "endpoint": "gov",      "complexity": "simple",  "expected_model": "deepseek-v4-flash" },
-  { "no": 4, "title": "kgov(/gov/relay) 복잡 메시지 — pro 기대",    "endpoint": "gov",      "complexity": "complex", "expected_model": "deepseek-v4-pro" }
+  {
+    "no": 1,
+    "title": "일반챗(/deepseek) 단순 메시지 — flash 기대",
+    "endpoint": "deepseek",
+    "complexity": "simple",
+    "expected_model": "deepseek-v4-flash"
+  },
+  {
+    "no": 2,
+    "title": "일반챗(/deepseek) 복잡 메시지 — pro 기대",
+    "endpoint": "deepseek",
+    "complexity": "complex",
+    "expected_model": "deepseek-v4-pro"
+  },
+  {
+    "no": 3,
+    "title": "kgov(/gov/relay) 단순 메시지 — flash 기대",
+    "endpoint": "gov",
+    "complexity": "simple",
+    "expected_model": "deepseek-v4-flash"
+  },
+  {
+    "no": 4,
+    "title": "kgov(/gov/relay) 복잡 메시지 — pro 기대",
+    "endpoint": "gov",
+    "complexity": "complex",
+    "expected_model": "deepseek-v4-pro"
+  },
+  {
+    "no": 5,
+    "title": "일반챗(/deepseek) 경계값 2점(임계값 미만) — flash 기대(회귀 안전장치)",
+    "endpoint": "deepseek",
+    "complexity": "boundary_below",
+    "text": "오늘 날씨가 좀 흐린 것 같은데 우산을 챙겨야 할까요? 그리고 저녁에 비가 온다고 하던데 정말 그런가요? 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다",
+    "expected_model": "deepseek-v4-flash"
+  },
+  {
+    "no": 6,
+    "title": "일반챗(/deepseek) 경계값 3점(임계값 정확히 도달) — pro 기대",
+    "endpoint": "deepseek",
+    "complexity": "boundary_at",
+    "text": "오늘 날씨가 좀 흐린 것 같은데 우산을 챙겨야 할까요? 그리고 저녁에 비가 온다고 하던데 정말 그런가요? 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다 오늘 하루도 평범하게 지나갔습니다 별다른 일은 없었고 그냥 평소처럼 지냈습니다 이번 주랑 저번 주를 비교해 주실 수 있나요?",
+    "expected_model": "deepseek-v4-pro"
+  }
 ]
