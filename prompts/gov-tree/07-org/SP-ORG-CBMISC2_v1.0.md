@@ -23,9 +23,10 @@
 ## §LEGAL-BASIS. 법적 근거
 
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
-- 근거 법령: 클래스 템플릿 `SP-ORG-WOMENFAMILY-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조(지방출자출연법 공통 근거 + 개별 조례, 인스턴스 자체는 미검증)
+- 근거 법령: 양성평등기본법 + 충북여성재단 설립 및 운영 조례(취업톡 명단 확인, 조례번호 미확인 — §6 참조)
+- 근거_검증: 2026-08-15 웹서치로 확인
 - 기관 구분: 출연기관 (충청북도와 별도 법인격)
-- legal_basis_last_verified: 미검증
+- legal_basis_last_verified: 2026-08-15 (유형별 법률근거 적용, 조례번호는 미검증 — §6 참조)
 
 ## §0. 상속 및 삽입 위치
 

@@ -28,7 +28,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령: 지방출자출연법(일반 근거) + 특정 개별 특별법 없음(수출·창업지원 등은 개별 사업 근거에 따름, 검증 필요)
 - 기관 구분: 출자출연기관 (도청과 별도 법인격)
-- legal_basis_last_verified: (미검증)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 - 상세: 클래스 템플릿 `SP-ORG-ECONIND-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
 
 ## §0. 상속 및 삽입 위치

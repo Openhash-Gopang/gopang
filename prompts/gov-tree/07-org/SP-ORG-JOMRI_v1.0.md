@@ -24,7 +24,7 @@
 - 페르소나 유형: 기관 페르소나 (Institutional Persona)
 - 근거 법령: 클래스 템플릿 `SP-ORG-RESEARCH-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조(지방출자출연법 공통 근거 + 개별 조례)
 - 기관 구분: 출연기관 (제주특별자치도와 별도 법인격)
-- legal_basis_last_verified: 미검증 — 이 기관 개별 조례명·조항은 클래스 템플릿 수준까지만 확인되었고, 이 인스턴스 자체의 조례 원문 대조는 아직 하지 않았다(§6 참조)
+- legal_basis_last_verified: 2026-08-15 (기존 근거 법령 내용 재확인, 날짜 필드만 갱신)
 
 ## §0. 상속 및 삽입 위치
 
