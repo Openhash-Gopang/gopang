@@ -95,7 +95,7 @@ import { mountChatInput, THEME_LINE_GREEN } from '/src/gopang/ui/chat-input.js';
 // 채 끝났다). call-ai.js가 이미 가진 파서·핸들러(_handleGovTaskTags)를
 // 새로 만들지 않고 그대로 재사용한다 — sendFn만 이 페이지의 비-스트리밍
 // 구조에 맞게 새로 만든다(아래 _callAI 내부 참고).
-import { _handleGovTaskTags } from '/src/gopang/ai/call-ai.js';
+import { _handleGovTaskTags, _resolveHondiTier } from '/src/gopang/ai/call-ai.js';
 // ★ 2026-08-09 신설(주피터 지시 — "사용자의 AI 비서(AC)는 사용자의 발화를
 // 분석하고, 필요하면 사용자의 현재 위치와 주소지 데이터를 라우팅 모듈에
 // 전달해야 합니다") — 이 페이지 파일 상단 주석(§13 대체 관련)이 이미
@@ -193,6 +193,18 @@ function _extractTaskKeyFromReply(replyText) {
     const payload = JSON.parse(m[1].trim());
     return payload.task_key ? `${payload.agency || _lastAgency}:${payload.task_key}` : null;
   } catch (e) { return null; }
+}
+
+// 2026-08-14 신설(주피터 지시) — flash↔pro 자동 승격을 kgov 전용으로
+// 새로 만들지 않고, 일반 챗(call-ai.js)이 이미 여러 차례 검증·재설계
+// 끝에(v3.2→v4.0→v4.1→v5.0) 정착시킨 _resolveHondiTier() 하나를
+// 그대로 재사용한다 — 복잡도 채점 로직은 한 곳에만 존재해야 유지보수가
+// 쉽다는 원칙. 반환값("hondi-flash"/"hondi-pro")을 gov 쪽 티어 키
+// ("gov-flash"/"gov-pro", worker.js GOV_TIER_MODELS)로 이름만 매핑한다
+// — 판단 로직 자체는 건드리지 않는다.
+function _resolveGovTier(latestUserText, messages) {
+  const hondiTier = _resolveHondiTier(latestUserText, messages);
+  return hondiTier === 'hondi-pro' ? 'gov-pro' : 'gov-flash';
 }
 
 // 2026-07-23 — 페이지 자체 헤더(구 #top-bar, 초록)를 삭제했다. 이
@@ -314,7 +326,7 @@ function _recordRequesterPdv(userText, replyText, agency, provinceCode, trace) {
 
 // ── AI 호출 — jeju.hondi.net이 쓰던 것과 동일한 공용 워커 엔드포인트.
 // 오리진과 무관한 순수 서버 호출이라 그대로 재사용한다. ──────────────
-async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode, taskKey, taskRoundtrips) {
+async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode, taskKey, taskRoundtrips, tier) {
   const user = _loadUser();
   try {
     const r = await fetch(`${PROXY}/gov/relay`, {
@@ -322,7 +334,7 @@ async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode, tas
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         guid: user?.ipv6 || null, agency, agencyPrompt, messages: msgs, provinceCode,
-        max_tokens: 2000, stream: false, tier: 'gov-flash',
+        max_tokens: 2000, stream: false, tier: tier || 'gov-flash',
         // 2026-08-13 신설 — 자율 과금 제안 시스템(worker.js billGovCall)이
         // task_key 단위로 신호를 쌓으려면 클라이언트가 알려줘야 한다.
         // 서버는 대화 1턴=1호출 구조라 task_key를 스스로 알 방법이 없음
@@ -422,7 +434,7 @@ async function _callAI(latestUserText, typingEl) {
   document.title = agencyDisplayName ? `${agencyDisplayName} AI`
     : (provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI');
 
-  return _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips).then(async (rawReply) => {
+  return _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips, _resolveGovTier(latestUserText, messages)).then(async (rawReply) => {
     // ── GOV_TASK 태그 처리 (2026-08-13 신설) ──────────────────────
     // 이 페이지는 스트리밍이 아니라 단일 완료 호출이라 call-ai.js의
     // _callAIInner(스트리밍·bubble 기반)와 구조가 다르다 — 그래서
@@ -454,7 +466,7 @@ async function _callAI(latestUserText, typingEl) {
       depth++;
       _taskRoundtrips++; // GOV_TASK 왕복 1회 — 자율 과금 제안의 "왕복 잦음" 신호
       messages.push({ role: 'user', content: internalText });
-      const nextReply = await _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips);
+      const nextReply = await _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips, _resolveGovTier(internalText, messages));
       messages.push({ role: 'assistant', content: nextReply });
       finalReply = nextReply; // 태그가 더 없으면 이게 최종 표시될 응답
       const _foundKey2 = _extractTaskKeyFromReply(nextReply);
