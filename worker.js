@@ -3627,8 +3627,10 @@ const SUBSCRIPTION_TIERS = {
   citizen: { name: '시민', price_krw: 990, all_services_free: false },
 };
 // 잔액 부족으로 결제가 밀렸을 때, 즉시 서비스를 끊지 않고 봐주는 기간.
-// 통신사·OTT 등 일반적 유예 관행(3~7일)을 참고해 7일로 설정 — 재조정 가능.
-const SUBSCRIPTION_GRACE_DAYS = 7;
+// 2026-08-14: 7일 → 1일로 단축(주피터 지시) — 이전엔 통신사·OTT 관행
+// (3~7일)을 참고했으나, 990원 단일 저가 요금제 체계에서는 미납 방치
+// 기간을 짧게 유지하는 쪽으로 정책 변경.
+const SUBSCRIPTION_GRACE_DAYS = 1;
 
 function _addOneMonth(date) {
   const d = new Date(date);
