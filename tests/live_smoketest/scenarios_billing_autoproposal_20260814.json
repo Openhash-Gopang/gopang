@@ -1,0 +1,34 @@
+[
+  {
+    "no": 1,
+    "title": "미확정 task_key — 임계치 도달 전엔 규칙이 없어야 함",
+    "type": "precondition_check",
+    "finding": "표본 부족 시 제안이 성급히 생기지 않는지(음성 대조군)"
+  },
+  {
+    "no": 2,
+    "title": "표본 50건 이상 + 왕복 잦음(avgRoundtrips>=3) — 자동 제안 생성·즉시 활성화",
+    "type": "threshold_trigger",
+    "call_count": 51,
+    "gov_task_roundtrips_per_call": 4,
+    "expected_status": "active_pending_review",
+    "expected_based_on": "klaw-pro",
+    "finding": "왕복 횟수만으로 승격되는지(2026-08-13 버그 수정 검증 — 원가 비교 없이 avgRoundtrips>=3 단독 트리거)"
+  },
+  {
+    "no": 3,
+    "title": "생성된 배율이 상한(BILLING_PROPOSAL_MAX_MULTIPLIER=5) 이내인지",
+    "type": "cap_check",
+    "reuse_task_key_from": 2,
+    "max_allowed_multiplier": 5,
+    "finding": "폭주 방지 상한선이 실제로 강제되는지"
+  },
+  {
+    "no": 4,
+    "title": "동일 task_key 재요청 — 중복 제안 생성 안 함(unique index)",
+    "type": "no_duplicate_check",
+    "reuse_task_key_from": 2,
+    "extra_call_count": 3,
+    "finding": "task_key당 활성 규칙 1개만 유지되는지(billing_rule_proposals.task_key UNIQUE)"
+  }
+]
