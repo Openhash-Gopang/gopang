@@ -697,9 +697,9 @@ section.section[data-tab].tab-active { display: block; }
 .cmp-table { width: 100%; border-collapse: collapse; font-family: 'Pretendard', sans-serif; font-size: 12px; line-height: 1.6; min-width: 760px; }
 .cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 .cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
-.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table thead th.cmp-hondi { background: var(--bg-subtle); color: var(--text); border-bottom: 2px solid var(--brand); }
 .cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
-.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody td.cmp-hondi { background: transparent; color: var(--text); font-weight: 600; }
 .cmp-table tbody tr:last-child td { border-bottom: none; }
 .cmp-summary { margin-top: 18px; padding: 16px 20px; background: var(--brand-bg); border: 1px solid #a7f3d0; border-radius: var(--radius-lg); font-size: 14px; line-height: 1.8; color: var(--text); font-weight: 400; }
 @media (max-width: 680px) {
@@ -740,8 +740,9 @@ section.section[data-tab].tab-active { display: block; }
 .pf-card .pf-icon svg { width: 30px; height: 30px; display: block; }
 .pf-card b { display: block; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .pf-card p { font-size: 13.5px; color: var(--text2); margin-bottom: 0; line-height: 1.6; }
-.pf-callout { background: var(--brand-bg); border: 1px solid var(--brand-lt); border-radius: 12px; padding: 18px 22px; margin: 16px 0; }
-.pf-callout h3 { font-size: 16px; font-weight: 700; margin: 0 0 8px 0; color: var(--brand-dk); }
+.pf-callout { background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px 26px; margin: 20px 0; }
+.pf-callout h3 { font-size: 15px; font-weight: 700; margin: 0 0 12px 0; color: var(--text); letter-spacing: -0.2px; display: flex; align-items: center; }
+.pf-callout h3::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); margin-right: 8px; flex-shrink: 0; }
 .pf-callout p { font-size: 14px; color: var(--text2); margin-bottom: 0; line-height: 1.6; }
 .pf-signup { border-left: 4px solid var(--brand); padding-left: 14px; margin: 10px 0; font-size: 14px; color: var(--text2); display: flex; align-items: flex-start; gap: 8px; }
 .pf-signup svg { width: 18px; height: 18px; color: var(--brand-dk); flex-shrink: 0; margin-top: 2px; }
