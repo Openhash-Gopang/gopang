@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-14 kgov IDV/GOV_TASK/자율과금/요금체계
+  전면 재설계 세션 전체 요약.
+  ① 혼디 패스포트 IDV(모델 A) 채택 — 정부24 카탈로그 94건 실사 사고실험
+  ② kgov SP-10 v3.14→v3.25(11회 개정) — 정부24 220여 건 사고실험 반영
+  ③ regional-gov.html 구조적 결함 발견 — GOV_TASK 태그 처리가 실서비스
+     경로에 아예 없었음(342개 기관 전부 영향) → 신설
+  ④ 자율 과금 제안 시스템 신설 — 신호축적→자동제안→즉시활성화→사후승인,
+     라이브 검증 중 ctx.waitUntil 누락(51건 중 8건 신호 유실) 발견·수정
+  ⑤ PocketBase 배포 파이프라인 수사 — SSH 수동 시도 전부 허당, 실제로는
+     GitHub Actions 자동배포(deploy-pb-migrations.yml)가 정답이었음
+  ⑥ 단일 요금제(990원) 재설계 — 사업자/학생/전문직 3개 티어 폐지, 관련
+     게이팅(교수 페르소나 월8회 제한 등) 전부 제거
+  ⑦ DeepSeek 캐싱 원리 검증 — SP별 API키 분리 제안을 사실 확인으로 반려,
+     H6 원칙·프리픽스 순서 실코드 검증
+  ⑧ flash/pro 자동승격 서버 이관 — 브라우저 로직을 worker.js로 이전해
+     단일 소스화, 라이브 스모크테스트(경계값 포함) 6/6 PASS
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-14): 신설
+-->
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kgov IDV·자율과금·요금체계 재설계 — Gopang 개발자 문서</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --good:     #2e7d4f;
+  --good-lt:  #eaf6ef;
+  --bad:      #b3392c;
+  --bad-lt:   #fbeceb;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout.good { border-left-color: var(--good); background: var(--good-lt); }
+.callout.bad { border-left-color: var(--bad); background: var(--bad-lt); }
+.callout strong { color: var(--ink); }
+
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  padding: 9px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+.badge {
+  display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .3px;
+}
+.badge.pass { background: var(--good-lt); color: var(--good); border: 1px solid var(--good); }
+.badge.fail { background: var(--bad-lt); color: var(--bad); border: 1px solid var(--bad); }
+.badge.skip { background: var(--bg-3); color: var(--ink-3); border: 1px solid var(--line-2); }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .4s ease, transform .4s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+.doc-hero {
+  padding: 8px 0 30px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.4;
+  color: var(--ink); margin-bottom: 14px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  margin-top: 18px; font-size: 12px; color: var(--ink-4);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+<div class="doc-layout">
+
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#idv">① 혼디 패스포트 IDV — 모델 A + 94건 사고실험</a>
+    <a href="#kgov-sp">② kgov SP-10 v3.14→v3.25(11회 개정)</a>
+    <a href="#govtask-gap">③ regional-gov.html — GOV_TASK 처리 부재 발견</a>
+    <a href="#billing">④ 자율 과금 제안 시스템 — 신설·waitUntil 버그 수정</a>
+    <a href="#deploy">⑤ PocketBase 배포 파이프라인 수사</a>
+    <a href="#pricing">⑥ 단일 요금제(990원) 재설계</a>
+    <a href="#caching">⑦ DeepSeek 캐싱 원리 검증</a>
+    <a href="#tier">⑧ flash/pro 자동승격 서버 이관 + 라이브 검증</a>
+    <a href="#defects">발견된 실제 결함 총정리</a>
+    <a href="#lessons">교훈</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SESSION SUMMARY — 2026-08-14</div>
+      <h1 class="doc-hero-title">"정부24 첨부 하나"로 시작한 사고실험이,<br><em>요금 체계 전면 재설계</em>까지 이어졌다</h1>
+      <p class="doc-hero-desc">
+        정부24 민원 카탈로그를 사용자 발화로 상정한 사고실험에서 출발해,
+        혼디 패스포트(IDV) 모델 A 확정, kgov SP-10을 11번 개정, 실서비스
+        경로에 GOV_TASK 태그 처리가 아예 없었다는 구조적 결함 발견,
+        자율 과금 제안 시스템 신설과 라이브 검증 중 발견한
+        <code>ctx.waitUntil</code> 누락 결함, PocketBase 배포가 몇 달째
+        전부 허당이었다는 사실이 드러난 SSH 수사, 4단계 요금제를 990원
+        단일 요금제로 전면 재설계, DeepSeek 캐싱에 대한 잘못된 전제
+        반려, 마지막으로 flash/pro 자동승격을 브라우저에서 서버로
+        옮기고 경계값까지 라이브로 검증하는 데까지 — 하루 안에 벌어진
+        일이라기엔 범위가 넓다. 각 단계에서 <strong>실제로 무엇이
+        고쳐졌고, 무엇이 사실이 아니었는지</strong> 위주로 정리한다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>작성</strong> 2026-08-14</span>
+        <span><strong>핵심 변경</strong> worker.js · regional-gov.html · desktop.html · pb_migrations · tests/live_smoketest</span>
+      </div>
+    </div>
+
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이번 세션은 "정부24 민원 하나를 사용자가 요청하면 kgov가 어떻게
+          반응하는가"라는 좁은 질문에서 시작해, 꼬리를 물고 8개의 서로
+          다른 작업으로 번졌다. 공통점은 <strong>매번 "이게 맞나?"라고
+          한 번 더 확인했더니, 실제로는 다르게 동작하고 있었거나 아예
+          작동한 적이 없었다는 것</strong>이다 — IDV 저장 버튼이 사용자에게
+          안내된 적이 없었던 것, kgov의 실제 서비스 경로에 GOV_TASK 처리가
+          없었던 것, 과금 신호가 51건 중 8건씩 조용히 사라지고 있었던 것,
+          PocketBase 마이그레이션이 SSH로는 몇 시간을 파도 원인을 못 찾다가
+          알고 보니 GitHub Actions 자동배포가 따로 있었던 것, "SP 300개는
+          한 키로 캐시 못 한다"는 그럴듯한 전제가 검색 한 번에 반려된 것.
+          다음에 이 영역을 다시 건드릴 사람이 같은 과정을 반복하지 않도록
+          정리한다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="idv">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">① Passport IDV</div>
+          <div class="gs-title">혼디 패스포트 IDV — 모델 A 확정 + 정부24 카탈로그 94건 사고실험</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          dpaper.kr 전자문서지갑 수취 API 신청서(서식2·서식3)를 마무리하는
+          중, "API 승인이 나도 그걸로 사용자 문서를 자동으로 받아올 수
+          있나"를 사고실험으로 짚어봤다. 결론은 <strong>모델 B(API 자동
+          연계)는 서버 인프라·보안 리스크가 크고, 모델 A(사용자가 직접
+          발급받아 채팅에 첨부 → IDV 저장)로 이미 핵심 문제가 풀려
+          있다</strong>는 것 — API 승인은 선택적 고도화일 뿐, 서비스를
+          켜기 위한 필수 관문이 아니라고 정리했다.
+        </p>
+        <p>
+          이어서 정부24 민원 카탈로그(총 94건, 3차에 걸쳐 첨부)를 사용자
+          발화로 상정한 사고실험을 진행했다. 처음엔 개별 항목을 하나씩
+          따라가다가, 실제로는 처리 패턴이 <strong>발급/신청/신고/조회/
+          사이트가기/예약형/제도안내형/취소철회형</strong> 등 소수의
+          유형으로 수렴한다는 걸 발견 — 그런데 v3.20에서 "정부24 버튼
+          라벨로 유형을 구분하면 된다"고 설계했던 게, v3.22 실사에서
+          <strong>버튼 라벨 자체가 신뢰할 수 없다</strong>(예: "신고"인
+          민원인데 버튼은 "발급하기")는 게 드러나 근본 전제부터 뒤집혔다.
+        </p>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            발견 — §공문서 발급 안내가 IDV 저장 버튼을 한 번도 안내한 적 없음
+          </div>
+          같은 세션 앞부분에서 만든 "IDV 저장" 버튼이, 정작 사용자에게
+          말을 거는 §공문서 발급 안내 섹션엔 한 줄도 언급돼 있지 않았다
+          — 존재해도 사용자가 우연히 발견하지 못하면 영원히 안 쓰이는
+          죽은 기능이었다.
+        </div>
+        <p>
+          SP-10을 v3.19(IDV 안내 신설)부터 계속 개정하며 예약형·환급형·
+          제도안내형·취소철회형·지자체별 개별등록 주의·신규재발급 구분
+          원칙을 차례로 추가했다 — 상세는 ②에서 이어진다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="kgov-sp">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">② SP-10 Revision</div>
+          <div class="gs-title">kgov SP-10 v3.14 → v3.25 — 11회 개정, 정부24 220여 건 사고실험 반영</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          한 번에 완성하지 않고, 매 라운드마다 새 카탈로그 묶음을
+          사고실험 → 발견 → 즉시 반영 → 다음 라운드에서 재검증하는
+          순서로 진행했다. 핵심 전환점만 추리면:
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>버전</th><th>계기</th><th>내용</th></tr></thead>
+            <tbody>
+              <tr><td><code>v3.19</code></td><td>IDV 저장 버튼 안내 누락 발견</td><td>§공문서 발급 안내에 IDV 저장 기능 안내 문구 신설</td></tr>
+              <tr><td><code>v3.20</code></td><td>50건 1차 실사</td><td>정부24 처리유형 5종(발급/신청/신고/조회/사이트가기) 구분 반영 — <strong>후에 v3.22에서 전제 자체가 뒤집힘</strong></td></tr>
+              <tr><td><code>v3.21</code></td><td>94건(50+44) 2차 실사</td><td>예약형·환급형 처리원칙, 웹검색 결과 신뢰성 원칙, idv_type 명칭충돌 대조규칙 신설</td></tr>
+              <tr><td><code>v3.22</code></td><td>3차 실사</td><td><strong>"버튼 라벨은 신뢰할 수 없다"</strong>는 근본 전제 정정 — 민원명·설명 직접 판독으로 전환, 제도안내형 신설</td></tr>
+              <tr><td><code>v3.23</code></td><td>4차 실사(44건)</td><td>제도안내형이 특정 버튼("내용보기")에 갇혀있지 않음을 확인·반영</td></tr>
+              <tr><td><code>v3.24</code></td><td>5차 실사(42건)</td><td>지자체별 개별 등록 주의(같은 "안심상속"이 중앙부처·지자체에 따로 등록돼 안내가 갈릴 수 있음)</td></tr>
+              <tr><td><code>v3.25</code></td><td>6차 실사(44건)</td><td>신규/재발급 처리기관 구분 원칙, 복합처리형 보류 근거 정정</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            버려진 게 아니라 확인된 것
+          </div>
+          v3.22에서 "버튼 신뢰" 전제를 뒤집은 뒤, v3.23에서 실제로 "방문
+          예약 신청(출입국)"이 버튼은 사이트가기인데 민원명에 "예약"이
+          있는 사례로 새 원칙이 정확히 작동하는 걸 확인했다 — 고친 게
+          실제로 맞는 방향이었다는 증거가 다음 라운드에서 바로 나온 셈.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="govtask-gap">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">③ Structural Gap</div>
+          <div class="gs-title">regional-gov.html — GOV_TASK 태그 처리가 실서비스 경로에 아예 없었음</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          §REQUIRED-DOCUMENTS의 <code>GOV_TASK_SCHEMA_LOOKUP</code>/
+          <code>SUBMIT_REQUEST</code> 태그를 처리하는 로직(<code>
+          _handleGovTaskTags</code>)은 <code>call-ai.js</code>에 이미
+          있었다. 문제는 kgov가 GWP 핸드오프로 항상 새 탭
+          (<code>regional-gov.html</code>)을 열고 <code>/gov/relay</code>
+          경로를 타는데, <strong>그 경로엔 이 태그 처리 호출이 아예
+          없었다</strong> — 즉 342개 기관이 공유하는 유일한 실서비스
+          경로에서, kgov의 §REQUIRED-DOCUMENTS 파이프라인 전체가 한
+          번도 정상 작동한 적이 없었을 가능성이 있었다.
+        </p>
+        <ul>
+          <li><code>_handleGovTaskTags</code> import + 태그 처리 루프
+              (<code>_tagAwareSend</code>) 신설 — 재귀 깊이 상한(5회)도
+              기존 메인 챗에 없던 안전장치로 새로 추가</li>
+          <li>이후 <code>task_key</code>를 태그에서 뽑아 세션에 기억해두고
+              (④의 자율 과금 신호 기록용), <code>gov_task_roundtrips</code>
+              카운트까지 함께 배선</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="billing">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">④ Autonomous Billing</div>
+          <div class="gs-title">자율 과금 제안 시스템 신설 — 라이브 검증 중 ctx.waitUntil 누락(51건 중 8건 신호 유실) 발견</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "1천만 명 규모에서는 새 요청 유형마다 관리자에게 물을 수 없다"는
+          전제로 설계했다 — 기본값은 항상 안전한 쪽(기존 토큰과금 유지),
+          표본 50건이 쌓이면 기존 K-서비스 가격구조에서만 배율을 보간해
+          <strong>즉시 활성화</strong>하고, 관리자는 사후에 배치로
+          검토해 확정하거나 거부(거부 시 소급 전액 환불)한다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>구성요소</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td><code>billing_signal_events</code></td><td>신호 축적(원가·외부API 호출 여부·왕복횟수)</td></tr>
+              <tr><td><code>billing_rule_proposals</code></td><td>자동 제안 배율, task_key당 UNIQUE로 중복 방지</td></tr>
+              <tr><td><code>_maybeProposeBillingRule</code></td><td>표본 50건 도달 시 klaw-pro 원가 구조에서 배율 보간, 상한 5배 강제</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            라이브 검증에서 실제로 발견된 결함 — 신호 51건 중 8건 유실
+          </div>
+          첫 라이브 스모크테스트에서 51회 호출했는데 신호가 43건만
+          기록됐다. 원인은 <code>_recordBillingSignal</code>/
+          <code>_maybeProposeBillingRule</code>을 응답 지연 없이
+          fire-and-forget으로 던졌는데, <strong>Cloudflare Workers가
+          응답을 반환하는 즉시 실행 컨텍스트를 종료</strong>시켜 완료
+          전의 요청이 통째로 죽는 게 실측으로 확인됐다.
+          <code>ctx.waitUntil</code>로 감싸도록 수정한 뒤 재실행하니
+          50/50 표본 도달, 배율 <code>3.107</code>(klaw-pro 기준)로
+          정확히 제안·활성화됐다.
+        </div>
+        <p>
+          승격 기준 자체에도 버그가 있었다 — <code>gov-flash</code>가
+          <code>klaw-flash</code>와 완전히 같은 단가라, "klaw-flash 수준
+          승격"이 항상 배율 1.0(사실상 무변화)로 죽어있었다. 2단계 분기를
+          걷어내고 klaw-pro 단일 승격 기준으로 단순화, 왕복 횟수가 원가
+          비교 없이 단독으로 승격을 트리거하도록 정정했다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="deploy">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑤ Deployment Archaeology</div>
+          <div class="gs-title">PocketBase 배포 파이프라인 수사 — SSH 수동 시도는 전부 허당, 정답은 GitHub Actions였다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          새로 만든 <code>billing_signal_events</code>/<code>
+          billing_rule_proposals</code>가 실서버(l1-hanlim)에 반영됐는지
+          SQLite로 직접 조회했는데 계속 비어 있었다. <code>migrate</code>,
+          <code>history-sync</code>, WAL 체크포인트까지 순서대로 의심하며
+          몇 시간을 팠지만 전부 헛다리 — 서버 프로세스가 애초에
+          <code>data.db</code>를 열어놓고 있지도 않았다(<code>/proc/$PID/fd</code>
+          로 직접 확인).
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            실제 정답
+          </div>
+          정식 배포 절차는 <strong>GitHub Actions가 SSH로 접속해
+          <code>apply-pb-migrations.sh</code>를 원격 실행</strong>하는
+          구조였다(<code>main</code>에 <code>pb_migrations/**</code> 변경이
+          push되면 자동 트리거). SSH에서 손으로 돌린 명령은 이 정식
+          경로와 무관해 계속 헛손질이었을 뿐 — PR을 열어 <code>main</code>에
+          병합하자 자동으로 반영됐고, PocketBase Admin API로 직접 조회해
+          최종 확인했다(파일 직접 열람이 왜 계속 어긋났는지는 끝내
+          완전히 규명하지 못함 — 원인 불명으로 남김).
+        </div>
+        <p>
+          부수적으로 어제(8/13) 만든 <code>klaw_case_charges</code>도
+          같은 이유로 실제 서버엔 반영된 적이 없었다는 게 같이 드러났다
+          — 배포 파이프라인 확인 자체가 오늘 세션에서 가장 시간을 많이
+          쓴 단일 작업이었다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="pricing">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑥ Pricing Redesign</div>
+          <div class="gs-title">단일 요금제(990원) 재설계 — 사업자·학생·전문직 티어 폐지</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          기존 4단계 요금제(시민 9,900원 / 사업자·학생 49,900원 / 전문직
+          99,900원)를 <strong>시민 990원 단일 요금제</strong>로 재설계 —
+          행정 서비스는 기본 포함, 그 외 모든 서비스(K-Law, 교수 페르소나,
+          사업 운영 지원 등)는 건별 과금으로 통일했다.
+        </p>
+        <ul>
+          <li><code>SUBSCRIPTION_TIERS</code>를 citizen(990원) 하나로 축소</li>
+          <li>존재 근거가 "학생 티어와의 가격 차별화"였던 교수 페르소나
+              월 8회 제한 게이팅을 완전히 폐지(항상 무제한)</li>
+          <li>K-Law "전문직 무료" 체크 로직은 구조만 남기고 항상 false로
+              귀결되도록 주석 정리(향후 재사용 대비)</li>
+          <li>공개 요금 안내서(<code>reports/hondi-pricing.html</code>
+              등) 3페이지를 2페이지로 재작성, 도중 K-Law 요금표 자체가
+              문서(1만/2.5만/7.5만 3단계)와 실제 코드(5천~10만 8단계)가
+              달랐던 것도 함께 발견해 코드 기준으로 정정</li>
+          <li>구독 미납 유예기간도 7일 → 1일로 별도 정정</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="caching">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑦ Caching Verification</div>
+          <div class="gs-title">DeepSeek 캐싱 원리 검증 — "SP 300개는 API키 하나로 못 캐시한다"는 전제 반려</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "SP 종류가 수백 개니 SP마다 별도 DeepSeek API 키를 써야
+          한다"는 제안이 나와, 구현 전에 사실관계부터 검색으로 확인했다.
+          결과: <strong>전제가 틀렸다.</strong> DeepSeek 공식 문서상
+          캐시는 프리픽스 단위로 독립 저장되고("공통 프리픽스를 감지하면
+          독립 캐시 유닛으로 유지"), 축출은 개수 경쟁이 아니라
+          <strong>비활성 기간(몇 시간~며칠) 기준</strong>이다 — 키 하나로
+          수백 개 SP를 동시에 캐시하는 데 기술적 문제가 없다.
+        </p>
+        <p>
+          오히려 SP별로 키를 쪼개면 이미 확립된 <code>SP-COMMON-05 H6</code>
+          원칙(같은 키를 써야 <code>UNIVERSAL-common</code> 같은 공통
+          블록이 서비스 간에 캐시 공유됨)과 정반대 방향이라 손해만 크다고
+          정리, 진행하지 않기로 했다.
+        </p>
+        <p>
+          같은 맥락에서 K-Law 캐시 프리픽스 순서(<code>_insertSystemNote</code>)도
+          코드로 직접 확인했다 — 사용자별로 달라지는 위치·날짜 안내가
+          정적 SP 텍스트 <strong>뒤에</strong> 붙도록 이미 정확히
+          설계돼 있었다(의도한 대로 구현이 맞았던 드문 경우).
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="tier">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑧ Tier Autopromotion</div>
+          <div class="gs-title">flash/pro 자동승격 — 브라우저에서 서버로 이관, 라이브 검증(경계값 포함) 6/6 PASS</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          복잡도 기반 flash/pro 자동승격(<code>_resolveHondiTier</code>)은
+          일반 챗에만 있고 kgov는 <code>gov-flash</code>로 하드코딩돼
+          있었다. 처음엔 "새로 안 만들고 기존 함수 재사용"으로 kgov에
+          배선했는데, 곧바로 <strong>이 판단 로직이 브라우저(<code>
+          window</code> 의존)에만 있어 순수 함수 단위테스트조차 안
+          된다</strong>는 한계가 드러났다.
+        </p>
+        <p>
+          서버(<code>callDeepSeek</code>/<code>handleGovRelay</code>)가
+          이미 <code>messages</code> 전체를 받고 있다는 걸 확인하고,
+          판단 로직 자체를 <code>worker.js</code>로 이관 — 클라이언트가
+          보낸 tier 값을 더 이상 신뢰하지 않고 서버가 직접 재계산한다.
+          kgov의 중복 배선은 걷어내고, 이제 브라우저 없이도 실제 배포
+          서버를 HTTP로 직접 테스트할 수 있게 됐다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>#</th><th>시나리오</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>1~2</td><td>일반챗 — 단순/복잡 메시지</td><td><span class="badge pass">LIVE-PASS</span> flash/pro 정확히 갈림</td></tr>
+              <tr><td>3~4</td><td>kgov — 단순/복잡 메시지</td><td><span class="badge pass">LIVE-PASS</span> flash/pro 정확히 갈림</td></tr>
+              <tr><td>5</td><td>경계값 2점(임계값 미만)</td><td><span class="badge pass">LIVE-PASS</span> flash</td></tr>
+              <tr><td>6</td><td>경계값 3점(임계값 정확히 도달)</td><td><span class="badge pass">LIVE-PASS</span> pro — <code>&gt;=</code> 연산자 정확</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            "결과가 너무 좋다"는 의심에 대한 재검증
+          </div>
+          6/6 PASS가 우연이 아닌지 <code>billed_krw</code>가 <code>cost_krw</code>
+          × 10(청구배수)로 6건 전부 일치하는 것까지 확인했고, 극단값
+          두 개만으론 못 잡는 임계값 경계(2점 vs 3점)를 사전에 Python으로
+          정확히 검산한 문구로 추가 검증했다 — 둘 다 실제로 문제 없음이
+          확인됐다. 덤으로 kgov 시나리오의 캐시 히트 토큰이 6만 건대로
+          찍힌 걸 보고, ⑦에서 이론으로만 확인했던 캐시 공유가 실제
+          운영에서도 작동 중이라는 걸 숫자로 목격했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="defects">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Defects</div>
+          <div class="gs-title">오늘 발견된 실제 결함 총정리</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>#</th><th>결함</th><th>발견 경로</th><th>조치</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>IDV 저장 버튼을 SP가 사용자에게 한 번도 안내한 적 없음</td><td>텍스트 사고실험</td><td>§공문서 발급 안내에 안내 문구 신설(v3.19)</td></tr>
+              <tr><td>2</td><td>정부24 "버튼 라벨"이 실제 민원 성격과 어긋나는 사례 다수</td><td>3차 실사(94건)</td><td>버튼 대신 민원명·설명 직접 판독으로 전환(v3.22)</td></tr>
+              <tr><td>3</td><td>regional-gov.html 실서비스 경로에 GOV_TASK 태그 처리 자체가 없었음</td><td>코드 추적</td><td>태그 처리 루프 신설(재귀 상한 포함)</td></tr>
+              <tr><td>4</td><td>과금 신호 51건 중 8건이 fire-and-forget 종료로 조용히 유실</td><td>라이브 스모크테스트</td><td><code>ctx.waitUntil</code> 배선</td></tr>
+              <tr><td>5</td><td>승격 배율이 gov-flash=klaw-flash 단가 일치로 항상 1.0(무효)</td><td>사고실험 재검증</td><td>klaw-pro 단일 승격 기준으로 단순화</td></tr>
+              <tr><td>6</td><td>PocketBase 마이그레이션이 SSH 수동 배포로는 몇 달째 전부 무효(klaw_case_charges 포함)</td><td>SQLite 직접 조회 + fd 추적</td><td>GitHub Actions 자동배포 경로로 병합·확인</td></tr>
+              <tr><td>7</td><td>공개 요금 페이지 K-Law 요금표가 실제 코드와 다름(3단계 vs 8단계)</td><td>요금 재설계 중 대조</td><td>코드 기준으로 문서 재작성</td></tr>
+              <tr><td>8</td><td>tier 자동승격 판단이 브라우저 전용이라 순수 테스트 불가</td><td>단위테스트 시도 중 실패</td><td>판단 로직을 worker.js로 이관</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lessons">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.2H22l-6 4.6L18.4 21 12 16.4 5.6 21 8 13.8 2 9.2h7.6z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Lessons</div>
+          <div class="gs-title">교훈</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <strong>내가 방금 세운 원칙도 다음 라운드 실사로 뒤집힐 수
+          있다.</strong> v3.20에서 "버튼으로 유형을 구분하면 된다"고
+          정리했던 게, 바로 다음 실사(v3.22)에서 근본 전제 자체가
+          틀렸다고 드러났다. 사고실험은 한 번에 끝나는 게 아니라
+          라운드마다 이전 결론을 의심하는 과정이어야 한다는 걸
+          다시 확인했다.
+        </p>
+        <p>
+          <strong>"결과가 비정상적으로 좋다"는 의심은 매번 값어치가
+          있다.</strong> 4/4, 6/6처럼 전부 PASS가 나올 때마다 실제로
+          한 겹 더 파보면(billed_krw 대조, 경계값 재설계) 진짜인지
+          가짜인지가 갈렸다 — 이번엔 진짜였지만, 그 확인 과정 자체가
+          생략 가능한 절차가 아니었다.
+        </p>
+        <p>
+          <strong>그럴듯한 아키텍처 제안도 구현 전에 사실관계부터
+          확인해야 한다.</strong> "SP 300개는 키 하나로 못 캐시한다"는
+          전제는 상식적으로 그럴듯했지만 검색 한 번으로 틀렸다는 게
+          드러났다 — 만약 그대로 구현했다면 캐시 공유 이점을 스스로
+          없애는 방향으로 몇백 개의 키를 만들 뻔했다.
+        </p>
+        <p>
+          <strong>SSH로 안 되면 배포 절차 자체를 의심하라.</strong>
+          몇 시간을 SQLite 파일 조회로 헤맨 끝에, 문제는 명령어가
+          아니라 애초에 "SSH 수동 실행"이 이 프로젝트의 정식 배포
+          경로가 아니었다는 것이었다. 반복해서 안 되는 수동 작업은,
+          방법을 더 파기 전에 "이게애초에 맞는 절차인가"부터 되물어야
+          한다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li>저장소 내 <code>prompts/SP-10_kpublic_v3.25.txt</code> · <code>prompts/archive/SP-10_kpublic_v3.14~v3.24.txt</code> — ①②의 SP 개정 이력 전체</li>
+          <li>저장소 내 <code>pb_migrations/1787700001_created_billing_signal_events.js</code> · <code>1787700002_created_billing_rule_proposals.js</code> — ④의 스키마</li>
+          <li>저장소 내 <code>tests/live_smoketest/billing_autoproposal_live_smoketest.py</code> · <code>tier_autopromotion_live_smoketest.py</code> — ④⑧의 라이브 검증 하네스</li>
+          <li>저장소 내 <code>.github/workflows/deploy-pb-migrations.yml</code> — ⑤에서 재발견한 실제 배포 경로</li>
+          <li>저장소 내 <code>reports/hondi-pricing.html</code> · <code>reports/hondi-pricing-bw.html</code> — ⑥의 재작성된 공개 요금 안내서</li>
+          <li>저장소 내 <code>prompts/SP_hierarchy_inheritance_v1_0.md</code>(H6) — ⑦에서 재확인한 캐시 공유 원칙</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
