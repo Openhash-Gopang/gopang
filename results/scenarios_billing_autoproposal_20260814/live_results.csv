@@ -1,0 +1,5 @@
+no,title,finding,verdict,reason,task_key
+1,미확정 task_key — 임계치 도달 전엔 규칙이 없어야 함,표본 부족 시 제안이 성급히 생기지 않는지(음성 대조군),LIVE-PASS,신선한 task_key에 규칙 없음(기대대로),public:smoketest_billing_precheck_bab975b6-b712-49ed-8705-e2f7c20ea434
+2,표본 50건 이상 + 왕복 잦음(avgRoundtrips>=3) — 자동 제안 생성·즉시 활성화,왕복 횟수만으로 승격되는지(2026-08-13 버그 수정 검증 — 원가 비교 없이 avgRoundtrips>=3 단독 트리거),LIVE-PASS,"규칙 생성 확인: status=active_pending_review, multiplier=3.107, based_on=klaw-pro, sample_size=50",public:smoketest_billing_trigger_bc1739da-68ac-4b40-b3e2-0dba0eefef04
+3,생성된 배율이 상한(BILLING_PROPOSAL_MAX_MULTIPLIER=5) 이내인지,폭주 방지 상한선이 실제로 강제되는지,LIVE-PASS,배율 3.107 <= 상한 5 확인,public:smoketest_billing_trigger_bc1739da-68ac-4b40-b3e2-0dba0eefef04
+4,동일 task_key 재요청 — 중복 제안 생성 안 함(unique index),task_key당 활성 규칙 1개만 유지되는지(billing_rule_proposals.task_key UNIQUE),LIVE-PASS,추가 호출 후에도 규칙 1건 유지(UNIQUE 정상),public:smoketest_billing_trigger_bc1739da-68ac-4b40-b3e2-0dba0eefef04
