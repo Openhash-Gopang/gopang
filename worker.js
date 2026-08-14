@@ -3612,7 +3612,7 @@ async function handleCitizenReportList(request, url, env, corsHeaders) {
 // 컨벤션)으로 분리했다.
 //
 // 요금제(주피터 지시, 2026-08-11 대화 기준):
-//   citizen(시민, 9,900원) — 일반 시민, K-Law 등 개별 서비스는 건당 결제
+//   citizen(시민, 990원) — 일반 시민, K-Law 등 개별 서비스는 건당 결제
 //   business(사업자, 49,900원) — K-Business 관련 서비스 포함
 //   student(학생, 49,900원) — 교수 AI 페르소나·K-School 포함
 //   professional(전문직, 99,900원) — K-Law 등 혼디의 모든 서비스 무료
@@ -3622,7 +3622,7 @@ async function handleCitizenReportList(request, url, env, corsHeaders) {
 // ═══════════════════════════════════════════════════════════
 
 const SUBSCRIPTION_TIERS = {
-  citizen:      { name: '시민',   price_krw: 9900,  all_services_free: false },
+  citizen:      { name: '시민',   price_krw: 990,   all_services_free: false },
   business:     { name: '사업자', price_krw: 49900, all_services_free: false },
   student:      { name: '학생',   price_krw: 49900, all_services_free: false },
   professional: { name: '전문직', price_krw: 99900, all_services_free: true  },
@@ -3734,7 +3734,7 @@ async function handleSubscriptionStatus(request, url, env, corsHeaders) {
 // ═══════════════════════════════════════════════════════════
 // 교수 페르소나(professor) 월 사용 한도 — 2026-08-11 신설(주피터 지시)
 //
-// 시민 티어(9,900원)에 교수 페르소나를 "제한적으로" 포함하기로 결정 —
+// 시민 티어(990원)에 교수 페르소나를 "제한적으로" 포함하기로 결정 —
 // 학생 티어(49,900원)는 무제한. 학생 티어와의 가격 차별화가 무너지지
 // 않도록 시민 등급은 월 N회로 제한한다(PROFESSOR_MONTHLY_LIMIT_CITIZEN,
 // 기본 8회 — 임의 초기값이라 실사용 데이터로 조정 필요, 확정치 아님).
