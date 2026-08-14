@@ -3611,21 +3611,20 @@ async function handleCitizenReportList(request, url, env, corsHeaders) {
 // user_subscriptions 컬렉션(seller_products/seller_reviews와 동일
 // 컨벤션)으로 분리했다.
 //
-// 요금제(주피터 지시, 2026-08-11 대화 기준):
-//   citizen(시민, 990원) — 일반 시민, K-Law 등 개별 서비스는 건당 결제
-//   business(사업자, 49,900원) — K-Business 관련 서비스 포함
-//   student(학생, 49,900원) — 교수 AI 페르소나·K-School 포함
-//   professional(전문직, 99,900원) — K-Law 등 혼디의 모든 서비스 무료
+// 요금제(2026-08-14 단일 티어로 재설계, 주피터 지시):
+//   citizen(시민, 990원) — 유일한 티어. 행정 서비스 기본 사용량을 넘는
+//   이용을 포함해, K-Law 등 모든 개별 서비스는 전부 건별로 과금된다.
+//   이전에 있었던 사업자/학생/전문직 3개 상위 티어(및 "교수 페르소나
+//   무제한"·"K-Law 등 전 서비스 무료" 같은 티어 차등 혜택)는 전부
+//   폐기됐다 — 아래 PROFESSOR_MONTHLY_LIMIT_CITIZEN 관련 게이팅도
+//   같은 이유로 이후에 제거됨(그 문단 주석 참고).
 // 자동 카드결제는 없다 — 가입자가 GDC 지갑을 충전해두면(기존 charge.html
 // 수동 확인 방식 그대로), 이 스케줄러가 매월 그 잔액에서 구독료를
 // 차감한다. 잔액 부족 시 즉시 정지하지 않고 유예(grace) 기간을 둔다.
 // ═══════════════════════════════════════════════════════════
 
 const SUBSCRIPTION_TIERS = {
-  citizen:      { name: '시민',   price_krw: 990,   all_services_free: false },
-  business:     { name: '사업자', price_krw: 49900, all_services_free: false },
-  student:      { name: '학생',   price_krw: 49900, all_services_free: false },
-  professional: { name: '전문직', price_krw: 99900, all_services_free: true  },
+  citizen: { name: '시민', price_krw: 990, all_services_free: false },
 };
 // 잔액 부족으로 결제가 밀렸을 때, 즉시 서비스를 끊지 않고 봐주는 기간.
 // 통신사·OTT 등 일반적 유예 관행(3~7일)을 참고해 7일로 설정 — 재조정 가능.
@@ -3746,95 +3745,35 @@ async function handleSubscriptionStatus(request, url, env, corsHeaders) {
 // 달 안에는 절대 유실되지 않게 한다.
 // ═══════════════════════════════════════════════════════════
 
-const PROFESSOR_MONTHLY_LIMIT_CITIZEN = 8; // 잠정치 — 실사용 데이터로 재조정 필요
+// ═══════════════════════════════════════════════════════════
+// 교수 AI 페르소나 사용 한도 — 2026-08-14 폐지(주피터 지시로 티어를
+// 시민(990원) 단일화하면서, 이 한도의 유일한 존재 이유였던 "학생
+// 티어와의 가격 차별화"가 사라졌다). PROFESSOR_MONTHLY_LIMIT_CITIZEN/
+// _professorUnlimited()는 더 이상 쓰지 않는다 — 교수 페르소나도 다른
+// 서비스와 동일하게 무제한 허용하고, 비용은 기존 토큰 기반 과금
+// (_settleAiUsage)이 그대로 건별로 반영한다. 아래 두 핸들러
+// (handleProfessorUsageStatus/handleProfessorUsageConsume)는 항상
+// allowed:true만 반환하도록 남겨뒀다 — 라우트를 그대로 호출하는
+// expert-session.js가 있어 엔드포인트 자체를 지우면 그쪽도 같이
+// 고쳐야 하는데, 지금은 "항상 통과"로 충분하고 더 안전하다(호출부
+// 수정은 별도 커밋).
+// ═══════════════════════════════════════════════════════════
 
-function _currentYearMonth() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-// tier(문자열 또는 null=미구독)를 받아 professor 무제한 여부를 반환.
-// professional(all_services_free) · student만 무제한 — 그 외(citizen,
-// business, 미구독)는 전부 시민과 동일한 제한을 받는다(business 티어에
-// 대한 별도 정책은 아직 결정된 바 없어 안전한 기본값으로 citizen과
-// 동일하게 취급 — §PRICING_TIER_FINAL 문서 §5 참고).
-function _professorUnlimited(tier) {
-  return tier === 'student' || tier === 'professional';
-}
-
-// GET /subscription/professor-usage?guid=
+// GET /subscription/professor-usage?guid= — 2026-08-14부터 항상 무제한 허용
 async function handleProfessorUsageStatus(request, url, env, corsHeaders) {
   const guid = (url.searchParams.get('guid') || '').trim();
   if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
-
-  let tier = null;
-  try {
-    const sub = await _l1GetSubscription(env, guid);
-    tier = sub?.tier || null;
-  } catch (e) { /* 구독 조회 실패는 미구독(citizen과 동일 제한)으로 보수적 간주 */ }
-
-  if (_professorUnlimited(tier)) {
-    return new Response(JSON.stringify({ tier, unlimited: true, allowed: true }), { headers: corsHeaders });
-  }
-
-  let used = 0;
-  if (env.AI_SETUP_SEALS_KV) {
-    try { used = parseInt(await env.AI_SETUP_SEALS_KV.get(`hondi:professor_usage:${guid}:${_currentYearMonth()}`) || '0', 10) || 0; }
-    catch (e) { /* 조회 실패는 0으로 보수적 간주(막지 않는 쪽으로) */ }
-  }
-  return new Response(JSON.stringify({
-    tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used,
-    remaining: Math.max(PROFESSOR_MONTHLY_LIMIT_CITIZEN - used, 0),
-    allowed: used < PROFESSOR_MONTHLY_LIMIT_CITIZEN,
-  }), { headers: corsHeaders });
+  return new Response(JSON.stringify({ unlimited: true, allowed: true }), { headers: corsHeaders });
 }
 
-// POST /subscription/professor-usage/consume — 실제 교수 세션 시작 시점에
-// 호출(client: expert-session.js handleExpertTag). 한도 초과면 소비하지
-// 않고 allowed:false만 반환 — 세션은 시작되지 않는다.
+// POST /subscription/professor-usage/consume — 2026-08-14부터 항상 무제한 허용.
+// 실제 비용은 세션 진행 중 정상적인 토큰 기반 과금(_settleAiUsage)으로 건별 반영된다.
 async function handleProfessorUsageConsume(request, env, corsHeaders) {
   let body;
   try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
   const guid = (body.guid || '').trim();
   if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
-
-  let tier = null;
-  try {
-    const sub = await _l1GetSubscription(env, guid);
-    tier = sub?.tier || null;
-  } catch (e) { /* 미구독으로 간주 */ }
-
-  if (_professorUnlimited(tier)) {
-    return new Response(JSON.stringify({ tier, unlimited: true, allowed: true }), { headers: corsHeaders });
-  }
-
-  if (!env.AI_SETUP_SEALS_KV) {
-    // KV 바인딩 자체가 없으면 한도를 강제할 방법이 없다 — 사용자 흐름을
-    // 막지 않는 쪽으로 안전하게 통과시킨다(과금 누락보다 UX 차단이 더
-    // 나쁘다는 기존 코드베이스 관례 — _settleAiUsage 주석 참고).
-    return new Response(JSON.stringify({ tier, unlimited: false, allowed: true, note: 'KV_UNAVAILABLE' }), { headers: corsHeaders });
-  }
-
-  const key = `hondi:professor_usage:${guid}:${_currentYearMonth()}`;
-  let used = 0;
-  try { used = parseInt(await env.AI_SETUP_SEALS_KV.get(key) || '0', 10) || 0; } catch (e) { /* 0으로 간주 */ }
-
-  if (used >= PROFESSOR_MONTHLY_LIMIT_CITIZEN) {
-    return new Response(JSON.stringify({
-      tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used, remaining: 0, allowed: false,
-    }), { headers: corsHeaders });
-  }
-
-  const newUsed = used + 1;
-  try {
-    await env.AI_SETUP_SEALS_KV.put(key, String(newUsed), { expirationTtl: 40 * 24 * 60 * 60 });
-  } catch (e) {
-    console.error('[ProfessorUsage] KV put 실패(카운트 유실 가능, 통과시킴):', e.message);
-  }
-  return new Response(JSON.stringify({
-    tier, unlimited: false, limit: PROFESSOR_MONTHLY_LIMIT_CITIZEN, used: newUsed,
-    remaining: Math.max(PROFESSOR_MONTHLY_LIMIT_CITIZEN - newUsed, 0), allowed: true,
-  }), { headers: corsHeaders });
+  return new Response(JSON.stringify({ unlimited: true, allowed: true }), { headers: corsHeaders });
 }
 
 // ── 월정기 결제 스윕 — scheduled()의 기존 10분 주기 크론에 편승 ──────────
@@ -16377,15 +16316,13 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, case_id, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
-  // ── 전문직 티어(all_services_free) 요금 면제 — 2026-08-11 신설 ──
-  // 지금까지 SUBSCRIPTION_TIERS.professional.all_services_free 플래그가
-  // 판정만 되고 실제 개별 서비스 과금 로직 어디서도 확인되지 않고
-  // 있었다(§PRICING_TIER_FINAL 문서 §5-1에서 지적된 공백) — K-Law가
-  // 그 첫 연동이다. 실패(조회 오류 등)해도 과금 자체를 막지는 않는다
-  // (무료 판정 실패로 유료 사용자가 과금되는 쪽이, 반대의 매출 누락보다
-  // 사용자 신뢰 관점에서 덜 나쁘다는 기존 코드베이스 관례를 따름 —
-  // 단, 이 경우엔 반대로 "면제해줘야 하는데 못 해줌"이 방향이라 향후
-  // 별도 사후 정산 절차가 필요할 수 있음).
+  // ── 티어 기반 요금 면제 — 2026-08-14 현재 해당 없음 ──
+  // 2026-08-11엔 "전문직 티어(all_services_free)"가 있어 K-Law를 무료로
+  // 면제하는 경로였으나, 2026-08-14에 티어가 시민(990원) 단일로
+  // 재설계되며 all_services_free:true인 티어 자체가 더 이상 없다 —
+  // 그래서 지금은 이 조회가 사실상 항상 false로 귀결된다(구독 조회에
+  // 성공해도 실패해도 결과는 같음). 향후 다시 무료 면제 티어가
+  // 생기면 이 조회 로직만 그대로 재사용하면 되므로 구조는 남겨둔다.
   let _klawFreeTier = false;
   try {
     const sub = await _l1GetSubscription(env, guid);
