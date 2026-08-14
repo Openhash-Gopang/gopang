@@ -1262,6 +1262,22 @@ const BUSAN_ORG_TABLE = [
     desc: '당신은 **부산교통공사(BTC)**를 대표하는 AI 레이어다. 주요 소관: 부산 도시철도 1~4호선 건설·운영, 도시교통 발전·시민복리 증진 관련 부대사업',
     kw: ['부산교통공사', '부산 도시철도', '부산 지하철', '휴메트로', '도시철도 1호선', '도시철도 2호선', '도시철도 3호선', '도시철도 4호선'],
     file: '07-org/SP-ORG-BUSANTRANSIT_v1.0.md' },
+  { code: "SP-ORG-BEPA", name: "부산경제진흥원", desc: "당신은 **부산경제진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 중소기업·소상공인 경영지원", kw: ["부산경제진흥원", "부산 중소기업 지원"], file: "07-org/SP-ORG-BEPA_v1.0.md" },
+  { code: "SP-ORG-BSCF", name: "부산문화재단", desc: "당신은 **부산문화재단**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술 진흥·지원사업", kw: ["부산문화재단", "부산 문화예술 지원"], file: "07-org/SP-ORG-BSCF_v1.0.md" },
+  { code: "SP-ORG-BSCULTUREHALL", name: "부산문화회관", desc: "당신은 **부산문화회관**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술 공연·전시시설 운영", kw: ["부산문화회관", "부산 공연장"], file: "07-org/SP-ORG-BSCULTUREHALL_v1.0.md" },
+  { code: "SP-ORG-BSSSO", name: "부산광역시사회서비스원", desc: "당신은 **부산광역시사회서비스원**을(를) 대표하는 AI 레이어다. 주요 소관: 사회서비스 제공(재가돌봄·아이돌봄 등)", kw: ["부산광역시사회서비스원", "부산 사회서비스"], file: "07-org/SP-ORG-BSSSO_v1.0.md" },
+  { code: "SP-ORG-BSCGF", name: "부산신용보증재단", desc: "당신은 **부산신용보증재단**을(를) 대표하는 AI 레이어다. 주요 소관: 소상공인·중소기업 신용보증", kw: ["부산신용보증재단", "부산 신용보증"], file: "07-org/SP-ORG-BSCGF_v1.0.md" },
+  { code: "SP-ORG-BSWOMEN", name: "부산여성가족과 평생교육진흥원", desc: "당신은 **부산여성가족과 평생교육진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 양성평등·가족·청소년 지원사업, 평생교육", kw: ["부산여성가족과평생교육진흥원", "부산 여성가족", "부산 가정폭력 상담"], file: "07-org/SP-ORG-BSWOMEN_v1.0.md" },
+  { code: "SP-ORG-BSMED", name: "부산의료원", desc: "당신은 **부산의료원**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 공공의료(진료·응급의료·공공보건사업)", kw: ["부산의료원", "부산 공공의료"], file: "07-org/SP-ORG-BSMED_v1.0.md" },
+  { code: "SP-ORG-BIPA", name: "부산정보산업진흥원", desc: "당신은 **부산정보산업진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 지식정보산업(IT·소프트웨어) 육성·지원", kw: ["부산정보산업진흥원", "부산 IT 지원", "BIPA"], file: "07-org/SP-ORG-BIPA_v1.0.md" },
+  { code: "SP-ORG-BTP", name: "부산테크노파크", desc: "당신은 **부산테크노파크**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 산업기술 지원·기업지원", kw: ["부산테크노파크", "부산 기업지원", "BTP"], file: "07-org/SP-ORG-BTP_v1.0.md" },
+  { code: "SP-ORG-ASIADCC", name: "아시아드CC(주)", desc: "당신은 **아시아드CC(주)**을(를) 대표하는 AI 레이어다. 주요 소관: 관광·컨벤션·전시 시설 운영", kw: ["아시아드CC", "아시아드 골프장"], file: "07-org/SP-ORG-ASIADCC_v1.0.md" },
+  { code: "SP-ORG-BCC", name: "영화의전당", desc: "당신은 **영화의전당**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술(영화) 공연·전시시설 운영", kw: ["영화의전당", "부산국제영화제 상영관", "BIFF 상영관"], file: "07-org/SP-ORG-BCC_v1.0.md" },
+  { code: "SP-ORG-BSDESIGN", name: "부산디자인진흥원", desc: "당신은 **부산디자인진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 디자인산업 육성·지원", kw: ["부산디자인진흥원", "부산 디자인 지원"], file: "07-org/SP-ORG-BSDESIGN_v1.0.md" },
+  { code: "SP-ORG-BSSTEP", name: "부산과학기술고등교육진흥원", desc: "당신은 **부산과학기술고등교육진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 과학기술·고등교육 진흥 정책연구", kw: ["부산과학기술고등교육진흥원", "부산 과학기술 진흥"], file: "07-org/SP-ORG-BSSTEP_v1.0.md" },
+  { code: "SP-ORG-BDI", name: "부산연구원", desc: "당신은 **부산연구원**을(를) 대표하는 AI 레이어다. 주요 소관: 부산 지역 정책연구", kw: ["부산연구원", "부산 정책연구", "BDI"], file: "07-org/SP-ORG-BDI_v1.0.md" },
+  { code: "SP-ORG-BGCF", name: "부산광역시글로벌도시재단", desc: "당신은 **부산광역시글로벌도시재단**을(를) 대표하는 AI 레이어다. 주요 소관: 자매도시 국제교류, 공공외교, 외국인 지원", kw: ["부산광역시글로벌도시재단", "부산 자매도시", "부산 국제교류재단", "BGCF"], file: "07-org/SP-ORG-BGCF_v1.0.md" },
+  { code: "SP-ORG-BTIP", name: "부산기술창업투자원", desc: "당신은 **부산기술창업투자원**을(를) 대표하는 AI 레이어다. 주요 소관: 기술창업기업 투자·육성 지원사업", kw: ["부산기술창업투자원", "부산 창업투자"], file: "07-org/SP-ORG-BTIP_v1.0.md" },
 ];
 
 
@@ -1271,6 +1287,27 @@ const BUSAN_ORG_TABLE = [
 // news.seoul.go.kr 2026년 부서별 주요업무계획 + opengov.seoul.go.kr
 // 업무추진비 공개문서. 산하과 상세는 다수 도메인에서 TBD로 남아있어
 // 안정적인 국/실/본부 단위 키워드 위주로 구성(§비고 참고).
+// ==== SEOUL_ORG_TABLE (2026-08-14, 전국 확대 배치) ====
+const SEOUL_ORG_TABLE = [
+  { code: "SP-ORG-SEOULMED", name: "서울의료원", desc: "당신은 **서울의료원**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 공공의료(진료·응급의료·공공보건사업)", kw: ["서울의료원", "서울 공공의료"], file: "07-org/SP-ORG-SEOULMED_v1.0.md" },
+  { code: "SP-ORG-SDI", name: "서울연구원", desc: "당신은 **서울연구원**을(를) 대표하는 AI 레이어다. 주요 소관: 서울시 지역 정책연구", kw: ["서울연구원", "서울 정책연구", "SDI"], file: "07-org/SP-ORG-SDI_v1.0.md" },
+  { code: "SP-ORG-SBA", name: "서울경제진흥원", desc: "당신은 **서울경제진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 중소기업·소상공인·스타트업 지원사업", kw: ["서울경제진흥원", "서울 창업 지원", "SBA"], file: "07-org/SP-ORG-SBA_v1.0.md" },
+  { code: "SP-ORG-SEOULCGF", name: "서울신용보증재단", desc: "당신은 **서울신용보증재단**을(를) 대표하는 AI 레이어다. 주요 소관: 소상공인·중소기업 신용보증", kw: ["서울신용보증재단", "서울 신용보증"], file: "07-org/SP-ORG-SEOULCGF_v1.0.md" },
+  { code: "SP-ORG-SEJONGPAC", name: "세종문화회관", desc: "당신은 **세종문화회관**을(를) 대표하는 AI 레이어다. 주요 소관: 공연·전시시설 운영, 문화예술 프로그램", kw: ["세종문화회관", "서울 공연장"], file: "07-org/SP-ORG-SEJONGPAC_v1.0.md" },
+  { code: "SP-ORG-SWFF", name: "서울시여성가족재단", desc: "당신은 **서울시여성가족재단**을(를) 대표하는 AI 레이어다. 주요 소관: 양성평등·가족·청소년 지원사업", kw: ["서울시여성가족재단", "서울 여성가족", "서울 가정폭력 상담"], file: "07-org/SP-ORG-SWFF_v1.0.md" },
+  { code: "SP-ORG-SWF", name: "서울시복지재단", desc: "당신은 **서울시복지재단**을(를) 대표하는 AI 레이어다. 주요 소관: 사회복지 정책연구·지원사업", kw: ["서울시복지재단", "서울 복지 지원"], file: "07-org/SP-ORG-SWF_v1.0.md" },
+  { code: "SP-ORG-SFAC", name: "서울문화재단", desc: "당신은 **서울문화재단**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술 진흥·지원사업", kw: ["서울문화재단", "서울 문화예술 지원", "SFAC"], file: "07-org/SP-ORG-SFAC_v1.0.md" },
+  { code: "SP-ORG-SPO", name: "서울시립교향악단", desc: "당신은 **서울시립교향악단**을(를) 대표하는 AI 레이어다. 주요 소관: 오케스트라 공연·음악교육 사업", kw: ["서울시립교향악단", "SPO 공연"], file: "07-org/SP-ORG-SPO_v1.0.md" },
+  { code: "SP-ORG-SDF", name: "서울디자인재단", desc: "당신은 **서울디자인재단**을(를) 대표하는 AI 레이어다. 주요 소관: 디자인산업 육성·지원, DDP 운영", kw: ["서울디자인재단", "DDP", "동대문디자인플라자"], file: "07-org/SP-ORG-SDF_v1.0.md" },
+  { code: "SP-ORG-SEOULSCHOL", name: "서울장학재단", desc: "당신은 **서울장학재단**을(를) 대표하는 AI 레이어다. 주요 소관: 장학금 지원사업", kw: ["서울장학재단", "서울 장학금"], file: "07-org/SP-ORG-SEOULSCHOL_v1.0.md" },
+  { code: "SP-ORG-SILE", name: "서울특별시평생교육진흥원", desc: "당신은 **서울특별시평생교육진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 평생교육 진흥사업", kw: ["서울특별시평생교육진흥원", "서울 평생교육"], file: "07-org/SP-ORG-SILE_v1.0.md" },
+  { code: "SP-ORG-SEOUL50PLUS", name: "서울특별시50플러스재단", desc: "당신은 **서울특별시50플러스재단**을(를) 대표하는 AI 레이어다. 주요 소관: 50+세대(장년층) 일자리·교육·복지 지원", kw: ["서울특별시50플러스재단", "50플러스", "서울 장년층 일자리"], file: "07-org/SP-ORG-SEOUL50PLUS_v1.0.md" },
+  { code: "SP-ORG-SEOULAI", name: "서울에이아이재단", desc: "당신은 **서울에이아이재단**을(를) 대표하는 AI 레이어다. 주요 소관: AI산업 육성·지원", kw: ["서울에이아이재단", "서울 AI 지원"], file: "07-org/SP-ORG-SEOULAI_v1.0.md" },
+  { code: "SP-ORG-DASAN120", name: "120다산콜재단", desc: "당신은 **120다산콜재단**을(를) 대표하는 AI 레이어다. 주요 소관: 서울시 행정·생활정보 통합상담(120다산콜센터) 운영", kw: ["120다산콜재단", "다산콜센터", "서울시 민원상담"], file: "07-org/SP-ORG-DASAN120_v1.0.md" },
+  { code: "SP-ORG-SEOULTOURISM", name: "서울관광재단", desc: "당신은 **서울관광재단**을(를) 대표하는 AI 레이어다. 주요 소관: 관광 마케팅·프로모션, MICE 지원", kw: ["서울관광재단", "서울 관광 마케팅", "MICE 지원"], file: "07-org/SP-ORG-SEOULTOURISM_v1.0.md" },
+  { code: "SP-ORG-SEOULINVEST", name: "서울투자진흥재단", desc: "당신은 **서울투자진흥재단**을(를) 대표하는 AI 레이어다. 주요 소관: 외국인 투자유치·기업 투자지원", kw: ["서울투자진흥재단", "서울 투자유치"], file: "07-org/SP-ORG-SEOULINVEST_v1.0.md" },
+];
+
 const SEOUL_L2_TABLE = [
   { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'seoul', file: null,
     // ★ 2026-07-24 수정 — 부산과 동일한 이유로 '취득세'/'재산세' 삭제.
@@ -1672,6 +1709,33 @@ GYEONGNAM_L2_TABLE.push(..._makeGenericL2Entries('gyeongnam', ['health']));
 // 있었는데 라우팅 테이블(L2_TABLE) 자체가 없어서 죽어있었다(2026-07-24
 // 발견). 실제 부서명(gg.go.kr 확인분)을 키워드로 써서 살리고, 미확인
 // 3개 도메인(sports/health/family)은 범용 키워드로 채운다.
+// ==== GYEONGGI_ORG_TABLE (2026-08-14, 전국 확대 배치) ====
+const GYEONGGI_ORG_TABLE = [
+  { code: "SP-ORG-GGDJTP", name: "경기대진테크노파크", desc: "당신은 **경기대진테크노파크**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 산업기술 지원·기업지원", kw: ["경기대진테크노파크", "포천 기업지원", "북부권 산업기술"], file: "07-org/SP-ORG-GGDJTP_v1.0.md" },
+  { code: "SP-ORG-GGSTEP", name: "경기도경제과학진흥원", desc: "당신은 **경기도경제과학진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 중소기업·소상공인 경영지원, 과학기술 진흥", kw: ["경기도경제과학진흥원", "경기도 중소기업 지원", "경과원"], file: "07-org/SP-ORG-GGSTEP_v1.0.md" },
+  { code: "SP-ORG-GGMED", name: "경기도의료원", desc: "당신은 **경기도의료원**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 공공의료(진료·응급의료·공공보건사업)", kw: ["경기도의료원", "공공의료", "경기 의료원"], file: "07-org/SP-ORG-GGMED_v1.0.md" },
+  { code: "SP-ORG-GGJOB", name: "경기도일자리재단", desc: "당신은 **경기도일자리재단**을(를) 대표하는 AI 레이어다. 주요 소관: 고용·일자리 지원사업", kw: ["경기도일자리재단", "경기 일자리", "취업지원"], file: "07-org/SP-ORG-GGJOB_v1.0.md" },
+  { code: "SP-ORG-GGFUTURE", name: "경기도미래세대재단", desc: "당신은 **경기도미래세대재단**을(를) 대표하는 AI 레이어다. 주요 소관: 청소년·미래세대 지원사업", kw: ["경기도미래세대재단", "경기 청소년 지원"], file: "07-org/SP-ORG-GGFUTURE_v1.0.md" },
+  { code: "SP-ORG-GGLIFE", name: "경기도평생교육진흥원", desc: "당신은 **경기도평생교육진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 평생교육 진흥사업", kw: ["경기도평생교육진흥원", "경기 평생교육"], file: "07-org/SP-ORG-GGLIFE_v1.0.md" },
+  { code: "SP-ORG-GGCULTURE", name: "경기문화재단", desc: "당신은 **경기문화재단**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술 진흥·지원사업", kw: ["경기문화재단", "경기 문화예술 지원"], file: "07-org/SP-ORG-GGCULTURE_v1.0.md" },
+  { code: "SP-ORG-GGWELFARE", name: "경기복지재단", desc: "당신은 **경기복지재단**을(를) 대표하는 AI 레이어다. 주요 소관: 사회복지 정책연구·지원사업", kw: ["경기복지재단", "경기 복지 지원"], file: "07-org/SP-ORG-GGWELFARE_v1.0.md" },
+  { code: "SP-ORG-GGCGF", name: "경기신용보증재단", desc: "당신은 **경기신용보증재단**을(를) 대표하는 AI 레이어다. 주요 소관: 소상공인·중소기업 신용보증", kw: ["경기신용보증재단", "경기 신용보증"], file: "07-org/SP-ORG-GGCGF_v1.0.md" },
+  { code: "SP-ORG-GGRI", name: "경기연구원", desc: "당신은 **경기연구원**을(를) 대표하는 AI 레이어다. 주요 소관: 경기도 지역 정책연구", kw: ["경기연구원", "경기 정책연구"], file: "07-org/SP-ORG-GGRI_v1.0.md" },
+  { code: "SP-ORG-GGCONTENT", name: "경기콘텐츠진흥원", desc: "당신은 **경기콘텐츠진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 콘텐츠산업(IT·문화콘텐츠) 육성·지원", kw: ["경기콘텐츠진흥원", "경기 콘텐츠 지원", "게임 콘텐츠 지원"], file: "07-org/SP-ORG-GGCONTENT_v1.0.md" },
+  { code: "SP-ORG-GGTP", name: "경기테크노파크", desc: "당신은 **경기테크노파크**을(를) 대표하는 AI 레이어다. 주요 소관: 지역 산업기술 지원·기업지원", kw: ["경기테크노파크", "경기 기업지원"], file: "07-org/SP-ORG-GGTP_v1.0.md" },
+  { code: "SP-ORG-GGAGRI", name: "경기도 농수산진흥원", desc: "당신은 **경기도 농수산진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 농수산물 유통·판로지원", kw: ["경기도 농수산진흥원", "경기 농산물 유통", "경기 직거래장터"], file: "07-org/SP-ORG-GGAGRI_v1.0.md" },
+  { code: "SP-ORG-GGSSO", name: "경기도사회서비스원", desc: "당신은 **경기도사회서비스원**을(를) 대표하는 AI 레이어다. 주요 소관: 사회서비스 제공(재가돌봄·아이돌봄 등)", kw: ["경기도사회서비스원", "경기 사회서비스"], file: "07-org/SP-ORG-GGSSO_v1.0.md" },
+  { code: "SP-ORG-GGMARKET", name: "경기도시장상권진흥원", desc: "당신은 **경기도시장상권진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 전통시장·상권 활성화 지원", kw: ["경기도시장상권진흥원", "경기 전통시장 지원", "경기 상권"], file: "07-org/SP-ORG-GGMARKET_v1.0.md" },
+  { code: "SP-ORG-GGWOMEN", name: "경기도여성가족재단", desc: "당신은 **경기도여성가족재단**을(를) 대표하는 AI 레이어다. 주요 소관: 양성평등·가족·청소년 지원사업", kw: ["경기도여성가족재단", "경기 여성가족", "경기 가정폭력 상담"], file: "07-org/SP-ORG-GGWOMEN_v1.0.md" },
+  { code: "SP-ORG-GGARTCENTER", name: "경기아트센터", desc: "당신은 **경기아트센터**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술 공연·전시시설 운영", kw: ["경기아트센터", "경기도 공연장"], file: "07-org/SP-ORG-GGARTCENTER_v1.0.md" },
+  { code: "SP-ORG-GGACE", name: "차세대융합기술연구원", desc: "당신은 **차세대융합기술연구원**을(를) 대표하는 AI 레이어다. 주요 소관: 경기도 지역 정책연구·융합기술 연구", kw: ["차세대융합기술연구원", "경기 융합기술"], file: "07-org/SP-ORG-GGACE_v1.0.md" },
+  { code: "SP-ORG-GGKOREA", name: "코리아경기도주식회사", desc: "당신은 **코리아경기도주식회사**을(를) 대표하는 AI 레이어다. 주요 소관: 지자체 출자 주식회사 사업", kw: ["코리아경기도주식회사"], file: "07-org/SP-ORG-GGKOREA_v1.0.md" },
+  { code: "SP-ORG-KOCEF", name: "한국도자재단", desc: "당신은 **한국도자재단**을(를) 대표하는 AI 레이어다. 주요 소관: 문화예술(도자·공예) 진흥·지원사업", kw: ["한국도자재단", "경기 도자기 축제", "이천 도자기"], file: "07-org/SP-ORG-KOCEF_v1.0.md" },
+  { code: "SP-ORG-GGSE", name: "경기도사회적경제원", desc: "당신은 **경기도사회적경제원**을(를) 대표하는 AI 레이어다. 주요 소관: 사회적경제(협동조합·사회적기업) 지원", kw: ["경기도사회적경제원", "경기 사회적기업 지원", "경기 협동조합"], file: "07-org/SP-ORG-GGSE_v1.0.md" },
+  { code: "SP-ORG-GGEEA", name: "경기환경에너지진흥원", desc: "당신은 **경기환경에너지진흥원**을(를) 대표하는 AI 레이어다. 주요 소관: 환경·에너지 산업 지원, 신재생에너지 보급", kw: ["경기환경에너지진흥원", "경기 환경 지원", "경기 신재생에너지"], file: "07-org/SP-ORG-GGEEA_v1.0.md" },
+  { code: "SP-ORG-GGWCST", name: "경기도수원월드컵경기장관리재단", desc: "당신은 **경기도수원월드컵경기장관리재단**을(를) 대표하는 AI 레이어다. 주요 소관: 수원월드컵경기장·부대시설 운영·대관", kw: ["경기도수원월드컵경기장관리재단", "수원월드컵경기장", "빅버드"], file: "07-org/SP-ORG-GGWCST_v1.0.md" },
+];
+
 const GYEONGGI_L2_TABLE = [
   { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'gyeonggi', file: null,
     kw: ['기획조정실', '정책기획관', '예산담당관', '인구정책담당관'] },
@@ -1748,7 +1812,9 @@ const PROVINCE_TABLES = {
     // 2026-08-04 신설 — 부산 파일럿 org tier 1호(부산교통공사). 위
     // BUSAN_ORG_TABLE 정의부 주석 참조.
     org: BUSAN_ORG_TABLE },
-  seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [_makePoliceEntry('seoul')], citydept: SEOUL_CITY_DEPT_TABLE },
+  seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [_makePoliceEntry('seoul')], citydept: SEOUL_CITY_DEPT_TABLE,
+    // 2026-08-14 추가 — 서울 출자·출연기관(07-org) 전국 확대 배치 17건.
+    org: SEOUL_ORG_TABLE },
   // 2026-07-24 — 3단계: 나머지 12개 도 시/군/구 183개 전수 메타데이터
   // 등록 완료(계획서 v1.1 §5). L2가 이미 있던 8개 도는 city/citydept만
   // 채우고, L2가 아예 없던 4개 도(경기·강원·대구·전남광주통합)는 항목
@@ -1773,7 +1839,9 @@ const PROVINCE_TABLES = {
   // 실명 없이도 즉시 작동하는 범용 도메인 키워드+기본 라벨로 16/16 채운다
   // — 경기도는 do-dept-master-data.json에 이미 있던 13개 실사 데이터를
   // 살려 실명 키워드를 우선 쓰고, 나머지 3개(sports/health/family)만 범용.
-  gyeonggi: { l2: GYEONGGI_L2_TABLE, city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE },
+  gyeonggi: { l2: GYEONGGI_L2_TABLE, city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE,
+    // 2026-08-14 추가 — 경기 출자·출연기관(07-org) 전국 확대 배치 23건.
+    org: GYEONGGI_ORG_TABLE },
   gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [_makePoliceEntry('gangwon')], citydept: GANGWON_CITY_DEPT_TABLE },
   daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [_makePoliceEntry('daegu')], citydept: DAEGU_CITY_DEPT_TABLE },
   'jeonnam-gwangju': { l2: JEONNAM_GWANGJU_L2_TABLE, city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
