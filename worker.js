@@ -1278,7 +1278,7 @@ async function _chargeGdcForAiUsage(env, {
 // 무료로 나가는 부분은 지금까지처럼 _recordFreeSpend(TTL 없는 평생
 // 누적)로, 그 초과분만 GDC 잔액에서 차감한다. 이렇게 해야 "가입자당
 // 평생 100원 무료"라는 약속이 요청 경계와 무관하게 정확히 지켜진다.
-async function _settleAiUsage(env, guid, bill, meta = {}) {
+async function _settleAiUsage(env, guid, bill, meta = {}, ctx = null) {
   if (!guid || !bill) return;
   const kv = env.AI_SETUP_SEALS_KV;
   let spentBefore = 0;
@@ -1286,7 +1286,7 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
     try { spentBefore = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0'); } catch (e) { /* 조회 실패는 0원 소진으로 보수적 간주 */ }
   }
 
-  // ── 자율 과금 제안 반영(2026-08-13 신설) ──────────────────────
+  // ── 자율 과금 제안 반영(2026-08-13 신설, 2026-08-14 waitUntil 수정) ──
   // meta.taskKey가 있는 호출부(예: kgov GOV_TASK 처리)에 한해 활성 규칙을
   // 조회해 billedKRW에 추가 배율을 곱한다. taskKey를 안 넘기는 기존
   // 호출부는 조회 자체를 안 해 지금까지와 100% 동일하게 동작한다(하위호환).
@@ -1296,15 +1296,24 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
     if (rule && rule.price_multiplier && rule.price_multiplier !== 1) {
       effectiveBilledKRW = Math.round(bill.billedKRW * rule.price_multiplier * 10000) / 10000;
     }
-    // 신호 기록·제안 판단은 응답을 지연시키지 않도록 기다리지 않는다
-    // (환경이 waitUntil을 지원하면 그쪽에 맡기는 게 이상적 — 지금은
-    // 단순 fire-and-forget으로 최소 구현).
-    _recordBillingSignal(env, {
+    // ⚠ 2026-08-14 라이브 스모크테스트로 발견한 실제 결함 수정: 응답을
+    // 지연시키지 않으려고 await 없이 fire-and-forget으로 던졌더니,
+    // Cloudflare Workers가 응답을 반환하는 즉시 실행 컨텍스트를 종료시켜
+    // 완료 전의 요청이 통째로 죽는 사례가 실측으로 확인됐다(51회 호출
+    // 중 43건만 기록, 8건 유실 — ctx.waitUntil 없이는 재현되는 손실률).
+    // ctx가 있으면 waitUntil로 응답 종료 이후에도 완료를 보장하고,
+    // ctx가 없는 극히 일부 호출부(과거 하위호환)만 예전처럼 순수
+    // fire-and-forget으로 남는다 — 그 경로는 여전히 유실 가능성이 있음을
+    // 알고 있는 상태로 남겨둔다(ctx 배선이 안 된 극소수 호출부용 폴백).
+    const signalPromise = _recordBillingSignal(env, {
       taskKey: meta.taskKey, serviceId: meta.serviceId, guid,
       costKrw: bill.apiCostKRW, usedPaidExternalApi: meta.usedPaidExternalApi,
       govTaskRoundtrips: meta.govTaskRoundtrips,
-    }).catch(() => {});
-    _maybeProposeBillingRule(env, meta.taskKey, meta.serviceId).catch(() => {});
+    }).then(() => _maybeProposeBillingRule(env, meta.taskKey, meta.serviceId)).catch(() => {});
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(signalPromise);
+    }
+    // ctx 없으면 signalPromise는 그대로 fire-and-forget(수정 전과 동일 폴백).
   }
 
   const remainingFree = Math.max(FREE_QUOTA_KRW_LIMIT - spentBefore, 0);
@@ -18477,7 +18486,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         // 동작한다(taskKey undefined → _settleAiUsage가 규칙 조회 자체를 생략).
         taskKey: task_key || undefined,
         govTaskRoundtrips: gov_task_roundtrips || undefined,
-      }),
+      }, ctx), // ★ 2026-08-14 신설 — ctx 배선(waitUntil 보장, 위 _settleAiUsage 수정 참고)
     });
   };
 
