@@ -108,7 +108,10 @@ COMPLEX_MESSAGE = (
 
 def run_scenario(sc, worker_base, pb_base, token):
     guid = f"smoketest-tier-{uuid.uuid4()}"
-    text = SIMPLE_MESSAGE if sc["complexity"] == "simple" else COMPLEX_MESSAGE
+    if "text" in sc:
+        text = sc["text"]  # 경계값 시나리오처럼 정확한 점수로 미리 검산된 문구
+    else:
+        text = SIMPLE_MESSAGE if sc["complexity"] == "simple" else COMPLEX_MESSAGE
     messages = [{"role": "user", "content": text}]
 
     caller = call_deepseek_relay if sc["endpoint"] == "deepseek" else call_gov_relay
