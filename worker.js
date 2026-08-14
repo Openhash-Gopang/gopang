@@ -967,6 +967,80 @@ const HONDI_TIER_MODELS = {
     price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 },
   },
 };
+
+// ═══════════════════════════════════════════════════════════
+// 복잡도 기반 flash/pro 판단 — 서버측 단일 소스(2026-08-14 신설, 주피터
+// 지시). 이전엔 이 로직이 call-ai.js(브라우저)에만 있어 (1) window
+// 의존 코드와 얽혀 순수 함수만 따로 테스트하기 어려웠고 (2) kgov 등
+// 새 화면이 생길 때마다 브라우저 쪽에서 매번 다시 import해 써야 했다.
+// 서버(callDeepSeek/handleGovRelay)는 이미 messages 전체를 받고
+// 있으므로, 클라이언트가 계산해 보낸 tier 이름을 그냥 믿는 대신 여기서
+// 직접 판단한다 — 정말로 "한 곳에만 존재하는 단일 판단 로직"이 된다.
+// call-ai.js의 _estimateQueryComplexity/_COMPLEXITY_PATTERNS와 완전히
+// 동일한 규칙을 그대로 옮겼다(점수 기준 임의 변경 없음).
+const COMPLEXITY_PATTERNS = [
+  /코드|버그|디버그|에러|함수|변수|스크립트|알고리즘/,      // 코드/디버깅
+  /계산|환산|이자율|퍼센트|%|비율|합계|평균/,                // 수치 연산
+  /비교해|장단점|어느\s*게|뭐가\s*더|중\s*(뭐|어떤)/,        // 비교/선택
+  /만약|~라면|그리고\s*나서|단계별로|차근차근|순서대로/,      // 조건부·다단계
+  /일정.*예산|예산.*이내|계획.*세워|동선/,                   // 복수 제약 계획
+];
+const COMPLEXITY_PRO_THRESHOLD = 3; // 이 점수 이상이면 이번 턴만 Pro
+
+function _estimateQueryComplexityServer(userText, messages) {
+  const text = typeof userText === 'string' ? userText.trim() : '';
+  let score = 0;
+
+  if (text) {
+    if (text.length > 400) score += 2;
+    else if (text.length > 180) score += 1;
+
+    const qMarks = (text.match(/\?/g) || []).length;
+    if (qMarks >= 2) score += 1;
+    if (/\n\s*[-*\d]/.test(text)) score += 1;
+
+    for (const re of COMPLEXITY_PATTERNS) {
+      if (re.test(text)) score += 1;
+    }
+  }
+
+  if (Array.isArray(messages) && messages.length >= 10) score += 1;
+
+  // PDV/정체성 신호 — call-ai.js의 동일 로직 그대로. kgov 등 이 마커를
+  // 안 쓰는 호출부에서는 그냥 항상 매치 안 되어 0점으로 자연 무시된다.
+  if (Array.isArray(messages) && messages.length) {
+    const lastContent = messages[messages.length - 1]?.content;
+    const ctxText = typeof lastContent === 'string' ? lastContent : '';
+    if (ctxText) {
+      const hasPdvNote     = ctxText.includes('[PDV 최근 기록');
+      const hasReviewDue   = ctxText.includes('[PDV_REVIEW_DUE');
+      const hasProfileFlag = ctxText.includes('프로필:미완성');
+      const identityCount = ['직업:', '소속:', '업무상태:', '배정된업무(']
+        .filter(marker => ctxText.includes(marker)).length;
+
+      if (hasPdvNote) score += 1;
+      if (identityCount >= 2) score += 1;
+      if (hasReviewDue) score += 1;
+      if (hasReviewDue && hasProfileFlag) score += 2;
+    }
+  }
+
+  return score;
+}
+
+// userText가 명시적으로 없으면(messages만 있는 호출부 — 예: handleGovRelay는
+// 별도 userText 필드가 없다) messages의 마지막 user 턴을 대신 쓴다.
+function _resolveServerTier(userText, messages) {
+  let text = userText;
+  if (text == null && Array.isArray(messages)) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]?.role === 'user') { text = messages[i].content; break; }
+    }
+  }
+  const score = _estimateQueryComplexityServer(text, messages);
+  return score >= COMPLEXITY_PRO_THRESHOLD ? 'hondi-pro' : 'hondi-flash';
+}
+
 const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
 // (2026-07-23 정정 — SP-GDC-CHARGE-v1_0 §5 "B안" 채택, 주피터 지시.
 //  가입 시 실지갑에 100원 상당(현재 1:1 환율 기준 100 GDC)을 직접
@@ -15941,15 +16015,20 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   const isStream = !!parsedBody?.stream;
   const guid = parsedBody?.guid || null;
 
-  // ── 티어 해석: 클라이언트는 "hondi-flash"/"hondi-pro" 논리 이름만 보낸다.
-  // 알려진 티어 이름이면 실제 벤더 모델명으로 치환하고, 아니면(레거시 호출 등)
-  // 받은 model 값을 그대로 쓴다 — 하위 호환.
+  // ── 티어 해석(2026-08-14 개정) — 클라이언트가 보낸 model 값은 더 이상
+  // 신뢰하지 않는다. "hondi-flash"/"hondi-pro" 같은 알려진 티어명이든,
+  // 실제 벤더 모델명을 직접 지정한 레거시 호출이든, messages가 있으면
+  // 서버가 직접 복잡도를 계산해 우선한다 — 클라이언트 로직 없이도(또는
+  // 오래된/버그 있는 클라이언트가 잘못된 값을 보내도) 항상 서버가 최종
+  // 판단자가 되도록. requestedModel이 HONDI_TIER_MODELS에 없는 진짜
+  // 레거시 직접 모델 지정(BYOK 등, tierKey 개념 자체가 없는 경우)만
+  // 예외적으로 그대로 존중한다(resolveDeepseekModel 정규화만 적용).
   const requestedModel = parsedBody?.model || '';
-  const tierKey = HONDI_TIER_MODELS[requestedModel] ? requestedModel : null;
-  // 알려진 티어명("hondi-flash" 등)이면 그 tier의 backendModel을 쓰고,
-  // 아니면(레거시 직접 호출 등) requestedModel을 resolveDeepseekModel로
-  // 한 번 더 정규화한다 — 'deepseek-chat'/'deepseek-reasoner' 같은
-  // 폐기 예정 별칭이 그대로 들어와도 여기서 걸러진다.
+  const isKnownTierName = !!HONDI_TIER_MODELS[requestedModel];
+  const hasMessages = Array.isArray(parsedBody?.messages) && parsedBody.messages.length > 0;
+  const tierKey = (isKnownTierName && hasMessages)
+    ? _resolveServerTier(null, parsedBody.messages)   // 서버가 재계산해서 덮어씀
+    : (isKnownTierName ? requestedModel : null);       // messages가 없는 예외적 호출은 클라이언트 값 존중(안전 폴백)
   const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : resolveDeepseekModel(requestedModel);
 
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
@@ -18280,7 +18359,11 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation, task_key, gov_task_roundtrips } = body || {};
+  // tier(클라이언트가 보낸 gov-flash/gov-pro)는 구조분해에서 일부러
+  // 빼지 않고 받되 밑에서 안 쓴다 — 2026-08-14부터 서버가 직접
+  // 재계산하므로(아래 tierKey), 구버전 클라이언트가 이 필드를 여전히
+  // 보내도 조용히 무시된다(하위호환, 에러 없음).
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier: _clientTierIgnored, provinceCode, currentLocation, task_key, gov_task_roundtrips } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -18303,7 +18386,12 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // system(K-Public 공통 + agencyPrompt)만 유효하다.
   const dialogOnly = (messages || []).filter(m => m.role !== 'system');
 
-  const tierKey = GOV_TIER_MODELS[tier] ? tier : 'gov-flash';
+  // 2026-08-14 개정 — 클라이언트가 보낸 tier(gov-flash/gov-pro)는 더
+  // 이상 신뢰하지 않는다. dialogOnly(방금 위에서 만든, system 제거된
+  // 실제 대화)를 서버가 직접 복잡도 판단(_resolveServerTier, callDeepSeek과
+  // 동일 로직 공유)해 gov-flash/gov-pro를 정한다 — kgov 전용 판단 로직을
+  // 따로 두지 않고, hondi-flash/hondi-pro 결과를 이름만 매핑한다.
+  const tierKey = _resolveServerTier(null, dialogOnly) === 'hondi-pro' ? 'gov-pro' : 'gov-flash';
   const backendModel = GOV_TIER_MODELS[tierKey].backendModel;
 
   const day       = _todayKey();

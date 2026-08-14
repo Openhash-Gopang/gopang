@@ -95,7 +95,7 @@ import { mountChatInput, THEME_LINE_GREEN } from '/src/gopang/ui/chat-input.js';
 // 채 끝났다). call-ai.js가 이미 가진 파서·핸들러(_handleGovTaskTags)를
 // 새로 만들지 않고 그대로 재사용한다 — sendFn만 이 페이지의 비-스트리밍
 // 구조에 맞게 새로 만든다(아래 _callAI 내부 참고).
-import { _handleGovTaskTags, _resolveHondiTier } from '/src/gopang/ai/call-ai.js';
+import { _handleGovTaskTags } from '/src/gopang/ai/call-ai.js';
 // ★ 2026-08-09 신설(주피터 지시 — "사용자의 AI 비서(AC)는 사용자의 발화를
 // 분석하고, 필요하면 사용자의 현재 위치와 주소지 데이터를 라우팅 모듈에
 // 전달해야 합니다") — 이 페이지 파일 상단 주석(§13 대체 관련)이 이미
@@ -195,17 +195,16 @@ function _extractTaskKeyFromReply(replyText) {
   } catch (e) { return null; }
 }
 
-// 2026-08-14 신설(주피터 지시) — flash↔pro 자동 승격을 kgov 전용으로
-// 새로 만들지 않고, 일반 챗(call-ai.js)이 이미 여러 차례 검증·재설계
-// 끝에(v3.2→v4.0→v4.1→v5.0) 정착시킨 _resolveHondiTier() 하나를
-// 그대로 재사용한다 — 복잡도 채점 로직은 한 곳에만 존재해야 유지보수가
-// 쉽다는 원칙. 반환값("hondi-flash"/"hondi-pro")을 gov 쪽 티어 키
-// ("gov-flash"/"gov-pro", worker.js GOV_TIER_MODELS)로 이름만 매핑한다
-// — 판단 로직 자체는 건드리지 않는다.
-function _resolveGovTier(latestUserText, messages) {
-  const hondiTier = _resolveHondiTier(latestUserText, messages);
-  return hondiTier === 'hondi-pro' ? 'gov-pro' : 'gov-flash';
-}
+// 2026-08-14 신설(주피터 지시), 같은 날 서버로 이관 — flash↔pro 판단을
+// 처음엔 브라우저에서 _resolveHondiTier()를 재사용해 했으나(중복 로직
+// 안 만드는 원칙), 곧바로 "브라우저 판단은 순수함수 단위테스트가 안
+// 된다"는 문제(window 의존 모듈이라 Node에서 import 불가)가 드러나
+// 서버(worker.js callDeepSeek/handleGovRelay의 _resolveServerTier)로
+// 옮겼다 — 서버는 이미 messages를 받고 있어 클라이언트 계산이 아예
+// 필요 없었다. 여기 있던 _resolveGovTier() 클라이언트 계산·전달은
+// 그래서 제거— 서버가 tier 필드를 더 이상 신뢰하지 않고 스스로
+// 재계산하므로 안 보내도 무방하다(_govRelayCompletion의 tier 인자는
+// 하위호환으로 남겨뒀지만 항상 undefined로 호출됨).
 
 // 2026-07-23 — 페이지 자체 헤더(구 #top-bar, 초록)를 삭제했다. 이
 // 웹뷰를 감싸는 상위 크롬(제목표시줄)이 이미 있어 헤더가 두 겹으로
@@ -434,7 +433,7 @@ async function _callAI(latestUserText, typingEl) {
   document.title = agencyDisplayName ? `${agencyDisplayName} AI`
     : (provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI');
 
-  return _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips, _resolveGovTier(latestUserText, messages)).then(async (rawReply) => {
+  return _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips).then(async (rawReply) => {
     // ── GOV_TASK 태그 처리 (2026-08-13 신설) ──────────────────────
     // 이 페이지는 스트리밍이 아니라 단일 완료 호출이라 call-ai.js의
     // _callAIInner(스트리밍·bubble 기반)와 구조가 다르다 — 그래서
@@ -466,7 +465,7 @@ async function _callAI(latestUserText, typingEl) {
       depth++;
       _taskRoundtrips++; // GOV_TASK 왕복 1회 — 자율 과금 제안의 "왕복 잦음" 신호
       messages.push({ role: 'user', content: internalText });
-      const nextReply = await _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips, _resolveGovTier(internalText, messages));
+      const nextReply = await _govRelayCompletion(sp, messages, agency, provinceCode, _lastTaskKey, _taskRoundtrips);
       messages.push({ role: 'assistant', content: nextReply });
       finalReply = nextReply; // 태그가 더 없으면 이게 최종 표시될 응답
       const _foundKey2 = _extractTaskKeyFromReply(nextReply);
