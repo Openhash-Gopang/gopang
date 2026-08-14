@@ -1,0 +1,140 @@
+[
+  {
+    "no": 1,
+    "title": "일반챗(/deepseek) 단순 메시지 — flash 기대",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-flash",
+    "guid": "smoketest-tier-05964afa-9675-4083-ad97-296613daa8b2",
+    "log": {
+      "billed_krw": 0.19,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 0.02,
+      "created": "2026-08-14 08:18:05.211Z",
+      "guid": "smoketest-tier-05964afa-9675-4083-ad97-296613daa8b2",
+      "hit_tokens": 0,
+      "id": "v8nkahpzgktg4tw",
+      "miss_tokens": 9,
+      "model": "deepseek-v4-flash",
+      "out_tokens": 40,
+      "service_id": "hondi-chat",
+      "tier": "hondi-flash",
+      "updated": "2026-08-14 08:18:05.211Z"
+    }
+  },
+  {
+    "no": 2,
+    "title": "일반챗(/deepseek) 복잡 메시지 — pro 기대",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-pro",
+    "guid": "smoketest-tier-4fb348c3-8342-433d-9120-8edb500629ad",
+    "log": {
+      "billed_krw": 1.22,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 0.12,
+      "created": "2026-08-14 08:18:09.806Z",
+      "guid": "smoketest-tier-4fb348c3-8342-433d-9120-8edb500629ad",
+      "hit_tokens": 256,
+      "id": "jbefc5m6jxmfedt",
+      "miss_tokens": 98,
+      "model": "deepseek-v4-pro",
+      "out_tokens": 40,
+      "service_id": "hondi-chat",
+      "tier": "hondi-pro",
+      "updated": "2026-08-14 08:18:09.806Z"
+    }
+  },
+  {
+    "no": 3,
+    "title": "kgov(/gov/relay) 단순 메시지 — flash 기대",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-flash",
+    "guid": "smoketest-tier-e544413d-8302-49ea-9feb-534f53ce8d56",
+    "log": {
+      "billed_krw": 3.06,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 0.31,
+      "created": "2026-08-14 08:18:14.094Z",
+      "guid": "smoketest-tier-e544413d-8302-49ea-9feb-534f53ce8d56",
+      "hit_tokens": 62336,
+      "id": "awe90rsdkwe0ein",
+      "miss_tokens": 180,
+      "model": "deepseek-v4-flash",
+      "out_tokens": 16,
+      "service_id": "gov:public",
+      "tier": "gov-flash",
+      "updated": "2026-08-14 08:18:14.094Z"
+    }
+  },
+  {
+    "no": 4,
+    "title": "kgov(/gov/relay) 복잡 메시지 — pro 기대",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-pro",
+    "guid": "smoketest-tier-581ee62b-4467-40d8-8ac0-fa52b30e4428",
+    "log": {
+      "billed_krw": 16.7,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 1.67,
+      "created": "2026-08-14 08:18:20.097Z",
+      "guid": "smoketest-tier-581ee62b-4467-40d8-8ac0-fa52b30e4428",
+      "hit_tokens": 62464,
+      "id": "v4wu3rdz41bfbip",
+      "miss_tokens": 397,
+      "model": "deepseek-v4-pro",
+      "out_tokens": 40,
+      "service_id": "gov:public",
+      "tier": "gov-pro",
+      "updated": "2026-08-14 08:18:20.097Z"
+    }
+  },
+  {
+    "no": 5,
+    "title": "일반챗(/deepseek) 경계값 2점(임계값 미만) — flash 기대(회귀 안전장치)",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-flash",
+    "guid": "smoketest-tier-6cdc32f5-deda-4472-b3e5-85b981803190",
+    "log": {
+      "billed_krw": 0.2,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 0.02,
+      "created": "2026-08-14 08:18:25.918Z",
+      "guid": "smoketest-tier-6cdc32f5-deda-4472-b3e5-85b981803190",
+      "hit_tokens": 128,
+      "id": "n6v8n83bcka49qc",
+      "miss_tokens": 13,
+      "model": "deepseek-v4-flash",
+      "out_tokens": 40,
+      "service_id": "hondi-chat",
+      "tier": "hondi-flash",
+      "updated": "2026-08-14 08:18:25.918Z"
+    }
+  },
+  {
+    "no": 6,
+    "title": "일반챗(/deepseek) 경계값 3점(임계값 정확히 도달) — pro 기대",
+    "verdict": "LIVE-PASS",
+    "reason": "모델 일치 확인: deepseek-v4-pro",
+    "guid": "smoketest-tier-43d7fafc-78de-45ee-8dd0-ba8366c59232",
+    "log": {
+      "billed_krw": 1.26,
+      "collectionId": "a1u5g3l0g0000n1",
+      "collectionName": "ai_usage_log",
+      "cost_krw": 0.13,
+      "created": "2026-08-14 08:18:29.647Z",
+      "guid": "smoketest-tier-43d7fafc-78de-45ee-8dd0-ba8366c59232",
+      "hit_tokens": 128,
+      "id": "4xu3pdpx28ist8i",
+      "miss_tokens": 109,
+      "model": "deepseek-v4-pro",
+      "out_tokens": 40,
+      "service_id": "hondi-chat",
+      "tier": "hondi-pro",
+      "updated": "2026-08-14 08:18:29.647Z"
+    }
+  }
+]
