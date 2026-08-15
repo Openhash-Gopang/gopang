@@ -269,6 +269,43 @@ function buildCourtFeeRecords(multiplier) {
   ];
 }
 
+// ── 관리자 로그인 (PocketBase 버전별 그레이스풀 디그레이드) ──────────
+// PocketBase 0.23부터 관리자가 일반 컬렉션(_superusers)으로 통합됐다
+// (npm pocketbase SDK v0.27은 이 모델만 지원 — pb.admins가 내부적으로
+// this.collection('_superusers')로 매핑돼 있다). 0.23 미만 서버는
+// 여전히 별도 최상위 라우트 /api/admins/auth-with-password를 쓴다
+// (2026-08-15 — 실제로 PocketBase 0.22.14 운영 서버에서 SDK 쪽
+// _superusers 경로가 404 나는 걸 확인하고 발견).
+//
+// 먼저 새 방식(_superusers)을 시도하고, 404면 구버전 엔드포인트로
+// raw fetch 후 pb.authStore에 토큰을 직접 채운다 — 이후의 모든
+// pb.collection('gov_fee_schedule').* 호출은 일반 레코드 CRUD라
+// 버전 차이가 없으므로 그대로 정상 동작한다.
+async function authenticateAdmin(pb, pbUrl, email, password) {
+  try {
+    await pb.collection('_superusers').authWithPassword(email, password);
+    console.log('[AUTH] PocketBase >=0.23 (_superusers) 방식으로 로그인 성공');
+    return;
+  } catch (e) {
+    if (e?.status !== 404) throw e; // 404 이외의 오류(비밀번호 오류 등)는 그대로 던진다
+  }
+
+  console.log('[AUTH] _superusers 방식 404 — PocketBase <0.23 구버전 엔드포인트로 재시도합니다.');
+  const res = await fetch(new URL('/api/admins/auth-with-password', pbUrl).toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identity: email, password }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`구버전 관리자 로그인도 실패: HTTP ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  if (!data.token) throw new Error('구버전 로그인 응답에 token이 없습니다: ' + JSON.stringify(data));
+  pb.authStore.save(data.token, data.admin || null);
+  console.log('[AUTH] PocketBase <0.23 (/api/admins) 방식으로 로그인 성공');
+}
+
 async function upsertRecord(pb, record) {
   const filter = `service_name_norm = "${record.service_name_norm}" && region_code ${record.region_code ? `= "${record.region_code}"` : '= null'}`;
   try {
@@ -374,7 +411,7 @@ async function main() {
   }
 
   const pb = new PocketBase(pbUrl);
-  await pb.collection('_superusers').authWithPassword(email, password);
+  await authenticateAdmin(pb, pbUrl, email, password);
 
   let created = 0, updated = 0, failed = 0;
   const indexableRecords = []; // --embed용: 성공적으로 upsert된 REAL 레코드만 모은다
