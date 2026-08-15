@@ -87,6 +87,16 @@ index_name = "hondi-benefit-catalog"
 binding = "VECTORIZE_ENTITIES"
 index_name = "hondi-entity-registry"
 
+# 2026-08-15 신설 — gov_fee_schedule(정부 수수료 기준표) 의미검색 전용 인덱스.
+# entity(VECTORIZE_ENTITIES)와 도메인·차원이 섞이지 않도록 별도 인덱스로
+# 분리한다(위 두 인덱스와 동일 원칙). 상세: worker.js handleGovFeeEmbedIndex 주석.
+# ★ 배포 전 필수 — 아래 index_name의 Vectorize 인덱스를 먼저 만들어야
+# 한다(로컬에선 실행 못 함, 배포 권한 있는 쪽에서 1회 실행):
+#   wrangler vectorize create hondi-gov-fee-schedule --dimensions=1024 --metric=cosine
+[[vectorize]]
+binding = "VECTORIZE_GOV_FEE"
+index_name = "hondi-gov-fee-schedule"
+
 # 2026-07-16 통합 — wrangler.json 제거 후 이관된 필드
 # (observability, AGENT_SIGNER의 environment) — wrangler.json에는 있었으나
 # .toml엔 빠져 있던 설정. Wrangler는 두 파일이 공존하면 .json만 읽고

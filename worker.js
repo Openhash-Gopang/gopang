@@ -7304,6 +7304,161 @@ async function handleEntitySemanticSearch(request, env, corsHeaders) {
   }), { headers: corsHeaders });
 }
 
+// ════════════════════════════════════════════════════════════════
+// 2026-08-15 신설 — gov_fee_schedule(정부 수수료 기준표) 의미검색.
+// handleEntityEmbedIndex/handleEntitySemanticSearch(바로 위, hondi-entity-
+// registry)와 완전히 같은 패턴이지만, "도메인·차원 혼재 방지" 원칙(위 §2026-
+// 08-04 주석 그대로 계승)에 따라 전용 Vectorize 인덱스를 쓴다
+// (env.VECTORIZE_GOV_FEE, wrangler.toml — 배포 전 인덱스 사전 생성 필요:
+//   wrangler vectorize create hondi-gov-fee-schedule --dimensions=1024 --metric=cosine
+// ).
+//
+// entity 버전과의 의도적인 차이점 두 가지:
+//   1) 후보 조회를 "profiles" 대신 "gov_fee_schedule" 컬렉션에서 한다.
+//   2) Vectorize record id로 PocketBase 레코드 자체의 id를 그대로 쓴다
+//      (entity 버전은 guid를 썼다가, guid != PocketBase 내부 id라서 후보
+//      조회가 전량 404로 죽는 버그가 났었다 — 2026-08-04 수정 이력 참조.
+//      여기서는 애초에 그 버그 클래스를 설계로 피한다: 인덱싱은 반드시
+//      PocketBase에 레코드가 이미 존재해 id가 확정된 뒤에만 호출한다,
+//      호출부는 tools/gov-fee-seed/scripts/seed_gov_fee_schedule.mjs 참조).
+//
+// formula_json은 Vectorize 메타데이터에 넣지 않는다(entity 버전과 동일한
+// 이유 — 메타데이터 크기 제한). 매칭 후 gov_fee_schedule에서 id로 전체
+// 레코드를 다시 읽어온다.
+//
+// 정직한 한계 — entity/benefit 버전과 동일. bge-m3가 "정부 민원사무명"
+// 도메인(짧고 정형화된 행정 용어, 동음이의 위험 큼 — 예: "건축신고"
+// "건축허가"처럼 한 글자 차이로 금액이 크게 달라짐)에서 얼마나 정확한지
+// 이 세션에서 검증 못 했다. 배포 전 소규모 파일럿 필요. 기존 키워드
+// 매칭기(src/gopang/gov/gov-fee-lookup.js의 matchServiceName)는 삭제하지
+// 않고 이 의미검색이 실패하거나 바인딩이 없을 때의 비상 폴백으로 유지한다
+// (그레이스풀 디그레이드 — 이 파일 전체의 일관된 원칙).
+// ════════════════════════════════════════════════════════════════
+
+// POST /orchestration/gov-fee-embed-index
+// body: { records: [{ id, service_name, raw_fee_text, related_law, scope, region_code, fee_type }] }
+// id는 반드시 PocketBase gov_fee_schedule 레코드의 실제 id여야 한다(위 설명 참조).
+async function handleGovFeeEmbedIndex(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음 - wrangler.toml [ai] 확인' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE_GOV_FEE) return new Response(JSON.stringify({ error: 'VECTORIZE_GOV_FEE 바인딩 없음 - wrangler.toml [[vectorize]] 확인, 인덱스 사전 생성 필요' }), { status: 500, headers: corsHeaders });
+
+  let body;
+  try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const records = body.records;
+  if (!Array.isArray(records) || records.length === 0) {
+    return new Response(JSON.stringify({ error: 'records(배열) 필요' }), { status: 400, headers: corsHeaders });
+  }
+  if (records.length > 100) {
+    return new Response(JSON.stringify({ error: '한 번에 최대 100건 - 호출부에서 배치 분할 필요' }), { status: 400, headers: corsHeaders });
+  }
+  for (const r of records) {
+    if (!r.id || !r.service_name) {
+      return new Response(JSON.stringify({ error: '각 record는 id(PocketBase 레코드 id)·service_name 필수' }), { status: 400, headers: corsHeaders });
+    }
+  }
+
+  const buildText = (r) => [r.service_name, r.raw_fee_text || '', r.related_law || ''].filter(Boolean).join(' - ');
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, records.map(buildText));
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `임베딩 생성 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  const upsertPayload = records.map((r, i) => ({
+    id: r.id,
+    values: vectors[i],
+    metadata: {
+      scope: r.scope || null,
+      region_code: r.region_code || null,
+      fee_type: r.fee_type || null,
+      service_name: r.service_name,
+    },
+  }));
+
+  try {
+    await env.VECTORIZE_GOV_FEE.upsert(upsertPayload);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize upsert 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ status: 'indexed', count: upsertPayload.length }), { headers: corsHeaders });
+}
+
+// GET /gov-fee-semantic-search?query=...&scope=...&region_code=...&limit=20
+// query는 자연어 문장 그대로(키워드 쪼개기 금지 - entity/benefit과 동일 원칙).
+// scope('national'|'regional')·region_code는 정확일치 조건이라 Vectorize
+// filter로 처리한다.
+async function handleGovFeeSemanticSearch(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE_GOV_FEE) return new Response(JSON.stringify({ error: 'VECTORIZE_GOV_FEE 바인딩 없음' }), { status: 500, headers: corsHeaders });
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('query');
+  const scope = searchParams.get('scope');
+  const regionCode = searchParams.get('region_code');
+  let limit = parseInt(searchParams.get('limit') || '5', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 5;
+  limit = Math.min(limit, 20);
+
+  if (!query || query.trim().length === 0) {
+    return new Response(JSON.stringify({ error: 'query 필요(자연어 문장 그대로)' }), { status: 400, headers: corsHeaders });
+  }
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, [query]);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `쿼리 임베딩 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  const filter = {};
+  if (scope) filter.scope = scope;
+  if (regionCode) filter.region_code = regionCode;
+
+  let matches;
+  try {
+    const result = await env.VECTORIZE_GOV_FEE.query(vectors[0], {
+      topK: limit,
+      filter: Object.keys(filter).length ? filter : undefined,
+      returnMetadata: 'all',
+    });
+    matches = result.matches || [];
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize 조회 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  if (matches.length === 0) {
+    return new Response(JSON.stringify({ status: 'not_found', count: 0, candidates: [] }), { headers: corsHeaders });
+  }
+
+  // m.id는 위 handleGovFeeEmbedIndex에서 PocketBase gov_fee_schedule의 실제
+  // id를 그대로 넣어뒀으므로, GET /records/{id}로 바로 조회한다(entity
+  // 버전이 겪었던 guid != id 404 버그 클래스를 설계로 피함).
+  const token = await _l1AdminToken(env);
+  const candidates = [];
+  for (const m of matches) {
+    try {
+      const res = await fetch(`${L1_DEFAULT}/api/collections/gov_fee_schedule/records/${m.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) continue;
+      const record = await res.json().catch(() => null);
+      if (!record) continue;
+      candidates.push({ ...record, score: m.score });
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return new Response(JSON.stringify({
+    status: candidates.length ? 'matched_list' : 'not_found',
+    count: candidates.length,
+    candidates,
+  }), { headers: corsHeaders });
+}
+
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
@@ -11043,6 +11198,13 @@ export default {
       return handleEntitySemanticSearch(request, env, corsHeaders);
     if (pathname === '/orchestration/entity-embed-index' && request.method === 'POST')
       return handleEntityEmbedIndex(request, env, corsHeaders);
+    // 2026-08-15 신설 — gov_fee_schedule 전용 의미검색(entity-semantic-search와
+    // 같은 패턴, 별도 Vectorize 인덱스 VECTORIZE_GOV_FEE). 상세 설명은
+    // handleGovFeeEmbedIndex 정의부 주석 참조.
+    if (pathname === '/gov-fee-semantic-search' && request.method === 'GET')
+      return handleGovFeeSemanticSearch(request, env, corsHeaders);
+    if (pathname === '/orchestration/gov-fee-embed-index' && request.method === 'POST')
+      return handleGovFeeEmbedIndex(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
       return handleProcedureMapDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')
