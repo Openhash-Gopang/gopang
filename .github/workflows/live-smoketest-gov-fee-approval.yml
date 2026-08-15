@@ -1,0 +1,64 @@
+name: Live Smoketest — GOV-FEE-APPROVAL Gate (K-Public)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "Scenario file name in tests/live_smoketest/ (blank = scenarios_gov_fee_approval_20260815.json)"
+        required: false
+        default: ""
+      system_prompt:
+        description: "System prompt file (blank = prompts/SP-10_kpublic_v3.25.txt)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-gov-fee-approval-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run GOV-FEE-APPROVAL gate live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_gov_fee_approval_20260815.json"; fi
+          SP="${{ github.event.inputs.system_prompt }}"
+          if [ -z "$SP" ]; then SP="../../prompts/SP-10_kpublic_v3.25.txt"; fi
+          BASE=$(basename "$SCEN" .json)
+          OUT="../../results/${BASE}"
+          echo "scenarios=$SCEN system_prompt=$SP out=$OUT"
+          python3 gov_fee_approval_live_smoketest.py \
+            --scenarios "$SCEN" --system-prompt "$SP" --out "$OUT" --resume
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-gov-fee-approval
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: GOV-FEE-APPROVAL gate live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-gov-fee-approval
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-gov-fee-approval-results
+          path: results/
