@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
-  const args = { dryRun: false, region: 'cheonan', multiplier: 2 };
+  const args = { dryRun: false, region: 'chungnam_cheonan', multiplier: 2 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--file') args.file = argv[++i];
@@ -133,60 +133,72 @@ function parseBaselineSheet(ws, { region, multiplier }) {
 
 // ── 2) 국세(인지세) 시트 파싱 ──
 function buildStampTaxRecords(multiplier) {
-  // 인지세법 제3조 — 부동산·선박·항공기 소유권이전 / 금융기관 대출증서 / 도급·위임증서
-  const realEstateFormula = {
-    calc: 'tiered_threshold',
-    tiers: [
-      { max: 10000000, rate: 0, base: 0 },
-      { max: 30000000, rate: 0, base: 20000 },
-      { max: 50000000, rate: 0, base: 40000 },
-      { max: 100000000, rate: 0, base: 70000 },
-      { max: 1000000000, rate: 0, base: 150000 },
-      { max: null, rate: 0, base: 350000 },
-    ],
-  };
-  return [
-    {
-      service_name: '인지세(부동산·선박·항공기 소유권이전, 금융기관 대출, 도급·위임증서)',
-      service_name_norm: normalizeName('인지세부동산선박항공기소유권이전금융기관대출도급위임증서'),
-      scope: 'national',
-      region_code: null,
-      fee_type: 'formula',
-      gov_reference_fee_min: 0,
-      gov_reference_fee_max: 350000,
-      formula_json: realEstateFormula,
-      gdc_multiplier: multiplier,
-      hondi_service_fee_min: null,
-      hondi_service_fee_max: null,
-      status: 'REAL',
-      source: '인지세법 제3조·제6조 (국가법령정보센터, 2026-08 기준)',
-      effective_date: null,
-      last_verified: '2026-08-15',
-      notes: '주택 이전 1억원 이하·대출 5천만원 이하는 비과세(제6조) — 계산 전 비과세 요건 확인 필요',
-      raw_fee_text: '1천만원 이하 면세 / 1천만~3천만 2만원 / 3천만~5천만 4만원 / 5천만~1억 7만원 / 1억~10억 15만원 / 10억 초과 35만원',
-      related_law: '인지세법 제3조, 제6조',
-    },
-    {
-      service_name: '인지세(등록대상 동산 양도증서 - 자동차 등)',
-      service_name_norm: normalizeName('인지세등록대상동산양도증서자동차등'),
-      scope: 'national',
-      region_code: null,
-      fee_type: 'flat',
-      gov_reference_fee_min: 3000,
-      gov_reference_fee_max: 3000,
-      formula_json: null,
-      gdc_multiplier: multiplier,
-      hondi_service_fee_min: 3000 * multiplier,
-      hondi_service_fee_max: 3000 * multiplier,
-      status: 'REAL',
-      source: '인지세법 제3조 (국가법령정보센터, 2026-08 기준)',
-      effective_date: null,
-      last_verified: '2026-08-15',
-      notes: null,
-      raw_fee_text: '3,000원 정액',
-      related_law: '인지세법 제3조제1항제4호',
-    },
+  // 인지세법 제3조제1항제1~3호 — 서로 다른 문서유형이지만 세액 구간표는 동일.
+  // ★ 2026-08-15 수정 — 원래 세 문서유형을 한 레코드(service_name에 전부 나열)로
+  // 묶었다가, 키워드 매칭 테스트에서 이름이 너무 길어져(9토큰) 실사용 문의와의
+  // 겹침 점수가 근소하게 임계값을 못 넘기는 문제를 발견했다(테스트 스위트 참고).
+  // 매칭 정확도를 위해 문서유형별로 레코드를 분리한다 — formula_json은 동일 tier를
+  // 그대로 복사(공식이 실제로 동일하므로 중복이 아니라 정확한 표현).
+  const sharedTiers = [
+    { max: 10000000, rate: 0, base: 0 },
+    { max: 30000000, rate: 0, base: 20000 },
+    { max: 50000000, rate: 0, base: 40000 },
+    { max: 100000000, rate: 0, base: 70000 },
+    { max: 1000000000, rate: 0, base: 150000 },
+    { max: null, rate: 0, base: 350000 },
   ];
+  const rawFeeText = '1천만원 이하 면세 / 1천만~3천만 2만원 / 3천만~5천만 4만원 / 5천만~1억 7만원 / 1억~10억 15만원 / 10억 초과 35만원';
+  const commonNote = '주택 이전 1억원 이하·대출 5천만원 이하는 비과세(제6조) — 계산 전 비과세 요건 확인 필요';
+
+  const docTypes = [
+    { key: '부동산·선박·항공기 소유권이전증서', lawNo: '제1호' },
+    { key: '금융기관 대출(금전소비대차)증서', lawNo: '제2호' },
+    { key: '도급·위임증서(법정)', lawNo: '제3호' },
+  ];
+
+  const tieredRecords = docTypes.map(({ key, lawNo }) => ({
+    service_name: `인지세(${key})`,
+    service_name_norm: normalizeName(`인지세${key}`),
+    scope: 'national',
+    region_code: null,
+    fee_type: 'formula',
+    gov_reference_fee_min: 0,
+    gov_reference_fee_max: 350000,
+    formula_json: { calc: 'tiered_threshold', tiers: sharedTiers },
+    gdc_multiplier: multiplier,
+    hondi_service_fee_min: null,
+    hondi_service_fee_max: null,
+    status: 'REAL',
+    source: '인지세법 제3조·제6조 (국가법령정보센터, 2026-08 기준)',
+    effective_date: null,
+    last_verified: '2026-08-15',
+    notes: commonNote,
+    raw_fee_text: rawFeeText,
+    related_law: `인지세법 제3조제1항${lawNo}, 제6조`,
+  }));
+
+  const flatRecord = {
+    service_name: '인지세(등록대상 동산 양도증서 - 자동차 등)',
+    service_name_norm: normalizeName('인지세등록대상동산양도증서자동차등'),
+    scope: 'national',
+    region_code: null,
+    fee_type: 'flat',
+    gov_reference_fee_min: 3000,
+    gov_reference_fee_max: 3000,
+    formula_json: null,
+    gdc_multiplier: multiplier,
+    hondi_service_fee_min: 3000 * multiplier,
+    hondi_service_fee_max: 3000 * multiplier,
+    status: 'REAL',
+    source: '인지세법 제3조 (국가법령정보센터, 2026-08 기준)',
+    effective_date: null,
+    last_verified: '2026-08-15',
+    notes: null,
+    raw_fee_text: '3,000원 정액',
+    related_law: '인지세법 제3조제1항제4호',
+  };
+
+  return [...tieredRecords, flatRecord];
 }
 
 // ── 3) 법원 인지대·송달료 시트 → 레코드 ──
