@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>MoTE와 Openhash — 혼디의 두 핵심 기술</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+    --good:#1f6f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .icon{ display:inline-block; vertical-align:-3px; margin-right:6px; color:var(--accent); }
+  .icon svg{ display:block; }
+
+  .doc-eyebrow{
+    font-size:11.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+    display:flex; align-items:center;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:26px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:13.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.65; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:12px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:16.5px; font-weight:700; color:var(--accent);
+    margin:26px 0 10px; padding-bottom:6px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:center; gap:8px;
+  }
+  h2.sec .num{ font-size:12px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:13.5px; font-weight:700; color:var(--ink); margin:18px 0 6px; }
+  p{ font-size:13px; line-height:1.85; margin:0 0 11px; color:var(--ink); }
+  p b{ color:var(--accent); font-weight:700; }
+  .note{
+    font-size:12px; line-height:1.7; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:10px 13px; margin:12px 0;
+  }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:12px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:11.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+  tbody tr.hl td{ background:#eef2f8; font-weight:700; }
+
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:94%; }
+  .msg .who{
+    font-size:11px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:12.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .msg.hondi2 .who{ color:var(--good); }
+  .msg.hondi2 .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--good); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:10.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+  .contact-line{ font-size:10.5px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">
+    <span class="icon" style="color:var(--accent-soft)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+    </span>
+    Hondi(혼디) 핵심 기술 안내
+  </div>
+  <h1 class="doc-title">MoTE와 Openhash — 혼디를 움직이는 두 개의 엔진</h1>
+  <p class="doc-sub">
+    혼디의 핵심 기술은 MoTE와 Openhash, 둘입니다. 하나는 "가장 적합한 답을 가장 적은
+    전력으로 찾는 기술"이고, 다른 하나는 "그 결과를 가장 적은 전력으로 위조 없이
+    기록하는 기술"입니다. 아파트 단지에 비유해 두 기술을 차례로 설명합니다.
+  </p>
+  <div class="doc-meta">
+    <div>기술 1<br><b>MoTE (Mixture of Tiny Experts)</b></div>
+    <div>기술 2<br><b>Openhash (확률론적 계층 분산원장)</b></div>
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+    </span>
+    MoTE
+  </h2>
+  <p>
+    MoTE(Mixture of Tiny Experts)는 거대한 AI 모델(LLM)을 기능별로 잘게 세분화해
+    전력 소비를 최소화하는 기술로, DeepSeek 등이 대중화한 MoE(Mixture of Experts)
+    기술의 확장판입니다.
+  </p>
+  <p>
+    아파트 단지에 비유하자면, DeepSeek 이전의 LLM은 특정 호수를 방문하기 위해
+    단지 내 모든 집의 전등을 켭니다. DeepSeek은 특정 동의 집들만 불을 켭니다.
+    혼디는 <b>해당 호수만</b> 불을 켭니다. 이 셋 사이의 에너지 소비 차이를
+    짐작할 수 있을 것입니다.
+  </p>
+
+  <h3 class="subsec">해당 호수를 찾는 두 가지 기술</h3>
+  <p>
+    혼디가 해당 호수를 정확히 찾기 위해 쓰는 기술은 두 가지입니다.
+  </p>
+  <p>
+    <b>첫째, 단지 입구의 안내판입니다.</b> 이 안내판은 어느 동, 어느 호수가
+    어떤 역할을 하는지 간략히 적어둡니다 — 내과 의사의 역할과 기능, 상속 전문
+    변호사의 업무 같은 것들입니다. 혼디는 한국 사회의 모든 기관·부서·직책·직종의
+    역할과 업무를 기술한 문서를 이 안내판처럼 활용합니다.
+  </p>
+  <p>
+    <b>둘째, 사용자 각자의 프라이빗 데이터 금고(PDV, Private Data Vault)입니다.</b>
+    PDV는 개인과 기관, 부서의 일상과 업무를 하루 24시간, 1년 365일 기록합니다.
+    출생부터 평생을 기록한 로그 파일이자 일기장이자 업무 기록입니다. 혼디는 각
+    사용자의 PDV를 참고해, 그가 다른 사람이나 기관과 무엇이 다른지 특정합니다.
+  </p>
+
+  <div class="dialogue avoid-break">
+    <div class="msg user">
+      <div class="who">홍길동</div>
+      <div class="bubble">오늘 점심 뭐 먹지?</div>
+    </div>
+    <div class="msg user">
+      <div class="who">임꺽정</div>
+      <div class="bubble">오늘 점심 뭐 먹지?</div>
+    </div>
+  </div>
+  <p>
+    똑같은 질문이지만, 혼디는 두 사람의 식성과 식사량, 선호하는 분위기, 가격대를
+    고려해 각자에게 가장 적합한 식당이나 식단을 추천하고, 필요하면 예약·주문·결제까지
+    진행합니다. 혼디는 천만 명이 같은 것을 물어봐도, 천만 명에게 제각기 다른 것을
+    추천할 수 있습니다. 이처럼 단지 안내판과 PDV를 함께 읽어 사용자 요청에 가장
+    적합한 동과 호수를 찾는 모듈이 <b>"나만의 AI 비서"</b>입니다. 그래서 혼디는
+    쓰면 쓸수록 똑똑해지는 AI 비서입니다.
+  </p>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) MoTE와 Openhash · 2026-08-16</span>
+    <span>1 / 2</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h3 class="subsec">모든 동·호수에도 각자의 AI 비서가 있습니다</h3>
+  <p>
+    MoTE의 특징 중 빠뜨릴 수 없는 것 하나는, 모든 기관과 부서에도 AI 비서가
+    할당돼 있다는 점입니다. 아파트 단지 비유를 이어가면, 혼디는 단지 내 모든
+    동과 호수에 <b>"그만의 AI 비서"</b>를 할당합니다. 홍길동의 "나만의 AI 비서"가
+    찾은 특정 동·호수가 정말 적합한 대상인지는, 두 AI 비서끼리 직접 소통해
+    확인하고 지시를 이행합니다.
+  </p>
+
+  <div class="dialogue avoid-break">
+    <div class="msg user">
+      <div class="who">홍길동</div>
+      <div class="bubble">점심으로 짜장면 먹고 싶은데, 괜찮은 데 추천해 줘.</div>
+    </div>
+    <div class="msg hondi">
+      <div class="who">홍길동의 AI 비서</div>
+      <div class="bubble">
+        위치·식성·주변 상권을 분석해, 서귀포시 대정읍의 '홍성방'을 추천합니다.
+        예약을 진행할까요?
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="who">홍길동</div>
+      <div class="bubble">네, 진행해 주세요.</div>
+    </div>
+    <div class="msg hondi2">
+      <div class="who">홍성방의 AI 비서</div>
+      <div class="bubble">
+        홍길동의 AI 비서로부터 예약 요청을 받았습니다 — 확인 및 승인.
+      </div>
+    </div>
+  </div>
+  <p>
+    두 AI 비서 간의 소통으로 예약·주문·결제가 모두 진행되고, 각각의 비서가
+    각자의 사용자(홍길동과 홍성방 주인)에게 결과를 보고합니다. 이 모든 과정은
+    자동으로 진행되어 각자의 재무제표(손익계산서 등)에 반영되고, 국세와
+    지방세를 납부하며, 통계청에 한국인의 식단 데이터를 추가하는 절차로까지
+    이어집니다.
+  </p>
+  <div class="note">
+    이 마지막 단계 — "누가 무엇을 언제 주고받았는지"를 위조 없이 영구히
+    남기는 일 — 을 맡는 것이 바로 다음에 설명할 <b>Openhash</b>입니다.
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </span>
+    Openhash
+  </h2>
+  <p>
+    홍길동과 홍성방 사이의 거래가 실제로 있었다는 걸 나중에도 누구나 확인할 수
+    있으려면, 그 기록이 위조·변조되지 않았음을 증명할 방법이 필요합니다. 기존
+    블록체인은 이걸 해내지만, 그 대가로 <b>전 세계 모든 참여 컴퓨터가 거래 하나하나를
+    전부 따라 검증</b>합니다. 다시 아파트 단지에 비유하면, 단지 안에서 일어난 사건
+    하나를 확인하려고 <b>지구 반대편 아파트 주민들까지 전부 불러 모아 함께
+    검증</b>시키는 것과 같습니다. 참여자가 많을수록 신뢰는 올라가지만, 전기도 그만큼
+    낭비됩니다.
+  </p>
+  <p>
+    Openhash는 다르게 접근합니다. 거래 기록의 해시값(지문)을 계산해, 그 값에 따라
+    <b>단지 경비실 → 관리사무소 → 구청 → 중앙정부 → 국제기구</b> 순의 계층(L1~L5)
+    중 <b>딱 하나</b>가 확률적으로 뽑혀 검증을 맡습니다. 대부분의 거래는 사건이
+    일어난 바로 그 동의 경비실(L1)에서, 아주 짧은 시간 안에 끝납니다.
+  </p>
+
+  <table class="avoid-break">
+    <thead><tr><th>계층</th><th>비유</th><th>선택 확률</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td>L1</td><td>단지 경비실(읍면동)</td><td>60%</td></tr>
+      <tr><td>L2</td><td>관리사무소(시군구)</td><td>20%</td></tr>
+      <tr><td>L3</td><td>구청(광역시도)</td><td>10%</td></tr>
+      <tr><td>L4</td><td>중앙정부(국가)</td><td>6%</td></tr>
+      <tr><td>L5</td><td>국제기구(글로벌)</td><td>4%</td></tr>
+    </tbody>
+  </table>
+  <p>
+    원본 대화·거래 내용은 여전히 각자의 기기(PDV)에만 보관되고, Openhash 계층에는
+    "위조되지 않았다"를 증명하는 지문(해시)만 새겨집니다. 이 구조 덕분에 기존
+    블록체인 대비 에너지 소비를 <b>최대 99.8%</b>까지 줄이면서도(FPGA 기반
+    하드웨어 가속 실측, GPU 대비 18.2W vs 160.3W), 한 번 새겨진 기록은 절대
+    조작할 수 없습니다.
+  </p>
+  <div class="note">
+    <b>정리하면.</b> MoTE는 "누구에게 물어야 가장 잘 답할 수 있는가"를 가장 적은
+    전력으로 찾고, Openhash는 "그 답과 그로 인한 거래가 진짜였다"는 것을 가장
+    적은 전력으로 영구히 증명합니다. 이 둘이 합쳐져 혼디는 쓸수록 똑똑해지면서도,
+    쓸수록 나라 전체의 전력·시간·비용을 아끼는 AI가 됩니다.
+  </div>
+
+  <div class="footer-line">
+    <span class="contact-line">개발자 대표 도영민 · hondi.net · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com</span>
+    <span>2 / 2</span>
+  </div>
+</div>
+
+</body>
+</html>
