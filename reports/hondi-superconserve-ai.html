@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>초절전 AI 혼디 — MoTE·Openhash로 전기를 아끼는 방법</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+    --good:#1f6f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  /* 아이콘 — 사이트 전역 관례를 따라 전부 단색(stroke=currentColor) SVG로 통일 */
+  .icon{ display:inline-block; vertical-align:-3px; margin-right:6px; color:var(--accent); }
+  .icon svg{ display:block; }
+
+  .doc-eyebrow{
+    font-size:11.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+    display:flex; align-items:center;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:26px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:13.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.65; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:12px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:15.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:center; gap:8px;
+  }
+  h2.sec .num{ font-size:12px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:13.5px; font-weight:600; color:var(--ink); margin:16px 0 6px; display:flex; align-items:center; }
+  p{ font-size:13px; line-height:1.8; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:12px; line-height:1.7; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:9px 12px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:12px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:11.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+  tbody tr.hl td{ background:#eef2f8; font-weight:700; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:12.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:10.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:92%; }
+  .msg .who{
+    font-size:11px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:12.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .aside{
+    font-size:11.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .badge-live{
+    display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 18px; }
+  .stat-card{ border:1.5px solid var(--line); border-radius:8px; padding:14px 12px; background:#fff; text-align:center; }
+  .stat-num{ font-family:'Noto Serif KR',serif; font-size:22px; font-weight:700; color:var(--accent); }
+  .stat-label{ font-size:11px; color:var(--ink-soft); margin-top:3px; line-height:1.5; }
+
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 4px; }
+  .chip{
+    display:inline-block; background:var(--tint); color:var(--accent);
+    font-size:12px; font-weight:600; padding:5px 12px; border-radius:99px;
+    border:1px solid var(--line-strong);
+  }
+  .contact-line{ font-size:11px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">
+    <span class="icon" style="color:var(--accent-soft)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </span>
+    Hondi(혼디) 초절전 AI 안내
+  </div>
+  <h1 class="doc-title">AI는 전기 먹는 하마,<br>혼디는 초절전 AI</h1>
+  <p class="doc-sub">
+    혼디가 어떤 기술로 같은 일을 훨씬 적은 전기·비용으로 해내는지, 그리고 이것이
+    국가 경제 전체로는 어떤 효과로 이어지는지 정리했습니다.
+  </p>
+  <div class="doc-meta">
+    <div>핵심 기술<br><b>MoTE · Openhash</b></div>
+    <div>AI 연산 절감<br><b>최대 97%</b></div>
+    <div>기록 보관 절감<br><b>99.8%</b></div>
+    <div>국가 경제 효과(추정)<br><b>연 147조원</b></div>
+  </div>
+
+  <div class="note">
+    행정안전부는 2026년 7월 3일(금)부터 'AI 정부 실험실'을 시범 운영하며,
+    공무원이 AI 코딩·AI 에이전트 등을 활용해 현장 업무의 비효율과 반복
+    작업을 직접 개선할 수 있는 범정부 개발 공간을 구축했습니다. 혼디는
+    여기서 한 걸음 더 나아갑니다.
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+    </span>
+    <span class="num">01</span> MoTE — 필요한 전문가만 부른다
+  </h2>
+  <p>
+    지금 우리가 쓰는 AI는 아주 큰 두뇌 하나로 모든 질문에 답합니다. 간단한 질문
+    하나에도 거대한 두뇌 전체가 움직이니, 그만큼 전기를 많이 씁니다. 혼디는
+    다릅니다 — 병원에 가면 감기는 내과, 뼈를 다치면 정형외과에 가듯, 혼디는
+    질문의 종류를 먼저 짧게 파악한 뒤 그 분야만 맡는 작고 똑똑한 전문가 AI를
+    불러 답합니다. 이 방식을 <b>MoTE(Mixture of Tiny Experts, 초소형 전문가
+    혼합 모델)</b>라 부릅니다. 의사·변호사·교수·회계사 등 실제 전문직
+    카테고리별로 세분화된 전문가 AI 수백 개가 이런 방식으로 움직입니다.
+  </p>
+  <div class="stat-grid avoid-break">
+    <div class="stat-card">
+      <div class="stat-num">최대 97%</div>
+      <div class="stat-label">거대한 만능 AI 하나가 모든 걸<br>처리할 때와 비교한 절감률</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">99.8%</div>
+      <div class="stat-label">Openhash의 기존 블록체인<br>방식 대비 절감률(자체 실측)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">147조원</div>
+      <div class="stat-label">절차자동화 중간 시나리오의<br>연간 국가 경제 효과(추정)</div>
+    </div>
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </span>
+    <span class="num">02</span> Openhash — 가볍게, 안전하게 기록한다
+  </h2>
+  <p>
+    서류나 계약이 위조되지 않았다는 걸 증명하는 기존 방식(블록체인)은 전 세계
+    컴퓨터가 밤낮없이 경쟁하듯 계산해야 해서 전기를 많이 씁니다. 혼디의
+    Openhash는 훨씬 적은 연산으로 똑같이 "위조되지 않았다"는 걸 증명합니다 —
+    FPGA 기반 하드웨어 가속으로 기존 GPU 방식(160.3W) 대비 18.2W 수준까지
+    전력을 낮춘 자체 실측 결과입니다.
+  </p>
+  <div class="note">
+    <b>쉽게 말하면 이렇습니다.</b> 냉장고 문을 열 때마다 온 집안 전등을 다
+    켤 필요는 없습니다. 필요한 곳에만 불을 밝히는 것, 그게 혼디가 AI를
+    쓰는 방식입니다. 같은 질문에 답하고, 같은 서류를 지켜내면서도 전기는
+    훨씬 적게 씁니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 초절전 AI 안내 · 2026-08-16</span>
+    <span>1 / 2</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+    </span>
+    <span class="num">03</span> 나라 살림 전체로 보면
+  </h2>
+  <p>
+    서류를 떼러 오가는 시간, 같은 서류를 여러 번 내는 수고, 창구에서 기다리는
+    시간 — 이런 것들을 국민 전체로 더하면 결코 작은 돈이 아닙니다. 한국 경제가
+    서류·인증·행정 절차에 쓰는 비용은 GDP의 약 11%, 오늘 기준으로 약 300조원
+    규모로 추산됩니다. 이 중 혼디로 자동화할 수 있는 부분만 계산해도 상당한
+    규모의 경제 효과가 예상됩니다.
+  </p>
+  <table class="avoid-break">
+    <thead><tr><th>절차자동화 실현률</th><th>연간 경제 효과</th><th>2025년 GDP 대비</th></tr></thead>
+    <tbody>
+      <tr><td>보수적</td><td>88조원</td><td>3.3%</td></tr>
+      <tr class="hl"><td>중간(채택 시나리오)</td><td>147조원</td><td>5.5%</td></tr>
+      <tr><td>공격적</td><td>176조원</td><td>6.6%</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    본 수치는 자체 벤치마크 및 추정치이며, 실제 프로덕션 환경에서의 실측값과
+    다를 수 있습니다.
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1"/></svg>
+    </span>
+    <span class="num">04</span> 공공기관 담당자이신가요?
+  </h2>
+  <p>
+    혼디는 중앙 정부 기관(입법·사법·행정)과 지방 공공기관의 각 부서 업무를
+    돕는 AI 비서를 무료로 제공합니다. 물론, 여러분이 속한 기관·부서에 할당된
+    AI 비서도 있습니다. 지금 혼디에서 불러보세요.
+  </p>
+  <div class="chip-row">
+    <span class="chip">"혼디야, 제주시청 기초생활지원과 불러줘"</span>
+    <span class="chip">"혼디야, 대법원 불러줘"</span>
+  </div>
+
+  <h2 class="sec">
+    <span class="icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/></svg>
+    </span>
+    <span class="num">05</span> 개인정보는 어떻게 지켜지나요?
+  </h2>
+  <p>
+    혼디는 여러분의 정보를 회사 서버에 모아두지 않습니다. 신분증·증명서 같은
+    원본은 각자의 스마트폰·컴퓨터 안에만 보관되고, 필요할 때만 암호로
+    확인합니다. 한곳에 데이터를 쌓아두지 않으니, 대량 유출될 "표적" 자체가
+    없습니다.
+  </p>
+
+  <h3 class="subsec">
+    <span class="icon">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    </span>
+    자주 묻는 질문
+  </h3>
+  <p><b>혼디는 누가 만드나요?</b><br>
+  제주도 및 한국 개발자 50명이 힘을 합쳐 진행하는 오픈소스 프로젝트입니다.
+  누구나 코드를 투명하게 볼 수 있고, 개발에 참여할 수 있습니다.</p>
+  <p><b>사용료가 비싼가요?</b><br>
+  일상 대화와 민원 처리 같은 기본 서비스는 저렴하게 유지하는 것을 원칙으로
+  설계되고 있습니다.</p>
+
+  <div class="note">
+    <span class="icon" style="color:var(--accent)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6"/></svg>
+    </span>
+    <b>www.hondi.net</b> · PC와 폰의 화면이 다릅니다. PC로도 접속해 보세요.
+  </div>
+
+  <div class="footer-line">
+    <span class="contact-line">개발자 대표 도영민 · hondi.net · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com</span>
+    <span>2 / 2</span>
+  </div>
+</div>
+
+</body>
+</html>
