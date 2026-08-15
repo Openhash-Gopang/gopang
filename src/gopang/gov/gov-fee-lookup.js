@@ -133,6 +133,22 @@ export function matchServiceName(userText, records) {
 // 색인이 더 쌓이거나 쿼리 패턴이 다양해지면 재보정 필요.
 const SEMANTIC_SCORE_THRESHOLD = 0.55;
 
+// ── 1위·2위 점수차 안전장치 (2026-08-15, 44건 광역 파일럿으로 발견) ──────
+// 파일럿 결과: Top-1 정확도 76.5%(26/34), 그런데 오탐(정답 아닌데 통과)은
+// 전부 "1위가 절대점수 임계값은 넘었지만 2위와 근소한 차이"인 경우였다
+// (예: "건설기계 등록증 재발급" 질의에서 오답 0.740 vs 정답 0.723 — 차이
+// 0.017에 불과한데 오답이 그대로 채택됨). 절대 임계값만으로는 이런 "확신에
+// 찬 오답"을 못 거른다.
+//
+// ★ 정직한 트레이드오프 ★ 이 도메인(정형화된 민원명, "OO변경신고"·"OO재발급"
+// 류 유사 명칭이 많음)은 정답일 때도 1·2위 점수차가 자연스럽게 작은 경우가
+// 흔하다(파일럿 데이터: 정답 26건 중 6건이 갭 0.03 미만). 즉 이 안전장치는
+// 오답 8건 중 6건은 잡아내지만, 정답 26건 중 6건에도 불필요하게 승인을
+// 요구하게 된다 — "느리더라도 확실한 것"과 "빠르지만 가끔 틀리는 것" 사이의
+// 실측 기반 절충이다. 순수 계산(이미 받아온 top-3 후보 비교)이라 API 왕복이
+// 추가되지 않아 응답 속도에는 영향이 없다.
+const AMBIGUOUS_SCORE_GAP = 0.03;
+
 export async function semanticMatchServiceName(workerBaseUrl, userText, { scope, regionCode } = {}) {
   if (!workerBaseUrl) return null;
   try {
@@ -150,7 +166,15 @@ export async function semanticMatchServiceName(workerBaseUrl, userText, { scope,
 
     const top = candidates[0];
     if (typeof top.score !== 'number' || top.score < SEMANTIC_SCORE_THRESHOLD) return null;
-    return top;
+
+    const second = candidates[1];
+    const gap = typeof second?.score === 'number' ? top.score - second.score : Infinity;
+    const isAmbiguous = gap < AMBIGUOUS_SCORE_GAP;
+
+    // 원본 레코드 필드는 그대로 유지하고, 내부용 플래그만 얹는다(호출부
+    // resolveGovFee에서만 사용 — 이 값이 사용자에게 노출되는 API 응답
+    // 필드에 섞이지 않도록 upsert 등 다른 경로에선 절대 참조하지 않는다).
+    return { ...top, _semanticAmbiguous: isAmbiguous };
   } catch (e) {
     // 네트워크 오류·타임아웃 등 — 조용히 폴백 신호(null)만 반환한다.
     return null;
@@ -182,54 +206,26 @@ async function _fetchCandidates(pb, { regionCodes, includeNational = true }) {
  * @param {object} [options] - { workerBaseUrl } 제공 시 시맨틱 검색을 1순위로
  *   시도한다(worker.js GET /gov-fee-semantic-search). 생략하면 기존과 동일하게
  *   키워드 매칭만 쓴다 — 기존 호출부는 코드 변경 없이 계속 동작한다.
- *   { cityCode } 제공 시 trace 파싱을 건너뛰고 이 값을 지역코드로 직접
- *   사용한다(2026-08-15 신설 — handleGovTaskSubmit처럼 gov-router.js의
- *   trace 배열을 갖고 있지 않고 지역코드만 이미 알고 있는 호출부를 위함).
- *   trace와 cityCode를 둘 다 안 주면 지역 무관(전국공통/BASELINE만) 매칭.
- *   { cachedRecordId } 제공 시(2026-08-15 신설 — (agency,task_key)→레코드id
- *   매핑 캐시 적중) 검색을 전부 건너뛰고 그 id로 바로 조회한다. 레코드가
- *   없거나 status가 'REAL'이 아니면(재분류·삭제 등으로 캐시가 낡음) 자동으로
- *   일반 검색 경로로 폴백한다 — 호출부가 캐시 무효화를 신경 쓸 필요 없음.
  * @returns {Promise<{
  *   status: 'OK'|'NEEDS_APPROVAL'|'NOT_FOUND',
  *   record: object|null,
  *   govReferenceFee: number|null,
  *   hondiServiceFee: number|null,
  *   isBaselineFallback: boolean,
- *   matchedBy: 'semantic'|'keyword'|'cache'|null,
+ *   matchedBy: 'semantic'|'keyword'|null,
  *   message: string,
  * }>}
  */
 export async function resolveGovFee(pb, userText, trace, calcInputs = {}, options = {}) {
-  const { workerBaseUrl, cityCode: explicitCityCode, cachedRecordId } = options;
-  const cityCode = explicitCityCode || extractCityCodeFromTrace(trace);
+  const { workerBaseUrl } = options;
+  const cityCode = extractCityCodeFromTrace(trace);
   const regionCandidates = _regionCodeCandidates(cityCode);
   const primaryRegionCode = regionCandidates[0] || null;
 
   let isBaselineFallback = false;
   let matchedBy = null;
+  let isAmbiguousMatch = false;
 
-  // 0) 캐시 적중 시도 — 검색을 전부 생략하고 id로 직접 조회한다. 실패하면
-  // (레코드 삭제됨/재분류로 REAL 아님 등) 조용히 1)번 일반 검색으로 넘어간다.
-  let cacheMatch = null;
-  if (cachedRecordId) {
-    try {
-      const record = await pb.collection('gov_fee_schedule').getOne(cachedRecordId);
-      if (record && record.status === 'REAL') cacheMatch = record;
-    } catch (e) {
-      // 조용히 폴백 — 캐시가 가리키는 레코드가 사라졌거나 조회 실패.
-      cacheMatch = null;
-    }
-  }
-
-  let match = cacheMatch;
-  if (match) {
-    matchedBy = 'cache';
-    // 캐시가 가리키는 레코드가 BASELINE 태그일 수도 있다 — 검색 경로였다면
-    // 아래 "2) 매칭 지역 없음" 블록이 이 플래그를 세워줬겠지만, 캐시 경로는
-    // 그 블록을 통째로 건너뛰므로 여기서 직접 판정해야 한다.
-    isBaselineFallback = match.region_code === 'baseline';
-  } else {
   // 1) 사용자 관할 지역 — 시맨틱 검색 우선, 실패 시 키워드 매칭.
   // Vectorize filter는 AND 방식이라 region_code와 scope=national을 한 번에
   // "OR"로 못 묶는다 — 두 번 호출해 점수가 더 높은 쪽을 쓴다.
@@ -237,16 +233,17 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     semanticMatchServiceName(workerBaseUrl, userText, { regionCode: primaryRegionCode }),
     semanticMatchServiceName(workerBaseUrl, userText, { scope: 'national' }),
   ]);
+  let match = null;
   if (regionalHit && nationalHit) match = regionalHit.score >= nationalHit.score ? regionalHit : nationalHit;
   else match = regionalHit || nationalHit;
 
   if (match) {
     matchedBy = 'semantic';
+    isAmbiguousMatch = !!match._semanticAmbiguous;
   } else {
     const candidates = await _fetchCandidates(pb, { regionCodes: regionCandidates, includeNational: true });
     match = matchServiceName(userText, candidates.filter((r) => r.status === 'REAL'));
     if (match) matchedBy = 'keyword';
-  }
   }
 
   // 2) 지역 매칭이 없으면 BASELINE(지역 중립 기준점)으로 폴백 — 반드시 승인 필요로 표시.
@@ -259,6 +256,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     match = await semanticMatchServiceName(workerBaseUrl, userText, { regionCode: 'baseline' });
     if (match) {
       matchedBy = 'semantic';
+      isAmbiguousMatch = !!match._semanticAmbiguous;
     } else {
       const baseline = await _fetchCandidates(pb, {
         regionCodes: ['baseline'],
@@ -270,6 +268,13 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     if (match) isBaselineFallback = true;
   }
 
+  // 내부용 플래그(_semanticAmbiguous)는 판단에만 쓰고, 반환하는 record에는
+  // 남기지 않는다 — API 응답 필드를 깨끗하게 유지하기 위함.
+  if (match && '_semanticAmbiguous' in match) {
+    const { _semanticAmbiguous, ...rest } = match;
+    match = rest;
+  }
+
   if (!match) {
     return {
       status: 'NOT_FOUND',
@@ -277,6 +282,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
       govReferenceFee: null,
       hondiServiceFee: null,
       isBaselineFallback: false,
+      isAmbiguousMatch: false,
       matchedBy: null,
       message: '해당 서비스의 요금 정보를 찾지 못했습니다. 담당자 확인이 필요합니다.',
     };
@@ -289,6 +295,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
       govReferenceFee: null,
       hondiServiceFee: null,
       isBaselineFallback,
+      isAmbiguousMatch,
       matchedBy,
       message: '이 서비스는 요금이 조례·별표 참조로만 되어 있어 자동 계산할 수 없습니다. 담당자 확인 후 진행해 주세요.',
     };
@@ -304,8 +311,25 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
       govReferenceFee,
       hondiServiceFee,
       isBaselineFallback: true,
+      isAmbiguousMatch,
       matchedBy,
       message: `이 지역의 정확한 금액은 확인되지 않아 ${match.source} 기준 추정치(${hondiServiceFee ?? '확인 필요'}원)를 사용합니다. 진행 전 사용자 승인이 필요합니다.`,
+    };
+  }
+
+  // 2026-08-15 신설 — 1위·2위 시맨틱 점수차가 근소해 확신할 수 없는 경우.
+  // 레코드 자체는 REAL이고 지역도 정확히 맞았지만, "정말 이 서비스가 맞는지"
+  // 자체가 불확실하므로 OK로 바로 확정하지 않고 승인을 한 번 더 받는다.
+  if (isAmbiguousMatch) {
+    return {
+      status: 'NEEDS_APPROVAL',
+      record: match,
+      govReferenceFee,
+      hondiServiceFee,
+      isBaselineFallback: false,
+      isAmbiguousMatch: true,
+      matchedBy,
+      message: `"${match.service_name}"으로 추정되지만 비슷한 이름의 다른 서비스와 점수 차이가 근소합니다(혼디 서비스 수수료 ${hondiServiceFee}원). 맞는지 확인 부탁드립니다.`,
     };
   }
 
@@ -315,6 +339,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     govReferenceFee,
     hondiServiceFee,
     isBaselineFallback: false,
+    isAmbiguousMatch: false,
     matchedBy,
     message: `${match.service_name} — 혼디 서비스 수수료 ${hondiServiceFee}원 (참고: 정부 납부 기준액 ${govReferenceFee}원, 실제 정부 납부는 사용자 직접 처리)`,
   };

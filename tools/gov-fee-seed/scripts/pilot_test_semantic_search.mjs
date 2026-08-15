@@ -106,11 +106,32 @@ function normalize(s) {
   return String(s || '').replace(/\s+/g, '').replace(/['"'']/g, '');
 }
 
+// 2026-08-15 갱신 — gov-fee-lookup.js에 추가된 "1·2위 점수차 안전장치"를
+// 그대로 시뮬레이션한다. 실제 자동 확정(OK)이 몇 건인지, 그중 진짜 맞았는지,
+// 안전장치가 애매한 걸 잘 잡아냈는지까지 봐야 이 기능의 진짜 신뢰도를 알 수 있다.
+const SEMANTIC_SCORE_THRESHOLD = 0.55; // gov-fee-lookup.js와 동일하게 유지할 것
+const AMBIGUOUS_SCORE_GAP = 0.03; // gov-fee-lookup.js와 동일하게 유지할 것
+
+function simulateDecision(candidates) {
+  const top = candidates[0];
+  if (!top || typeof top.score !== 'number' || top.score < SEMANTIC_SCORE_THRESHOLD) {
+    return 'BELOW_THRESHOLD'; // 키워드 매칭 등 다른 경로로 폴백(여기선 시뮬레이션 안 함)
+  }
+  const second = candidates[1];
+  const gap = typeof second?.score === 'number' ? top.score - second.score : Infinity;
+  if (gap < AMBIGUOUS_SCORE_GAP) return 'NEEDS_APPROVAL';
+  return 'OK';
+}
+
 async function runPositiveCases() {
   console.log('══════════════ 긍정 케이스 (정답 있음) ══════════════\n');
   let top1Correct = 0;
   let top3Correct = 0;
   const failures = [];
+
+  // 실제 시스템 동작 시뮬레이션 집계
+  const sim = { okCorrect: 0, okWrong: 0, needsApproval: 0, belowThreshold: 0 };
+  const okWrongDetails = [];
 
   for (const [i, c] of POSITIVE_CASES.entries()) {
     const opts = c.national ? {} : { regionCode: 'baseline' };
@@ -126,8 +147,17 @@ async function runPositiveCases() {
     if (top1Match) top1Correct++;
     if (top3Match) top3Correct++;
 
+    const decision = simulateDecision(candidates);
+    if (decision === 'OK' && top1Match) sim.okCorrect++;
+    else if (decision === 'OK' && !top1Match) {
+      sim.okWrong++;
+      okWrongDetails.push({ ...c, got: names[0], score: scores[0] });
+    } else if (decision === 'NEEDS_APPROVAL') sim.needsApproval++;
+    else sim.belowThreshold++;
+
     const mark = top1Match ? '✅' : top3Match ? '🟡' : '❌';
-    console.log(`${mark} [${i + 1}/${POSITIVE_CASES.length}] "${c.query}"`);
+    const decisionTag = { OK: '[자동확정]', NEEDS_APPROVAL: '[승인요구]', BELOW_THRESHOLD: '[임계값미달]' }[decision];
+    console.log(`${mark} ${decisionTag} [${i + 1}/${POSITIVE_CASES.length}] "${c.query}"`);
     console.log(`     기대: ${c.expected}`);
     console.log(`     결과: ${names.map((n, j) => `${n}(${scores[j]})`).join(' / ') || '(없음)'}`);
     console.log();
@@ -140,7 +170,7 @@ async function runPositiveCases() {
     await new Promise((r) => setTimeout(r, 150));
   }
 
-  return { top1Correct, top3Correct, total: POSITIVE_CASES.length, failures };
+  return { top1Correct, top3Correct, total: POSITIVE_CASES.length, failures, sim, okWrongDetails };
 }
 
 async function runNegativeCases() {
@@ -153,14 +183,14 @@ async function runNegativeCases() {
     const candidates = result.candidates || [];
     const top = candidates[0];
 
-    // resolveGovFee의 실제 임계값(0.55)을 기준으로 "통과됐을 후보"만 오탐으로 카운트
-    const wouldPass = top && typeof top.score === 'number' && top.score >= 0.55;
+    // resolveGovFee의 실제 임계값을 기준으로 "통과됐을 후보"만 오탐으로 카운트
+    const wouldPass = top && typeof top.score === 'number' && top.score >= SEMANTIC_SCORE_THRESHOLD;
     if (wouldPass) falsePositives++;
 
     const mark = wouldPass ? '❌ FP' : '✅';
     console.log(`${mark} [${i + 1}/${NEGATIVE_CASES.length}] "${text}"`);
     if (top) {
-      console.log(`     최상위 후보: ${top.service_name} (${top.score?.toFixed(3)})${wouldPass ? '  ← 임계값(0.55) 통과! 오탐' : '  (임계값 미달, 정상 차단)'}`);
+      console.log(`     최상위 후보: ${top.service_name} (${top.score?.toFixed(3)})${wouldPass ? `  ← 임계값(${SEMANTIC_SCORE_THRESHOLD}) 통과! 오탐` : '  (임계값 미달, 정상 차단)'}`);
     } else {
       console.log('     후보 없음 (정상)');
     }
@@ -181,9 +211,24 @@ async function main() {
   const neg = await runNegativeCases();
 
   console.log('\n══════════════ 최종 요약 ══════════════');
-  console.log(`Top-1 정확도: ${pos.top1Correct}/${pos.total} (${((pos.top1Correct / pos.total) * 100).toFixed(1)}%)`);
+  console.log(`Top-1 정확도(순수 매칭력): ${pos.top1Correct}/${pos.total} (${((pos.top1Correct / pos.total) * 100).toFixed(1)}%)`);
   console.log(`Top-3 정확도: ${pos.top3Correct}/${pos.total} (${((pos.top3Correct / pos.total) * 100).toFixed(1)}%)`);
-  console.log(`False Positive율(임계값 0.55 기준): ${neg.falsePositives}/${neg.total} (${((neg.falsePositives / neg.total) * 100).toFixed(1)}%)`);
+  console.log(`False Positive율(임계값 ${SEMANTIC_SCORE_THRESHOLD} 기준): ${neg.falsePositives}/${neg.total} (${((neg.falsePositives / neg.total) * 100).toFixed(1)}%)`);
+
+  console.log('\n--- 실제 시스템 동작 시뮬레이션(점수차 안전장치 반영) ---');
+  const s = pos.sim;
+  console.log(`  자동확정(OK) & 정답:        ${s.okCorrect}건  ← 이상적인 경우`);
+  console.log(`  자동확정(OK) & 오답:        ${s.okWrong}건  ← ⚠️ 위험: 사용자가 모르는 채로 잘못된 요금이 나갈 수 있는 케이스`);
+  console.log(`  승인요구(NEEDS_APPROVAL):   ${s.needsApproval}건  ← 안전(맞든 틀리든 사람이 확인)`);
+  console.log(`  임계값 미달(폴백):          ${s.belowThreshold}건  ← 키워드 매칭 등 다른 경로로 위임`);
+  if (pos.okWrongDetails.length > 0) {
+    console.log('\n  ⚠️ 자동확정됐는데 틀린 케이스 상세(가장 중요하게 봐야 할 목록):');
+    for (const d of pos.okWrongDetails) {
+      console.log(`    "${d.query}" → 기대: ${d.expected} / 실제 자동확정된 답: ${d.got} (${d.score})`);
+    }
+  } else {
+    console.log('\n  ✅ 자동확정됐는데 틀린 케이스 없음 — 점수차 안전장치가 위험 케이스를 전부 승인요구로 돌렸습니다.');
+  }
 
   if (pos.failures.length > 0) {
     console.log('\n--- Top-1 실패 케이스 상세 ---');
