@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "src/gopang/gov/ 폴더 전용 — 이 폴더의 .js 파일들(gov-router.js, gov-fee-lookup.js, division-tables.js)은 전부 ESM 문법(export/import)을 쓴다. 저장소 루트에는 package.json이 없어서 Node가 .js 파일의 모듈 타입을 버전별 휴리스틱으로 추측하는데, 이게 Node 버전마다 다르게 동작한다(예: Node 22.x는 정상 동작, Node 24.x는 'is a CommonJS module' 오류 — 2026-08-15 실사 파일럿 중 발견). 이 파일로 명시하면 버전 무관하게 항상 올바르게 동작한다. 저장소 루트에는 일부러 안 둔다 — auth/, data/classification/ 등 다른 폴더에 CommonJS(require/module.exports) 파일이 있어서, 루트에 두면 그 파일들이 깨진다."
+}
