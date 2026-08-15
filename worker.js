@@ -7684,6 +7684,13 @@ async function handleGovFeeSemanticSearch(request, env, corsHeaders) {
       if (!res.ok) continue;
       const record = await res.json().catch(() => null);
       if (!record) continue;
+      // 2026-08-15 신설 — 색인 시점 이후 레코드 상태가 바뀌었을 수 있다(예:
+      // service_name_norm 정규화 충돌로 같은 PocketBase 레코드가 재분류되며
+      // REAL→NEEDS_REVIEW로 바뀐 경우, 실사 파일럿에서 실제로 확인됨).
+      // Vectorize 쪽 벡터는 재색인 전까지 낡은 채로 남아있을 수 있으므로,
+      // 여기서 "지금 이 순간의" 상태를 다시 확인해 REAL이 아니면 버린다 —
+      // 잘못된 요금이 새어나가는 것보다 후보가 하나 줄어드는 게 훨씬 안전하다.
+      if (record.status !== 'REAL') continue;
       candidates.push({ ...record, score: m.score });
     } catch (e) {
       continue;
