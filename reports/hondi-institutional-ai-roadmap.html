@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>기관 AI 비서 — 입법·사법·행정부 전 기관 SP 작성 로드맵 | 혼디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430; --ink-soft:#4a5568; --paper:#fbfaf7;
+    --line:#d8d3c8; --line-strong:#a89f8c; --accent:#1f3a5f;
+    --accent-soft:#c9a45c; --tint:#f1efe6; --danger:#8a3b2b; --ok:#1f6f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:#e7e4dc; font-family:'Noto Sans KR',sans-serif; color:var(--ink); }
+  .wrap{ max-width:900px; margin:0 auto; background:var(--paper); padding:40px 48px 60px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14); }
+  .doc-eyebrow{ font-size:11px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:8px; }
+  h1.doc-title{ font-family:'Noto Serif KR',serif; font-size:28px; line-height:1.4;
+    font-weight:700; color:var(--ink); margin:0 0 10px; }
+  .doc-sub{ font-size:14px; color:var(--ink-soft); margin:0 0 16px; line-height:1.7; }
+  .doc-meta{ display:flex; gap:28px; font-size:11.5px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:10px 0; margin-bottom:28px; flex-wrap:wrap; }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:19px; font-weight:700; color:var(--accent);
+    margin:36px 0 12px; padding-bottom:7px; border-bottom:2px solid var(--accent);
+    display:flex; align-items:baseline; gap:10px; }
+  h2.sec .num{ font-size:14px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:15px; font-weight:700; color:var(--ink); margin:22px 0 8px; }
+  p{ font-size:13.5px; line-height:1.85; margin:0 0 12px; color:var(--ink); }
+  .note{ font-size:12.5px; line-height:1.75; color:var(--ink-soft); background:var(--tint);
+    border-left:3px solid var(--accent-soft); padding:12px 15px; margin:12px 0; }
+  .note.warn{ border-left-color:var(--danger); }
+  .note.ok{ border-left-color:var(--ok); }
+  .note b{ color:var(--ink); }
+  table{ width:100%; border-collapse:collapse; margin:12px 0 18px; font-size:12.5px; }
+  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:8px 10px;
+    text-align:left; font-size:12px; letter-spacing:.02em; }
+  tbody td{ padding:8px 10px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+  ul.list{ margin:0 0 14px; padding-left:20px; }
+  ul.list li{ font-size:13px; line-height:1.85; margin-bottom:6px; color:var(--ink); }
+  ol.mech{ margin:8px 0 16px; padding-left:22px; }
+  ol.mech li{ font-size:13px; line-height:1.85; margin-bottom:10px; color:var(--ink); }
+  ol.mech b{ color:var(--ink); }
+  code{ background:var(--tint); border:1px solid var(--line); border-radius:3px;
+    padding:1px 5px; font-size:12px; }
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    padding:2px 8px; border-radius:99px; margin-left:6px; vertical-align:1px; }
+  .badge-gap{ color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6; }
+  .badge-done{ color:var(--ok); background:#e5f4ec; border:1px solid #b9e3c9; }
+  .quote{ font-family:'Noto Serif KR',serif; font-style:italic; font-size:13px; line-height:1.8;
+    color:var(--ink); background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:14px 18px; margin:12px 0 16px; }
+  .toc{ background:#fff; border:1px solid var(--line); padding:16px 20px; margin:20px 0 32px; }
+  .toc-title{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+    font-weight:700; margin-bottom:8px; }
+  .toc a{ display:block; font-size:13px; color:var(--accent); text-decoration:none; padding:3px 0; }
+  .toc a:hover{ text-decoration:underline; }
+  .footer-line{ margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--ink-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-eyebrow">Hondi(혼디) 내부 작업계획 · 2026-08-15 세션 결론</div>
+  <h1 class="doc-title">기관 AI 비서 — 입법·사법·행정부<br>전 기관·부서 SP 작성 로드맵</h1>
+  <p class="doc-sub">
+    이 문서는 dpaper.kr API 신청 사고실험에서 출발해 도출한 결론을 기록한다.
+    새 대화창·다른 세션에서 이 작업을 이어갈 때는, 아래 내용을 반복 설명할 필요 없이
+    이 문서를 참조점으로 삼는다.
+  </p>
+  <div class="doc-meta">
+    <span><b>작성일</b> 2026-08-15</span>
+    <span><b>대상 저장소</b> Openhash-Gopang/gopang</span>
+    <span><b>작성자</b> AI City Inc. · 주피터 지시, Claude 작성</span>
+    <span><b>관련 문서</b> GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md</span>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">목차</div>
+    <a href="#sec1">1. 왜 기관·부서 AI 비서가 필요한가</a>
+    <a href="#sec2">2. 현재 격차 — 제주 도청 계열 vs 국가(입법·사법·행정) 계열</a>
+    <a href="#sec3">3. dpaper 사고실험 — 하나의 발화로 드러난 5개의 빠진 이빨</a>
+    <a href="#sec4">4. 작업 순서의 원칙 — 인간 감독 조직보다 AI 네트워크가 먼저</a>
+    <a href="#sec5">5. 방대한 작업 계획 (초안)</a>
+    <a href="#sec6">6. 조사 대상 범위 — 입법부 / 사법부 / 행정부</a>
+    <a href="#sec7">7. 참고 문서</a>
+  </div>
+
+  <h2 class="sec" id="sec1"><span class="num">1</span>왜 기관·부서 AI 비서가 필요한가</h2>
+  <p>
+    혼디의 근본 목표는, 현재 사람과 사람이 대화해 문서를 발급받고 입법·사법·행정 등
+    사회 각 분야의 민원을 처리하는 관행을, <b>사람(혼디 사용자)의 AI 비서와
+    기관/부서/직책의 AI 비서 간 소통</b>으로 대체하는 것이다.
+  </p>
+  <p>
+    사람 쪽 AI 비서(사용자 그림자 AI)는 상당 수준으로 완성되어 있으나,
+    <b>공공 기관 쪽 AI 비서는 아직 그 수준에 미치지 못한다</b> — 이 격차를
+    메우는 것이 이번 로드맵의 목적이다.
+  </p>
+
+  <h2 class="sec" id="sec2"><span class="num">2</span>현재 격차 — 제주 도청 계열 vs 국가 계열</h2>
+  <p>
+    제주 도청 계열(도청 → 실·국/직속기관/출자출연기관 → 과·팀)은 이미 이 방법론을
+    성공적으로 적용한 <b>선례이자 증거</b>다. 반면 국가 계열(입법부·사법부·행정부)은
+    아직 부처 단위에 머물러 있다.
+  </p>
+  <table>
+    <thead><tr><th>항목</th><th>제주 도청 계열</th><th>국가(입법·사법·행정부) 계열</th></tr></thead>
+    <tbody>
+      <tr><td>최상위~부서 단위 SP</td><td>도청 1 + 실국 22 + 직속기관 10 + 출자출연 26 = 58건, 전부 완료</td>
+        <td>68개 정책기관(19부+청·위원회 등) 전부 파일 작성 완료</td></tr>
+      <tr><td>과·팀(division) 단위 SP</td><td><b>138건 실존</b>(do-dept 23 + do-agency 28 + org 87)</td>
+        <td><b>계층 자체가 없음</b> — 09-national 트리에 division 폴더 미존재</td></tr>
+      <tr><td>라우팅 연결(sp-catalog.json)</td><td>정상 등록·로드됨</td>
+        <td><b>SP-NAT-POLICY/ENT/OTHER/UNLISTED 342개 전부 미등록</b>(2026-07-12 확인) — kgov 혼자 대행</td></tr>
+      <tr><td>실제 업무처리 레지스트리</td><td>부서별 마스터데이터로 라우팅·안내 가능</td>
+        <td><code>REQUIRED_DOCUMENTS_REGISTRY</code> 실등록 <b>단 2건</b>(kcc 위치기반서비스, court 개인파산)</td></tr>
+      <tr><td>법적 근거(§LEGAL-BASIS) 검증</td><td>대부분 완료</td>
+        <td>31개 확정 / 24개 조항번호 재검증 대기 / 7개 verbatim 미확인 / 4개 미착수</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="sec3"><span class="num">3</span>dpaper 사고실험 — 하나의 발화로 드러난 5개의 빠진 이빨</h2>
+  <p>
+    사용자 발화 <span class="quote" style="display:inline;padding:2px 8px;">"dpaper api 신청 공문 제출하고 진행 상황 알려줘"</span>
+    하나를 실제 코드·SP까지 끝까지 추적한 결과, 다음 5개 공백이 드러났다.
+    이는 국지적 버그가 아니라 <b>국가 트리 전체의 구조적 미완성</b>을 보여주는 대표 사례다.
+  </p>
+  <table>
+    <thead><tr><th>#</th><th>빠진 이빨</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>①</td><td>"행정정보공유과 AI 비서"를 호출할 SP 자체가 없음</td>
+        <td>09-national 트리에 division(과 단위) 계층 미존재</td></tr>
+      <tr><td>②</td><td>342개 국가 정책기관 SP가 사실상 죽은 코드</td>
+        <td>sp-catalog.json 미등록, worker.js 어디서도 로드 안 됨(SP-10 v3.7 changelog 자체 확인)</td></tr>
+      <tr><td>③</td><td>레지스트리 실등록 절차 단 2건뿐</td>
+        <td>PUBLIC-MYDATA-REGISTRATION-REQUIREMENTS(행정정보공유과, 거의 동일 절차)가 조사는 됐지만 등록으로 이어지지 않음</td></tr>
+      <tr><td>④</td><td>"제출"이 실제 정부 시스템에 도달하지 않음</td>
+        <td>문서24·우편발송 연동 코드 전무 — G18의 유일 활성 분기(DEPARTMENT_CONTACT)가 결국 사람 발송을 전제</td></tr>
+      <tr><td>⑤</td><td>"진행 상황 수시 통지"를 받을 채널이 없음</td>
+        <td>G9/G11(무응답·단계관리 게이트)은 상대의 GOV_TASK_RESPONSE를 전제 — 애초에 응답할 카운터파트가 없음</td></tr>
+    </tbody>
+  </table>
+  <p>
+    사용자님이 제시한 4단계 설계(① 미등록 시 웹검색으로 소관 파악 → ② 소관 기관 AC 호출·서류 특정
+    → ③ PDV 인출/정부24 안내(관제탑 원칙) → ④ 서류 검토→제출→진행상황 통지) 중,
+    <b>①·③은 이미 상당 부분 구축되어 있고</b>(<span class="badge badge-done">기존 구현</span>),
+    <b>②·④가 핵심 공백</b>이다(<span class="badge badge-gap">미해결</span>).
+  </p>
+
+  <h2 class="sec" id="sec4"><span class="num">4</span>작업 순서의 원칙 — 인간 감독 조직보다 AI 네트워크가 먼저</h2>
+  <p>
+    최종 목표는 기관 AI 비서들의 활동을 통괄하는 <b>인간 조직</b>을 구성하는 것이다.
+    다만 그 조직을 먼저 설계하고 거기에 맞춰 AI를 만드는 순서가 아니라, <b>역순</b>으로 진행한다:
+  </p>
+  <ol class="mech">
+    <li><b>1단계 — AI 네트워크 완성.</b> 입법부·사법부·행정부 각 기관 및 각 부서의 역할·기능·업무를
+      상세히 조사하여, 해당 기관의 AI 비서(SP)를 작성한다. 사용자 AI 비서와 기관 AI 비서 간
+      소통 채널이 실제로 작동하는 상태를 먼저 만든다.</li>
+    <li><b>2단계 — 인간 감독 조직 설계.</b> 실제 업무 처리 능력이 검증된 AI 비서 네트워크가
+      갖춰진 다음에야, 그 활동을 통괄·감독할 인간 조직의 형태를 설계한다.</li>
+  </ol>
+  <p class="note">
+    이 순서를 택한 이유: 조직을 먼저 짜면 그 조직이 실제로 무엇을 감독하게 될지 추상적으로만
+    가정하게 된다. 반대로 실제로 작동하는(또는 작동하지 않는) AI 비서 네트워크를 먼저 실사·구축해보면,
+    무엇을 감독해야 하는지가 구체적으로 드러난다 — dpaper 사고실험이 그 방법론적 증거다:
+    한 개의 구체적 발화만 끝까지 파봐도 이 정도 깊이의 공백이 실증됐다.
+  </p>
+
+  <h2 class="sec" id="sec5"><span class="num">5</span>방대한 작업 계획 (초안)</h2>
+  <p>dpaper 사고실험에서 드러난 공백을 메우는 순서로, 우선순위는 다음과 같이 잡는다.</p>
+  <h3 class="subsec">5-1. 인프라 보강 (기관 조사보다 선행)</h3>
+  <ul class="list">
+    <li>09-national 트리에 division(과·팀) 계층 스키마 신설 — 제주 do-dept/agency/org division
+      패턴(마스터데이터 JSON + 도메인 템플릿)을 국가 계열에 이식</li>
+    <li>342개 SP-NAT-* 파일을 실제 라우팅(sp-catalog.json/worker.js)에 연결하거나,
+      최소한 kgov가 이들을 참조할 수 있는 경로 확보</li>
+    <li><code>REQUIRED_DOCUMENTS_REGISTRY</code> 등록을 자동화 — 웹검색 조사 결과(초안)가
+      주피터 승인을 거쳐 등록까지 자동으로 이어지는 파이프라인 완성(현재는 조사와 등록 사이에서 끊김)</li>
+    <li>실제 정부 시스템(문서24 등)과의 연동 방식 결정 — 최소한 "사람이 발송해야 하는 지점"을
+      명확히 UI화해서 사용자에게 정직하게 안내</li>
+  </ul>
+  <h3 class="subsec">5-2. 실사·SP화 (전수 조사)</h3>
+  <ul class="list">
+    <li>입법부: 국회 및 소속기관(국회사무처·국회예산정책처·국회입법조사처·국회미래연구원)의
+      실제 업무·부서 단위 실사</li>
+    <li>사법부: 대법원·각급 법원(이미 16개 도 인스턴스 존재)의 부서(재판부·행정처 산하) 단위 실사,
+      검찰 동일 확장</li>
+    <li>행정부: 19부 + 청·위원회 등 68개 정책기관의 <b>과·국 단위</b> 실제 업무 조사 —
+      제주 도청 실·국을 조사했던 것과 동일한 깊이</li>
+  </ul>
+  <p class="note warn">
+    이 작업은 방대하다 — 제주 도청 267개 기관·부서를 실사하는 데도 여러 세션이 걸렸다.
+    국가 단위는 최소 그보다 한 자릿수 이상 큰 규모(정책기관 68개 × 평균 과 단위 수)가 될 것으로
+    예상되므로, 세션 간 인수인계 문서(이 문서 포함)를 지속적으로 갱신해야 한다.
+  </p>
+
+  <h2 class="sec" id="sec6"><span class="num">6</span>조사 대상 범위 — 입법부 / 사법부 / 행정부</h2>
+  <table>
+    <thead><tr><th>부(府)</th><th>현재 SP 상태</th><th>남은 작업</th></tr></thead>
+    <tbody>
+      <tr><td>입법부</td><td>국회 + 소속기관 4개(NAS·NABO·NARS·NAFI) 부처 단위 SP 존재</td>
+        <td>국회사무처 등 내부 국·과 단위 division SP 전무</td></tr>
+      <tr><td>사법부</td><td>대법원(정책기관) + 지방법원 16개 도 인스턴스(agencies) 존재</td>
+        <td>각 지방법원 내부 재판부·행정처 단위, 검찰 지역청 상세 부서 미착수</td></tr>
+      <tr><td>행정부</td><td>19부 전부 + 청·위원회 등 68개 정책기관 부처 단위 SP 존재</td>
+        <td>과·국 단위 division 계층 전무(제주 do-dept와 동급 작업 필요), 법적근거 재검증 24건 잔여</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="sec7"><span class="num">7</span>참고 문서</h2>
+  <ul class="list">
+    <li><code>docs/GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md</code> — gov-tree 추상화 계층
+      전수 검증 현황(2026-08-04)</li>
+    <li><code>prompts/gov-tree/09-national/PUBLIC-MYDATA-REGISTRATION-REQUIREMENTS_2026-07-09.md</code>
+      — 행정정보공유과 이용기관 등록 절차 실사(등록 미완료 상태로 남아있는 선례)</li>
+    <li><code>prompts/gov-tree/08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md</code> — G18(담당부서·직원
+      확인 게이트)·G19(외부 서류 획득 게이트) 등 기관 AI의 권한 경계 정의</li>
+    <li><code>prompts/gov-tree/docs/POLICY-BODIES-LEGAL-BASIS-STATUS_2026-08-02.md</code> — 68개
+      국가 정책기관 법적근거 검증 현황</li>
+    <li><code>prompts/SP-10_kpublic_v3.25.txt</code> §REQUIRED-DOCUMENTS — 레지스트리 미등록 기관에 대한
+      웹검색 조사 절차(U8 원칙)</li>
+  </ul>
+
+  <div class="footer-line">
+    <span>Hondi(혼디) · Openhash-Gopang/gopang</span>
+    <span>2026-08-15 세션 결론 정리 — 다음 세션은 이 문서를 참조점으로 삼을 것</span>
+  </div>
+
+</div>
+</body>
+</html>
