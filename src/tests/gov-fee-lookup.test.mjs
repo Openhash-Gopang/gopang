@@ -88,6 +88,23 @@ const MOCK_RECORDS = [
     status: 'NEEDS_REVIEW',
     source: '천안시 민원사무편람',
   },
+  {
+    // 2026-08-15 신설 — 지역 중립 BASELINE. 천안시 데이터를 그대로 복제한
+    // 것이지만 region_code는 'baseline'이라는 별도 태그를 쓴다(실제 시코드가
+    // 아님). 제주시처럼 아직 자기 데이터가 없는 지역의 폴백 대상이 정확히
+    // 이 태그를 쓰는지 검증하기 위한 레코드.
+    service_name: '건축신고',
+    service_name_norm: '건축신고',
+    scope: 'regional',
+    region_code: 'baseline',
+    fee_type: 'flat',
+    gov_reference_fee_min: 50000,
+    gov_reference_fee_max: 1600000,
+    formula_json: null,
+    gdc_multiplier: 2,
+    status: 'REAL',
+    source: '천안시 민원사무편람 (BASELINE)',
+  },
 ];
 
 function makeMockPb(allRecords) {
@@ -141,7 +158,7 @@ await check('resolveGovFee — 전국공통 인지세 (지역 무관, 구간 계
 });
 
 await check('resolveGovFee — 매칭 지역 없음 → BASELINE 폴백 + 승인 필요', async () => {
-  // 제주시(SP-CITY-JEJUSI)에는 해당 레코드가 없으므로 chungnam_cheonan으로 폴백
+  // 제주시(SP-CITY-JEJUSI)에는 해당 레코드가 없으므로 region_code='baseline'으로 폴백
   const r = await resolveGovFee(pb, '건축신고', ['SP-CITY-JEJUSI'], {});
   assert.strictEqual(r.status, 'NEEDS_APPROVAL');
   assert.strictEqual(r.isBaselineFallback, true);

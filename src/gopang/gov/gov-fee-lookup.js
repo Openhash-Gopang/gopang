@@ -10,12 +10,24 @@
  * ★ gov-router.js의 라우팅 로직 자체는 건드리지 않는다 — resolveAgencyDisplayName
  * 등 기존 함수들의 주석에 이미 명시된 이 파일의 설계 원칙을 그대로 따른다.
  *
- * ★ 알려진 이슈(2026-08-15) — tools/gov-fee-seed/scripts/seed_gov_fee_schedule.mjs가
- * 초기 시드 시 region_code를 'cheonan'으로 넣었는데, gov-router.js의 실제
- * 시코드 체계는 도코드 접두어가 붙은 'chungnam_cheonan'이다(CHUNGNAM_GU 테이블,
- * _makeMetroCityTable 참조). 이 파일은 두 형태를 모두 조회해보는 정규화로
- * 우회하지만, 근본 수정은 seed 스크립트의 --region 기본값을 'chungnam_cheonan'
- * 으로 바꾸고 재시드하는 것이다(별도 후속 작업).
+ * ★ 지역 데이터 아키텍처(2026-08-15 재정리) — region_code 체계는 세 종류다:
+ *   1) 실제 시코드(예: 'chungnam_cheonan') — 그 지역 고유 편람에서 나온 REAL 데이터.
+ *      gov-router.js의 SP-CITY-{시코드} trace와 그대로 대응(CHUNGNAM_GU 테이블,
+ *      _makeMetroCityTable 참조).
+ *   2) 'baseline' — 지역 중립 기준점. 현재는 천안시 데이터를 그대로 복제해 채워뒀지만
+ *      (전국에서 가장 먼저 확보한 편람이라는 이유일 뿐, "천안시가 기준"이라는 의미는
+ *      아니다), region_code로는 'baseline'이라는 별도 태그를 쓴다 — 특정 지역명이
+ *      아니라 "아직 그 지역 고유 데이터가 없을 때 쓰는 잠정치"라는 걸 코드에서도
+ *      명확히 구분하기 위함.
+ *   3) null(scope='national') — 인지세·법원 인지대처럼 지역 자체가 무의미한 전국공통.
+ * 새 지역을 온보딩하려면: 관리자가 그 지역 민원사무편람을 구해
+ * `node seed_gov_fee_schedule.mjs --file <그지역.xlsx> --region <실제시코드>`로 시드한다
+ * (tools/gov-fee-seed/README.md 참조) — 그러면 그 지역은 자기 데이터가 있는 항목은
+ * REAL을, 없는 항목은 자동으로 'baseline' 폴백(승인 필요)을 쓰게 된다.
+ *
+ * (과거 이슈 — 이미 해결됨: 초기 시드가 region_code='cheonan'을 썼다가 gov-router.js의
+ * 실제 시코드 'chungnam_cheonan'과 어긋났던 문제. seed 스크립트 기본값을 고치고
+ * 재시드해 해결했다.)
  *
  * 의존성: pocketbase(JS SDK), 같은 폴더의 gov_fee_calc.mjs 로직을 그대로
  * 재사용하기 위해 tools/gov-fee-seed/scripts/gov_fee_calc.mjs를 임포트한다.
@@ -208,14 +220,19 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     if (match) matchedBy = 'keyword';
   }
 
-  // 2) 지역 매칭이 없으면 BASELINE(천안시)으로 폴백 — 반드시 승인 필요로 표시
+  // 2) 지역 매칭이 없으면 BASELINE(지역 중립 기준점)으로 폴백 — 반드시 승인 필요로 표시.
+  // BASELINE은 천안시 민원사무편람에서 인출한 값이지만, region_code='baseline'으로
+  // 별도 태그돼 있어 "천안시"라는 특정 지역이 아니라 "전국 잠정 기준값"으로 취급된다.
+  // 각 지역은 관리자가 그 지역 고유 편람을 구해 --region <해당코드>로 시드하면 이
+  // BASELINE보다 우선하는 REAL 데이터를 갖게 된다(README 참조) — 이 폴백은 아직
+  // 그 지역 고유 데이터가 없을 때만 작동하는 안전망이다.
   if (!match) {
-    match = await semanticMatchServiceName(workerBaseUrl, userText, { regionCode: 'chungnam_cheonan' });
+    match = await semanticMatchServiceName(workerBaseUrl, userText, { regionCode: 'baseline' });
     if (match) {
       matchedBy = 'semantic';
     } else {
       const baseline = await _fetchCandidates(pb, {
-        regionCodes: ['chungnam_cheonan', 'cheonan'],
+        regionCodes: ['baseline'],
         includeNational: false,
       });
       match = matchServiceName(userText, baseline.filter((r) => r.status === 'REAL'));
