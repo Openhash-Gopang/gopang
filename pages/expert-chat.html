@@ -1119,7 +1119,8 @@ async function _connectHumanExpert(occupationKeyword, escReason = 'success') {
 // ══════════════════════════════════════════════════════════════
 // 2026-08-15 신설 — 전문가 페르소나(리프) 개별 구독 게이트. 첫 접근은
 // worker.js(/expert-persona/access)가 청구 없이 자동으로 무료체험
-// 레코드를 만들어 통과시킨다(첫 1개월 무료, 주피터 지시). 이후
+// 레코드를 만들어 통과시킨다(첫 1일 무료, 2026-08-15 주피터 지시로
+// 1개월 → 1일로 단축). 이후
 // 정지(suspended)된 경우에만 여기서 결제 화면을 보여준다.
 //
 // 게이트 조회 자체가 실패하면(네트워크 오류 등) 막지 않고 그냥 통과시킨다
@@ -1146,7 +1147,7 @@ async function _ensureExpertPersonaAccess() {
   if (data?.access) {
     if (data.trial) {
       const untilStr = data.trial_until ? new Date(data.trial_until).toLocaleDateString('ko-KR') : '';
-      appendBubble('ai', `📌 ${escHtml(def.label)} AI는 첫 1개월 무료입니다${untilStr ? `(${untilStr}까지)` : ''}. 이후 월 ${EXPERT_PERSONA_MONTHLY_FEE_KRW_DISPLAY}원이 GDC 잔액에서 자동 청구됩니다.`);
+      appendBubble('ai', `📌 ${escHtml(def.label)} AI는 첫 1일 무료입니다${untilStr ? `(${untilStr}까지)` : ''}. 이후 월 ${EXPERT_PERSONA_MONTHLY_FEE_KRW_DISPLAY}원이 GDC 잔액에서 자동 청구됩니다.`);
     }
     startGreeting();
     return;

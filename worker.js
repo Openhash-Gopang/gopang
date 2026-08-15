@@ -3824,6 +3824,15 @@ async function handleSubscriptionStatus(request, url, env, corsHeaders) {
 
 const EXPERT_PERSONA_MONTHLY_FEE_KRW = 9900;
 const EXPERT_PERSONA_GRACE_DAYS = 1; // 시민 티어(2026-08-14)와 동일 정책 재사용
+// 2026-08-15 수정(주피터 지시) — 무료체험 기간을 1개월 → 1일로 단축.
+// next_billing_at(=최초 실청구 시도일)은 여전히 이 값으로 계산하고, 실청구
+// 이후의 정기 갱신 주기(매 결제 성공 시 _addOneMonth)는 그대로 1개월 유지 —
+// 짧아진 건 "처음 한 번 공짜로 써보는 기간"뿐, 구독 자체의 청구 주기가
+// 아니다.
+const EXPERT_PERSONA_TRIAL_DAYS = 1;
+function _addExpertPersonaTrialPeriod(date) {
+  return new Date(new Date(date).getTime() + EXPERT_PERSONA_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+}
 
 async function _l1GetExpertPersonaSubscription(env, guid, personaId) {
   const token = await _l1AdminToken(env);
@@ -3857,7 +3866,7 @@ async function handleExpertPersonaAccess(request, url, env, corsHeaders) {
   if (!sub) {
     // 최초 접근 — 청구 없이 무료체험 레코드 생성
     const now = new Date();
-    const trialUntil = _addOneMonth(now);
+    const trialUntil = _addExpertPersonaTrialPeriod(now);
     try {
       const token = await _l1AdminToken(env);
       const payload = {
