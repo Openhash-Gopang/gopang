@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디의 민원 대응 — 공공 서비스 요금 안내부터 승인까지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --line:#d8d3c8;
+    --line-strong:#a89f8c;
+    --accent:#1f3a5f;
+    --accent-soft:#c9a45c;
+    --tint:#f1efe6;
+    --danger:#8a3b2b;
+    --good:#1f6f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#e7e4dc;
+    font-family:'Noto Sans KR',sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:18mm 16mm; }
+  .sheet{
+    width:210mm;
+    min-height:297mm;
+    margin:10mm auto;
+    background:var(--paper);
+    padding:18mm 16mm 20mm;
+    position:relative;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  @media print{
+    body{background:none;}
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; }
+    .page-break{ page-break-before:always; }
+    .avoid-break{ break-inside:avoid; page-break-inside:avoid; }
+  }
+
+  .doc-eyebrow{
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
+  }
+  h1.doc-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
+  .doc-meta{
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+
+  h2.sec{
+    font-family:'Noto Serif KR',serif;
+    font-size:14.5px; font-weight:700; color:var(--accent);
+    margin:24px 0 8px; padding-bottom:5px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.78; margin:0 0 9px; color:var(--ink); }
+  .note{
+    font-size:10px; line-height:1.65; color:var(--ink-soft);
+    background:var(--tint); border-left:2.5px solid var(--accent-soft);
+    padding:8px 11px; margin:10px 0;
+  }
+  .note.warn{ border-left-color:var(--danger); }
+  .note b{ color:var(--ink); }
+
+  table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:10px; }
+  thead th{
+    background:var(--accent); color:#fff; font-weight:600;
+    padding:6px 7px; text-align:left; font-size:9.5px; letter-spacing:.02em;
+  }
+  tbody td{ padding:5.5px 7px; border-bottom:1px solid var(--line); color:var(--ink); }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+
+  ul.list{ margin:0 0 10px; padding-left:16px; }
+  ul.list li{ font-size:10.5px; line-height:1.75; margin-bottom:4px; color:var(--ink); }
+
+  .footer-line{
+    position:absolute; bottom:10mm; left:16mm; right:16mm;
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
+  }
+
+  .dialogue{ margin:12px 0 6px; }
+  .msg{ margin:0 0 4px; max-width:92%; }
+  .msg .who{
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
+    text-transform:uppercase;
+  }
+  .msg .bubble{
+    display:inline-block; font-size:10.5px; line-height:1.72;
+    padding:9px 13px; text-align:left;
+  }
+  .msg.user{ margin-left:auto; text-align:right; }
+  .msg.user .who{ color:var(--ink-soft); text-align:right; }
+  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.hondi .who{ color:var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
+  .aside{
+    font-size:9.5px; color:var(--ink-soft); font-style:italic;
+    margin:2px 0 14px 4px; line-height:1.65; max-width:92%;
+  }
+  .badge-live{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .badge-road{
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
+  }
+  .stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0 18px; }
+  .stat-card{ border:1.5px solid var(--line); border-radius:8px; padding:12px 12px; background:#fff; text-align:center; }
+  .stat-num{ font-family:'Noto Serif KR',serif; font-size:19px; font-weight:700; color:var(--accent); }
+  .stat-label{ font-size:9px; color:var(--ink-soft); margin-top:3px; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="sheet">
+
+  <div class="doc-eyebrow">Hondi(혼디) 공공 서비스 안내</div>
+  <h1 class="doc-title">등본 한 장 떼는 데도,<br>얼마인지 먼저 말해줍니다</h1>
+  <p class="doc-sub">
+    혼디가 정부 민원(공공 행정 문서 발급·신고·등록 등)을 접수할 때 요금을
+    어떻게 산정하고, 언제 사용자 승인을 먼저 구하는지 정리했습니다.
+  </p>
+  <div class="doc-meta">
+    <div>작성일<br><b>2026-08-15</b></div>
+    <div>기준 데이터<br><b>천안시 민원사무편람 857건 + 전국공통(인지세·법원 인지대)</b></div>
+    <div>검증 방식<br><b>실제 서버 라이브 스모크테스트 6건 + 광역 파일럿 44건</b></div>
+    <div>성격<br><b>실제 동작 중인 기능 안내 <span class="badge-live">LIVE</span></b></div>
+  </div>
+
+  <h2 class="sec"><span class="num">01</span> 지금 이렇게 됩니다</h2>
+  <p>
+    "혼디야, 등본 떼줘" 같은 요청이 들어오면, 혼디는 접수와 동시에 요금을
+    계산해서 먼저 알려드립니다. 아래는 실제 검증 시나리오를 그대로 옮긴
+    대화입니다.
+  </p>
+
+  <div class="dialogue">
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"혼디야, 주민등록표 등본·초본 신청해 줘."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        접수했습니다(접수번호 GOV-public-...-0001). 주민등록표등·초본교부
+        신청 — 혼디 서비스 수수료 1,000원(참고: 정부 납부 기준액 500원,
+        실제 정부 납부는 사용자 직접 처리)이 청구됐습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 금액이 확실히 확인된 서비스는
+      승인 절차 없이 접수와 동시에 자동 청구됩니다.
+    </div>
+  </div>
+
+  <div class="dialogue">
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"혼디야, 건축신고 해줘."</div>
+    </div>
+
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        접수했습니다(접수번호 GOV-public-...-0002). 다만 이 지역의 정확한
+        금액은 아직 확인되지 않아 천안시 민원사무편람(BASELINE) 기준
+        추정치(100,000원)를 사용합니다. 이 금액으로 진행할까요?
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="who">사용자</div>
+      <div class="bubble">"네, 그 금액으로 진행해 주세요."</div>
+    </div>
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">확인했습니다 — 100,000원 청구하고 계속 진행하겠습니다.</div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 지역 고유 데이터가 아직 없어
+      전국 기준값(BASELINE)을 추정치로 쓸 때는, <b>사용자가 명시적으로
+      동의해야만</b> 청구가 진행됩니다. "잘 알겠어요" 같은 애매한 응답은
+      동의로 간주하지 않습니다 — 실제로 이 오판 사례를 막기 위한 테스트를
+      별도로 통과시켰습니다.
+    </div>
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 공공 서비스 안내 · 2026-08-15</span>
+    <span>1 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">02</span> 요금은 어떻게 정해지나요</h2>
+  <p>
+    혼디 서비스 수수료는 <b>정부에 실제로 납부하는 금액과는 별개</b>입니다.
+    정부 납부 기준액(참고용)의 <b>2배</b>가 혼디 서비스 수수료로 청구되고,
+    정부에 실제로 내야 하는 돈은 사용자가 공식 채널로 직접 납부합니다 —
+    혼디가 대신 송금하지 않습니다.
+  </p>
+
+  <table class="avoid-break">
+    <thead><tr><th>상태</th><th>의미</th><th>사용자 경험</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>OK</b></td>
+        <td>지역 고유 데이터로 금액이 확실히 확인됨</td>
+        <td>접수와 동시에 자동 청구, 별도 승인 불필요</td>
+      </tr>
+      <tr>
+        <td><b>NEEDS_APPROVAL</b></td>
+        <td>BASELINE 추정치이거나, 비슷한 이름의 다른 서비스와 점수 차이가 근소함</td>
+        <td>추정 금액을 먼저 안내하고, <b>명시적 동의 후에만</b> 청구</td>
+      </tr>
+      <tr>
+        <td><b>NOT_FOUND</b></td>
+        <td>요금 정보 자체를 찾지 못함</td>
+        <td>금액을 지어내지 않고 담당자 확인이 필요하다고 안내</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>왜 2배인가요?</b> 정부 납부액과 별개로, 혼디가 서류를 준비하고
+    접수를 대행하는 데 드는 서비스 비용입니다. 정부 납부액이 크지 않은
+    민원(예: 500원짜리 등본)일수록 실제 청구액도 작게(1,000원) 유지되도록
+    설계했습니다.
+  </div>
+
+  <h2 class="sec"><span class="num">03</span> 데이터가 없거나 애매할 때</h2>
+  <p>
+    모든 민원에 확실한 답을 드릴 수 있는 건 아닙니다. 그럴 때 혼디가
+    실제로 어떻게 반응하는지도 숨기지 않고 보여드립니다.
+  </p>
+
+  <div class="dialogue">
+    <div class="msg hondi">
+      <div class="who">혼디</div>
+      <div class="bubble">
+        접수했습니다. 다만 이 서비스의 요금 정보를 찾지 못했습니다 —
+        담당자 확인 후 정확한 금액을 다시 안내해 드리겠습니다.
+      </div>
+    </div>
+    <div class="aside">
+      <span class="badge-live">LIVE</span> 확인 안 된 금액을 그럴듯하게
+      지어내지 않습니다. 모르면 모른다고 말하고 사람에게 넘깁니다.
+    </div>
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 공공 서비스 안내 · 2026-08-15</span>
+    <span>2 / 3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 3 ═══════════════════ -->
+<div class="sheet page-break">
+
+  <h2 class="sec"><span class="num">04</span> 지금까지의 검증 결과</h2>
+  <p>
+    "만들었다"에서 끝내지 않고, 실제 서버에 배포해 실사용자 스타일
+    쿼리 44건으로 정확도를 측정했습니다.
+  </p>
+
+  <div class="stat-grid avoid-break">
+    <div class="stat-card">
+      <div class="stat-num">76.5%</div>
+      <div class="stat-label">정확한 서비스로<br>바로 매칭(Top-1)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">91.2%</div>
+      <div class="stat-label">상위 3개 후보 안에<br>정답 포함</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">0%</div>
+      <div class="stat-label">정부 민원과 무관한<br>질문에 오답(오탐)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">857건</div>
+      <div class="stat-label">현재 확보된<br>천안시 민원 데이터</div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <b>정직하게 말씀드립니다.</b> Top-1 정확도 76.5%는 4번에 1번꼴로
+    "그럴듯하지만 다른" 서비스가 매칭될 수 있다는 뜻입니다. 이를 보완하기
+    위해 1위·2위 후보의 점수 차이가 근소할 때는 자동 확정하지 않고
+    사용자 확인을 한 번 더 받도록 안전장치를 추가했습니다 — 완벽한
+    해결책은 아니지만, 확신에 찬 오답이 조용히 청구되는 것을 상당 부분
+    막습니다.
+  </div>
+
+  <h3 class="subsec">지역 확대 계획</h3>
+  <p>
+    현재는 천안시 실제 데이터와, 이를 전국 잠정 기준값(BASELINE)으로 삼은
+    데이터만 있습니다. 다른 지역은 그 지역 고유 민원사무편람을 확보하는
+    대로 순차적으로 추가됩니다 — 그 전까지는 BASELINE 추정치를
+    <b>사용자 승인 후에만</b> 사용합니다.
+  </p>
+
+  <div class="note">
+    <b>※ 안내:</b> 이 문서에 안내된 금액은 예시이며 실제 청구 금액은
+    서비스 종류와 지역에 따라 달라질 수 있습니다. 정부에 실제로 납부하는
+    금액은 혼디 서비스 수수료와 별개이며, 사용자가 공식 채널로 직접
+    확인·납부하셔야 합니다.
+  </div>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) 공공 서비스 안내 · 2026-08-15</span>
+    <span>3 / 3</span>
+  </div>
+</div>
+
+</body>
+</html>
