@@ -21,6 +21,10 @@ import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TA
 // 선언돼 있어 이 파일처럼 순수 ES 모듈 import로도 그대로 쓸 수 있다(둘 다
 // fetch()만 쓰고 브라우저 전용 API에 의존하지 않아 Workers 런타임에서도 동작).
 import { assembleGovSystemPrompt } from './src/gopang/gov/gov-router.js';
+// 2026-08-15 신설 — gov-fee-lookup.js 배선(2단계). 위 assembleGovSystemPrompt와
+// 동일한 이유로 순수 ES 모듈 import로 그대로 쓸 수 있다(fetch()만 사용,
+// 브라우저 전용 API 의존 없음).
+import { resolveGovFee, extractCityCodeFromTrace } from './src/gopang/gov/gov-fee-lookup.js';
 // 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
 // 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
 import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
@@ -11969,6 +11973,7 @@ export default {
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/fee-approve')      return handleGovFeeApprove(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
     if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
     if (pathname === '/stats/self')                return handleStatsSelf(bodyText, env, corsHeaders);
@@ -18459,6 +18464,83 @@ function _isValidSha256Hex(s) {
   return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(s);
 }
 
+// 2026-08-15 신설(4단계 배선 준비) — gov-fee-lookup.js의 resolveGovFee()는
+// PocketBase JS SDK 형태의 pb 객체(pb.collection(name).getFullList({filter}))를
+// 기대하는데, worker.js는 SDK를 안 쓰고 _l1AdminToken()+raw fetch로 직접
+// REST를 호출하는 기존 관례를 쓴다(이 파일 전체와 통일). 새 SDK 의존성을
+// 추가하는 대신, resolveGovFee()가 요구하는 최소 인터페이스만 흉내 내는
+// 얇은 어댑터를 이 함수 하나로 둔다 — gov_fee_schedule 레코드 수가 아직
+// 소규모(파일럿 단계)라 단일 페이지(perPage=200)로 충분하다고 보고 별도
+// 페이지네이션은 넣지 않았다 — 지역/전국공통 레코드 총량이 200건을 넘어서면
+// (요율 데이터가 여러 지역으로 확장되면 그럴 수 있다) 여기부터 다시 봐야 한다.
+function _govFeePbShim(env) {
+  return {
+    collection: (name) => ({
+      getFullList: async ({ filter } = {}) => {
+        const token = await _l1AdminToken(env);
+        const qs = filter ? `?filter=${encodeURIComponent(filter)}&perPage=200` : '?perPage=200';
+        const res = await fetch(`${L1_DEFAULT}/api/collections/${name}/records${qs}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`_govFeePbShim: ${name} 조회 실패 (HTTP ${res.status})`);
+        const data = await res.json().catch(() => ({ items: [] }));
+        return data.items || [];
+      },
+      // 2026-08-15 신설(③단계, 매핑 캐시) — resolveGovFee()의
+      // options.cachedRecordId 경로가 pb.collection(x).getOne(id)를
+      // 기대하므로 추가. 진짜 PocketBase SDK와 동일하게, 없으면 예외를
+      // 던진다(resolveGovFee가 이미 이걸 try/catch로 흡수해 폴백 처리함).
+      getOne: async (id) => {
+        const token = await _l1AdminToken(env);
+        const res = await fetch(`${L1_DEFAULT}/api/collections/${name}/records/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`_govFeePbShim.getOne: ${name}/${id} 조회 실패 (HTTP ${res.status})`);
+        return res.json();
+      },
+    }),
+  };
+}
+
+// 2026-08-15 신설(③단계) — (agency, task_key) → gov_fee_schedule.id 매핑
+// 캐시 조회/기록. 실패해도(네트워크 오류 등) 절대 throw하지 않는다 —
+// 캐시는 순수 최적화이지 정확성의 전제조건이 아니다(미스 시 그냥 평소처럼
+// 검색하면 된다). get은 실패 시 null(=캐시 미스와 동일하게 처리)을 반환.
+async function _govFeeTaskCacheGet(env, agency, taskKey) {
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`agency='${agency}' && task_key='${taskKey}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/gov_fee_task_cache/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({ items: [] }));
+    return data.items?.[0]?.gov_fee_schedule_id || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function _govFeeTaskCacheSet(env, agency, taskKey, recordId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`agency='${agency}' && task_key='${taskKey}'`);
+  const lookupRes = await fetch(`${L1_DEFAULT}/api/collections/gov_fee_task_cache/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const lookupData = await lookupRes.json().catch(() => ({ items: [] }));
+  const existing = lookupData.items?.[0];
+  const payload = { agency, task_key: taskKey, gov_fee_schedule_id: recordId, cached_at: new Date().toISOString() };
+  const url = existing
+    ? `${L1_DEFAULT}/api/collections/gov_fee_task_cache/records/${existing.id}`
+    : `${L1_DEFAULT}/api/collections/gov_fee_task_cache/records`;
+  const res = await fetch(url, {
+    method: existing ? 'PATCH' : 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`_govFeeTaskCacheSet 실패 (HTTP ${res.status})`);
+}
+
 async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   // ★ 2026-07-12 정정 — 라우터가 이미 bodyText로 본문을 읽어놓은 뒤 호출되므로
   // request.json()이 아니라 bodyText를 직접 파싱한다(handleGovTaskSchemaDraft와 동일 원인).
@@ -18523,6 +18605,90 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
     : null;
   const now = new Date().toISOString();
 
+  // ── 2026-08-15 신설(4단계 배선 — 조회만, 아직 청구 안 함) ──────────
+  // gov_fee_schedule에서 이 task의 혼디 서비스 수수료를 조회한다.
+  // status==='accepted'일 때만 의미가 있다(pending_documents는 아직
+  // 실행이 아니므로 조회 자체를 건너뛴다 — 불필요한 검색 호출 절약).
+  // body.trace(클라이언트가 실어 보내면)에서 지역코드를 뽑아 쓰고,
+  // 없으면(trace 미제공 호출부) 지역 무관(전국공통/BASELINE)으로만
+  // 매칭된다 — resolveGovFee 자체가 이미 그레이스풀 디그레이드하므로
+  // 여기서 별도 분기 불필요. 실패해도(네트워크 오류 등) 접수 자체는
+  // 절대 막지 않는다 — 요금 조회는 접수와 별개 관심사.
+  let govFee = null;
+  if (status === 'accepted') {
+    try {
+      const cityCode = extractCityCodeFromTrace(Array.isArray(body.trace) ? body.trace : []);
+      // 2026-08-15 신설(③단계 — 매핑 캐시 조회). 있으면 resolveGovFee가
+      // 검색을 건너뛰고 이 id로 바로 계산한다(레코드가 사라졌거나 더는
+      // REAL이 아니면 resolveGovFee 자체가 자동으로 일반 검색에 폴백).
+      const cachedRecordId = await _govFeeTaskCacheGet(env, agency, task_key);
+      // 2026-08-15 — 이 파일 다른 자기참조 지점(예: 프로필 사진 URL)과
+      // 동일하게 워커 자신의 공개 URL을 리터럴로 쓴다(별도 상수 없음,
+      // 기존 관례 그대로 재사용).
+      govFee = await resolveGovFee(
+        _govFeePbShim(env), schema.task_name, [], {},
+        { cityCode, cachedRecordId, workerBaseUrl: 'https://hondi-proxy.tensor-city.workers.dev' }
+      );
+      // 캐시 미스였는데(matchedBy !== 'cache') 이번에 검색으로 새로
+      // 찾았으면(record.id 존재, OK 또는 NEEDS_APPROVAL) 다음번을 위해
+      // 매핑을 기록해둔다 — NOT_FOUND/계산불가(record 없음)는 캐싱할
+      // 대상 자체가 없으므로 제외.
+      if (govFee?.matchedBy && govFee.matchedBy !== 'cache' && govFee.record?.id
+          && (govFee.status === 'OK' || govFee.status === 'NEEDS_APPROVAL')) {
+        _govFeeTaskCacheSet(env, agency, task_key, govFee.record.id)
+          .catch(e => console.warn('[GovTaskSubmit] 요금 매핑 캐시 기록 실패(다음번에 다시 검색됨, 치명적이지 않음):', e.message));
+      }
+    } catch (e) {
+      console.warn('[GovTaskSubmit] 요금 조회 실패(접수는 계속 진행):', e.message);
+      govFee = null;
+    }
+  }
+
+  // ── 2026-08-15 신설(5단계 — 실제 청구 + 승인 게이트) ────────────────
+  // status:'OK'(확정 매칭)만 접수 즉시 자동 청구한다. status:'NEEDS_APPROVAL'
+  // (BASELINE 추정치 등)은 gov_fee_charges에 pending_approval로만 기록하고
+  // 절대 여기서 청구하지 않는다 — 사용자가 POST /gov/task/fee-approve로
+  // 명시 승인해야 그때 청구된다(SP-10_kpublic.txt §GOV-FEE-APPROVAL의
+  // GOV_FEE_APPROVE 태그 경유). NOT_FOUND/null은 청구할 근거 자체가
+  // 없으므로 레코드를 만들지 않는다. 이 블록 전체가 실패해도(청구 실패
+  // 포함) 이미 확정된 행정 접수(status/receiptNo)는 절대 취소되지 않는다
+  // — 청구는 접수와 완전히 분리된 후속 관심사.
+  let govFeeChargeStatus = null; // 'charged' | 'pending_approval' | 'charge_failed' | null(레코드 없음)
+  if (govFee && (govFee.status === 'OK' || govFee.status === 'NEEDS_APPROVAL') && govFee.hondiServiceFee > 0) {
+    const chargeRecordBase = {
+      user_guid: guid, agency, task_key,
+      receipt_no: receiptNo,
+      gov_fee_schedule_id: govFee.record?.id || null,
+      gov_reference_fee: govFee.govReferenceFee,
+      hondi_service_fee: govFee.hondiServiceFee,
+      is_baseline_fallback: !!govFee.isBaselineFallback,
+      created_at: now,
+    };
+    try {
+      const token = await _l1AdminToken(env);
+      if (govFee.status === 'OK') {
+        const charge = await _chargeGdcForAiUsage(env, {
+          guid, krwAmount: govFee.hondiServiceFee, serviceId: `gov-fee:${agency}`,
+          memo: `혼디 서비스 수수료: ${govFee.record?.service_name || schema.task_name} (접수번호 ${receiptNo})`,
+        });
+        govFeeChargeStatus = charge?.ok ? 'charged' : 'charge_failed';
+        await fetch(`${L1_DEFAULT}/api/collections/gov_fee_charges/records`, {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...chargeRecordBase, status: govFeeChargeStatus, charged_at: charge?.ok ? now : null }),
+        }).catch(e => console.warn('[GovTaskSubmit] gov_fee_charges 기록 실패:', e.message));
+      } else {
+        govFeeChargeStatus = 'pending_approval';
+        await fetch(`${L1_DEFAULT}/api/collections/gov_fee_charges/records`, {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...chargeRecordBase, status: 'pending_approval', charged_at: null }),
+        }).catch(e => console.warn('[GovTaskSubmit] gov_fee_charges 기록 실패:', e.message));
+      }
+    } catch (e) {
+      console.warn('[GovTaskSubmit] 수수료 청구/기록 처리 실패(접수는 유효함):', e.message);
+    }
+  }
+
+
   // ── 구조화 PDV 기록 — handlePdvReport와 동일한 L1 pdv_records 컬렉션에
   // type:'gov_task_submission'으로 남긴다. 스키마리스 확장은 summary_6w에. ──
   const summary6wFull = {
@@ -18543,6 +18709,15 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
       documents_required: requiredDocs.map(d => d.id),
       documents_matched:  matchedDocs.map(d => ({ id: d.id, name: d.name, sha256: submitted.find(s => s.doc_id === d.id)?.sha256 })),
       documents_missing:  missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
+      // 2026-08-15 신설(5단계 배선 완료) — 감사 로그 목적. charge_status는
+      // 실제로 청구됐는지(charged/pending_approval/charge_failed/null)를
+      // 나타낸다 — govFee.status(매칭 신뢰도)와는 다른 축.
+      gov_fee: govFee ? {
+        status: govFee.status, gov_reference_fee: govFee.govReferenceFee,
+        hondi_service_fee: govFee.hondiServiceFee, is_baseline_fallback: govFee.isBaselineFallback,
+        matched_service_name: govFee.record?.service_name || null,
+        charge_status: govFeeChargeStatus,
+      } : null,
       // 2026-07-13 신설(#15) — 팬아웃 그룹 소속 여부. 둘 다 null이면
       // 기존과 동일한 단일 제출.
       batch_id: batchId,
@@ -18636,6 +18811,73 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
     task_name:  schema.task_name,
     documents_missing: missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
     pdv_id: pdvId,
+    // 2026-08-15 신설(5단계 — 실제 청구 + 승인 게이트 배선 완료) — 클라이언트가
+    // 이 값을 사용자에게 보여줄 수 있도록 반환한다. status별 의미:
+    //   'OK'             — 확정 매칭, 접수 즉시 자동 청구됨(charge_status 확인)
+    //   'NEEDS_APPROVAL' — BASELINE 추정치이거나 계산 불가 조례참조 — 아직
+    //                      청구 안 됨(charge_status:'pending_approval'), 사용자
+    //                      명시 승인 후 POST /gov/task/fee-approve로 청구
+    //   'NOT_FOUND'      — 요금 정보 없음, 수동 확인 필요, 청구 대상 아님
+    //   null             — pending_documents(아직 접수 전)라 조회 자체를 안 함
+    gov_fee: govFee ? {
+      status: govFee.status,
+      gov_reference_fee: govFee.govReferenceFee,
+      hondi_service_fee: govFee.hondiServiceFee,
+      is_baseline_fallback: govFee.isBaselineFallback,
+      matched_service_name: govFee.record?.service_name || null,
+      message: govFee.message,
+      charge_status: govFeeChargeStatus,
+    } : null,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/fee-approve — {guid, receipt_no} → gov_fee_charges의
+// pending_approval 레코드를 사용자 명시 승인으로 실제 청구한다
+// (2026-08-15 신설, 5단계). SP-10_kpublic.txt §GOV-FEE-APPROVAL의
+// GOV_FEE_APPROVE 태그가 이 엔드포인트를 호출한다 — 반드시 사용자가
+// "이 추정 금액으로 청구할까요?" 질문에 명시 동의한 뒤에만 이 태그가
+// 나온다는 전제(SP 텍스트가 강제, 서버는 그 전제를 신뢰하되 guid 일치는
+// 직접 검증한다).
+async function handleGovFeeApprove(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { guid, receipt_no } = body;
+  if (!guid || !receipt_no) return _err(400, 'MISSING_FIELD', 'guid/receipt_no 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`receipt_no='${receipt_no}'`);
+  const lookupRes = await fetch(`${L1_DEFAULT}/api/collections/gov_fee_charges/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  }).catch(() => null);
+  const lookupData = await lookupRes?.json().catch(() => null);
+  const record = lookupData?.items?.[0];
+  if (!record) return _err(404, 'NOT_FOUND', '해당 접수번호의 수수료 승인 대기 건이 없습니다', corsHeaders);
+  if (record.user_guid !== guid) return _err(403, 'GUID_MISMATCH', '본인의 접수 건이 아닙니다', corsHeaders);
+  if (record.status !== 'pending_approval') {
+    return new Response(JSON.stringify({
+      ok: false, error: 'NOT_PENDING', message: `이미 처리된 건입니다(현재 상태: ${record.status})`, status: record.status,
+    }), { status: 409, headers: corsHeaders });
+  }
+
+  const charge = await _chargeGdcForAiUsage(env, {
+    guid, krwAmount: record.hondi_service_fee, serviceId: `gov-fee:${record.agency}`,
+    memo: `혼디 서비스 수수료(승인 후 청구): 접수번호 ${receipt_no}`,
+  });
+  const now = new Date().toISOString();
+  const newStatus = charge?.ok ? 'approved_charged' : 'charge_failed';
+  await fetch(`${L1_DEFAULT}/api/collections/gov_fee_charges/records/${record.id}`, {
+    method: 'PATCH', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus, charged_at: charge?.ok ? now : null }),
+  }).catch(e => console.warn('[GovFeeApprove] gov_fee_charges 갱신 실패:', e.message));
+
+  if (!charge?.ok) {
+    return new Response(JSON.stringify({
+      ok: false, error: 'INSUFFICIENT_BALANCE', message: 'GDC 잔액이 부족합니다. 충전 후 다시 시도해 주세요.', detail: charge,
+    }), { status: 402, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({
+    ok: true, status: newStatus, hondi_service_fee: record.hondi_service_fee, balance_after_krw: charge.balance_after,
   }), { status: 200, headers: corsHeaders });
 }
 
