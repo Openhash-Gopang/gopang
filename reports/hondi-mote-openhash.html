@@ -64,12 +64,6 @@
     padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
   }
   .doc-meta b{ color:var(--ink); font-weight:600; }
-  .site-note{
-    position:absolute; top:14mm; right:16mm;
-    font-size:10.5px; font-weight:600; color:var(--accent);
-    background:var(--tint); border:1px solid var(--line-strong);
-    padding:4px 10px; border-radius:99px;
-  }
 
   h2.sec{
     font-family:'Noto Serif KR',serif;
@@ -88,7 +82,6 @@
     padding:10px 13px; margin:12px 0;
   }
   .note b{ color:var(--ink); }
-  .note.warn{ border-left-color:var(--accent); background:#eef2f8; }
 
   table{ width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:12px; }
   thead th{
@@ -130,8 +123,6 @@
 <!-- ═══════════════════ PAGE 1 ═══════════════════ -->
 <div class="sheet">
 
-  <div class="site-note">hondi.net에 폰과 PC로 각기 따로 접속해 보세요.</div>
-
   <div class="doc-eyebrow">
     <span class="icon" style="color:var(--accent-soft)">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
@@ -147,7 +138,6 @@
   <div class="doc-meta">
     <div>기술 1<br><b>MoTE (Mixture of Tiny Experts)</b></div>
     <div>기술 2<br><b>Openhash (확률론적 계층 분산원장)</b></div>
-    <div>월 기본료<br><b>990원</b></div>
   </div>
 
   <h2 class="sec">
@@ -296,11 +286,6 @@
     하드웨어 가속 실측, GPU 대비 18.2W vs 160.3W), 한 번 새겨진 기록은 절대
     조작할 수 없습니다.
   </p>
-  <div class="note warn">
-    <b>모든 데이터는 오직 사용자의 스마트폰·컴퓨터에만 저장됩니다.</b> 혼디 서버는
-    대화·거래 원본 데이터를 저장하지 않으며, Openhash 계층에도 원문이 아닌 지문(해시)만
-    올라갑니다. 한곳에 모인 데이터가 없으니, 대량 유출될 "표적" 자체가 없습니다.
-  </div>
   <div class="note">
     <b>정리하면.</b> MoTE는 "누구에게 물어야 가장 잘 답할 수 있는가"를 가장 적은
     전력으로 찾고, Openhash는 "그 답과 그로 인한 거래가 진짜였다"는 것을 가장
