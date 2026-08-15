@@ -216,9 +216,9 @@
     <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
     <tbody>
       <tr><td class="chk">☑</td><td>1</td><td>국회</td><td>ASSEMBLY</td></tr>
-      <tr><td class="chk">☐</td><td>2</td><td>국회사무처</td><td>NAS</td></tr>
-      <tr><td class="chk">☐</td><td>3</td><td>국회예산정책처</td><td>NABO</td></tr>
-      <tr><td class="chk">☐</td><td>4</td><td>국회입법조사처</td><td>NARS</td></tr>
+      <tr><td class="chk">☑</td><td>2</td><td>국회사무처</td><td>NAS</td></tr>
+      <tr><td class="chk">☑</td><td>3</td><td>국회예산정책처</td><td>NABO</td></tr>
+      <tr><td class="chk">☑</td><td>4</td><td>국회입법조사처</td><td>NARS</td></tr>
       <tr><td class="chk">☐</td><td>5</td><td>국회미래연구원</td><td>NAFI</td></tr>
       <tr><td class="chk">☐</td><td>6</td><td>국회도서관</td><td>NANET</td></tr>
     </tbody>
@@ -228,11 +228,11 @@
   <table class="census-table">
     <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
     <tbody>
-      <tr><td class="chk">☐</td><td>7</td><td>법원(대법원)</td><td>SUPREMECOURT</td></tr>
+      <tr><td class="chk">☑</td><td>7</td><td>법원(대법원)</td><td>SUPREMECOURT</td></tr>
       <tr><td class="chk">☑</td><td>8</td><td>헌법재판소</td><td>CONSTCOURT</td></tr>
       <tr><td class="chk">☑</td><td>9</td><td>법원행정처</td><td>NCA</td></tr>
       <tr><td class="chk">☑</td><td>10</td><td>법원공무원교육원</td><td>COTI</td></tr>
-      <tr><td class="chk">☐</td><td>11</td><td>사법정책연구원</td><td>JPRI</td></tr>
+      <tr><td class="chk">☑</td><td>11</td><td>사법정책연구원</td><td>JPRI</td></tr>
       <tr><td class="chk">☑</td><td>12</td><td>사법연수원</td><td>JRTI</td></tr>
     </tbody>
   </table>
@@ -386,6 +386,24 @@
         §6-4(독립기관)·§6-5(국무총리 직속) 상당수가 같은 "위원회+사무처"
         구조라 다음 배치부터 재사용 가능. 이로써 §6-3(대통령 직속 6개)
         전체 완결: 4개 실사 완료, 2개(NIS·PSS) 비공개 확인.</td></tr>
+      <tr><td>2026-08-15</td><td>#2,3,4 국회 소속기관(NAS·NABO·NARS) — §6-1 4/6</td>
+        <td>국회사무처 직제(법령정보센터, 현행 2026.01.12.)로 16개 division 확인
+        (입법차장/사무차장 이원 구조). 국회예산정책처 4개(2017년 직제 기준,
+        재검증 필요), 국회입법조사처 4개(공식 조직도). 국회 소속기관 재사용
+        템플릿 <code>SP-ASSEMBLY-AGENCYDIV-TEMPLATE_v1.0.md</code> 신설.
+        <b>발견</b>: 2026-01-12 국회기록원법 시행으로 국회도서관 기록관리
+        기능이 신설기관 "국회기록원"으로 이관됨 — 70개 기관 목록에 없는
+        신규 기관, 다음 세션에 코드 부여 검토 필요. <b>이월</b>: 국회미래연구원·
+        국회도서관은 시간 관계상 다음 배치로.</td></tr>
+      <tr><td>2026-08-15</td><td>#7,11 사법부 보류분(대법원·사법정책연구원) — §6-2 완결 6/6</td>
+        <td>대법원: scourt.go.kr 공식 안내+법원조직법 제7조로 전원합의체(대법관
+        2/3 이상)+소부 3개(대법관 4명씩)+재판연구관 구조 확인, 별도 인스턴스
+        <code>SP-SUPREMECOURT-BENCH_v1.0.md</code> 신설(재사용 템플릿이 아닌
+        유일 인스턴스). <b>중요 발견</b>: 2028~2030년 대법관 14명→26명 증원에
+        따라 재판부 재편 논의 중(경향신문 2026-07-29, 미확정) — 2028년 전후
+        재검증 필수로 기록. 사법정책연구원: 법원조직법 제76조의2로 "division
+        자체가 없는 flat 연구직군 구조"임을 확인 — 이는 조사 실패가 아니라
+        실사 결과 자체.</td></tr>
       <tr><td>2026-08-15</td><td>#1 국회(ASSEMBLY)</td>
         <td>국회법 제37조·committee.na.go.kr 교차확인으로 18개 상임위원회·상설특별위원회
         목록 확정. <code>prompts/gov-tree/09-national/policy-bodies/divisions/
