@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>기관 AI 비서 — 입법·사법·행정부 전 기관·부서 SP 작성 로드맵 | 혼디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430; --ink-soft:#4a5568; --paper:#fbfaf7;
+    --line:#d8d3c8; --line-strong:#a89f8c; --accent:#1f3a5f;
+    --accent-soft:#c9a45c; --tint:#f1efe6; --danger:#8a3b2b; --ok:#1f6f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:#e7e4dc; font-family:'Noto Sans KR',sans-serif; color:var(--ink); }
+  .wrap{ max-width:960px; margin:0 auto; background:var(--paper); padding:40px 48px 60px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14); }
+  .doc-eyebrow{ font-size:11px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:8px; }
+  h1.doc-title{ font-family:'Noto Serif KR',serif; font-size:28px; line-height:1.4;
+    font-weight:700; color:var(--ink); margin:0 0 10px; }
+  .doc-sub{ font-size:14px; color:var(--ink-soft); margin:0 0 16px; line-height:1.7; }
+  .doc-meta{ display:flex; gap:24px; font-size:11.5px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:10px 0; margin-bottom:28px; flex-wrap:wrap; }
+  .doc-meta b{ color:var(--ink); font-weight:600; }
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:19px; font-weight:700; color:var(--accent);
+    margin:36px 0 12px; padding-bottom:7px; border-bottom:2px solid var(--accent);
+    display:flex; align-items:baseline; gap:10px; }
+  h2.sec .num{ font-size:14px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:15px; font-weight:700; color:var(--ink); margin:22px 0 8px; }
+  p{ font-size:13.5px; line-height:1.85; margin:0 0 12px; color:var(--ink); }
+  .note{ font-size:12.5px; line-height:1.75; color:var(--ink-soft); background:var(--tint);
+    border-left:3px solid var(--accent-soft); padding:12px 15px; margin:12px 0; }
+  .note.warn{ border-left-color:var(--danger); }
+  .note.ok{ border-left-color:var(--ok); }
+  .note b{ color:var(--ink); }
+  table{ width:100%; border-collapse:collapse; margin:12px 0 18px; font-size:12.5px; }
+  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:8px 10px;
+    text-align:left; font-size:12px; letter-spacing:.02em; position:sticky; top:0; }
+  tbody td{ padding:7px 10px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; }
+  tbody tr:nth-child(even){ background:#f6f4ee; }
+  .census-table{ font-size:12px; }
+  .census-table td.chk{ text-align:center; font-size:15px; width:40px; }
+  ul.list{ margin:0 0 14px; padding-left:20px; }
+  ul.list li{ font-size:13px; line-height:1.85; margin-bottom:6px; color:var(--ink); }
+  ol.mech{ margin:8px 0 16px; padding-left:22px; }
+  ol.mech li{ font-size:13px; line-height:1.85; margin-bottom:10px; color:var(--ink); }
+  ol.mech b{ color:var(--ink); }
+  code{ background:var(--tint); border:1px solid var(--line); border-radius:3px;
+    padding:1px 5px; font-size:12px; }
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    padding:2px 8px; border-radius:99px; margin-left:6px; vertical-align:1px; }
+  .badge-gap{ color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6; }
+  .badge-done{ color:var(--ok); background:#e5f4ec; border:1px solid #b9e3c9; }
+  .badge-new{ color:#5b4a8a; background:#eeeaf6; border:1px solid #d3c7ea; }
+  .quote{ font-family:'Noto Serif KR',serif; font-style:italic; font-size:13px; line-height:1.8;
+    color:var(--ink); background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:14px 18px; margin:12px 0 16px; display:inline-block; }
+  .toc{ background:#fff; border:1px solid var(--line); padding:16px 20px; margin:20px 0 32px; }
+  .toc-title{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+    font-weight:700; margin-bottom:8px; }
+  .toc a{ display:block; font-size:13px; color:var(--accent); text-decoration:none; padding:3px 0; }
+  .toc a:hover{ text-decoration:underline; }
+  .progress-bar-wrap{ background:#fff; border:1px solid var(--line); padding:4px; margin:8px 0 20px; }
+  .progress-bar{ background:var(--tint); height:22px; position:relative; }
+  .progress-fill{ background:var(--ok); height:100%; width:0%; }
+  .progress-label{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--ink); }
+  .footer-line{ margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--ink-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-eyebrow">Hondi(혼디) 내부 작업계획 · 통합본 · 2026-08-15 세션</div>
+  <h1 class="doc-title">기관 AI 비서 — 입법·사법·행정부<br>전 기관·부서 SP 작성 로드맵</h1>
+  <p class="doc-sub">
+    dpaper.kr API 신청 사고실험에서 출발한 결론(배경·원칙·작업계획)과, 70개 국가기관
+    전수 실사 체크리스트를 한 문서로 통합했다. 이전에 별도로 존재했던
+    <code>hondi-institutional-ai-roadmap.html</code>(구버전)과
+    <code>INSTITUTIONAL-AI-CENSUS-WORKPLAN_v1_0.md</code>를 이 파일 하나가 대체한다.
+    새 대화창·다른 세션에서는 이 문서 하나만 참조하면 된다.
+  </p>
+  <div class="doc-meta">
+    <span><b>작성일</b> 2026-08-15(통합)</span>
+    <span><b>대상 저장소</b> Openhash-Gopang/gopang</span>
+    <span><b>작성자</b> AI City Inc. · 주피터 지시, Claude 작성</span>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">목차</div>
+    <a href="#sec1">1. 왜 기관·부서 AI 비서가 필요한가</a>
+    <a href="#sec2">2. 현재 격차 — 제주 도청 계열 vs 국가 계열</a>
+    <a href="#sec3">3. dpaper 사고실험 — 하나의 발화로 드러난 빠진 이빨</a>
+    <a href="#sec4">4. 작업 순서의 원칙 — 인간 감독 조직보다 AI 네트워크가 먼저</a>
+    <a href="#sec5">5. 인프라 선행 작업</a>
+    <a href="#sec6">6. 70개 국가기관 전수 실사 체크리스트</a>
+    <a href="#sec7">7. 참고 문서</a>
+  </div>
+
+  <h2 class="sec" id="sec1"><span class="num">1</span>왜 기관·부서 AI 비서가 필요한가</h2>
+  <p>
+    혼디의 근본 목표는, 현재 사람과 사람이 대화해 문서를 발급받고 입법·사법·행정 등
+    사회 각 분야의 민원을 처리하는 관행을, <b>사람(혼디 사용자)의 AI 비서와
+    기관/부서/직책의 AI 비서 간 소통</b>으로 대체하는 것이다.
+  </p>
+  <p>
+    사람 쪽 AI 비서(사용자 그림자 AI)는 상당 수준으로 완성되어 있으나,
+    <b>공공 기관 쪽 AI 비서는 아직 그 수준에 미치지 못한다</b> — 이 격차를
+    메우는 것이 이번 로드맵의 목적이다.
+  </p>
+
+  <h2 class="sec" id="sec2"><span class="num">2</span>현재 격차 — 제주 도청 계열 vs 국가 계열</h2>
+  <p>
+    제주 도청 계열(도청 → 실·국/직속기관/출자출연기관 → 과·팀)은 이미 이 방법론을
+    성공적으로 적용한 <b>선례이자 증거</b>다. 반면 국가 계열(입법부·사법부·행정부)은
+    아직 부처 단위에 머물러 있다.
+  </p>
+  <table>
+    <thead><tr><th>항목</th><th>제주 도청 계열</th><th>국가(입법·사법·행정부) 계열</th></tr></thead>
+    <tbody>
+      <tr><td>최상위~부서 단위 SP</td><td>도청 1 + 실국 22 + 직속기관 10 + 출자출연 26 = 58건, 전부 완료</td>
+        <td>70개 정책기관(19부+청·위원회·입법부·사법부 등) 전부 파일 작성 완료</td></tr>
+      <tr><td>과·팀(division) 단위 SP</td><td><b>138건 실존</b>(do-dept 23 + do-agency 28 + org 87)</td>
+        <td><b>계층 자체가 없음</b> — 09-national 트리에 division 폴더 미존재</td></tr>
+      <tr><td>라우팅 연결(sp-catalog.json)</td><td>정상 등록·로드됨</td>
+        <td><b>SP-NAT-POLICY/ENT/OTHER/UNLISTED 342개 전부 미등록</b>(2026-07-12 확인) — kgov 혼자 대행</td></tr>
+      <tr><td>실제 업무처리 레지스트리</td><td>부서별 마스터데이터로 라우팅·안내 가능</td>
+        <td><code>REQUIRED_DOCUMENTS_REGISTRY</code> 실등록 <b>단 2건</b>(kcc 위치기반서비스, court 개인파산)</td></tr>
+      <tr><td>법적 근거(§LEGAL-BASIS) 검증</td><td>대부분 완료</td>
+        <td>31개 확정 / 24개 조항번호 재검증 대기 / 7개 verbatim 미확인 / 4개 미착수</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="sec3"><span class="num">3</span>dpaper 사고실험 — 하나의 발화로 드러난 빠진 이빨</h2>
+  <p>
+    사용자 발화 <span class="quote">"dpaper api 신청 공문 제출하고 진행 상황 알려줘"</span>
+    하나를 실제 코드·SP까지 끝까지 추적한 결과, 다음 공백이 드러났다.
+    국지적 버그가 아니라 <b>국가 트리 전체의 구조적 미완성</b>을 보여주는 대표 사례다.
+  </p>
+  <table>
+    <thead><tr><th>#</th><th>빠진 이빨</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>①</td><td>"행정정보공유과 AI 비서"를 호출할 SP 자체가 없음</td>
+        <td>09-national 트리에 division(과 단위) 계층 미존재</td></tr>
+      <tr><td>②</td><td>342개 국가 정책기관 SP가 사실상 죽은 코드</td>
+        <td>sp-catalog.json 미등록, worker.js 어디서도 로드 안 됨(SP-10 v3.7 changelog 자체 확인)</td></tr>
+      <tr><td>③</td><td>레지스트리 실등록 절차 단 2건뿐</td>
+        <td>PUBLIC-MYDATA-REGISTRATION-REQUIREMENTS(행정정보공유과, 거의 동일 절차)가 조사는 됐지만 등록으로 이어지지 않음</td></tr>
+      <tr><td>④</td><td>"제출"이 실제 정부 시스템에 도달하지 않음</td>
+        <td>Hondi 내부에 문서24·우편발송 연동 코드 전무 — G18의 유일 활성 분기(DEPARTMENT_CONTACT)가 결국 사람 발송을 전제</td></tr>
+      <tr><td>⑤</td><td>"진행 상황 수시 통지"를 받을 채널이 없음</td>
+        <td>G9/G11(무응답·단계관리 게이트)은 상대의 GOV_TASK_RESPONSE를 전제 — 애초에 응답할 카운터파트가 없음</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note ok">
+    <b>2026-08-15 추가 확인 — ④의 실제 해법 후보: 문서24(docu.gdoc.go.kr)</b><span class="badge badge-new">신규</span><br>
+    행정안전부·한국지역정보개발원(KLID)이 운영하는 <b>민·관 양방향 전자문서유통 플랫폼</b>이다.
+    민간기업·단체·개인이 정부24 계정 또는 공동인증서로 로그인해 문서를 작성하고, 받는 기관·부서를
+    지정해 발송하면 정부 전자문서유통시스템을 통해 해당 기관에 자동 전달되며, 처리 결과도
+    회신받을 수 있다. <b>dpaper API 신청 공문을 포함한 모든 "공문 제출" 유형 작업의 실제 발송
+    채널 후보</b>다. 다만 확인된 것은 사람이 로그인해 쓰는 웹 서비스라는 점뿐이며,
+    <b>기관 대 기관(시스템 대 시스템) API 개방 여부는 아직 미확인</b> — 문서24 고객센터
+    (gov.kr 경유)에 직접 문의해 API 연동 가능성을 확인하는 것이 §5의 선행 작업 항목이다.
+  </div>
+
+  <h2 class="sec" id="sec4"><span class="num">4</span>작업 순서의 원칙 — 인간 감독 조직보다 AI 네트워크가 먼저</h2>
+  <p>
+    최종 목표는 기관 AI 비서들의 활동을 통괄하는 <b>인간 조직</b>을 구성하는 것이다.
+    다만 그 조직을 먼저 설계하고 거기에 맞춰 AI를 만드는 순서가 아니라, <b>역순</b>으로 진행한다:
+  </p>
+  <ol class="mech">
+    <li><b>1단계 — AI 네트워크 완성.</b> 입법부·사법부·행정부 각 기관 및 각 부서의 역할·기능·업무를
+      상세히 조사하여, 해당 기관의 AI 비서(SP)를 작성한다. 사용자 AI 비서와 기관 AI 비서 간
+      소통 채널이 실제로 작동하는 상태를 먼저 만든다.</li>
+    <li><b>2단계 — 인간 감독 조직 설계.</b> 실제 업무 처리 능력이 검증된 AI 비서 네트워크가
+      갖춰진 다음에야, 그 활동을 통괄·감독할 인간 조직의 형태를 설계한다.</li>
+  </ol>
+  <p class="note">
+    이 순서를 택한 이유: 조직을 먼저 짜면 그 조직이 실제로 무엇을 감독하게 될지 추상적으로만
+    가정하게 된다. 반대로 실제로 작동하는(또는 작동하지 않는) AI 비서 네트워크를 먼저 실사·구축해보면,
+    무엇을 감독해야 하는지가 구체적으로 드러난다 — dpaper 사고실험이 그 방법론적 증거다.
+  </p>
+
+  <h2 class="sec" id="sec5"><span class="num">5</span>인프라 선행 작업</h2>
+  <p>§6의 70개 기관 전수 실사에 착수하기 전에 먼저 해결해야 하는 구조적 공백이다.</p>
+  <table>
+    <thead><tr><th>완료</th><th>작업</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>09-national 트리에 division(과·팀) 계층 스키마 신설 (제주 do-dept 패턴 이식)</td></tr>
+      <tr><td class="chk">☐</td><td>342개 SP-NAT-* 파일을 sp-catalog.json/worker.js 라우팅에 연결</td></tr>
+      <tr><td class="chk">☐</td><td><code>REQUIRED_DOCUMENTS_REGISTRY</code> 자동 등록 파이프라인 완성(웹검색 초안 → 주피터 승인 → 등록)</td></tr>
+      <tr><td class="chk">☐</td><td>법적근거 재검증 대기 24건 일괄 처리(정부조직법 조항번호 확정)</td></tr>
+      <tr><td class="chk">☐</td><td><b>문서24(docu.gdoc.go.kr) API 연동 가능성 확인</b> — 고객센터 문의, 기관용 API 개방 여부·신청 절차 파악<span class="badge badge-new">신규</span></td></tr>
+      <tr><td class="chk">☐</td><td>문서24 자체를 09-national 국가기관 목록에 등록(운영기관: 한국지역정보개발원 KLID)<span class="badge badge-new">신규</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="sec6"><span class="num">6</span>70개 국가기관 전수 실사 체크리스트</h2>
+  <p>
+    <code>prompts/gov-tree/09-national/policy-bodies/</code>에 이미 존재하는 70개 기관 SP는
+    <b>부처(기관) 단위까지는 완료</b>돼 있다. 아래는 <b>과·팀 단위(division) 실사</b> 완료 여부를
+    추적하는 체크리스트다. 완료 시 해당 행의 <code>☐</code>를 <code>☑</code>로 바꾸고 커밋한다.
+  </p>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-fill" style="width:0%"></div>
+      <div class="progress-label" id="progress-label">0 / 70 완료 (0%)</div></div>
+  </div>
+
+  <h3 class="subsec">6-1. 입법부 (6개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☑</td><td>1</td><td>국회</td><td>ASSEMBLY</td></tr>
+      <tr><td class="chk">☐</td><td>2</td><td>국회사무처</td><td>NAS</td></tr>
+      <tr><td class="chk">☐</td><td>3</td><td>국회예산정책처</td><td>NABO</td></tr>
+      <tr><td class="chk">☐</td><td>4</td><td>국회입법조사처</td><td>NARS</td></tr>
+      <tr><td class="chk">☐</td><td>5</td><td>국회미래연구원</td><td>NAFI</td></tr>
+      <tr><td class="chk">☐</td><td>6</td><td>국회도서관</td><td>NANET</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-2. 사법부 — 법원 계통 (6개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>7</td><td>법원(대법원)</td><td>SUPREMECOURT</td></tr>
+      <tr><td class="chk">☑</td><td>8</td><td>헌법재판소</td><td>CONSTCOURT</td></tr>
+      <tr><td class="chk">☑</td><td>9</td><td>법원행정처</td><td>NCA</td></tr>
+      <tr><td class="chk">☑</td><td>10</td><td>법원공무원교육원</td><td>COTI</td></tr>
+      <tr><td class="chk">☐</td><td>11</td><td>사법정책연구원</td><td>JPRI</td></tr>
+      <tr><td class="chk">☑</td><td>12</td><td>사법연수원</td><td>JRTI</td></tr>
+    </tbody>
+  </table>
+  <p class="note">지방법원(16개 도 인스턴스)·검찰(16개 지역청)·경찰(15개 지방청) 등 이미 지역 단위까지
+    존재하는 기관은 §6-9 별도 트랙에서 관리한다(범위가 16배 커지므로 이 표에 합치지 않음).</p>
+
+  <h3 class="subsec">6-3. 대통령 직속 (6개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>13</td><td>감사원</td><td>BAI</td></tr>
+      <tr><td class="chk">☐</td><td>14</td><td>방송미디어통신위원회</td><td>BMTC</td></tr>
+      <tr><td class="chk">☐</td><td>15</td><td>국가정보원</td><td>NIS</td></tr>
+      <tr><td class="chk">☐</td><td>16</td><td>국가안보실</td><td>NSC</td></tr>
+      <tr><td class="chk">☐</td><td>17</td><td>대통령비서실</td><td>PRESOFFICE</td></tr>
+      <tr><td class="chk">☐</td><td>18</td><td>대통령경호처</td><td>PSS</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-4. 독립기관 · 선거관리 (3개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>19</td><td>고위공직자범죄수사처</td><td>CIO</td></tr>
+      <tr><td class="chk">☐</td><td>20</td><td>국가인권위원회</td><td>NHRCK</td></tr>
+      <tr><td class="chk">☐</td><td>21</td><td>중앙선거관리위원회</td><td>NEC</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-5. 국무총리 직속 (12개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>22</td><td>국민권익위원회</td><td>ACRC</td></tr>
+      <tr><td class="chk">☐</td><td>23</td><td>금융위원회</td><td>FSC</td></tr>
+      <tr><td class="chk">☐</td><td>24</td><td>공정거래위원회</td><td>FTC</td></tr>
+      <tr><td class="chk">☐</td><td>25</td><td>지식재산처</td><td>KIPO</td></tr>
+      <tr><td class="chk">☐</td><td>26</td><td>식품의약품안전처</td><td>MFDS</td></tr>
+      <tr><td class="chk">☐</td><td>27</td><td>법제처</td><td>MOLELEG</td></tr>
+      <tr><td class="chk">☐</td><td>28</td><td>인사혁신처</td><td>MPM</td></tr>
+      <tr><td class="chk">☐</td><td>29</td><td>국가데이터처</td><td>NDA</td></tr>
+      <tr><td class="chk">☐</td><td>30</td><td>원자력안전위원회</td><td>NSSC</td></tr>
+      <tr><td class="chk">☐</td><td>31</td><td>기획예산처</td><td>OBS</td></tr>
+      <tr><td class="chk">☐</td><td>32</td><td>국무조정실</td><td>OPC</td></tr>
+      <tr><td class="chk">☐</td><td>33</td><td>개인정보보호위원회</td><td>PIPC</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-6. 행정각부 — 19부 (19개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>34</td><td>농림축산식품부</td><td>MAFRA</td></tr>
+      <tr><td class="chk">☐</td><td>35</td><td>문화체육관광부</td><td>MCST</td></tr>
+      <tr><td class="chk">☐</td><td>36</td><td>국방부</td><td>MND</td></tr>
+      <tr><td class="chk">☐</td><td>37</td><td>기후에너지환경부</td><td>MOCEE</td></tr>
+      <tr><td class="chk">☐</td><td>38</td><td>고용노동부</td><td>MOEL</td></tr>
+      <tr><td class="chk">☐</td><td>39</td><td>교육부</td><td>MOE</td></tr>
+      <tr><td class="chk">☐</td><td>40</td><td>외교부</td><td>MOFA</td></tr>
+      <tr><td class="chk">☐</td><td>41</td><td>재정경제부</td><td>MOFE</td></tr>
+      <tr><td class="chk">☐</td><td>42</td><td>해양수산부</td><td>MOF</td></tr>
+      <tr><td class="chk">☐</td><td>43</td><td>성평등가족부</td><td>MOGEF</td></tr>
+      <tr><td class="chk">☐</td><td>44</td><td>보건복지부</td><td>MOHW</td></tr>
+      <tr><td class="chk">☐</td><td>45</td><td><b>행정안전부</b>(dpaper·문서24 소관)</td><td>MOIS</td></tr>
+      <tr><td class="chk">☐</td><td>46</td><td>법무부</td><td>MOJ</td></tr>
+      <tr><td class="chk">☐</td><td>47</td><td>국토교통부</td><td>MOLIT</td></tr>
+      <tr><td class="chk">☐</td><td>48</td><td>산업통상부</td><td>MOTIE</td></tr>
+      <tr><td class="chk">☐</td><td>49</td><td>국가보훈부</td><td>MPVA</td></tr>
+      <tr><td class="chk">☐</td><td>50</td><td>과학기술정보통신부</td><td>MSIT</td></tr>
+      <tr><td class="chk">☐</td><td>51</td><td>중소벤처기업부</td><td>MSS</td></tr>
+      <tr><td class="chk">☐</td><td>52</td><td>통일부</td><td>UNIKOREA</td></tr>
+    </tbody>
+  </table>
+  <p class="note">"행정정보공유과"(dpaper API 신청 소관)와 문서24 운영 감독 부서는 MOIS(행정안전부) 산하
+    division 실사 대상이다 — #45가 체크되면 그 하위 division 실사가 완료됐다는 뜻이다.</p>
+
+  <h3 class="subsec">6-7. 행정각부 소속 청 (외청, 17개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th><th>소속 부처</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>53</td><td>방위사업청</td><td>DAPA</td><td>국방부</td></tr>
+      <tr><td class="chk">☐</td><td>54</td><td>우주항공청</td><td>KASA</td><td>과학기술정보통신부</td></tr>
+      <tr><td class="chk">☐</td><td>55</td><td>해양경찰청</td><td>KCG</td><td>해양수산부</td></tr>
+      <tr><td class="chk">☐</td><td>56</td><td>관세청</td><td>KCS</td><td>기획재정부</td></tr>
+      <tr><td class="chk">☐</td><td>57</td><td>질병관리청</td><td>KDCA</td><td>보건복지부</td></tr>
+      <tr><td class="chk">☐</td><td>58</td><td>산림청</td><td>KFS</td><td>농림축산식품부</td></tr>
+      <tr><td class="chk">☐</td><td>59</td><td>국가유산청</td><td>KHS</td><td>문화체육관광부</td></tr>
+      <tr><td class="chk">☐</td><td>60</td><td>기상청</td><td>KMA</td><td>기후에너지환경부</td></tr>
+      <tr><td class="chk">☐</td><td>61</td><td>병무청</td><td>MMA</td><td>국방부</td></tr>
+      <tr><td class="chk">☐</td><td>62</td><td>행정중심복합도시건설청</td><td>NAACC</td><td>국토교통부</td></tr>
+      <tr><td class="chk">☐</td><td>63</td><td>소방청</td><td>NFA</td><td>행정안전부</td></tr>
+      <tr><td class="chk">☐</td><td>64</td><td>국세청</td><td>NTS</td><td>기획재정부</td></tr>
+      <tr><td class="chk">☐</td><td>65</td><td>재외동포청</td><td>OKA</td><td>외교부</td></tr>
+      <tr><td class="chk">☐</td><td>66</td><td>경찰청</td><td>POLICE</td><td>행정안전부</td></tr>
+      <tr><td class="chk">☐</td><td>67</td><td>조달청</td><td>PPS</td><td>기획재정부</td></tr>
+      <tr><td class="chk">☐</td><td>68</td><td>농촌진흥청</td><td>RDA</td><td>농림축산식품부</td></tr>
+      <tr><td class="chk">☐</td><td>69</td><td>새만금개발청</td><td>SDIA</td><td>국토교통부</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-8. 검찰 (준사법·법무부 소속, 1개 기관)</h3>
+  <table class="census-table">
+    <thead><tr><th>완료</th><th>#</th><th>기관명</th><th>코드</th><th>소속</th></tr></thead>
+    <tbody>
+      <tr><td class="chk">☐</td><td>70</td><td>검찰청</td><td>PROSECUTION</td><td>법무부</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsec">6-9. 별도 트랙 — 이미 지역 단위까지 존재하는 기관 (참고용, 위 70건에 미포함)</h3>
+  <p>
+    다음은 <code>09-national/agencies/</code>에 16개 도 인스턴스가 이미 존재하는 기관이다.
+    §6-1~8의 "중앙조직 과·팀 단위" 작업과 별개로, <b>지역청 내부 부서 단위</b> 실사가
+    필요할 때 별도 문서로 관리한다.
+  </p>
+  <ul class="list">
+    <li>법원(court) — 16개 지방법원 · 검찰(prosecution) — 16개 지역청 · 경찰(police) — 15개 지방청</li>
+    <li>해양경찰(coastguard) — 5개 지방청 · 국세청(tax) — 133개+지서21 · 관세청(customs) — 34개</li>
+    <li>통계청(stat) · 병무청(mma) · 기상청(weather) · 해양수산청(port) · 보훈청(veterans)</li>
+  </ul>
+
+  <h3 class="subsec">6-10. 실사 진행 기록 (착수분)</h3>
+  <table>
+    <thead><tr><th>일자</th><th>기관</th><th>실사 결과물</th></tr></thead>
+    <tbody>
+      <tr><td>2026-08-15</td><td>#8,9,10,12 사법부 4개 기관(CONSTCOURT·NCA·COTI·JRTI)</td>
+        <td>scourt.go.kr·ccourt.go.kr·edu.scourt.go.kr·jrti.scourt.go.kr 및
+        「헌법재판소 사무기구에 관한 규칙」 교차확인으로 4개 기관 15개 사무기구
+        division 확정. <code>SP-JUDICIARY-ADMINDIV-TEMPLATE_v1.0.md</code> +
+        <code>judiciary-division-master-data.json</code> 신설. <b>보류:</b>
+        #7 대법원(SUPREMECOURT)은 재판부 조직(전원합의체·소부)이 사무기구와
+        성격이 달라 별도 템플릿 필요(미착수), #11 사법정책연구원(JPRI)은
+        공개된 조직도를 확인 못해 미체크로 남김 — 둘 다 §6-9류 별도 트랙
+        후보로 재분류 검토 필요.</td></tr>
+      <tr><td>2026-08-15</td><td>#1 국회(ASSEMBLY)</td>
+        <td>국회법 제37조·committee.na.go.kr 교차확인으로 18개 상임위원회·상설특별위원회
+        목록 확정. <code>prompts/gov-tree/09-national/policy-bodies/divisions/
+        SP-ASSEMBLYDIV-TEMPLATE_v1.0.md</code>(클래스 템플릿, 09-national 트리
+        최초의 division 계층) + <code>assembly-committee-master-data.json</code>
+        (18개 위원회, 소관 정책기관코드 매핑 포함) 신설. 위원회별 소위원회·
+        수석전문위원실 등 세부 조직은 다음 단계 실사 대상으로 남김.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="sec7"><span class="num">7</span>참고 문서</h2>
+  <ul class="list">
+    <li><code>docs/GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md</code> — gov-tree 추상화 계층
+      전수 검증 현황(2026-08-04)</li>
+    <li><code>prompts/gov-tree/09-national/PUBLIC-MYDATA-REGISTRATION-REQUIREMENTS_2026-07-09.md</code>
+      — 행정정보공유과 이용기관 등록 절차 실사(등록 미완료 상태로 남아있는 선례)</li>
+    <li><code>prompts/gov-tree/08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md</code> — G18(담당부서·직원
+      확인 게이트)·G19(외부 서류 획득 게이트) 등 기관 AI의 권한 경계 정의</li>
+    <li><code>prompts/gov-tree/docs/POLICY-BODIES-LEGAL-BASIS-STATUS_2026-08-02.md</code> — 68개
+      국가 정책기관 법적근거 검증 현황</li>
+    <li><code>prompts/SP-10_kpublic_v3.25.txt</code> §REQUIRED-DOCUMENTS — 레지스트리 미등록 기관에 대한
+      웹검색 조사 절차(U8 원칙)</li>
+    <li>문서24(docu.gdoc.go.kr) — 행정안전부·한국지역정보개발원(KLID) 운영, 민·관 양방향
+      전자문서유통 플랫폼(2026-08-15 조사, §3·§5 반영)</li>
+  </ul>
+
+  <div class="footer-line">
+    <span>Hondi(혼디) · Openhash-Gopang/gopang</span>
+    <span>2026-08-15 통합본 — 이전 두 문서(roadmap.html / census-workplan.md)를 대체함</span>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var chks = document.querySelectorAll('.census-table td.chk');
+  var total = chks.length;
+  var done = 0;
+  chks.forEach(function(td){ if(td.textContent.trim() === '☑') done++; });
+  var pct = total ? Math.round(done/total*100) : 0;
+  document.querySelector('.progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = done + ' / ' + total + ' 완료 (' + pct + '%)';
+})();
+</script>
+</body>
+</html>
