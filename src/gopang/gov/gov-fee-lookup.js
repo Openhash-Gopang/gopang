@@ -108,11 +108,18 @@ export function matchServiceName(userText, records) {
 // 던지지 않고 null을 반환한다 — 호출부(resolveGovFee)가 조용히 키워드
 // 매칭기로 넘어가도록 하기 위함(그레이스풀 디그레이드).
 //
-// score 임계값(0.75)은 entity-semantic-search 쪽과 마찬가지로 "정직한
-// 한계" — 실사용 데이터로 아직 검증 못 한 잠정치다. 오탐(잘못된 서비스에
-// 잘못된 요금 매칭)이 못 찾는 것보다 훨씬 나쁘므로, 애매하면 일부러 버리고
-// 키워드 매칭기 쪽 안전장치(그것도 못 찾으면 NOT_FOUND)에 맡긴다.
-const SEMANTIC_SCORE_THRESHOLD = 0.75;
+// score 임계값 — 2026-08-15 l1-hanlim 서버에서 실제 bge-m3 파일럿으로 실측:
+//   "건축신고 하려고요"                        → 건축신고             0.639 (정답)
+//   "등본 떼줘"                                → 주민등록표등·초본교부 신청 0.603 (정답)
+//   "부동산 계약서 세금"                       → 부동산등기용 등록증명서 발급신청 0.563 (근접)
+//   "식당 영업 시작하려면 뭐부터 해야돼"        → 식품영업등록 신청 등    0.465 (근접, 쿼리가 모호할수록 낮아짐)
+// 애초 잠정치 0.75는 이 도메인(정형화된 행정 용어, 동음이의 위험 큼)에서
+// bge-m3 코사인 유사도가 실제로 도달하는 범위보다 훨씬 높게 잡혀 있어서,
+// 정답까지 전부 걸러지고 있었다(=시맨틱 검색이 사실상 항상 키워드 폴백행).
+// 실측 분포 기준 0.55로 낮춘다 — "부동산 계약서 세금"(0.563)까지는 통과,
+// 더 모호한 자연어 질의(0.46대)는 여전히 걸러 안전 마진을 유지한다.
+// 색인이 더 쌓이거나 쿼리 패턴이 다양해지면 재보정 필요.
+const SEMANTIC_SCORE_THRESHOLD = 0.55;
 
 export async function semanticMatchServiceName(workerBaseUrl, userText, { scope, regionCode } = {}) {
   if (!workerBaseUrl) return null;
