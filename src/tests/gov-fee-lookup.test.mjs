@@ -12,7 +12,30 @@
 // 이 테스트를 지우지 말 것 — 회귀 방지용.
 
 import assert from 'node:assert';
-import { matchServiceName, extractCityCodeFromTrace, resolveGovFee } from '../gopang/gov/gov-fee-lookup.js';
+import { matchServiceName, extractCityCodeFromTrace, resolveGovFee, semanticMatchServiceName } from '../gopang/gov/gov-fee-lookup.js';
+
+// ── 시맨틱 검색(worker.js /gov-fee-semantic-search) mock ────────────
+// 2026-08-15 신설 — 실제 Cloudflare Worker/Vectorize 없이 fetch를 가로채서
+// semanticMatchServiceName()/resolveGovFee()의 시맨틱 우선 + 키워드 폴백
+// 경로를 검증한다. mockSemanticQueue에 순서대로 응답을 채워두면
+// /gov-fee-semantic-search 호출마다 하나씩 꺼내 쓴다(호출 순서 = regional
+// 먼저, national 그다음 — resolveGovFee 구현 순서와 일치시킬 것).
+const _originalFetch = global.fetch;
+let mockSemanticQueue = [];
+function installSemanticMock() {
+  global.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.pathname === '/gov-fee-semantic-search') {
+      const response = mockSemanticQueue.shift() || { status: 'not_found', count: 0, candidates: [] };
+      return { ok: true, json: async () => response };
+    }
+    return _originalFetch(url);
+  };
+}
+function restoreFetch() {
+  global.fetch = _originalFetch;
+}
+const WORKER_URL = 'https://hondi-proxy.example.workers.dev';
 
 // ── 최소 목 레코드 세트 (실제 시드 스크립트 출력 구조를 그대로 축약) ──
 const MOCK_RECORDS = [
@@ -135,6 +158,58 @@ await check('resolveGovFee — 완전히 무관한 발화는 NOT_FOUND', async (
   const r = await resolveGovFee(pb, '오늘 날씨 어때', [], {});
   assert.strictEqual(r.status, 'NOT_FOUND');
 });
+
+// ── 시맨틱 검색 경로 테스트 ──────────────────────────────────────
+installSemanticMock();
+
+await check('semanticMatchServiceName — 정상 후보 반환 (score 임계값 이상)', async () => {
+  mockSemanticQueue = [{
+    status: 'matched_list', count: 1,
+    candidates: [{ service_name: '건축신고', region_code: 'chungnam_cheonan', scope: 'regional',
+      fee_type: 'flat', gov_reference_fee_min: 50000, gdc_multiplier: 2, status: 'REAL', score: 0.91 }],
+  }];
+  const r = await semanticMatchServiceName(WORKER_URL, '건축신고 하려고요', { regionCode: 'chungnam_cheonan' });
+  assert.ok(r);
+  assert.strictEqual(r.service_name, '건축신고');
+});
+
+await check('semanticMatchServiceName — score 낮으면 null(오탐 방지 안전장치)', async () => {
+  mockSemanticQueue = [{ status: 'matched_list', count: 1, candidates: [{ service_name: '전혀다른민원', score: 0.4 }] }];
+  const r = await semanticMatchServiceName(WORKER_URL, '아무말', {});
+  assert.strictEqual(r, null);
+});
+
+await check('semanticMatchServiceName — workerBaseUrl 없으면 null(그레이스풀 디그레이드)', async () => {
+  const r = await semanticMatchServiceName(undefined, '건축신고', {});
+  assert.strictEqual(r, null);
+});
+
+await check('resolveGovFee — workerBaseUrl 제공 시 시맨틱 우선 사용(matchedBy=semantic)', async () => {
+  mockSemanticQueue = [
+    { status: 'matched_list', count: 1, candidates: [{ service_name: '건축신고', region_code: 'chungnam_cheonan',
+      scope: 'regional', fee_type: 'flat', gov_reference_fee_min: 50000, gdc_multiplier: 2, status: 'REAL', score: 0.9 }] },
+    { status: 'not_found', count: 0, candidates: [] },
+  ];
+  const pbNeverCalled = { collection: () => ({ getFullList: async () => {
+    throw new Error('키워드 폴백이 호출되면 안 됨(시맨틱이 이미 찾았어야 함)');
+  } }) };
+  const r = await resolveGovFee(pbNeverCalled, '건축신고 하려고요', ['SP-CITY-CHUNGNAM_CHEONAN'], {}, { workerBaseUrl: WORKER_URL });
+  assert.strictEqual(r.status, 'OK');
+  assert.strictEqual(r.matchedBy, 'semantic');
+  assert.strictEqual(r.hondiServiceFee, 100000);
+});
+
+await check('resolveGovFee — 시맨틱 실패(무응답) 시 키워드로 그레이스풀 디그레이드', async () => {
+  mockSemanticQueue = [
+    { status: 'not_found', count: 0, candidates: [] },
+    { status: 'not_found', count: 0, candidates: [] },
+  ];
+  const r = await resolveGovFee(pb, '건축신고 하려고요', ['SP-CITY-CHUNGNAM_CHEONAN'], {}, { workerBaseUrl: WORKER_URL });
+  assert.strictEqual(r.status, 'OK');
+  assert.strictEqual(r.matchedBy, 'keyword');
+});
+
+restoreFetch();
 
 if (failures > 0) {
   console.error(`\n${failures}건 실패`);

@@ -23,6 +23,13 @@
  * 함수들을 src/gopang/gov/gov-fee-calc.mjs로 옮기고 양쪽에서 재사용하는
  * 정리를 후속 PR로 진행할 것 — 지금은 로직 중복을 피하는 게 더 중요해서
  * 우선 그대로 import한다.)
+ *
+ * ★ 2026-08-15 갱신 — worker.js의 /gov-fee-semantic-search(bge-m3+Vectorize,
+ * hondi-entity-registry와 같은 패턴, 전용 인덱스 hondi-gov-fee-schedule)를
+ * 1순위 매칭기로 연결했다. resolveGovFee()에 { workerBaseUrl }을 넘기면
+ * 이 의미검색을 먼저 쓰고, 넘기지 않거나 실패/무응답이면 기존 키워드
+ * 매칭기(matchServiceName)로 그레이스풀 디그레이드한다 — 기존 호출부
+ * (workerBaseUrl 없이 호출하는 코드)는 전혀 안 바뀌어도 계속 동작한다.
  */
 
 import { resolveProvinceCode, resolveAgencyDisplayName } from './gov-router.js';
@@ -50,13 +57,12 @@ function _regionCodeCandidates(cityCode) {
   return [...candidates];
 }
 
-// ── 서비스명 매칭 (v1: 키워드 스코어링) ───────────────────────────────
-// TODO(후속 작업): hondi-entity-registry에 이미 구축된 Cloudflare Workers AI
-// bge-m3 + Vectorize 시맨틱 검색을 재사용하면 자연어 요청("등본 떼줘")에서
-// 훨씬 정확히 매칭된다. 지금은 그 인프라를 이 계산 경로까지 연결하지 않은
-// 상태라, 우선 순수 키워드 겹침 점수로 v1을 구현한다 — matchServiceName()
-// 함수 시그니처만 그대로 유지하면 나중에 벡터 검색으로 갈아끼워도 호출부는
-// 안 바뀐다.
+// ── 서비스명 매칭 (키워드 스코어링 — 시맨틱 검색 실패 시 폴백용) ──────
+// 2026-08-15 — 원래 v1 유일 매칭기였다가, 이제 semanticMatchServiceName()의
+// 그레이스풀 디그레이드 대상으로 격하됐다(바인딩 없음/네트워크 실패/후보
+// 없음일 때만 호출됨). 여전히 필요하다: 시맨틱 검색은 Worker·Vectorize
+// 인프라가 살아있어야 하므로, 로컬 테스트·오프라인 환경·인프라 장애
+// 상황의 안전망으로 이 경로를 지우지 않는다.
 function _tokenize(text) {
   return String(text || '')
     .replace(/[()·・,./]/g, ' ')
@@ -96,6 +102,42 @@ export function matchServiceName(userText, records) {
   return bestScore >= 0.34 ? best : null;
 }
 
+// ── 시맨틱 검색 (1순위 매칭기) ──────────────────────────────────────
+// worker.js GET /gov-fee-semantic-search를 호출한다. 실패하는 모든 경우
+// (fetch 자체 실패, non-2xx, 빈 후보, workerBaseUrl 미제공)에 예외를
+// 던지지 않고 null을 반환한다 — 호출부(resolveGovFee)가 조용히 키워드
+// 매칭기로 넘어가도록 하기 위함(그레이스풀 디그레이드).
+//
+// score 임계값(0.75)은 entity-semantic-search 쪽과 마찬가지로 "정직한
+// 한계" — 실사용 데이터로 아직 검증 못 한 잠정치다. 오탐(잘못된 서비스에
+// 잘못된 요금 매칭)이 못 찾는 것보다 훨씬 나쁘므로, 애매하면 일부러 버리고
+// 키워드 매칭기 쪽 안전장치(그것도 못 찾으면 NOT_FOUND)에 맡긴다.
+const SEMANTIC_SCORE_THRESHOLD = 0.75;
+
+export async function semanticMatchServiceName(workerBaseUrl, userText, { scope, regionCode } = {}) {
+  if (!workerBaseUrl) return null;
+  try {
+    const url = new URL('/gov-fee-semantic-search', workerBaseUrl);
+    url.searchParams.set('query', userText);
+    if (scope) url.searchParams.set('scope', scope);
+    if (regionCode) url.searchParams.set('region_code', regionCode);
+    url.searchParams.set('limit', '3');
+
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const candidates = data?.candidates;
+    if (!Array.isArray(candidates) || candidates.length === 0) return null;
+
+    const top = candidates[0];
+    if (typeof top.score !== 'number' || top.score < SEMANTIC_SCORE_THRESHOLD) return null;
+    return top;
+  } catch (e) {
+    // 네트워크 오류·타임아웃 등 — 조용히 폴백 신호(null)만 반환한다.
+    return null;
+  }
+}
+
 // ── PocketBase 조회 ─────────────────────────────────────────────────
 async function _fetchCandidates(pb, { regionCodes, includeNational = true }) {
   const filters = [];
@@ -118,32 +160,60 @@ async function _fetchCandidates(pb, { regionCodes, includeNational = true }) {
  * @param {string[]} trace - assembleGovSystemPrompt()가 반환한 trace 배열
  * @param {object} [calcInputs] - formula_type 레코드 계산에 필요한 입력값
  *   (예: { amount, isEfile, parties, count } — 인지세/인지대/송달료용)
+ * @param {object} [options] - { workerBaseUrl } 제공 시 시맨틱 검색을 1순위로
+ *   시도한다(worker.js GET /gov-fee-semantic-search). 생략하면 기존과 동일하게
+ *   키워드 매칭만 쓴다 — 기존 호출부는 코드 변경 없이 계속 동작한다.
  * @returns {Promise<{
  *   status: 'OK'|'NEEDS_APPROVAL'|'NOT_FOUND',
  *   record: object|null,
  *   govReferenceFee: number|null,
  *   hondiServiceFee: number|null,
  *   isBaselineFallback: boolean,
+ *   matchedBy: 'semantic'|'keyword'|null,
  *   message: string,
  * }>}
  */
-export async function resolveGovFee(pb, userText, trace, calcInputs = {}) {
+export async function resolveGovFee(pb, userText, trace, calcInputs = {}, options = {}) {
+  const { workerBaseUrl } = options;
   const cityCode = extractCityCodeFromTrace(trace);
   const regionCandidates = _regionCodeCandidates(cityCode);
+  const primaryRegionCode = regionCandidates[0] || null;
 
-  // 1) 사용자 관할 지역의 REAL 레코드 우선
-  let candidates = await _fetchCandidates(pb, { regionCodes: regionCandidates, includeNational: true });
   let isBaselineFallback = false;
+  let matchedBy = null;
 
-  let match = matchServiceName(userText, candidates.filter((r) => r.status === 'REAL'));
+  // 1) 사용자 관할 지역 — 시맨틱 검색 우선, 실패 시 키워드 매칭.
+  // Vectorize filter는 AND 방식이라 region_code와 scope=national을 한 번에
+  // "OR"로 못 묶는다 — 두 번 호출해 점수가 더 높은 쪽을 쓴다.
+  const [regionalHit, nationalHit] = await Promise.all([
+    semanticMatchServiceName(workerBaseUrl, userText, { regionCode: primaryRegionCode }),
+    semanticMatchServiceName(workerBaseUrl, userText, { scope: 'national' }),
+  ]);
+  let match = null;
+  if (regionalHit && nationalHit) match = regionalHit.score >= nationalHit.score ? regionalHit : nationalHit;
+  else match = regionalHit || nationalHit;
+
+  if (match) {
+    matchedBy = 'semantic';
+  } else {
+    const candidates = await _fetchCandidates(pb, { regionCodes: regionCandidates, includeNational: true });
+    match = matchServiceName(userText, candidates.filter((r) => r.status === 'REAL'));
+    if (match) matchedBy = 'keyword';
+  }
 
   // 2) 지역 매칭이 없으면 BASELINE(천안시)으로 폴백 — 반드시 승인 필요로 표시
   if (!match) {
-    const baseline = await _fetchCandidates(pb, {
-      regionCodes: ['chungnam_cheonan', 'cheonan'],
-      includeNational: false,
-    });
-    match = matchServiceName(userText, baseline.filter((r) => r.status === 'REAL'));
+    match = await semanticMatchServiceName(workerBaseUrl, userText, { regionCode: 'chungnam_cheonan' });
+    if (match) {
+      matchedBy = 'semantic';
+    } else {
+      const baseline = await _fetchCandidates(pb, {
+        regionCodes: ['chungnam_cheonan', 'cheonan'],
+        includeNational: false,
+      });
+      match = matchServiceName(userText, baseline.filter((r) => r.status === 'REAL'));
+      if (match) matchedBy = 'keyword';
+    }
     if (match) isBaselineFallback = true;
   }
 
@@ -154,6 +224,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}) {
       govReferenceFee: null,
       hondiServiceFee: null,
       isBaselineFallback: false,
+      matchedBy: null,
       message: '해당 서비스의 요금 정보를 찾지 못했습니다. 담당자 확인이 필요합니다.',
     };
   }
@@ -165,6 +236,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}) {
       govReferenceFee: null,
       hondiServiceFee: null,
       isBaselineFallback,
+      matchedBy,
       message: '이 서비스는 요금이 조례·별표 참조로만 되어 있어 자동 계산할 수 없습니다. 담당자 확인 후 진행해 주세요.',
     };
   }
@@ -179,6 +251,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}) {
       govReferenceFee,
       hondiServiceFee,
       isBaselineFallback: true,
+      matchedBy,
       message: `이 지역의 정확한 금액은 확인되지 않아 ${match.source} 기준 추정치(${hondiServiceFee ?? '확인 필요'}원)를 사용합니다. 진행 전 사용자 승인이 필요합니다.`,
     };
   }
@@ -189,6 +262,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}) {
     govReferenceFee,
     hondiServiceFee,
     isBaselineFallback: false,
+    matchedBy,
     message: `${match.service_name} — 혼디 서비스 수수료 ${hondiServiceFee}원 (참고: 정부 납부 기준액 ${govReferenceFee}원, 실제 정부 납부는 사용자 직접 처리)`,
   };
 }

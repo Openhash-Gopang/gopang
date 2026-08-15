@@ -3,15 +3,20 @@
 // 사용법:
 //   node scripts/seed_gov_fee_schedule.mjs --file ./혼디_정부수수료_기준표_초안.xlsx --dry-run
 //   node scripts/seed_gov_fee_schedule.mjs --file ./혼디_정부수수료_기준표_초안.xlsx
+//   node scripts/seed_gov_fee_schedule.mjs --file ./혼디_정부수수료_기준표_초안.xlsx --embed --worker-url https://hondi-proxy.example.workers.dev
 //
 // 환경변수 (PocketBase 실제 반영 시 필요, --dry-run이면 불필요):
 //   POCKETBASE_URL, POCKETBASE_ADMIN_EMAIL, POCKETBASE_ADMIN_PASSWORD
+//   HONDI_WORKER_URL (--embed 시, --worker-url 생략하면 이 값을 씀)
 //
 // 옵션:
 //   --file <path>       엑셀 파일 경로 (필수)
-//   --region <code>     기준표(천안시) 시트를 어느 region_code로 저장할지 (기본: cheonan)
+//   --region <code>     기준표(천안시) 시트를 어느 region_code로 저장할지 (기본: chungnam_cheonan)
 //   --multiplier <n>    gdc_multiplier 기본값 (기본: 2, 혼디 과금 원칙 ③)
 //   --dry-run           PocketBase에 쓰지 않고 파싱 결과만 콘솔에 출력 + JSON으로 저장
+//   --embed             PocketBase 반영 후, worker.js POST /orchestration/gov-fee-embed-index로
+//                        REAL 레코드를 bge-m3+Vectorize(hondi-gov-fee-schedule 인덱스)에 색인
+//   --worker-url <url>  --embed용 Worker 베이스 URL (HONDI_WORKER_URL 환경변수로도 지정 가능)
 
 import ExcelJS from 'exceljs';
 import path from 'node:path';
@@ -23,10 +28,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
-  const args = { dryRun: false, region: 'chungnam_cheonan', multiplier: 2 };
+  const args = { dryRun: false, region: 'chungnam_cheonan', multiplier: 2, embed: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--file') args.file = argv[++i];
+    else if (a === '--embed') args.embed = true;
+    else if (a === '--worker-url') args.workerUrl = argv[++i];
     else if (a === '--region') args.region = argv[++i];
     else if (a === '--multiplier') args.multiplier = Number(argv[++i]);
     else if (a === '--dry-run') args.dryRun = true;
@@ -266,15 +273,50 @@ async function upsertRecord(pb, record) {
   const filter = `service_name_norm = "${record.service_name_norm}" && region_code ${record.region_code ? `= "${record.region_code}"` : '= null'}`;
   try {
     const existing = await pb.collection('gov_fee_schedule').getFirstListItem(filter);
-    await pb.collection('gov_fee_schedule').update(existing.id, record);
-    return 'updated';
+    const updated = await pb.collection('gov_fee_schedule').update(existing.id, record);
+    return { action: 'updated', id: updated.id };
   } catch (e) {
     if (e?.status === 404) {
-      await pb.collection('gov_fee_schedule').create(record);
-      return 'created';
+      const created = await pb.collection('gov_fee_schedule').create(record);
+      return { action: 'created', id: created.id };
     }
     throw e;
   }
+}
+
+// ── 시맨틱 검색 인덱싱 (2026-08-15 신설) ────────────────────────────
+// worker.js POST /orchestration/gov-fee-embed-index를 배치(최대 100건)로
+// 호출한다. id는 반드시 PocketBase가 방금 발급한 실제 레코드 id를 써야
+// 한다(gov-fee-lookup.js/handleGovFeeEmbedIndex 주석 참조 — entity 버전이
+// guid를 써서 겪은 404 버그 클래스를 여기서는 애초에 피한다).
+async function embedIndexBatch(workerBaseUrl, records) {
+  const url = new URL('/orchestration/gov-fee-embed-index', workerBaseUrl);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ records }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+async function embedIndexAll(workerBaseUrl, indexableRecords) {
+  const BATCH_SIZE = 100; // worker.js 쪽 배치 한도와 동일
+  let indexed = 0;
+  for (let i = 0; i < indexableRecords.length; i += BATCH_SIZE) {
+    const batch = indexableRecords.slice(i, i + BATCH_SIZE);
+    try {
+      const result = await embedIndexBatch(workerBaseUrl, batch);
+      indexed += result.count || 0;
+      console.log(`[EMBED] 배치 ${i / BATCH_SIZE + 1}: ${result.count}건 색인 완료`);
+    } catch (e) {
+      console.error(`[EMBED-FAIL] 배치 ${i / BATCH_SIZE + 1} (${batch.length}건):`, e.message);
+    }
+  }
+  return indexed;
 }
 
 async function main() {
@@ -335,11 +377,27 @@ async function main() {
   await pb.collection('_superusers').authWithPassword(email, password);
 
   let created = 0, updated = 0, failed = 0;
+  const indexableRecords = []; // --embed용: 성공적으로 upsert된 REAL 레코드만 모은다
   for (const record of all) {
     try {
-      const result = await upsertRecord(pb, record);
-      if (result === 'created') created++;
+      const { action, id } = await upsertRecord(pb, record);
+      if (action === 'created') created++;
       else updated++;
+      // NEEDS_REVIEW/MISSING은 애초에 자동 계산 대상이 아니므로 색인 대상에서
+      // 제외한다 — 시맨틱 검색이 "그럴듯하게 매칭됐지만 실제로는 사람 확인이
+      // 필요한" 레코드를 찾아내 봐야 resolveGovFee가 어차피 NEEDS_APPROVAL로
+      // 되돌리므로, 색인 낭비일 뿐 아니라 오탐 표면적만 넓힌다.
+      if (record.status === 'REAL') {
+        indexableRecords.push({
+          id,
+          service_name: record.service_name,
+          raw_fee_text: record.raw_fee_text,
+          related_law: record.related_law,
+          scope: record.scope,
+          region_code: record.region_code,
+          fee_type: record.fee_type,
+        });
+      }
     } catch (e) {
       failed++;
       console.error(`[FAIL] ${record.service_name} (${record.region_code ?? 'national'}):`, e?.message || e);
@@ -347,6 +405,18 @@ async function main() {
   }
 
   console.log(`완료 — 생성 ${created} / 갱신 ${updated} / 실패 ${failed}`);
+
+  if (args.embed) {
+    const workerBaseUrl = args.workerUrl || process.env.HONDI_WORKER_URL;
+    if (!workerBaseUrl) {
+      console.error('[EMBED] --worker-url 또는 HONDI_WORKER_URL 환경변수가 필요합니다 (예: https://hondi-proxy.example.workers.dev).');
+      console.error('[EMBED] 색인을 건너뜁니다 — PocketBase 반영은 이미 완료됐으니 나중에 이 스크립트를 --embed로 다시 실행해도 됩니다(멱등).');
+      return;
+    }
+    console.log(`[EMBED] REAL 레코드 ${indexableRecords.length}건 색인 시작 → ${workerBaseUrl}`);
+    const indexed = await embedIndexAll(workerBaseUrl, indexableRecords);
+    console.log(`[EMBED] 완료 — ${indexed}/${indexableRecords.length}건 색인됨`);
+  }
 }
 
 main().catch((e) => {
