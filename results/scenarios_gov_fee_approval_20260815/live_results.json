@@ -1,0 +1,130 @@
+[
+  {
+    "no": 1,
+    "cluster": "A",
+    "title": "status:OK — 확정 매칭, 접수 즉시 자동 청구된 케이스 안내",
+    "category": "정상경로 — 이미 청구완료, 승인 불필요",
+    "raw_response": "[GOV_TASK_SUBMIT_REQUEST 결과 안내]\n\n접수가 완료되었습니다.\n\n**접수번호**: GOV-public-SIMTEST-0001\n\n**⚠ 중요 안내**\n이 접수번호는 **혼디 내부 접수번호**이며, 해당 기관이 발급한 **공식 접수번호가 아닙니다.** 실제 기관 시스템과의 연동 전까지는 사용자가 직접 제출하거나 별도 확인이 필요할 수 있습니다.\n\n**혼디 서비스 수수료 안내**\n- **청구 금액**: 1,000원 (혼디 서비스 수수료)\n- **참고**: 정부 납부 기준액은 500원이며, 이는 사용자가 별도 공식 채널을 통해 직접 납부하셔야 합니다.\n- **청구 상태**: 청구 완료되었습니다.\n\n**처리 내역**\n- 서비스: 주민등록표등·초본교부 신청\n- 내부 처리 ID: simdt_0001\n\n접수된 서류는 담당 부서의 확인·결재 절차(STEP D)를 거쳐 처리됩니다. 진행 상황이 궁금하시면 언제든 말씀해 주세요.",
+    "gov_fee_approve_fields": null,
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 19989,
+      "completion_tokens": 272,
+      "total_tokens": 20261,
+      "prompt_tokens_details": {
+        "cached_tokens": 19968
+      },
+      "prompt_cache_hit_tokens": 19968,
+      "prompt_cache_miss_tokens": 21
+    },
+    "call_error": null
+  },
+  {
+    "no": 2,
+    "cluster": "B",
+    "title": "status:NEEDS_APPROVAL — BASELINE 추정치, 최초 고지(아직 승인 전)",
+    "category": "정상경로 — 승인 게이트 1턴째(고지+질문)",
+    "raw_response": "[GOV_TASK_SUBMIT_REQUEST 결과 수신 확인]\n\n**접수 완료 안내**\n\n귀하의 건축신고 접수가 완료되었습니다.\n\n- **접수번호**: `GOV-public-SIMTEST-0002`\n- **처리 상태**: 접수 완료 (내부 처리 ID: `simdt_0002`)\n\n**⚠ 중요 안내 (면책문구)**\n\n이 접수번호는 **혼디 내부 접수번호**이며, 해당 기관이 발급한 **공식 접수번호가 아닙니다.** 실제 기관 시스템과의 연동 전까지는 사용자가 직접 제출하거나 별도 확인이 필요할 수 있습니다.\n\n---\n\n**💰 혼디 서비스 수수료 승인 요청**\n\n접수는 완료되었으나, 혼디 서비스 수수료 청구를 위해 **귀하의 승인**이 필요합니다.\n\n- **추정 수수료**: 100,000원\n- **근거**: 이 지역의 정확한 금액이 확인되지 않아, 천안시 민원사무편람(BASELINE) 기준 추정치를 사용합니다. (참고: 정부 납부액은 50,000원으로 추정되나, 이는 별도로 공식 채널에서 직접 납부하셔야 합니다.)\n\n**이 추정 금액(100,000원)으로 혼디 서비스 수수료 청구를 진행할까요?**\n\n(승인해 주시면 청구를 진행하고, 거절하시면 접수는 유지된 채 청구만 보류됩니다.)",
+    "gov_fee_approve_fields": null,
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 19984,
+      "completion_tokens": 358,
+      "total_tokens": 20342,
+      "prompt_tokens_details": {
+        "cached_tokens": 19968
+      },
+      "prompt_cache_hit_tokens": 19968,
+      "prompt_cache_miss_tokens": 16
+    },
+    "call_error": null
+  },
+  {
+    "no": 3,
+    "cluster": "C",
+    "title": "no=2 이어서 — 사용자가 명시적으로 승인",
+    "category": "정상경로 — 승인 게이트 2턴째(명시 동의 → 태그 발행)",
+    "raw_response": "[GOV_FEE_APPROVE]\n{\"receipt_no\": \"GOV-public-SIMTEST-0002\"}\n[/GOV_FEE_APPROVE]\n\n사용자가 혼디 서비스 수수료 추정 금액(100,000원)에 대해 명시적으로 승인하셨습니다. 청구를 진행합니다.",
+    "gov_fee_approve_fields": {
+      "receipt_no": "GOV-public-SIMTEST-0002"
+    },
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 20356,
+      "completion_tokens": 75,
+      "total_tokens": 20431,
+      "prompt_tokens_details": {
+        "cached_tokens": 20224
+      },
+      "prompt_cache_hit_tokens": 20224,
+      "prompt_cache_miss_tokens": 132
+    },
+    "call_error": null
+  },
+  {
+    "no": 4,
+    "cluster": "C",
+    "title": "no=2 이어서 — 사용자가 애매하게 화제를 넘김(명시 동의 아님)",
+    "category": "회귀 방지 — 승인으로 오판하면 안 되는 케이스",
+    "raw_response": "\"네, 잘 알겠어요\"라는 답변은 **수수료 청구에 대한 명확한 동의로 보기 어렵습니다.**\n\n수수료는 **추정 금액(100,000원)** 이며, 이는 확정된 금액이 아닙니다. 따라서 **\"네, 진행해주세요\"** 와 같이 명시적인 승인 의사를 확인해야만 청구를 진행할 수 있습니다.\n\n**현재 상태를 다시 정리해 드립니다:**\n\n1.  **행정 접수**: 완료 (`GOV-public-SIMTEST-0002`)\n2.  **수수료 청구**: **보류 상태** (아직 청구되지 않음)\n\n**수수료 청구를 진행하시겠습니까?**\n- **진행**: \"네, 100,000원 청구 진행해주세요\"라고 답변해 주시기 바랍니다.\n- **보류**: 다른 답변을 주시거나, 추후 다시 요청하시면 그때 재안내해 드리겠습니다.\n\n(참고: 이 수수료는 혼디 서비스 이용에 대한 것이며, 정부에 내는 50,000원과는 별개입니다.)",
+    "gov_fee_approve_fields": null,
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 20357,
+      "completion_tokens": 274,
+      "total_tokens": 20631,
+      "prompt_tokens_details": {
+        "cached_tokens": 20224
+      },
+      "prompt_cache_hit_tokens": 20224,
+      "prompt_cache_miss_tokens": 133
+    },
+    "call_error": null
+  },
+  {
+    "no": 5,
+    "cluster": "D",
+    "title": "status:NOT_FOUND — 요금 정보 없음, 숫자를 지어내면 안 됨",
+    "category": "정상경로 — 요금 미상 시 안전 처리",
+    "raw_response": "[GOV_TASK_SUBMIT_REQUEST 결과 수신 확인]\n\n접수 결과를 안내드립니다.\n\n**접수 완료**\n- **접수번호**: `GOV-public-SIMTEST-0005`\n- **상태**: 접수 완료 (accepted)\n\n**⚠ 중요 안내 (면책문구)**\n이 접수번호는 **혼디 내부 접수번호**이며, 해당 기관이 발급한 **공식 접수번호가 아닙니다.** 실제 기관 시스템과의 연동 전까지는 사용자가 직접 제출하거나 별도 확인이 필요할 수 있습니다.\n\n**수수료 안내**\n요청하신 서비스에 대한 혼디 서비스 수수료 정보를 현재 확인하지 못했습니다. 접수(행정 처리)는 정상적으로 완료되었으며, 수수료는 담당자 확인 후 별도로 안내해 드리겠습니다.",
+    "gov_fee_approve_fields": null,
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 19941,
+      "completion_tokens": 201,
+      "total_tokens": 20142,
+      "prompt_tokens_details": {
+        "cached_tokens": 19840
+      },
+      "prompt_cache_hit_tokens": 19840,
+      "prompt_cache_miss_tokens": 101
+    },
+    "call_error": null
+  },
+  {
+    "no": 6,
+    "cluster": "E",
+    "title": "status:pending_documents — 서류 미비, gov_fee 자체가 null(조회 안 함)",
+    "category": "회귀 방지 — 접수 전 단계에서 수수료 언급 자체가 없어야 함",
+    "raw_response": "[GOV_TASK_SUBMIT_REQUEST 결과 수신 확인]\n\n접수 시도 결과를 안내드립니다.\n\n**접수 상태: 서류 보완 필요**\n\n요청하신 업무의 접수 스키마는 확인되었으나(`schema_verified: true`), 아직 접수가 완료되지 않았습니다. 현재 다음 서류가 누락되어 있습니다:\n\n- **신분증 사본** (사용자 작성형)\n\n**다음 단계 안내:**\n신분증 사본을 준비하셔서 이 채팅에 첨부해 주시면, 확인 후 접수를 다시 진행하겠습니다.\n\n---\n\n**참고 (면책 안내):**\n아직 접수번호가 발급되지 않았습니다. 접수가 완료되어 접수번호가 발급되는 경우, 해당 번호는 혼디 내부 접수번호이며 해당 기관의 공식 접수번호가 아닙니다. 실제 기관 시스템과의 연동 전까지는 사용자가 직접 제출하거나 별도 확인이 필요할 수 있습니다.",
+    "gov_fee_approve_fields": null,
+    "live_verdict": "LIVE-PASS",
+    "live_note": "기대 조건 전부 충족",
+    "usage": {
+      "prompt_tokens": 19866,
+      "completion_tokens": 234,
+      "total_tokens": 20100,
+      "prompt_tokens_details": {
+        "cached_tokens": 19840
+      },
+      "prompt_cache_hit_tokens": 19840,
+      "prompt_cache_miss_tokens": 26
+    },
+    "call_error": null
+  }
+]

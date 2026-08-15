@@ -1,0 +1,7 @@
+no,cluster,title,category,live_verdict,live_note
+1,A,"status:OK — 확정 매칭, 접수 즉시 자동 청구된 케이스 안내","정상경로 — 이미 청구완료, 승인 불필요",LIVE-PASS,기대 조건 전부 충족
+2,B,"status:NEEDS_APPROVAL — BASELINE 추정치, 최초 고지(아직 승인 전)",정상경로 — 승인 게이트 1턴째(고지+질문),LIVE-PASS,기대 조건 전부 충족
+3,C,no=2 이어서 — 사용자가 명시적으로 승인,정상경로 — 승인 게이트 2턴째(명시 동의 → 태그 발행),LIVE-PASS,기대 조건 전부 충족
+4,C,no=2 이어서 — 사용자가 애매하게 화제를 넘김(명시 동의 아님),회귀 방지 — 승인으로 오판하면 안 되는 케이스,LIVE-PASS,기대 조건 전부 충족
+5,D,"status:NOT_FOUND — 요금 정보 없음, 숫자를 지어내면 안 됨",정상경로 — 요금 미상 시 안전 처리,LIVE-PASS,기대 조건 전부 충족
+6,E,"status:pending_documents — 서류 미비, gov_fee 자체가 null(조회 안 함)",회귀 방지 — 접수 전 단계에서 수수료 언급 자체가 없어야 함,LIVE-PASS,기대 조건 전부 충족
