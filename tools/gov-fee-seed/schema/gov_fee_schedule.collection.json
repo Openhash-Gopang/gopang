@@ -1,0 +1,50 @@
+[
+  {
+    "name": "gov_fee_schedule",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      { "name": "service_name", "type": "text", "required": true },
+      { "name": "service_name_norm", "type": "text", "required": true },
+
+      { "name": "scope", "type": "select", "required": true,
+        "values": ["national", "regional"], "maxSelect": 1 },
+      { "name": "region_code", "type": "text", "required": false },
+
+      { "name": "fee_type", "type": "select", "required": true,
+        "values": ["free", "flat", "tiered", "formula", "ordinance_ref", "unknown"],
+        "maxSelect": 1 },
+
+      { "name": "gov_reference_fee_min", "type": "number", "required": false },
+      { "name": "gov_reference_fee_max", "type": "number", "required": false },
+      { "name": "formula_json", "type": "json", "required": false },
+
+      { "name": "gdc_multiplier", "type": "number", "required": true },
+      { "name": "hondi_service_fee_min", "type": "number", "required": false },
+      { "name": "hondi_service_fee_max", "type": "number", "required": false },
+
+      { "name": "status", "type": "select", "required": true,
+        "values": ["REAL", "STUB", "MISSING", "NEEDS_REVIEW"], "maxSelect": 1 },
+
+      { "name": "source", "type": "text", "required": false },
+      { "name": "effective_date", "type": "date", "required": false },
+      { "name": "last_verified", "type": "date", "required": false },
+      { "name": "notes", "type": "text", "required": false },
+
+      { "name": "raw_fee_text", "type": "text", "required": false },
+      { "name": "related_law", "type": "text", "required": false },
+
+      { "name": "created", "type": "autodate", "onCreate": true },
+      { "name": "updated", "type": "autodate", "onCreate": true, "onUpdate": true }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_gov_fee_unique ON gov_fee_schedule (service_name_norm, region_code)",
+      "CREATE INDEX idx_gov_fee_scope ON gov_fee_schedule (scope)"
+    ]
+  }
+]

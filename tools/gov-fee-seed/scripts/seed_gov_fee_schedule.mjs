@@ -1,0 +1,343 @@
+// seed_gov_fee_schedule.mjs
+//
+// 사용법:
+//   node scripts/seed_gov_fee_schedule.mjs --file ./혼디_정부수수료_기준표_초안.xlsx --dry-run
+//   node scripts/seed_gov_fee_schedule.mjs --file ./혼디_정부수수료_기준표_초안.xlsx
+//
+// 환경변수 (PocketBase 실제 반영 시 필요, --dry-run이면 불필요):
+//   POCKETBASE_URL, POCKETBASE_ADMIN_EMAIL, POCKETBASE_ADMIN_PASSWORD
+//
+// 옵션:
+//   --file <path>       엑셀 파일 경로 (필수)
+//   --region <code>     기준표(천안시) 시트를 어느 region_code로 저장할지 (기본: cheonan)
+//   --multiplier <n>    gdc_multiplier 기본값 (기본: 2, 혼디 과금 원칙 ③)
+//   --dry-run           PocketBase에 쓰지 않고 파싱 결과만 콘솔에 출력 + JSON으로 저장
+
+import ExcelJS from 'exceljs';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+// Windows에서 상대경로가 올바르게 해석되도록 pathToFileURL 패턴 사용
+// (기존 gopang bootstrap seeding 스크립트 컨벤션과 동일)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function parseArgs(argv) {
+  const args = { dryRun: false, region: 'cheonan', multiplier: 2 };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--file') args.file = argv[++i];
+    else if (a === '--region') args.region = argv[++i];
+    else if (a === '--multiplier') args.multiplier = Number(argv[++i]);
+    else if (a === '--dry-run') args.dryRun = true;
+    else if (a === '--pb-url') args.pbUrl = argv[++i];
+  }
+  return args;
+}
+
+function getCellText(cell) {
+  const v = cell.value;
+  if (v == null) return null;
+  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'number') return v;
+  if (v.richText) return v.richText.map((r) => r.text).join('').trim();
+  if (v.text) return String(v.text).trim();
+  return String(v).trim();
+}
+
+function normalizeName(s) {
+  return String(s || '')
+    .replace(/\s+/g, '')
+    .replace(/['"'']/g, '')
+    .trim();
+}
+
+// ── 1) 기준표(천안시) 시트 파싱 ──
+function parseBaselineSheet(ws, { region, multiplier }) {
+  const records = [];
+  const header = ws.getRow(1);
+  const colIndex = {};
+  header.eachCell((cell, colNumber) => {
+    colIndex[getCellText(cell)] = colNumber;
+  });
+
+  const required = ['민원사무명', '처리부서(원본:천안시)', '수수료_원문', '최소금액(원)', '최대금액(원)', '분류', '처리일수', '관련법규(발췌)'];
+  for (const key of required) {
+    if (!colIndex[key]) throw new Error(`기준표 시트에서 컬럼을 찾지 못함: ${key}`);
+  }
+
+  for (let r = 2; r <= ws.rowCount; r++) {
+    const row = ws.getRow(r);
+    const name = getCellText(row.getCell(colIndex['민원사무명']));
+    if (!name || typeof name !== 'string') continue;
+    if (name.startsWith('※')) continue; // 하단 안내 문구 행 skip
+
+    const feeText = getCellText(row.getCell(colIndex['수수료_원문']));
+    const min = getCellText(row.getCell(colIndex['최소금액(원)']));
+    const max = getCellText(row.getCell(colIndex['최대금액(원)']));
+    const classification = getCellText(row.getCell(colIndex['분류']));
+    const dept = getCellText(row.getCell(colIndex['처리부서(원본:천안시)']));
+    const days = getCellText(row.getCell(colIndex['처리일수']));
+    const law = getCellText(row.getCell(colIndex['관련법규(발췌)']));
+
+    const hasParsedNumber = typeof min === 'number';
+    const feeTypeMap = {
+      '무료': 'free',
+      '금액명시': hasParsedNumber ? 'flat' : 'unknown',
+      '조례참조': 'ordinance_ref',
+      '정보없음': 'unknown',
+    };
+    // 상태는 분류 라벨이 아니라 "실제로 쓸 수 있는 숫자를 확보했는가"로 결정한다.
+    // 라벨이 '금액명시'라도 정규식이 놓친 한글 숫자("1만5천원" 등)면 REAL로 표시하지 않는다.
+    let status;
+    if (classification === '무료') status = 'REAL';
+    else if (classification === '금액명시' && hasParsedNumber) status = 'REAL';
+    else if (classification === '금액명시' && !hasParsedNumber) status = 'NEEDS_REVIEW'; // 원문에 숫자 있는데 파싱 실패
+    else if (classification === '조례참조') status = 'NEEDS_REVIEW';
+    else status = 'MISSING';
+
+    const govMin = classification === '무료' ? 0 : hasParsedNumber ? min : null;
+    const govMax = classification === '무료' ? 0 : typeof max === 'number' ? max : null;
+
+    const hondiMin = govMin != null ? Math.round(govMin * multiplier) : null;
+    const hondiMax = govMax != null ? Math.round(govMax * multiplier) : null;
+
+    records.push({
+      service_name: name,
+      service_name_norm: normalizeName(name),
+      scope: 'regional',
+      region_code: region,
+      fee_type: feeTypeMap[classification] ?? 'unknown',
+      gov_reference_fee_min: govMin,
+      gov_reference_fee_max: govMax,
+      formula_json: null,
+      gdc_multiplier: multiplier,
+      hondi_service_fee_min: hondiMin,
+      hondi_service_fee_max: hondiMax,
+      status,
+      source: '천안시 민원사무편람 (사용자 제공, 2026-08 기준)',
+      effective_date: null,
+      last_verified: null,
+      notes:
+        classification === '조례참조'
+          ? '조례/별표 원문 확인 필요 — 자동 산정 금지'
+          : classification === '금액명시' && !hasParsedNumber
+          ? '원문에 금액이 명시되어 있으나 한글 숫자 표기 등으로 자동 파싱 실패 — 수동 확인 필요'
+          : null,
+      raw_fee_text: typeof feeText === 'string' ? feeText : feeText != null ? String(feeText) : null,
+      related_law: typeof law === 'string' ? law : null,
+    });
+  }
+  return records;
+}
+
+// ── 2) 국세(인지세) 시트 파싱 ──
+function buildStampTaxRecords(multiplier) {
+  // 인지세법 제3조 — 부동산·선박·항공기 소유권이전 / 금융기관 대출증서 / 도급·위임증서
+  const realEstateFormula = {
+    calc: 'tiered_threshold',
+    tiers: [
+      { max: 10000000, rate: 0, base: 0 },
+      { max: 30000000, rate: 0, base: 20000 },
+      { max: 50000000, rate: 0, base: 40000 },
+      { max: 100000000, rate: 0, base: 70000 },
+      { max: 1000000000, rate: 0, base: 150000 },
+      { max: null, rate: 0, base: 350000 },
+    ],
+  };
+  return [
+    {
+      service_name: '인지세(부동산·선박·항공기 소유권이전, 금융기관 대출, 도급·위임증서)',
+      service_name_norm: normalizeName('인지세부동산선박항공기소유권이전금융기관대출도급위임증서'),
+      scope: 'national',
+      region_code: null,
+      fee_type: 'formula',
+      gov_reference_fee_min: 0,
+      gov_reference_fee_max: 350000,
+      formula_json: realEstateFormula,
+      gdc_multiplier: multiplier,
+      hondi_service_fee_min: null,
+      hondi_service_fee_max: null,
+      status: 'REAL',
+      source: '인지세법 제3조·제6조 (국가법령정보센터, 2026-08 기준)',
+      effective_date: null,
+      last_verified: '2026-08-15',
+      notes: '주택 이전 1억원 이하·대출 5천만원 이하는 비과세(제6조) — 계산 전 비과세 요건 확인 필요',
+      raw_fee_text: '1천만원 이하 면세 / 1천만~3천만 2만원 / 3천만~5천만 4만원 / 5천만~1억 7만원 / 1억~10억 15만원 / 10억 초과 35만원',
+      related_law: '인지세법 제3조, 제6조',
+    },
+    {
+      service_name: '인지세(등록대상 동산 양도증서 - 자동차 등)',
+      service_name_norm: normalizeName('인지세등록대상동산양도증서자동차등'),
+      scope: 'national',
+      region_code: null,
+      fee_type: 'flat',
+      gov_reference_fee_min: 3000,
+      gov_reference_fee_max: 3000,
+      formula_json: null,
+      gdc_multiplier: multiplier,
+      hondi_service_fee_min: 3000 * multiplier,
+      hondi_service_fee_max: 3000 * multiplier,
+      status: 'REAL',
+      source: '인지세법 제3조 (국가법령정보센터, 2026-08 기준)',
+      effective_date: null,
+      last_verified: '2026-08-15',
+      notes: null,
+      raw_fee_text: '3,000원 정액',
+      related_law: '인지세법 제3조제1항제4호',
+    },
+  ];
+}
+
+// ── 3) 법원 인지대·송달료 시트 → 레코드 ──
+function buildCourtFeeRecords(multiplier) {
+  const courtFeeFormula = {
+    calc: 'tiered_rate_plus_base',
+    roundDown: 100,
+    tiers: [
+      { max: 10000000, rate: 0.005, base: 0 },
+      { max: 100000000, rate: 0.0045, base: 5000 },
+      { max: 1000000000, rate: 0.004, base: 55000 },
+      { max: null, rate: 0.0035, base: 555000 },
+    ],
+    efileDiscount: 0.1,
+  };
+  const serviceMailFormula = {
+    calc: 'service_mail',
+    unitFee: 5500, // 2025-06-01 개정 기준
+  };
+  return [
+    {
+      service_name: '법원 인지대(민사소송 등, 본안)',
+      service_name_norm: normalizeName('법원인지대민사소송등본안'),
+      scope: 'national',
+      region_code: null,
+      fee_type: 'formula',
+      gov_reference_fee_min: null,
+      gov_reference_fee_max: null,
+      formula_json: courtFeeFormula,
+      gdc_multiplier: multiplier,
+      hondi_service_fee_min: null,
+      hondi_service_fee_max: null,
+      status: 'REAL',
+      source: '민사소송 등 인지법 제2조·제3조, 인지규칙 (2026-08 기준)',
+      effective_date: null,
+      last_verified: '2026-08-15',
+      notes: '지급명령(독촉절차)은 본안 인지액의 1/10. 전자소송 10% 할인. 100원 미만 절사.',
+      raw_fee_text: '소가 1천만원 미만: ×0.5% / 1천만~1억: ×0.45%+5,000원 / 1억~10억: ×0.40%+55,000원 / 10억 이상: ×0.35%+555,000원',
+      related_law: '민사소송 등 인지법 제2조, 제3조',
+    },
+    {
+      service_name: '법원 송달료',
+      service_name_norm: normalizeName('법원송달료'),
+      scope: 'national',
+      region_code: null,
+      fee_type: 'formula',
+      gov_reference_fee_min: null,
+      gov_reference_fee_max: null,
+      formula_json: serviceMailFormula,
+      gdc_multiplier: multiplier,
+      hondi_service_fee_min: null,
+      hondi_service_fee_max: null,
+      status: 'REAL',
+      source: '송달료규칙 (2025-06-01 개정, 1회 5,500원)',
+      effective_date: '2025-06-01',
+      last_verified: '2026-08-15',
+      notes: '예상 송달료 = 단가 × 당사자수 × 예납 회수(사건유형별 회수 상이, 기본 15회는 예시)',
+      raw_fee_text: '1회 5,500원',
+      related_law: '송달료규칙',
+    },
+  ];
+}
+
+async function upsertRecord(pb, record) {
+  const filter = `service_name_norm = "${record.service_name_norm}" && region_code ${record.region_code ? `= "${record.region_code}"` : '= null'}`;
+  try {
+    const existing = await pb.collection('gov_fee_schedule').getFirstListItem(filter);
+    await pb.collection('gov_fee_schedule').update(existing.id, record);
+    return 'updated';
+  } catch (e) {
+    if (e?.status === 404) {
+      await pb.collection('gov_fee_schedule').create(record);
+      return 'created';
+    }
+    throw e;
+  }
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (!args.file) {
+    console.error('사용법: node seed_gov_fee_schedule.mjs --file <xlsx경로> [--dry-run] [--region cheonan] [--multiplier 2]');
+    process.exit(1);
+  }
+
+  const filePath = path.isAbsolute(args.file) ? args.file : path.resolve(process.cwd(), args.file);
+  if (!fs.existsSync(filePath)) {
+    console.error(`파일을 찾을 수 없습니다: ${filePath}`);
+    process.exit(1);
+  }
+  // Windows 경로 호환을 위해 file:// URL로도 정규화해 로그에 남김 (컨벤션 유지)
+  console.log('대상 파일:', pathToFileURL(filePath).href);
+
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(filePath);
+
+  const baselineWs = wb.getWorksheet('기준표(천안시)');
+  if (!baselineWs) throw new Error('"기준표(천안시)" 시트를 찾지 못했습니다.');
+
+  const regionalRecords = parseBaselineSheet(baselineWs, { region: args.region, multiplier: args.multiplier });
+  const stampTaxRecords = buildStampTaxRecords(args.multiplier);
+  const courtFeeRecords = buildCourtFeeRecords(args.multiplier);
+
+  const all = [...regionalRecords, ...stampTaxRecords, ...courtFeeRecords];
+
+  const summary = {
+    total: all.length,
+    regional: regionalRecords.length,
+    national: stampTaxRecords.length + courtFeeRecords.length,
+    byStatus: all.reduce((acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    }, {}),
+  };
+  console.log('파싱 요약:', JSON.stringify(summary, null, 2));
+
+  if (args.dryRun) {
+    const outPath = path.join(__dirname, 'seed_preview.json');
+    fs.writeFileSync(outPath, JSON.stringify(all, null, 2), 'utf-8');
+    console.log(`[DRY-RUN] PocketBase에 쓰지 않았습니다. 미리보기 저장: ${outPath}`);
+    return;
+  }
+
+  const { default: PocketBase } = await import('pocketbase');
+  const pbUrl = args.pbUrl || process.env.POCKETBASE_URL;
+  const email = process.env.POCKETBASE_ADMIN_EMAIL;
+  const password = process.env.POCKETBASE_ADMIN_PASSWORD;
+  if (!pbUrl || !email || !password) {
+    console.error('POCKETBASE_URL / POCKETBASE_ADMIN_EMAIL / POCKETBASE_ADMIN_PASSWORD 환경변수가 필요합니다.');
+    process.exit(1);
+  }
+
+  const pb = new PocketBase(pbUrl);
+  await pb.collection('_superusers').authWithPassword(email, password);
+
+  let created = 0, updated = 0, failed = 0;
+  for (const record of all) {
+    try {
+      const result = await upsertRecord(pb, record);
+      if (result === 'created') created++;
+      else updated++;
+    } catch (e) {
+      failed++;
+      console.error(`[FAIL] ${record.service_name} (${record.region_code ?? 'national'}):`, e?.message || e);
+    }
+  }
+
+  console.log(`완료 — 생성 ${created} / 갱신 ${updated} / 실패 ${failed}`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
