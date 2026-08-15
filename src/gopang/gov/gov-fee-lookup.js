@@ -182,25 +182,54 @@ async function _fetchCandidates(pb, { regionCodes, includeNational = true }) {
  * @param {object} [options] - { workerBaseUrl } 제공 시 시맨틱 검색을 1순위로
  *   시도한다(worker.js GET /gov-fee-semantic-search). 생략하면 기존과 동일하게
  *   키워드 매칭만 쓴다 — 기존 호출부는 코드 변경 없이 계속 동작한다.
+ *   { cityCode } 제공 시 trace 파싱을 건너뛰고 이 값을 지역코드로 직접
+ *   사용한다(2026-08-15 신설 — handleGovTaskSubmit처럼 gov-router.js의
+ *   trace 배열을 갖고 있지 않고 지역코드만 이미 알고 있는 호출부를 위함).
+ *   trace와 cityCode를 둘 다 안 주면 지역 무관(전국공통/BASELINE만) 매칭.
+ *   { cachedRecordId } 제공 시(2026-08-15 신설 — (agency,task_key)→레코드id
+ *   매핑 캐시 적중) 검색을 전부 건너뛰고 그 id로 바로 조회한다. 레코드가
+ *   없거나 status가 'REAL'이 아니면(재분류·삭제 등으로 캐시가 낡음) 자동으로
+ *   일반 검색 경로로 폴백한다 — 호출부가 캐시 무효화를 신경 쓸 필요 없음.
  * @returns {Promise<{
  *   status: 'OK'|'NEEDS_APPROVAL'|'NOT_FOUND',
  *   record: object|null,
  *   govReferenceFee: number|null,
  *   hondiServiceFee: number|null,
  *   isBaselineFallback: boolean,
- *   matchedBy: 'semantic'|'keyword'|null,
+ *   matchedBy: 'semantic'|'keyword'|'cache'|null,
  *   message: string,
  * }>}
  */
 export async function resolveGovFee(pb, userText, trace, calcInputs = {}, options = {}) {
-  const { workerBaseUrl } = options;
-  const cityCode = extractCityCodeFromTrace(trace);
+  const { workerBaseUrl, cityCode: explicitCityCode, cachedRecordId } = options;
+  const cityCode = explicitCityCode || extractCityCodeFromTrace(trace);
   const regionCandidates = _regionCodeCandidates(cityCode);
   const primaryRegionCode = regionCandidates[0] || null;
 
   let isBaselineFallback = false;
   let matchedBy = null;
 
+  // 0) 캐시 적중 시도 — 검색을 전부 생략하고 id로 직접 조회한다. 실패하면
+  // (레코드 삭제됨/재분류로 REAL 아님 등) 조용히 1)번 일반 검색으로 넘어간다.
+  let cacheMatch = null;
+  if (cachedRecordId) {
+    try {
+      const record = await pb.collection('gov_fee_schedule').getOne(cachedRecordId);
+      if (record && record.status === 'REAL') cacheMatch = record;
+    } catch (e) {
+      // 조용히 폴백 — 캐시가 가리키는 레코드가 사라졌거나 조회 실패.
+      cacheMatch = null;
+    }
+  }
+
+  let match = cacheMatch;
+  if (match) {
+    matchedBy = 'cache';
+    // 캐시가 가리키는 레코드가 BASELINE 태그일 수도 있다 — 검색 경로였다면
+    // 아래 "2) 매칭 지역 없음" 블록이 이 플래그를 세워줬겠지만, 캐시 경로는
+    // 그 블록을 통째로 건너뛰므로 여기서 직접 판정해야 한다.
+    isBaselineFallback = match.region_code === 'baseline';
+  } else {
   // 1) 사용자 관할 지역 — 시맨틱 검색 우선, 실패 시 키워드 매칭.
   // Vectorize filter는 AND 방식이라 region_code와 scope=national을 한 번에
   // "OR"로 못 묶는다 — 두 번 호출해 점수가 더 높은 쪽을 쓴다.
@@ -208,7 +237,6 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     semanticMatchServiceName(workerBaseUrl, userText, { regionCode: primaryRegionCode }),
     semanticMatchServiceName(workerBaseUrl, userText, { scope: 'national' }),
   ]);
-  let match = null;
   if (regionalHit && nationalHit) match = regionalHit.score >= nationalHit.score ? regionalHit : nationalHit;
   else match = regionalHit || nationalHit;
 
@@ -218,6 +246,7 @@ export async function resolveGovFee(pb, userText, trace, calcInputs = {}, option
     const candidates = await _fetchCandidates(pb, { regionCodes: regionCandidates, includeNational: true });
     match = matchServiceName(userText, candidates.filter((r) => r.status === 'REAL'));
     if (match) matchedBy = 'keyword';
+  }
   }
 
   // 2) 지역 매칭이 없으면 BASELINE(지역 중립 기준점)으로 폴백 — 반드시 승인 필요로 표시.

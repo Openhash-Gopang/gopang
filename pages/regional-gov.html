@@ -470,11 +470,11 @@ async function _callAI(latestUserText, typingEl) {
       finalReply = nextReply; // 태그가 더 없으면 이게 최종 표시될 응답
       const _foundKey2 = _extractTaskKeyFromReply(nextReply);
       if (_foundKey2 && _foundKey2 !== _lastTaskKey) { _lastTaskKey = _foundKey2; }
-      await _handleGovTaskTags(nextReply, null, _tagAwareSend, latestUserText);
+      await _handleGovTaskTags(nextReply, null, _tagAwareSend, latestUserText, trace);
     }
 
     messages.push({ role: 'assistant', content: rawReply }); // 태그 유무와 무관하게 문맥 유지를 위해 먼저 기록
-    await _handleGovTaskTags(rawReply, null, _tagAwareSend, latestUserText);
+    await _handleGovTaskTags(rawReply, null, _tagAwareSend, latestUserText, trace);
 
     const reply = await _consumeStaffReviewGate(finalReply, trace);
     _recordRequesterPdv(latestUserText, reply, agency, provinceCode, trace);

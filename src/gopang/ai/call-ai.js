@@ -2533,7 +2533,7 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
 // K-Compose/K-Deliver 게이트 없이 어느 SP에서든(kgov/SP-10 활성화된
 // 대화에서만 실제 출력되는 태그라 게이트 불필요) 처리한다 —
 // _handleSPAuthorTags 바로 다음 위치.
-export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, userText = '') {
+export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, userText = '', trace = []) {
   const _updateBubble = async (text) => {
     if (!bubble) return;
     const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
@@ -2672,7 +2672,13 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
       const res  = await fetch(`${base}/gov/task/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null }),
+        // 2026-08-15 신설(3단계 배선) — trace를 실어 보내면 서버가
+        // extractCityCodeFromTrace()로 지역코드를 뽑아 gov-fee-lookup.js의
+        // resolveGovFee()에 넘긴다(혼디 서비스 수수료 계산용). trace가 없는
+        // 호출부(kgov 인라인 등, gov-router.js의 시/도 판별을 안 쓰는 흐름)는
+        // 기본값 []로 조용히 넘어가고, 서버 쪽은 지역 무관(전국공통/BASELINE만)
+        // 매칭으로 그레이스풀 디그레이드한다 — 에러 없음.
+        body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null, trace }),
       });
       const data = await res.json().catch(() => null);
       // 2026-08-13 명확화 — 라이브 스모크테스트(no=6, gov_task_execute_
@@ -2692,6 +2698,44 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
       await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST 서버 호출 실패(${e.message}) — ` +
         `접수가 실제로 이루어지지 않았음을 사용자에게 명확히 알리세요. ` +
         `"접수했습니다"라고 말하면 안 됩니다.]`);
+    }
+    return true;
+  }
+
+  // ── GOV_FEE_APPROVE (2026-08-15 신설 — §GOV-FEE-APPROVAL 승인 게이트) ──
+  // GOV_TASK_SUBMIT_REQUEST 응답의 gov_fee.status가 'NEEDS_APPROVAL'일 때만
+  // SP가 이 태그를 낸다(사용자가 추정 금액에 명시 동의한 뒤에만 — SP 텍스트가
+  // 강제). 서버(POST /gov/task/fee-approve)가 guid 일치와 pending_approval
+  // 상태를 다시 검증하므로, 이 클라이언트 코드는 순수 배선 역할만 한다.
+  const govFeeApproveMatch = fullReply.match(
+    /\[GOV_FEE_APPROVE\]([\s\S]*?)\[\/GOV_FEE_APPROVE\]/);
+  if (govFeeApproveMatch) {
+    console.log('[GovTask] GOV_FEE_APPROVE 감지 — /gov/task/fee-approve 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govFeeApproveMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_FEE_APPROVE의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하세요. 청구되지 않았습니다.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res = await fetch(`${base}/gov/task/fee-approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receipt_no: payload.receipt_no, guid: _USER?.ipv6 || USER_GUID || null }),
+      });
+      const data = await res.json().catch(() => null);
+      await sendFn(`[INTERNAL: GOV_FEE_APPROVE 결과 수신 — 청구 성공/실패 여부(ok)와 ` +
+        `금액을 있는 그대로 사용자에게 전달하세요. 잔액 부족(INSUFFICIENT_BALANCE)이면 ` +
+        `충전 안내를, 이미 처리된 건(NOT_PENDING)이면 현재 상태를 그대로 알리세요: ` +
+        `${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_FEE_APPROVE 서버 호출 실패(${e.message}) — ` +
+        `청구가 실제로 이루어지지 않았음을 사용자에게 명확히 알리세요. ` +
+        `"청구했습니다"라고 말하면 안 됩니다.]`);
     }
     return true;
   }
