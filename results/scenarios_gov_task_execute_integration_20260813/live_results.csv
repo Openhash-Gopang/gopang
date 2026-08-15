@@ -1,0 +1,9 @@
+no,cluster,title,category,live_verdict,live_note
+1,A,"REPORT형, 매핑 있음, automation_sp 없음(인간전속) — kcc 위치기반서비스 등록",정상경로 — 접수와 실행 분리,LIVE-SKIPPED,픽스처 시드 필요(precondition_note 참고) — --include-fixtures로 강제 실행 가능
+2,B,"DECISION형, 매핑 있음 + automation_sp 있음 — 가상 건축허가(자동화 조합 테스트용, 실 데이터 아님)",정상경로 — 접수+자동화 병행,LIVE-SKIPPED,픽스처 시드 필요(precondition_note 참고) — --include-fixtures로 강제 실행 가능
+3,C,"QUERY형, 매핑 없음 — 회귀 확인(gov24-family-cert)",회귀 확인,LIVE-FAIL,"기대: 태그 없음, 실제: GOV_TASK_SUBMIT_REQUEST 발행됨 (전체 태그열: ['GOV_TASK_SUBMIT_REQUEST'])"
+4,D,"ADJUDICATE형(court-filing), 실제 매핑 사례 — 개인파산 신청",정상경로 — 실제 매핑 사례,LIVE-PASS,"기대 태그열 확인됨 (실제: ['GOV_TASK_SUBMIT_REQUEST', 'PROJECT_STATE_SAVE', 'HANDOFF_TO_KDELIVER'])"
+5,E,parallel_group(notify)에 매핑 있는 atom 포함 — batch_id 전달 확인,결함 회귀 확인 (사전 발견·수정분),LIVE-PASS,"기대 태그열 확인됨 (실제: ['GOV_TASK_SUBMIT_REQUEST', 'PROJECT_STATE_SAVE', 'HANDOFF_TO_KDELIVER'])"
+6,F-1,인간전속 구간 도달 후 정지 — 1턴째(접수+정지),결함 회귀 확인 (사전 발견·수정분) — 2턴 시퀀스 1/2,LIVE-PASS,"기대 태그열 확인됨 (실제: ['GOV_TASK_SUBMIT_REQUEST', 'PROJECT_STATE_SAVE', 'HANDOFF_TO_KDELIVER', 'PROJECT_STATE_SAVE', 'HANDOFF_TO_KDELIVER'])"
+7,F-2,인간전속 구간 도달 후 재개 — 2턴째(중복접수 방지 확인),결함 회귀 확인 (사전 발견·수정분) — 2턴 시퀀스 2/2,LIVE-PASS,기대대로 GOV_TASK_SUBMIT_REQUEST 미발행 (전체 태그열: ['HANDOFF_TO_KDELIVER'])
+8,H,gov_task_agency만 설정되고 gov_task_key는 비어있는 잘못된 데이터 — 방어적 케이스,엣지케이스 방어 확인,LIVE-SKIPPED,픽스처 시드 필요(precondition_note 참고) — --include-fixtures로 강제 실행 가능
