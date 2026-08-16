@@ -660,6 +660,9 @@ body {
 .page-tab.active { color: var(--brand-dk); border-bottom-color: var(--brand); }
 section.section[data-tab] { display: none; }
 section.section[data-tab].tab-active { display: block; }
+.section.rpt-embed { padding: 0; }
+.rpt-iframe { display: block; width: 100%; height: 600px; border: 0; background: #fff; }
+
 @media (max-width: 680px) {
   .page-tabs-wrap { top: 52px; }
   .page-tabs { padding: 0 16px; }
@@ -1515,10 +1518,10 @@ section.section[data-tab].tab-active { display: block; }
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <nav class="page-tabs" id="page-tabs" role="tablist" aria-label="혼디 소개 탭">
-      <a class="page-tab" href="reports/hondi-professor-teacher-complement.html" target="_blank" rel="noopener" role="tab">평생 교수</a>
+      <button type="button" class="page-tab" data-tab-target="rpt-lifelong-professor" role="tab" aria-selected="false">평생 교수</button>
       <button type="button" class="page-tab" data-tab-target="pamphlet" role="tab" aria-selected="false">한눈에 보기</button>
-      <a class="page-tab" href="reports/hondi-superconserve-ai.html" target="_blank" rel="noopener" role="tab">초절전 AI</a>
-      <a class="page-tab" href="reports/hondi-mote-openhash.html" target="_blank" rel="noopener" role="tab">MoTE와 Openhash</a>
+      <button type="button" class="page-tab" data-tab-target="rpt-superconserve" role="tab" aria-selected="false">초절전 AI</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-mote-openhash" role="tab" aria-selected="false">MoTE와 Openhash</button>
       <button type="button" class="page-tab" data-tab-target="intro" role="tab" aria-selected="false">소개</button>
       <button type="button" class="page-tab" data-tab-target="parallel" role="tab" aria-selected="false">평행세계 비교</button>
       <button type="button" class="page-tab" data-tab-target="features" role="tab" aria-selected="false">핵심 기능</button>
@@ -1526,9 +1529,9 @@ section.section[data-tab].tab-active { display: block; }
       <button type="button" class="page-tab" data-tab-target="usage" role="tab" aria-selected="false">직업별 활용</button>
       <button type="button" class="page-tab" data-tab-target="structure" role="tab" aria-selected="false">혼디의 구조</button>
       <button type="button" class="page-tab" data-tab-target="billing" role="tab" aria-selected="false">과금 체계</button>
-      <a class="page-tab" href="reports/hondi-4day-week-estimate.html" target="_blank" rel="noopener" role="tab">주 4일(또는 월 3주) 근무</a>
-      <a class="page-tab" href="reports/hondi-usage-scenarios.html" target="_blank" rel="noopener" role="tab">이용 시나리오</a>
-      <a class="page-tab" href="reports/hondi-public-service.html" target="_blank" rel="noopener" role="tab">공공 서비스</a>
+      <button type="button" class="page-tab" data-tab-target="rpt-4day-week" role="tab" aria-selected="false">주 4일(또는 월 3주) 근무</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-usage-scenarios" role="tab" aria-selected="false">이용 시나리오</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-public-service" role="tab" aria-selected="false">공공 서비스</button>
     </nav>
     <button type="button" class="tab-scroll-arrow right" id="tab-scroll-right" aria-label="다음 탭 보기">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1537,7 +1540,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure"];
+  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-lifelong-professor", "rpt-superconserve", "rpt-mote-openhash", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
   var tabButtons = document.querySelectorAll(".page-tab[data-tab-target]");
   var tabSections = document.querySelectorAll("section.section[data-tab]");
 
@@ -1570,6 +1573,32 @@ document.addEventListener("DOMContentLoaded", function () {
   if (leftArrow) leftArrow.addEventListener("click", function () { bar.scrollBy({ left: -220, behavior: "smooth" }); });
   if (rightArrow) rightArrow.addEventListener("click", function () { bar.scrollBy({ left: 220, behavior: "smooth" }); });
 
+  // 2026-08-16 신설 — 리포트형 탭(예전엔 target=_blank로 새 탭을 열던
+  // 평생 교수·초절전 AI·MoTE와 Openhash·주 4일·이용 시나리오·공공 서비스)을
+  // 같은 페이지 안에서 지연 로드되는 iframe으로 통일. 최초 클릭 시에만
+  // iframe.src를 채워 넣어(그전엔 빈 iframe) desktop.html 초기 로딩
+  // 페이로드가 늘지 않게 하고, 리포트 파일 자체는 원본 그대로 유지해
+  // CSS/JS 충돌 없이 독립 문서로 렌더링한다(iframe 문서 컨텍스트 분리).
+  function activateReportIframe(sec) {
+    if (!sec) return;
+    var iframe = sec.querySelector("iframe.rpt-iframe[data-src]");
+    if (!iframe || iframe.getAttribute("src")) return;
+    iframe.src = iframe.getAttribute("data-src");
+    iframe.addEventListener("load", function () {
+      try {
+        var doc = iframe.contentDocument || iframe.contentWindow.document;
+        var h = Math.max(
+          doc.documentElement ? doc.documentElement.scrollHeight : 0,
+          doc.body ? doc.body.scrollHeight : 0
+        );
+        if (h) iframe.style.height = (h + 24) + "px";
+      } catch (e) {
+        // 동일 출처가 아니거나(향후 CDN 분리 등) 접근 실패 시 기본 높이
+        // 유지 — 조용히 무시(iframe 자체는 정상 표시됨).
+      }
+    });
+  }
+
   function activateTab(key, opts) {
     opts = opts || {};
     tabButtons.forEach(function (btn) {
@@ -1577,9 +1606,13 @@ document.addEventListener("DOMContentLoaded", function () {
       btn.classList.toggle("active", active);
       btn.setAttribute("aria-selected", active ? "true" : "false");
     });
+    var activeSection = null;
     tabSections.forEach(function (sec) {
-      sec.classList.toggle("tab-active", sec.getAttribute("data-tab") === key);
+      var isActive = sec.getAttribute("data-tab") === key;
+      sec.classList.toggle("tab-active", isActive);
+      if (isActive) activeSection = sec;
     });
+    activateReportIframe(activeSection);
     if (history.replaceState) history.replaceState(null, "", "#tab-" + key);
     if (opts.scroll) {
       if (bar) bar.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -1599,6 +1632,29 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <!-- ── 한눈에 보기 (2026-08-09 신설, 대중용 2페이지 홍보 팜플렛 통합) ── -->
+<section class="section rpt-embed" id="rpt-lifelong-professor-embed" data-tab="rpt-lifelong-professor">
+  <iframe class="rpt-iframe" data-src="reports/hondi-professor-teacher-complement.html" title="평생 교수" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-superconserve-embed" data-tab="rpt-superconserve">
+  <iframe class="rpt-iframe" data-src="reports/hondi-superconserve-ai.html" title="초절전 AI" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-mote-openhash-embed" data-tab="rpt-mote-openhash">
+  <iframe class="rpt-iframe" data-src="reports/hondi-mote-openhash.html" title="MoTE와 Openhash" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-4day-week-embed" data-tab="rpt-4day-week">
+  <iframe class="rpt-iframe" data-src="reports/hondi-4day-week-estimate.html" title="주 4일(또는 월 3주) 근무" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-usage-scenarios-embed" data-tab="rpt-usage-scenarios">
+  <iframe class="rpt-iframe" data-src="reports/hondi-usage-scenarios.html" title="이용 시나리오" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-public-service-embed" data-tab="rpt-public-service">
+  <iframe class="rpt-iframe" data-src="reports/hondi-public-service.html" title="공공 서비스" loading="lazy"></iframe>
+</section>
 <section class="section" id="pamphlet-intro" data-tab="pamphlet">
   <div class="section-inner">
 
