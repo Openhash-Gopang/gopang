@@ -41,7 +41,7 @@ async function runPipelineForInstitution({ institutionName, ocId, callClaudeFn, 
   const reviewQueue = [];
   for (const reg of regulations.slice(0, maxRegulations)) {
     try {
-      const text = await client.fetchAdminRuleText(reg.행정규칙ID || reg.행정규칙일련번호);
+      const text = await client.fetchAdminRuleText(reg.행정규칙일련번호 || reg.행정규칙ID);
       const classification = await classifyRegulation(text, callClaudeFn);
       if (classification.stage !== 'regex') stats.regexPassed++; // regex 통과해서 AI까지 간 것
       if (!classification.is_procedural) continue;

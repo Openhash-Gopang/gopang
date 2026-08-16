@@ -53,7 +53,7 @@ async function main() {
   for (const reg of regulations.slice(0, 15)) {
     try {
       console.log(`--- "${reg.행정규칙명}" 처리 중 ---`);
-      const text = await client.fetchAdminRuleText(reg.행정규칙ID || reg.행정규칙일련번호);
+      const text = await client.fetchAdminRuleText(reg.행정규칙일련번호 || reg.행정규칙ID);
       stats.fetched++;
 
       // 디버그: 처음 3건만 본문 실물을 눈으로 확인(전체 로그 도배 방지).
