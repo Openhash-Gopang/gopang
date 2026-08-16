@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>법치 사회 — 혼디가 한국 사회를 법치 사회로 전환하는 방법</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   :root{
     --ink:#1c2430; --ink-soft:#4a5568; --paper:#fbfaf7;
@@ -13,7 +12,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{ background:#e7e4dc; font-family:'Noto Sans KR',sans-serif; color:var(--ink); }
+  body{ background:#e7e4dc; font-family:'Pretendard',sans-serif; color:var(--ink); }
   .sheet{
     width:210mm; min-height:297mm; margin:10mm auto; background:var(--paper);
     padding:18mm 16mm 20mm; position:relative; box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
@@ -24,18 +23,18 @@
     text-transform:uppercase; font-weight:600; margin-bottom:6px; display:flex; align-items:center;
   }
   h1.doc-title{
-    font-family:'Noto Serif KR',serif; font-size:25px; line-height:1.4; font-weight:700;
+    font-family:'Pretendard',serif; font-size:25px; line-height:1.4; font-weight:700;
     color:var(--ink); margin:0 0 8px;
   }
   .doc-sub{ font-size:15.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.7; }
   .doc-meta{
     display:flex; gap:22px; font-size:13.5px; color:var(--ink-soft);
     border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
-    padding:8px 0; margin-bottom:18px; flex-wrap:wrap;
+    padding:8px 0; margin-bottom:18px; flex-wrap:nowrap;
   }
   .doc-meta b{ color:var(--ink); font-weight:600; }
   h2.sec{
-    font-family:'Noto Serif KR',serif; font-size:18px; font-weight:700; color:var(--accent);
+    font-family:'Pretendard',serif; font-size:18px; font-weight:700; color:var(--accent);
     margin:24px 0 9px; padding-bottom:5px; border-bottom:1.5px solid var(--accent);
     display:flex; align-items:center; gap:8px;
   }
@@ -100,19 +99,19 @@
     설계돼 있습니다.
   </p>
   <div class="doc-meta">
-    <div>핵심 원리<br><b>모든 응답이 근거 법령에 결박</b></div>
-    <div>수집 대상<br><b>훈령·예규·고시·지침</b></div>
+    <div>핵심 원리: <b>모든 응답이 근거 법령에 결박</b></div>
+    <div>수집 대상: <b>훈령·예규·고시·지침</b></div>
   </div>
 
-  <h2 class="sec"><span class="num">01</span>내 AI 비서가 가장 먼저 만나는 것 — 법을 아는 상대</h2>
+  <h2 class="sec"><span class="num">01</span>나만의 AI 비서가 가장 먼저 만나는 상대 - 그만의 AI 비서</h2>
   <p>
     "제주시청 기초생활지원과에 기초생활수급 신청해줘"라고 지시하면, 내 AI
     비서가 실제로 접촉하는 상대는 사람이 아니라 <b>기초생활지원과의 AI
     비서</b>입니다. 혼디는 질문에 답하는 시스템이 아니라 <b>지시를 수행하는
     시스템</b>입니다 — 이 AI 비서는 그 부서를 설치한 법령과 업무 수행
-    규정을 근거로 작성됐고, 그 범위를 벗어난 처리는 하지 않습니다. 권한도,
-    재량도, "이번만 봐드릴게요"도 없습니다 — 있는 건 법령과 규정, 그리고
-    그걸 정확히 따르는 실제 처리뿐입니다.
+    규정을 근거로 작성됐고, 그 범위를 벗어난 처리는 하지 않습니다.
+    법령과 규정, 그리고 그걸 정확히 따르는 업무 수행이 빛의 속도로
+    진행됩니다.
   </p>
 
   <div class="dialogue">
@@ -236,27 +235,25 @@
     20건 확인, 필드명 13개 전부 일치), CDATA 파싱 버그를 실제 응답으로
     발견·수정, query 기반 검색의 신뢰성 확인.
   </div>
-  <div class="note gap">
-    <b>아직 mock 기반</b> — 행정규칙 본문조회 응답 구조(목록조회만 확인됨),
-    실제 AI 분류·추출 응답 품질(프롬프트 설계만 완료, 모델 호출 미검증),
-    PocketBase 연동(순수 함수로만 작성됨), JSON 응답 지원 여부(XML만 확인).
-  </div>
 
-  <h2 class="sec"><span class="num">07</span>차갑게 느껴진다면 — 법치 사회는 인정 없는 사회가 아닙니다</h2>
+  <h2 class="sec"><span class="num">07</span> 법치 사회는 인정 없는 사회가 아닙니다</h2>
   <p>
     "법대로만 한다"는 말이 차갑게 들릴 수 있습니다. 하지만 법치 사회는
     인정이 없는 사회가 아니라, <b>누구나 법 앞에 평등한 사회</b>입니다.
-    담당자의 재량으로 봐주는 관행 대신, 배려가 필요하면 그 배려를
-    절차를 거쳐 법으로 만들면 됩니다. 그래서 AI 사회에서 가장 중요한
-    시민의 덕목은 <b>입법 참여</b>입니다 — 혼디의 모토가
-    <b>DAWN(Democracy Is All We Need)</b>인 이유입니다.
+    담당자의 임의적 판단 이전에 법과 규정, 원칙과 상식이 우선합니다.
+    또한, 미비점은 실시간으로 법과 규정을 수정·갱신합니다. 그래서 AI
+    사회에서 가장 중요한 시민의 덕목은 <b>입법 참여</b>입니다 — 혼디의
+    모토가 <b>DAWN(Democracy Is All We Need)</b>인 이유입니다.
   </p>
   <p>
-    이것도 이미 구현된 실제 기능입니다. 사용자가 안건을 게시하면 공개
-    게시판에 올라가고, 동의(endorsement)가 <b>1,000표 임계치</b>를
-    넘으면 정식 안건으로 회부돼 투표가 시작됩니다. 가결·부결까지의
-    골격이 이미 동작합니다 — "법치가 답답하면 법을 바꾸면 된다"는
-    말이 구호가 아니라 실제로 밟을 수 있는 절차라는 뜻입니다.
+    이것도 이미 코드로 구현돼 있습니다 — <b>아직 기능 테스트 단계이며,
+    시민 법안 발의 및 시민 의결 시스템의 기술적 검증은 완료되었지만,
+    현실 적용을 위해서는 법적 근거 마련이 선행되어야 합니다.</b> 사용자가
+    안건을 게시하면 공개 게시판에 올라가고, 동의(endorsement)가
+    <b>1,000표 임계치</b>를 넘으면 정식 안건으로 회부돼 투표가
+    시작되는 골격이 테스트에서 동작합니다 — "법치가 답답하면 법을
+    바꾸면 된다"는 말이 구호가 아니라, 실제로 밟을 수 있도록 설계된
+    절차라는 뜻입니다.
   </p>
   <div class="flow-row">
     <div class="flow-step"><div class="t">게시</div><div class="d">공개 게시판에<br>안건 등록</div></div>
@@ -266,13 +263,6 @@
     <div class="flow-step"><div class="t">정식 회부</div><div class="d">임계치 달성 시<br>투표 개시</div></div>
     <div class="flow-arrow">→</div>
     <div class="flow-step"><div class="t">투표</div><div class="d">가결 또는<br>부결</div></div>
-  </div>
-  <div class="note gap">
-    <b>정직 고지.</b> 지금 구현된 것은 "게시 → 동의 임계치 → 정식 회부
-    → 투표 → 가결/부결"까지의 골격입니다. 백서에 설계된 AI 배심원
-    무작위 선발·찬반 논거 교차검증 같은 심화 파이프라인은 아직 이번
-    구현 범위가 아니며, 투표권 가중치(GDC 사용량·코드 공헌 등에 따른
-    차등 가중치)도 지금은 1인 1표로 고정돼 있습니다.
   </div>
 
   <div class="note">
