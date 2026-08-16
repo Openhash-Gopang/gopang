@@ -1519,6 +1519,7 @@ section.section[data-tab].tab-active { display: block; }
     </button>
     <nav class="page-tabs" id="page-tabs" role="tablist" aria-label="혼디 소개 탭">
       <button type="button" class="page-tab" data-tab-target="rpt-lifelong-professor" role="tab" aria-selected="false">평생 교수</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-rule-of-law" role="tab" aria-selected="false">법치 사회</button>
       <button type="button" class="page-tab" data-tab-target="pamphlet" role="tab" aria-selected="false">한눈에 보기</button>
       <button type="button" class="page-tab" data-tab-target="rpt-superconserve" role="tab" aria-selected="false">초절전 AI</button>
       <button type="button" class="page-tab" data-tab-target="rpt-mote-openhash" role="tab" aria-selected="false">MoTE와 Openhash</button>
@@ -1540,7 +1541,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-lifelong-professor", "rpt-superconserve", "rpt-mote-openhash", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
+  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
   var tabButtons = document.querySelectorAll(".page-tab[data-tab-target]");
   var tabSections = document.querySelectorAll("section.section[data-tab]");
 
@@ -1634,6 +1635,9 @@ document.addEventListener("DOMContentLoaded", function () {
 <!-- ── 한눈에 보기 (2026-08-09 신설, 대중용 2페이지 홍보 팜플렛 통합) ── -->
 <section class="section rpt-embed" id="rpt-lifelong-professor-embed" data-tab="rpt-lifelong-professor">
   <iframe class="rpt-iframe" data-src="reports/hondi-professor-teacher-complement.html" title="평생 교수" loading="lazy"></iframe>
+</section>
+<section class="section rpt-embed" id="rpt-rule-of-law-embed" data-tab="rpt-rule-of-law">
+  <iframe class="rpt-iframe" data-src="reports/hondi-rule-of-law.html" title="법치 사회" loading="lazy"></iframe>
 </section>
 
 <section class="section rpt-embed" id="rpt-superconserve-embed" data-tab="rpt-superconserve">
