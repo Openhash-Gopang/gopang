@@ -69,6 +69,14 @@ const _RAW_ROOT = _rawBase(_DEFAULT_REPO) + '/prompts/';
 // division/team 데이터를 후보로 준다 ③"애매함"은 최고점 동점으로 정의.
 import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE,
   JEJU_AGENCY_TABLE, JEJU_ORG_TABLE, JEJU_AGENCY_DIVISION_TABLE, JEJU_ORG_DIVISION_TABLE } from './division-tables.js';
+// ── §6-1~8 division(실·국·과) 지연 합성 라우팅 (2026-08-16 신설) ──────
+// 70개 정책기관 "본청" 단위(policy-bodies)까지는 이미 위 -0.8) 단계에서
+// 배선돼 있었다. 이 import는 그 아래 계층 — 실/국/과 561건 — 을 다룬다.
+// 반드시 기관이 먼저 확정된 뒤(getDivisionsForInstitution) 그 안에서만
+// 매칭한다 — 전역 검색은 절대 하지 않는다(national-division-router.js
+// 상단 주석 "핵심 설계 결정" 참고, "기획조정실" 같은 부서명이 여러
+// 기관에 공통으로 있어 전역 매칭은 필연적으로 충돌한다).
+import { getDivisionsForInstitution, resolvePolicyDivisionLazy } from './national-division-router.js';
 
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
 // ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
@@ -3367,9 +3375,26 @@ async function resolvePolicyBodyLazy(code, onProgress) {
     };
   }
 }
-// ── govType 기반 세정 라우팅 가드 (2026-07-21 신설) ──────────────
-// 주피터 지시: "도청 등의 원형 클래스를 먼저 구현하고... 클래스와
-// 인스턴스 관계를 명확히 규정하십시오." — PROVINCE_REGISTRY의 govType
+// ── §6-1~8 division(실·국·과) 매칭 헬퍼 (2026-08-16 신설) ────────────
+// 기관코드가 이미 확정된 뒤에만 호출한다(전역 검색 금지 원칙,
+// national-division-router.js 참고). 동점(_scoreMatchTies)이거나 매칭
+// 자체가 없으면 null을 반환해 호출부가 기존 resolvePolicyBodyLazy(본청)
+// 폴백을 그대로 타도록 한다 — 새 실패 모드를 만들지 않는다.
+async function _tryDivisionMatch(기관코드, text, onProgress) {
+  try {
+    const divisions = await getDivisionsForInstitution(기관코드, _fetchText);
+    if (!divisions.length) return null;
+    const { best, topScore, tied } = _scoreMatchTies(text, divisions);
+    if (!best || topScore === 0 || tied.length > 1) return null; // 무매칭/동점은 폴백
+    onProgress?.({ stage: 'policy-division-match', 기관코드, 부서코드: best.부서코드 });
+    const resolved = await resolvePolicyDivisionLazy(기관코드, best.부서코드, _fetchText, onProgress);
+    if (!resolved) return null;
+    return { text: resolved.text, source: resolved.source, 부서코드: best.부서코드, name: best.name };
+  } catch (e) {
+    console.warn('[gov-router] _tryDivisionMatch 실패, 본청으로 폴백:', 기관코드, e?.message);
+    return null;
+  }
+}
 // 필드를 실제 라우팅 분기에 처음 연결하는 지점. SPECIAL_AUTONOMOUS(제주)
 // 는 기초자치단체가 없어 세정이 도청 직할이 맞지만, GENERAL(그 외 전부)
 // 은 세정이 시군구 소관이다 — 이 구분 없이 jeju L2 키워드를 그대로
@@ -4324,6 +4349,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const resolved = await resolvePolicyBodyLazy(policyBodyGuess, onProgress);
     parts.push(resolved.text);
     trace.push(`SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`);
+    // 2026-08-16 신설 — 본청 확정 뒤 그 기관 소속 division(실·국·과)
+    // 매칭을 시도한다. §0 상속 체인(kgov→...→SP-NAT-POLICY-{code}→
+    // [division])대로 본청 SP 뒤에 division SP를 이어붙인다. 매칭 실패/
+    // 동점이면 divMatch가 null이라 본청 SP만으로 그대로 반환(회귀 없음).
+    const divMatch = await _tryDivisionMatch(policyBodyGuess, text, onProgress);
+    if (divMatch) {
+      parts.push(divMatch.text);
+      trace.push(`SP-POLICYDIV-LAZY(${policyBodyGuess}/${divMatch.부서코드}/${divMatch.source})`);
+    }
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
@@ -4712,9 +4746,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       nationalOnlyParts.push(nationalSp);
       const resolved = await resolvePolicyBodyLazy(policyBodyGuess, onProgress);
       nationalOnlyParts.push(resolved.text);
+      const traceArr = ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`, '(LLM 분류 폴백)'];
+      // 2026-08-16 신설 — 위 -0.8) 분기와 동일한 division 매칭(중복 로직
+      // 방지를 위해 _tryDivisionMatch 공유 헬퍼 재사용).
+      const divMatch = await _tryDivisionMatch(policyBodyGuess, text, onProgress);
+      if (divMatch) {
+        nationalOnlyParts.push(divMatch.text);
+        traceArr.push(`SP-POLICYDIV-LAZY(${policyBodyGuess}/${divMatch.부서코드}/${divMatch.source})`);
+      }
       return {
         systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
-        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`, '(LLM 분류 폴백)'],
+        trace: traceArr,
       };
     }
   } else if (classified === 'SP-SIGUNGU-LAZY') {
