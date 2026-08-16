@@ -1,0 +1,34 @@
+name: regulation-pipeline-live-test
+
+# 수동 실행 전용 (workflow_dispatch) — 실제 law.go.kr·DeepSeek API를 호출하는
+# 비용/부하가 있는 테스트라 push/PR 트리거로 자동 실행하지 않는다.
+on:
+  workflow_dispatch:
+    inputs:
+      institution:
+        description: '테스트할 기관명(예: 행정중심복합도시건설청)'
+        required: false
+        default: '행정중심복합도시건설청'
+
+jobs:
+  live-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 파이프라인 단위 테스트 먼저 실행 (mock 기반, 실 API 호출 전 회귀 확인)
+        run: |
+          cd src/gopang/gov/regulation-pipeline
+          for f in tests/*.mjs; do
+            echo "=== $f ==="
+            node "$f"
+          done
+
+      - name: 실시간 자기갱신 테스트 (law.go.kr + DeepSeek 실 API)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: node live_self_update_test_full.mjs
