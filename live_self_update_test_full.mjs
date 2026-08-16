@@ -56,6 +56,17 @@ async function main() {
       const text = await client.fetchAdminRuleText(reg.행정규칙ID || reg.행정규칙일련번호);
       stats.fetched++;
 
+      // 디버그: 처음 3건만 본문 실물을 눈으로 확인(전체 로그 도배 방지).
+      // 2026-08-16 15건 전부 정규식 미통과 원인 진단용 — HTML 마크업이
+      // 섞여서 텍스트 패턴이 안 걸리는 건지, 정말 절차 어휘가 없는
+      // 기관인지(NAACC는 형사수사 절차 어휘 위주 필터와 안 맞을 수 있음)
+      // 확인해야 다음 조치(정규식 확장 vs 대상 기관 변경)를 정할 수 있다.
+      if (stats.fetched <= 3) {
+        const snippet = text.slice(0, 400).replace(/\s+/g, ' ').trim();
+        console.log(`  [디버그] 본문 길이: ${text.length}자`);
+        console.log(`  [디버그] 앞부분: ${snippet}`);
+      }
+
       const regexHit = passesRegexFilter(text);
       console.log(`  정규식 1차 필터: ${regexHit ? '통과(AI 판별로)' : '미통과(제외)'}`);
       if (!regexHit) continue;
