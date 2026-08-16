@@ -87,7 +87,12 @@ export function createLawApiClient(ocId = 'test') {
       target: 'admrul',
       ID: adminRuleId,
       type: 'HTML',
-      mobileYn: 'Y',
+      // ★ 2026-08-16 재수정 ★ mobileYn=Y를 넣으면 jQuery+CSS만 로드하는
+      // JS 렌더링 셸(실제 조문은 클라이언트 JS가 별도 AJAX로 채워 넣는
+      // 구조로 추정)이 와서, 15건 전부 완전히 동일한 1589자 빈 껍데기만
+      // 받는 문제가 실측(GitHub Actions)으로 재확인됐다. mobileYn을
+      // 아예 빼서 데스크톱 버전 응답을 받도록 변경 — 이게 실제 조문
+      // 텍스트를 직접 포함할 가능성이 높다(다음 실측으로 재확인 필요).
     });
     const url = `${LAW_API_BASE}/lawService.do?${params.toString()}`;
     const res = await fetch(url);
