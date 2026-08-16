@@ -12,7 +12,7 @@
 import { createLawApiClient } from './src/gopang/gov/regulation-pipeline/law-api-client.js';
 import { classifyRegulation, extractChecklistItems, passesRegexFilter } from './src/gopang/gov/regulation-pipeline/regulation-classifier-extractor.js';
 import { enqueueForReview } from './src/gopang/gov/regulation-pipeline/review-gate-and-drift.js';
-import { createDeepSeekCaller } from './deepseek-client.js';
+import { createDeepSeekCaller } from './deepseek-client.mjs';
 
 const OC_ID = 'openhash';
 const TARGET_INSTITUTION = '행정중심복합도시건설청';
