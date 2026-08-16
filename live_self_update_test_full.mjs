@@ -46,8 +46,11 @@ async function main() {
   const allReviewItems = [];
   const stats = { fetched: 0, regexPassed: 0, aiProcedural: 0, extracted: 0, errors: 0 };
 
-  // 비용·시간 절약을 위해 최대 5건만 실제 본문까지 조회(전수는 배포 시 배치로)
-  for (const reg of regulations.slice(0, 5)) {
+  // 비용·시간 절약을 위해 최대 15건만 실제 본문까지 조회(전수는 배포 시 배치로).
+  // 2026-08-16 첫 실행 결과: 5건일 때는 알파벳순 상위 5건이 전부 인사·감사·
+  // 서무 규정이라 정규식 필터를 하나도 통과 못 해 DeepSeek 호출까지 못 갔음
+  // — 15건으로 늘려 "민원사무처리 규정" 등 절차 규정이 포함될 확률을 높임.
+  for (const reg of regulations.slice(0, 15)) {
     try {
       console.log(`--- "${reg.행정규칙명}" 처리 중 ---`);
       const text = await client.fetchAdminRuleText(reg.행정규칙ID || reg.행정규칙일련번호);
