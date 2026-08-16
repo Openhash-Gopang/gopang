@@ -1,0 +1,26 @@
+{
+  "name": "gopang",
+  "version": "1.0.0",
+  "description": "**혼디(Hondi) 오픈해시 기반 디지털 여권 프로젝트**",
+  "main": "gopang-app.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Openhash-Gopang/gopang.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Openhash-Gopang/gopang/issues"
+  },
+  "homepage": "https://github.com/Openhash-Gopang/gopang#readme"
+}
