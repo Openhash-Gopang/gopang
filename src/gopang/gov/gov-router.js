@@ -76,7 +76,7 @@ import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE,
 // 매칭한다 — 전역 검색은 절대 하지 않는다(national-division-router.js
 // 상단 주석 "핵심 설계 결정" 참고, "기획조정실" 같은 부서명이 여러
 // 기관에 공통으로 있어 전역 매칭은 필연적으로 충돌한다).
-import { getDivisionsForInstitution, resolvePolicyDivisionLazy } from './national-division-router.js';
+import { getDivisionsForInstitution, resolvePolicyDivisionLazy, resolveAssemblyCommitteeLazy, guessAssemblyCommitteeFromText } from './national-division-router.js';
 
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
 // ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
@@ -3093,7 +3093,15 @@ function _provinceCodeToName(code) {
 // 최소한 LAZY 안전망은 전국 어디서나 동일하게 타도록 한다.
 const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   tax: ['세무서', '국세', '부가세', '소득세', '법인세', '세무', '종합소득세', '부가가치세', '홈택스'],
-  court: ['법원', '재판', '소송', '판결', '민사', '형사', '지방법원', '등기소', '나의사건검색', '전자소송', '등기부등본'],
+  // ★ 2026-08-17 수정 — 원래 있던 단독 '법원'·'재판'은 지나치게 포괄적인
+  // 부분 문자열이라, 법원행정처(NCA)·헌법재판소사무처(CONSTCOURT)·
+  // 법원공무원교육원(COTI)·사법정책연구원(JPRI)·대법원(SUPREMECOURT) 등
+  // policy-bodies 5개의 정식 명칭·트리거와 매번 충돌해 -0.8) 게이트를
+  // 통째로 건너뛰게 만들었다(전수 감사로 발견, live-policy-body-
+  // collision-audit.mjs 참고). '지방법원'처럼 이미 구체적인 지사 실행
+  // 키워드만으로도 진짜 지사 민원(관할 확인 등)은 그대로 커버되므로,
+  // 단독 '법원'·'재판'은 제거하고 구체어만 남긴다.
+  court: ['소송', '판결', '민사', '형사', '지방법원', '관할 법원', '등기소', '나의사건검색', '전자소송', '등기부등본'],
   prosecution: ['검찰', '공소', '수사', '검찰청', '고소장', '고발', '검사실'],
   police: ['지방경찰청', '경찰청', '국가경찰', '112', '고소장', '지구대', '파출소'],
   labor: ['근로복지공단', '산재', '산업재해', '산재보험'],
@@ -3105,7 +3113,10 @@ const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   post: ['우정청', '우체국', '우편', '등기우편'],
   mma: ['병무청', '징병', '입영', '병역', '징병검사', '신체검사'],
   customs: ['세관', '관세', '통관'],
-  veterans: ['보훈청', '국가유공자', '보훈', '보훈급여'],
+  // ★ 2026-08-17 수정 — 단독 '보훈'이 국가보훈부(MPVA) 정식 명칭과 매번
+  // 충돌해 -0.8) 게이트를 건너뛰게 만들었다(전수 감사로 발견). '보훈청'·
+  // '보훈급여'로도 지사(보훈지청) 실행형 민원은 그대로 잡힌다.
+  veterans: ['보훈청', '국가유공자', '보훈급여'],
   weather: ['지방기상청', '기상특보', '기상청', '태풍정보', '태풍 정보', '실시간 기상'],
   coastguard: ['해양경찰', '해경', '122', '해양사고', '해양레저 안전'],
   port: ['해양수산청', '항만', '선박등록'],
@@ -3274,6 +3285,17 @@ const _POLICY_BODY_DOMAIN_KEYWORDS = {
   KIPO: ['지식재산처', '특허 출원'],
   MOFE: ['재정경제부', '세제 개편'],
   OBS: ['기획예산처', '공공기관 예산 편성 의견'],
+};
+
+// ── 정책기관 "고유명칭" 충돌 예외(2026-08-17) — 행위 서술형 충돌과
+// 구분해서 명칭 매칭일 때만 지사 우선 가드를 건너뛴다. 위 court/
+// veterans처럼 지사 사전 쪽을 고치지 않고, 정책기관 쪽에서 "이 문구가
+// 있으면 명칭 매칭으로 간주"만 좁게 허용 — MOEL의 '임금체불 진정' 같은
+// 행위 서술형 충돌에는 전혀 영향 없음(policyBodyGuess가 CIO/KMA가
+// 아니면 이 화이트리스트는 아예 안 쓰인다).
+const _POLICY_BODY_NAME_COLLISION_EXEMPT = {
+  CIO: ['고위공직자범죄수사처'],
+  KMA: ['기상청'],
 };
 
 const _POLICY_BODY_NAME_KO = {
@@ -4325,6 +4347,31 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // 폴백한다(회귀 없음, 기존 policy-only 시절과 동일한 안전 원칙).
   }
 
+  // ★ 2026-08-17 전수 감사 ★ _POLICY_BODY_DOMAIN_KEYWORDS(70) ×
+  // _NAT_AGENCY_DOMAIN_KEYWORDS(34) 전수 대조 결과, 2026-08-03에 이미
+  // 고쳐진 7개(NTS/KCS/POLICE/MMA/KCG/PPS/PROSECUTION) 외에 동일 패턴의
+  // 충돌이 11개 더 있었음(live-policy-body-collision-audit.mjs로 22건
+  // 실측, 22/22 가설 재현). 처리 결과:
+  //  - 6개(NCA/CONSTCOURT/COTI/JPRI/SUPREMECOURT/MPVA)는 원인이 단독
+  //    '법원'·'재판'·'보훈'처럼 지나치게 포괄적인 지사 키워드였다 —
+  //    위 court/veterans 테이블에서 그 단독어를 제거해 근본 수정함.
+  //  - 5개(CIO/KMA/MOEL/MOJ/OKA)는 원인이 되는 지사 키워드('수사'·
+  //    '기상청'·'임금체불'·'출입국'·'체류자격')가 실제로 그 자체 지사
+  //    실행형 민원에도 정당하게 쓰이므로 제거하지 않았다 — 이미 등록된
+  //    안전 대안 키워드(예: CIO='공수처'/'고위공직자 비리 제보',
+  //    KMA='장기예보 정확도 관련 문의')로 매칭되니 완전 차단은 아니지만,
+  //    MOEL/MOJ/OKA는 기관 정식 명칭 자체('고용노동부'/'법무부'/
+  //    '재외동포청')가 이미 안전해 실사용 영향이 작고, CIO('고위공직자
+  //    범죄수사처')·KMA('기상청' — 지사 사전에도 동일 명칭 존재)만
+  //    정식 명칭 그대로는 여전히 막힌다는 한계가 남아있음(추후 우선순위
+  //    가드 로직 자체를 명세 특이성 기반으로 재설계할 때 재검토 필요).
+  //
+  //  ★ 2026-08-17 후속 수정 ★ CIO·KMA는 "기관 고유명칭 자체"가 겹치는
+  //  경우라(MOEL의 '임금체불 진정'처럼 행위를 서술하는 문구가 아니라)
+  //  아래 화이트리스트로 좁게 예외 처리한다 — 고유명칭 매칭일 때만
+  //  지사 우선 가드를 건너뛰고, 다른 행위 서술형 충돌(MOEL/MOJ/OKA)에는
+  //  전혀 영향을 주지 않는다.
+  //
   // -0.8) 중앙부처 정책기관(policy-bodies) 매칭 (2026-08-02 신설) — 도
   // 판별 게이트(바로 아래 -0.5)보다 반드시 먼저 와야 한다. policy-bodies
   // 70개는 도별 지사가 없는 전국 단일 SP라(§0 "이 기관은 제주도지사
@@ -4335,6 +4382,26 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 튕겨나갔음). 기관명·정책성 키워드 매칭은 애매함이 낮아 LLM 폴백 없이
   // classifyFn 유무와 무관하게 즉시 판단한다(도청/시군구 라우팅과 달리
   // 동음이의 충돌 위험이 낮음).
+  // -0.85) 국회 상임위원회 매칭(2026-08-17 신설, 이전엔 "1차 배선 범위
+  // 제외"로 남아있던 갭을 채움) — -0.8) 정책기관 매칭보다 먼저 시도한다.
+  // 위원회명("교육위원회" 등)은 _POLICY_BODY_DOMAIN_KEYWORDS에 없어
+  // -0.8)과 겹치지 않지만, 소관 부처 이름이 발화에 같이 나오면(예:
+  // "고용노동부 관련 국회 위원회") 정책기관 쪽이 오탐할 수 있어 순서를
+  // 위원회 쪽이 앞서게 둔다. 도 판별과 무관(위원회도 전국 단일 개념)해
+  // -0.5) 게이트보다 반드시 먼저 와야 한다는 원칙은 -0.8)과 동일.
+  const committeeGuess = await guessAssemblyCommitteeFromText(text, _fetchText);
+  if (committeeGuess) {
+    const nationalSp = await _loadNationalSp();
+    parts.push(nationalSp);
+    trace.push('JEJU-NATIONAL-SP');
+    const resolvedCommittee = await resolveAssemblyCommitteeLazy(committeeGuess, _fetchText, onProgress);
+    if (resolvedCommittee) {
+      parts.push(resolvedCommittee.text);
+      trace.push(`SP-ASSEMBLYCOMMITTEE-LAZY(${committeeGuess}/${resolvedCommittee.source})`);
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+  }
+
   const policyBodyGuess = _guessPolicyBodyFromText(text);
   // 우선순위 가드 — 경찰청·검찰청·병무청 등은 policy-bodies(본청)와
   // 09-national/agencies(지사형 집행기관) 양쪽에 다 존재한다. 두 키워드
@@ -4342,7 +4409,10 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 사전에도 있음) 실행형 민원("고소장 접수해줘")은 관할 지사가 처리하는
   // 게 맞으므로 집행기관 쪽이 우선한다 — 이 가드가 없으면 -0.8)이 0.5)
   // 보다 먼저 실행돼 지사 라우팅을 가로챈다.
-  if (policyBodyGuess && !_guessNatAgencyDomainFromText(text)) {
+  const _natAgencyHit = _guessNatAgencyDomainFromText(text);
+  const _nameCollisionExempt = policyBodyGuess && _natAgencyHit &&
+    (_POLICY_BODY_NAME_COLLISION_EXEMPT[policyBodyGuess] || []).some(kw => text.includes(kw));
+  if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt)) {
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
     trace.push('JEJU-NATIONAL-SP');
