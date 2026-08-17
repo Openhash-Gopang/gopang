@@ -107,7 +107,70 @@ def call_deepseek(system_prompt, user_message, api_key, retries=3):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
-        "max_tokens": 1200,
+        "max_tokens": 4000,
+    }
+    for attempt in range(retries):
+        try:
+            r = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=60)
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            if attempt == retries - 1:
+                raise
+            time.sleep(2 * (attempt + 1))
+
+
+def call_deepseek_multiturn(system_prompt, first_user_message, api_key, extract_fns, max_turns=5):
+    """한 단계(예: K-Execute) 안에서 여러 턴이 필요할 수 있다는 걸 반영한다
+    (2026-08-17 실사로 확인 — K-Execute가 ORCHESTRATION_PROGRESS: step=1/3
+    까지만 내고 핸드오프 태그 없이 끝난 라이브 사례가 있었다. 실제 제품은
+    여러 턴/도구호출로 이어지는데, 단발 호출로는 그걸 재현 못 해 "멈춘 것
+    처럼" 보였을 뿐 — 진짜 버그인지 하네스 한계인지 구분하려면 최소한
+    "계속 진행하세요"로 이어서 물어봐야 한다).
+
+    extract_fns: [(tag_name_or_regex_fn, ...)] 형태가 아니라, 호출부에서
+    직접 응답 전체를 검사하고 (found_handoff: bool, body) 튜플을 돌려주는
+    콜백 하나를 받는다. 매 턴마다 이 콜백으로 확인하고, 없으면 대화
+    히스토리를 이어서 "계속 진행하세요"를 보낸다.
+    """
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": first_user_message},
+    ]
+    full_replies = []
+    for turn in range(max_turns):
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {"model": MODEL, "messages": messages, "max_tokens": 4000}
+        reply = None
+        for attempt in range(3):
+            try:
+                r = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=60)
+                r.raise_for_status()
+                reply = r.json()["choices"][0]["message"]["content"]
+                break
+            except Exception:
+                if attempt == 2:
+                    raise
+                time.sleep(2 * (attempt + 1))
+        full_replies.append(reply)
+        found, body = extract_fns(reply)
+        if found:
+            return {"handoff_body": body, "turns_used": turn + 1, "replies": full_replies}
+        # 아직 핸드오프가 안 나왔으면 같은 단계 안에서 이어서 진행시킨다.
+        messages.append({"role": "assistant", "content": reply})
+        messages.append({"role": "user", "content": "[INTERNAL: 계속 진행하세요]"})
+    return {"handoff_body": None, "turns_used": max_turns, "replies": full_replies}
+
+
+
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        "max_tokens": 4000,
     }
     for attempt in range(retries):
         try:
@@ -121,81 +184,139 @@ def call_deepseek(system_prompt, user_message, api_key, retries=3):
 
 
 def run_scenario(scenario, sp_texts, api_key):
-    """한 시나리오를 AC부터 K-Report(또는 조기 종료)까지 끝까지 태운다."""
+    """한 시나리오를 AC부터 K-Report(또는 조기 종료)까지 끝까지 태운다.
+    K-Intent 이후 각 단계는 call_deepseek_multiturn으로 돌려, 한 번에
+    핸드오프 태그가 안 나와도(예: K-Execute의 다단계 실행) 최대 5턴까지
+    "계속 진행하세요"로 이어가며 재확인한다."""
     trace = []
     utterance = scenario["utterance"]
 
-    # 1) AC
+    # 1) AC — 단일 응답으로 CALL_KINTENT 여부만 판단(원래 설계상 AC는
+    # 되묻기 외엔 한 응답으로 결정하므로 multiturn 불필요).
     ac_reply = call_deepseek(sp_texts["AC"], utterance, api_key)
-    trace.append({"stage": "AC", "input": utterance, "reply_snippet": ac_reply[:300]})
+    trace.append({"stage": "AC", "input": utterance, "reply_snippet": ac_reply[:400]})
     m = RE_CALL_KINTENT.search(ac_reply)
     if not m:
-        trace.append({"stage": "STOP", "reason": "AC가 CALL_KINTENT를 내지 않음(오케스트레이션 미진입)"})
-        return {"scenario": scenario, "trace": trace, "verdict": "NO_ENTRY"}
+        # R0(응급) 등 AC가 오케스트레이션 없이 직접 처리하는 것도 정상
+        # 경로일 수 있다 — [GWP: id]가 있으면 자동으로 뽑아 라벨에 붙여서
+        # "직행 라우팅이었다"를 한눈에 알 수 있게 한다(사람이 매번 reply
+        # 전문을 안 읽어도 되도록).
+        gwp_m = re.search(r"\[GWP:\s*([a-zA-Z_-]+)\]", ac_reply)
+        if gwp_m:
+            verdict = f"NO_ENTRY_DIRECT_GWP({gwp_m.group(1)})"
+            trace.append({"stage": "STOP", "reason": f"AC가 오케스트레이션 대신 [GWP: {gwp_m.group(1)}]로 직행 라우팅함 — 보통 정상(더 무거운 체인이 불필요하다고 AC가 판단)"})
+        else:
+            verdict = "NO_ENTRY_NEEDS_REVIEW"
+            trace.append({"stage": "STOP", "reason": "AC가 CALL_KINTENT도 [GWP:]도 안 냄 — 진짜로 review 필요"})
+        return {"scenario": scenario, "trace": trace, "verdict": verdict}
     forward_query = (m.group(1) or utterance).strip()
 
     # 2) K-Intent
+    def _kintent_check(reply):
+        hb = RE_ORCH_HANDBACK.search(reply)
+        if hb:
+            return True, ("HANDBACK", hb.group(1).strip())
+        mm = RE_HANDOFF_KCOMPOSE.search(reply)
+        if mm:
+            return True, ("OK", mm.group(1).strip())
+        return False, None
+
     msg = f"[INTERNAL: AC→K-Intent 위임 — 사용자에게 보이지 않는 내부 신호입니다. 다음 발화를 목표로 구조화하세요: \"{forward_query}\"]"
-    reply = call_deepseek(sp_texts["KINTENT"], msg, api_key)
-    trace.append({"stage": "K-Intent", "input": msg, "reply_snippet": reply[:300]})
-    if RE_ORCH_HANDBACK.search(reply):
-        trace.append({"stage": "STOP", "reason": "K-Intent에서 R0(응급) 감지 — AC로 복귀"})
-        return {"scenario": scenario, "trace": trace, "verdict": "EMERGENCY_HANDBACK"}
-    m = RE_HANDOFF_KCOMPOSE.search(reply)
-    if not m:
-        trace.append({"stage": "STOP", "reason": "K-Intent가 HANDOFF_TO_KCOMPOSE를 내지 않음(되묻기 중이거나 이탈)"})
+    r = call_deepseek_multiturn(sp_texts["KINTENT"], msg, api_key, _kintent_check)
+    trace.append({"stage": "K-Intent", "input": msg, "turns_used": r["turns_used"], "reply_snippet": r["replies"][-1][:400]})
+    if r["handoff_body"] is None:
+        trace.append({"stage": "STOP", "reason": "K-Intent가 5턴 안에 HANDOFF_TO_KCOMPOSE를 안 냄(되묻기 반복 중이거나 이탈)"})
         return {"scenario": scenario, "trace": trace, "verdict": "STUCK_AT_KINTENT"}
-    kcompose_goal = m.group(1).strip()
+    kind, body = r["handoff_body"]
+    if kind == "HANDBACK":
+        return {"scenario": scenario, "trace": trace, "verdict": f"HANDBACK_AT_KINTENT({body})"}
+    kcompose_goal = body
 
     # 3) K-Compose
+    def _kcompose_check(reply):
+        hb = RE_ORCH_HANDBACK.search(reply)
+        if hb:
+            return True, ("HANDBACK", hb.group(1).strip())
+        kex = extract_bracket_tag(reply, "HANDOFF_TO_KEXECUTE")
+        if kex is not None:
+            return True, ("TO_KEXECUTE", kex)
+        kdel = extract_bracket_tag(reply, "HANDOFF_TO_KDELIVER")
+        if kdel is not None:
+            return True, ("TO_KDELIVER", kdel)
+        return False, None
+
     msg = f"[INTERNAL: K-Intent→K-Compose 위임 — 아래 목표를 이어받아 진행하세요: {kcompose_goal}]"
-    reply = call_deepseek(sp_texts["KCOMPOSE"], msg, api_key)
-    trace.append({"stage": "K-Compose", "input": msg, "reply_snippet": reply[:300]})
-    if RE_ORCH_HANDBACK.search(reply):
-        trace.append({"stage": "STOP", "reason": "K-Compose에서 R0(응급) 감지 — AC로 복귀"})
-        return {"scenario": scenario, "trace": trace, "verdict": "EMERGENCY_HANDBACK"}
-    kexecute_body = extract_bracket_tag(reply, "HANDOFF_TO_KEXECUTE")
-    kdeliver_body_direct = extract_bracket_tag(reply, "HANDOFF_TO_KDELIVER")  # 무료 이관 직행 경로
-    if kdeliver_body_direct is not None:
-        # K-Compose가 K-Execute를 안 거치고 바로 K-Deliver로 이관(무료 경로)
-        return _continue_from_kdeliver(scenario, trace, sp_texts, api_key, kdeliver_body_direct)
-    if kexecute_body is None:
-        trace.append({"stage": "STOP", "reason": "K-Compose가 HANDOFF_TO_KEXECUTE/KDELIVER 어느 쪽도 안 냄(되묻기 중이거나 이탈)"})
+    r = call_deepseek_multiturn(sp_texts["KCOMPOSE"], msg, api_key, _kcompose_check)
+    trace.append({"stage": "K-Compose", "input": msg, "turns_used": r["turns_used"], "reply_snippet": r["replies"][-1][:400]})
+    if r["handoff_body"] is None:
+        trace.append({"stage": "STOP", "reason": "K-Compose가 5턴 안에 HANDOFF_TO_KEXECUTE/KDELIVER 어느 쪽도 안 냄"})
         return {"scenario": scenario, "trace": trace, "verdict": "STUCK_AT_KCOMPOSE"}
+    kind, body = r["handoff_body"]
+    if kind == "HANDBACK":
+        return {"scenario": scenario, "trace": trace, "verdict": f"HANDBACK_AT_KCOMPOSE({body})"}
+    if kind == "TO_KDELIVER":
+        return _continue_from_kdeliver(scenario, trace, sp_texts, api_key, body)
+    kexecute_body = body
 
     # 4) K-Execute
+    def _kexecute_check(reply):
+        hb = RE_ORCH_HANDBACK.search(reply)
+        if hb:
+            return True, ("HANDBACK", hb.group(1).strip())
+        kdel = extract_bracket_tag(reply, "HANDOFF_TO_KDELIVER")
+        if kdel is not None:
+            return True, ("OK", kdel)
+        return False, None
+
     msg = f"[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: {kexecute_body}]"
-    reply = call_deepseek(sp_texts["KEXECUTE"], msg, api_key)
-    trace.append({"stage": "K-Execute", "input": msg, "reply_snippet": reply[:300]})
-    if RE_ORCH_HANDBACK.search(reply):
-        trace.append({"stage": "STOP", "reason": "K-Execute에서 R0(응급) 감지 — AC로 복귀"})
-        return {"scenario": scenario, "trace": trace, "verdict": "EMERGENCY_HANDBACK"}
-    kdeliver_body = extract_bracket_tag(reply, "HANDOFF_TO_KDELIVER")
-    if kdeliver_body is None:
-        trace.append({"stage": "STOP", "reason": "K-Execute가 HANDOFF_TO_KDELIVER를 안 냄(재계획/중단 등 이탈)"})
+    r = call_deepseek_multiturn(sp_texts["KEXECUTE"], msg, api_key, _kexecute_check)
+    trace.append({"stage": "K-Execute", "input": msg, "turns_used": r["turns_used"], "reply_snippet": r["replies"][-1][:400]})
+    if r["handoff_body"] is None:
+        trace.append({"stage": "STOP", "reason": "K-Execute가 5턴 안에 HANDOFF_TO_KDELIVER를 안 냄(재계획/중단 등 이탈 — turns_used=5면 진짜로 안 끝나는 루프일 수 있음)"})
         return {"scenario": scenario, "trace": trace, "verdict": "STUCK_AT_KEXECUTE"}
+    kind, kdeliver_body = r["handoff_body"]
+    if kind == "HANDBACK":
+        return {"scenario": scenario, "trace": trace, "verdict": f"HANDBACK_AT_KEXECUTE({kdeliver_body})"}
 
     return _continue_from_kdeliver(scenario, trace, sp_texts, api_key, kdeliver_body)
 
 
 def _continue_from_kdeliver(scenario, trace, sp_texts, api_key, kdeliver_body):
     # 5) K-Deliver
+    def _kdeliver_check(reply):
+        mm = RE_HANDOFF_KREPORT.search(reply)
+        if mm:
+            return True, ("TO_KREPORT", mm.group(1).strip())
+        hb = RE_ORCH_HANDBACK.search(reply)
+        if hb:
+            return True, ("HANDBACK", hb.group(1).strip())
+        return False, None
+
     msg = f"[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: {kdeliver_body}]"
-    reply = call_deepseek(sp_texts["KDELIVER"], msg, api_key)
-    trace.append({"stage": "K-Deliver", "input": msg, "reply_snippet": reply[:300]})
-    m = RE_HANDOFF_KREPORT.search(reply)
-    if not m:
-        trace.append({"stage": "STOP", "reason": "K-Deliver가 HANDOFF_TO_KREPORT를 안 냄(project_paused 등으로 AC 조기 반환했을 수 있음 — 정상일 수도 있으니 사람이 확인)"})
+    r = call_deepseek_multiturn(sp_texts["KDELIVER"], msg, api_key, _kdeliver_check)
+    trace.append({"stage": "K-Deliver", "input": msg, "turns_used": r["turns_used"], "reply_snippet": r["replies"][-1][:400]})
+    if r["handoff_body"] is None:
+        trace.append({"stage": "STOP", "reason": "K-Deliver가 5턴 안에 HANDOFF_TO_KREPORT도 ORCHESTRATION_HANDOFF_BACK도 안 냄 — 진짜로 review 필요"})
         return {"scenario": scenario, "trace": trace, "verdict": "STOPPED_AT_KDELIVER_NEEDS_REVIEW"}
-    kreport_body = m.group(1).strip()
+    kind, body = r["handoff_body"]
+    if kind == "HANDBACK":
+        trace.append({"stage": "STOP", "reason": f"K-Deliver가 ORCHESTRATION_HANDOFF_BACK({body})로 AC에 정상 반환 — SP-21 설계상 project_paused 등은 K-Report를 건너뛰는 게 맞는 경로"})
+        return {"scenario": scenario, "trace": trace, "verdict": "PAUSED_CORRECTLY"}
+    kreport_body = body
 
     # 6) K-Report
+    def _kreport_check(reply):
+        mm = RE_ORCH_COMPLETE.search(reply)
+        if mm:
+            return True, mm.group(1).strip()
+        return False, None
+
     msg = f"[INTERNAL: K-Deliver→K-Report 위임 — 아래 결과에 대한 이해당사자 통지/신고를 처리하세요: {kreport_body}]"
-    reply = call_deepseek(sp_texts["KREPORT"], msg, api_key)
-    trace.append({"stage": "K-Report", "input": msg, "reply_snippet": reply[:300]})
-    if RE_ORCH_COMPLETE.search(reply):
+    r = call_deepseek_multiturn(sp_texts["KREPORT"], msg, api_key, _kreport_check)
+    trace.append({"stage": "K-Report", "input": msg, "turns_used": r["turns_used"], "reply_snippet": r["replies"][-1][:400]})
+    if r["handoff_body"] is not None:
         return {"scenario": scenario, "trace": trace, "verdict": "COMPLETE"}
-    trace.append({"stage": "STOP", "reason": "K-Report가 ORCHESTRATION_COMPLETE를 안 냄"})
+    trace.append({"stage": "STOP", "reason": "K-Report가 5턴 안에 ORCHESTRATION_COMPLETE를 안 냄"})
     return {"scenario": scenario, "trace": trace, "verdict": "STUCK_AT_KREPORT"}
 
 
