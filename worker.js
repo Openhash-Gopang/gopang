@@ -2372,6 +2372,34 @@ async function handleRegulationScan(request, env, corsHeaders) {
   const ocId = env.LAW_GO_KR_OC;
   if (!ocId) return _err(500, 'CONFIG_MISSING', 'LAW_GO_KR_OC 시크릿이 설정되지 않음', corsHeaders);
 
+  // ★ 2026-08-17 임시 진단 경로 ★ 첫 배포 스모크테스트에서 collected: 0
+  // (오류 없이 조용히 빈 결과)이 나와, Cloudflare Workers 환경에서
+  // law.go.kr이 실제로 어떤 응답을 주는지 원시 그대로 확인해야 한다.
+  // body.debug === true일 때만 동작 — 정상 운영 응답에는 영향 없음.
+  // 원인 파악 후 이 블록은 제거할 것(임시 코드임을 명시).
+  if (body?.debug === true) {
+    const debugParams = new URLSearchParams({ OC: ocId, target: 'admrul', type: 'XML', query: institutionName, display: '5' });
+    const debugUrl = `https://www.law.go.kr/DRF/lawSearch.do?${debugParams.toString()}`;
+    try {
+      const debugRes = await fetch(debugUrl);
+      const debugText = await debugRes.text();
+      return new Response(JSON.stringify({
+        ok: true,
+        debug: true,
+        requestUrl: debugUrl,
+        httpStatus: debugRes.status,
+        httpOk: debugRes.ok,
+        contentType: debugRes.headers.get('content-type'),
+        bodyLength: debugText.length,
+        bodySnippet: debugText.slice(0, 1000),
+      }), { status: 200, headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({
+        ok: false, debug: true, fetchError: e.message, fetchErrorName: e.name,
+      }), { status: 200, headers: corsHeaders });
+    }
+  }
+
   const callDeepSeekFn = async (prompt) => {
     const text = await deepseekChatText({
       env,
