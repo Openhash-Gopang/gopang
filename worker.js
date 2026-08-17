@@ -1270,6 +1270,72 @@ async function _l1GetBalanceKRW(guid) {
 //  이 함수를 쓰도록 같이 리팩터했다(아래 callDeepSeek 수정 참고).
 //  반환값: null이면 통과, Response 객체면 그 응답으로 즉시 차단해야 한다
 //  (호출부에서 `if (blocked) return blocked;` 패턴으로 사용).
+// ═══════════════════════════════════════════════════════════
+// 베타 테스트 기간 한정 통합요금제 (2026-08-17 신설, 주피터 지시)
+//
+// 기존의 모든 요금제(SUBSCRIPTION_TIERS 시민 990원/월, EXPERT_PERSONA_
+// MONTHLY_FEE_KRW 리프별 9,900원/월, KLAW_CLAIM_FEE_SCHEDULE 소송가액
+// 구간별 정액)를 잠정 보류하고, 베타 기간 동안은 전부 DeepSeek API
+// 실비용의 BILLING_MULTIPLIER_DEFAULT배(현재 10배)로 단일화한다 —
+// 즉 이 플래그가 켜져 있는 동안은 "정액/구독" 개념 자체가 없고,
+// 모든 이용이 일반 GDC 종량제(_settleAiUsage 등 기존 원가×배수 로직)
+// 하나로만 청구된다.
+//
+// 함께 바뀐 것: 최초 100원(=100 GDC) 가입 보너스로 최대 1일간 이용해
+// 볼 수 있게 하되(TRIAL_PERIOD_DAYS), 가입일로부터 1일이 지난 뒤에는
+// "누적 1만원 이상 실충전을 한 번이라도 완료했는지"를 새 조건으로
+// 추가 확인한다 — 잔액이 우연히 3원 이상 남아있어도 이 조건을
+// 통과 못하면 차단한다(가입 보너스만으로 무한정 연명하는 경우 방지).
+// 최소 충전액 자체도 CHARGE_MIN_KRW를 1,000→10,000으로 올려서, 첫
+// 실충전이 성립하는 순간 이 조건은 자동으로 만족된다.
+//
+// ★ 정직하게 밝힘 ★ 이 블록은 라이브 PocketBase 환경에서 실행 검증을
+// 못 했다(로컬에 L1 서버가 없음) — _hasCompletedBetaMinCharge의
+// charge_requests status 값('matched'/'confirmed' 둘 다 확정 상태로
+// 취급) 매핑이 실제 데이터와 정확히 맞는지는 배포 후 라이브로 한 번
+// 재확인이 필요하다.
+const BETA_UNIFIED_PRICING = true;
+const BETA_TRIAL_DAYS = 1;
+const BETA_MIN_CHARGE_KRW_TO_CONTINUE = 10000;
+
+async function _getAccountAgeDays(env, guid) {
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const created = data?.items?.[0]?.created;
+    if (!created) return null;
+    const ms = Date.now() - new Date(created).getTime();
+    return ms / (1000 * 60 * 60 * 24);
+  } catch (e) {
+    console.warn(JSON.stringify({ tag: 'ACCOUNT_AGE_CHECK_FAILED', guid, error: e.message, ts: new Date().toISOString() }));
+    return null;
+  }
+}
+
+async function _hasCompletedBetaMinCharge(env, guid) {
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(
+      `guid='${guid}' && matched_krw>=${BETA_MIN_CHARGE_KRW_TO_CONTINUE} && (status='matched' || status='confirmed')`
+    );
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return null; // 조회 실패는 "모름"으로 취급 — 호출부가 안전하게 처리
+    const data = await res.json().catch(() => null);
+    return (data?.items?.length || 0) > 0;
+  } catch (e) {
+    console.warn(JSON.stringify({ tag: 'BETA_MIN_CHARGE_CHECK_FAILED', guid, error: e.message, ts: new Date().toISOString() }));
+    return null;
+  }
+}
+
+
 async function _gdcFreeQuotaGate(env, guid, corsHeaders, meta) {
   if (!guid || !FREE_QUOTA_ENFORCEMENT_ENABLED) return null;
   const kv = env.AI_SETUP_SEALS_KV;
@@ -1306,6 +1372,29 @@ async function _gdcFreeQuotaGate(env, guid, corsHeaders, meta) {
       balance_krw: Math.round(balanceKRW),
     }), { status: 402, headers: corsHeaders });
   }
+
+  // 베타 테스트 기간 한정 통합요금제(2026-08-17) — 잔액이 남아있어도
+  // 가입 1일이 지났는데 1만원 이상 실충전을 한 번도 안 했으면 차단한다.
+  // 조회 실패(null)는 안전하게 통과시킨다(과도한 차단보다는 일시적
+  // 조회 실패로 정상 이용자를 막지 않는 쪽을 우선 — 위 GDC_BALANCE_
+  // CHECK_FAILED와는 다른 판단인데, 그쪽은 "돈이 실제로 있는지"라 틀리면
+  // 손실로 이어지지만 이쪽은 "1만원을 낸 적이 있는지"라 틀려도 손실로
+  // 이어지지 않기 때문).
+  if (BETA_UNIFIED_PRICING) {
+    const ageDays = await _getAccountAgeDays(env, guid);
+    if (ageDays !== null && ageDays > BETA_TRIAL_DAYS) {
+      const hasMinCharge = await _hasCompletedBetaMinCharge(env, guid);
+      if (hasMinCharge === false) {
+        console.warn(JSON.stringify({ tag: 'BETA_TRIAL_EXPIRED_NO_MIN_CHARGE', guid, ageDays, ts: new Date().toISOString(), ...meta }));
+        return new Response(JSON.stringify({
+          error: 'BETA_TRIAL_EXPIRED',
+          message: `베타 테스트 기간 한정 안내: 가입 후 1일간 무료로 이용하실 수 있고, 이후에는 GDC를 ${BETA_MIN_CHARGE_KRW_TO_CONTINUE.toLocaleString('ko-KR')}원 이상 충전하셔야 계속 이용하실 수 있습니다.`,
+          min_charge_krw: BETA_MIN_CHARGE_KRW_TO_CONTINUE,
+        }), { status: 402, headers: corsHeaders });
+      }
+    }
+  }
+
   return null; // 잔액 충분 — 통과. 실제 차감은 이번 요청의 실사용량이 확정된 뒤 일어난다.
 }
 
@@ -3861,13 +3950,22 @@ async function handleSubscribe(request, env, corsHeaders) {
 
   const priceKrw = SUBSCRIPTION_TIERS[tier].price_krw;
   let charge;
-  try {
-    charge = await _chargeGdcForAiUsage(env, {
-      guid, krwAmount: priceKrw, serviceId: 'hondi-subscription',
-      memo: `구독 개시: ${SUBSCRIPTION_TIERS[tier].name}(${tier})`,
-    });
-  } catch (e) {
-    return _err(502, 'CHARGE_FAILED', e.message, corsHeaders);
+  // 베타 테스트 기간 한정 통합요금제(2026-08-17) — 구독료 자체를 잠정
+  // 보류한다. tier/구독 레코드(아래)는 그대로 만들어 상태 추적은
+  // 유지하되, 실제 청구(charge)는 건너뛴다 — 이용자는 이후 일반 GDC
+  // 종량제(원가×10)로만 과금된다.
+  if (BETA_UNIFIED_PRICING) {
+    console.log(JSON.stringify({ tag: 'BETA_SUBSCRIPTION_CHARGE_SKIPPED', guid, tier, ts: new Date().toISOString() }));
+    charge = { ok: true, beta_skipped: true };
+  } else {
+    try {
+      charge = await _chargeGdcForAiUsage(env, {
+        guid, krwAmount: priceKrw, serviceId: 'hondi-subscription',
+        memo: `구독 개시: ${SUBSCRIPTION_TIERS[tier].name}(${tier})`,
+      });
+    } catch (e) {
+      return _err(502, 'CHARGE_FAILED', e.message, corsHeaders);
+    }
   }
   if (!charge?.ok) {
     return new Response(JSON.stringify({
@@ -4049,13 +4147,20 @@ async function handleExpertPersonaResubscribe(request, env, corsHeaders) {
   if (!personaId) return _err(400, 'MISSING_PERSONA_ID', 'personaId 필수', corsHeaders);
 
   let charge;
-  try {
-    charge = await _chargeGdcForAiUsage(env, {
-      guid, krwAmount: EXPERT_PERSONA_MONTHLY_FEE_KRW, serviceId: 'expert-persona-subscription',
-      memo: `전문가 페르소나 재구독: ${personaId}`,
-    });
-  } catch (e) {
-    return _err(502, 'CHARGE_FAILED', e.message, corsHeaders);
+  // 베타 테스트 기간 한정 통합요금제(2026-08-17) — 전문가 페르소나
+  // 구독료도 잠정 보류(handleSubscribe와 동일 정책).
+  if (BETA_UNIFIED_PRICING) {
+    console.log(JSON.stringify({ tag: 'BETA_EXPERT_PERSONA_CHARGE_SKIPPED', guid, personaId, ts: new Date().toISOString() }));
+    charge = { ok: true, beta_skipped: true };
+  } else {
+    try {
+      charge = await _chargeGdcForAiUsage(env, {
+        guid, krwAmount: EXPERT_PERSONA_MONTHLY_FEE_KRW, serviceId: 'expert-persona-subscription',
+        memo: `전문가 페르소나 재구독: ${personaId}`,
+      });
+    } catch (e) {
+      return _err(502, 'CHARGE_FAILED', e.message, corsHeaders);
+    }
   }
   if (!charge?.ok) {
     return new Response(JSON.stringify({
@@ -4120,10 +4225,15 @@ async function _runExpertPersonaBillingSweep(env) {
   const token = await _l1AdminToken(env);
   for (const sub of due) {
     try {
-      const charge = await _chargeGdcForAiUsage(env, {
-        guid: sub.user_guid, krwAmount: EXPERT_PERSONA_MONTHLY_FEE_KRW, serviceId: 'expert-persona-subscription',
-        memo: `월 정기 구독료: 전문가 페르소나(${sub.persona_id})`,
-      });
+      // 베타 테스트 기간 한정 통합요금제(2026-08-17) — 월정기 스윕도
+      // 실제 청구를 건너뛰고 항상 성공으로 처리(정지·유예 로직이 잘못
+      // 발동하지 않도록).
+      const charge = BETA_UNIFIED_PRICING
+        ? { ok: true, beta_skipped: true }
+        : await _chargeGdcForAiUsage(env, {
+            guid: sub.user_guid, krwAmount: EXPERT_PERSONA_MONTHLY_FEE_KRW, serviceId: 'expert-persona-subscription',
+            memo: `월 정기 구독료: 전문가 페르소나(${sub.persona_id})`,
+          });
 
       const now = new Date();
       let patch;
@@ -13793,7 +13903,7 @@ async function handleBizSupply(request, env, corsHeaders) {
 // 트레이드오프다(가상계좌 자동화는 은행 API 계약이 필요해 별도 TODO).
 // ═══════════════════════════════════════════════════════════
 
-const CHARGE_MIN_KRW = 1000;    // 너무 작은 신청은 매칭 단서(코드)만으로 은행 명세서 대조가 더 번거로워짐
+const CHARGE_MIN_KRW = 10000;   // 2026-08-17: 1,000 → 10,000 (베타 테스트 기간 한정 통합요금제, 주피터 지시 — 모든 가입자는 1일 무료 이용 후 최소 1만원 이상 충전해야 계속 이용 가능)
 const CHARGE_EXPIRE_HOURS = 48; // 이 시간 안에 입금 안 되면 UI/관리자 화면에서 만료로 표시(레코드 자체는 감사 보존을 위해 삭제하지 않음)
 
 // POST /biz/charge-request — 사용자가 충전 의사를 밝히고 매칭 코드를 발급받는다.
@@ -16819,6 +16929,11 @@ const KLAW_CLAIM_FEE_SCHEDULE = [
 ];
 
 function _klawFlatFeeForClaimAmount(claimAmountKrw) {
+  // 베타 테스트 기간 한정 통합요금제(2026-08-17) — 소송가액 구간별 정액
+  // 자체를 잠정 보류한다. null을 반환하면 호출부가 이미 갖추고 있던
+  // "claim_amount_krw 없음/정액 미해당 시 토큰 종량제로 폴백" 경로를
+  // 그대로 타므로, 별도 분기 추가 없이 안전하게 우회된다.
+  if (BETA_UNIFIED_PRICING) return null;
   const amt = Number(claimAmountKrw);
   if (!Number.isFinite(amt) || amt < 0) return null;
   const bucket = KLAW_CLAIM_FEE_SCHEDULE.find(b => amt <= b.max);
