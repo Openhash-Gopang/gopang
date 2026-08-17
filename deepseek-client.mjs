@@ -26,7 +26,12 @@ export function createDeepSeekCaller(apiKey) {
           { role: 'user', content: prompt },
         ],
         temperature: 0.1, // 추출 작업이라 낮게(창작성 최소화)
-        max_tokens: 2000,
+        // ★ 2026-08-17 수정 ★ max_tokens: 2000이었을 때 실측(로컬 실행)
+        // 에서 "공익신고 처리 및 신고자 보호 등에 관한 규정" 추출 시
+        // "Unterminated string in JSON" 오류로 응답이 중간에 잘렸다 —
+        // 항목이 여러 개고 legal_basis·division_type_guess 등 필드가
+        // 많은 규정에서는 2000 토큰이 부족했다. 8000으로 확대.
+        max_tokens: 8000,
       }),
     });
     if (!res.ok) {
