@@ -27,7 +27,7 @@ import { assembleGovSystemPrompt } from './src/gopang/gov/gov-router.js';
 import { resolveGovFee, extractCityCodeFromTrace } from './src/gopang/gov/gov-fee-lookup.js';
 // 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
 // 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
-import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
+import { resolveDeepseekModel, deepseekChatText } from './src/gopang/core/deepseek-client.js';
 // 2026-07-18 신설 — GDC 상거래 완성 계획서 Phase 4. src/profile2.0/ledger.js(M10)
 // 는 이 저장소 어디서도 호출되지 않던 죽은 코드였다(2026-07-18 실사로 발견) —
 // 순수 계산 함수만 재사용한다(marketPurchaseRPC/Supabase 관련 함수는 legacy라
@@ -35,6 +35,13 @@ import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
 // reconstructBalances만 실제로 쓰지만, verifyBIVM/detectBalanceAnomalies도
 // 향후 일괄 대사(batch reconciliation) 배치 작업에 바로 재사용 가능하다.
 import { reconstructBalances } from './src/profile2.0/ledger.js';
+// 2026-08-17 신설 — 훈령·예규 일괄수집 파이프라인(REGULATION-INGESTION-
+// PIPELINE-DESIGN_v1_0.md) 프로덕션 배선. GitHub Actions에서는 law.go.kr이
+// Azure IP를 차단해 동작 불가 확인됨(2026-08-16/17 실측) — Cloudflare
+// Worker(이 파일)에서 관리자 전용 엔드포인트로 노출한다.
+import { createLawApiClient } from './src/gopang/gov/regulation-pipeline/law-api-client.js';
+import { passesRegexFilter, classifyRegulation, extractChecklistItems } from './src/gopang/gov/regulation-pipeline/regulation-classifier-extractor.js';
+import { enqueueForReview } from './src/gopang/gov/regulation-pipeline/review-gate-and-drift.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -2331,6 +2338,92 @@ function _err(status, code, detail, corsHeaders) {
     JSON.stringify({ ok: false, error: code, detail }),
     { status, headers: corsHeaders }
   );
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST /admin/regulation-scan (2026-08-17 신설)
+// 훈령·예규 일괄수집 파이프라인 — 관리자 전용, 기관 하나를 대상으로
+// law.go.kr 실시간 수집 → 정규식 1차 필터 → DeepSeek 분류·추출까지
+// 돌리고 검수 대기 큐(status: pending_review)를 반환한다.
+//
+// ★ C4 원칙 재확인 ★ 이 엔드포인트는 검수 대기 큐를 "반환"할 뿐,
+// 어떤 division SP §ANNEX도 자동으로 고치지 않는다 — 실제 반영은
+// 이 응답을 사람이 검토한 뒤 review-gate-and-drift.js의
+// applyReviewDecision()을 통과시켜야 한다(현재는 별도 CLI/스크립트
+// 흐름 — 이 엔드포인트에 자동승인 경로를 추가하지 말 것).
+//
+// body: { institutionName: string, maxRegulations?: number(기본 15) }
+// 인증: 기존 /admin/* 엔드포인트와 동일한 Bearer 관리자 토큰
+//
+// ★ 정직하게 밝힘 ★ 로컬(Node) 환경에서는 실측 검증 완료(NAACC 도시
+// 계획국 대상 22개 절차 항목 정상 추출, 2026-08-17). 이 Worker 배선
+// 자체는 아직 실제 배포 후 스모크테스트를 거치지 않았다 — 배포 직후
+// 반드시 관리자 토큰으로 1회 호출해 정상 동작을 확인할 것.
+async function handleRegulationScan(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증 필요', corsHeaders);
+
+  const body = await request.json().catch(() => null);
+  const institutionName = body?.institutionName?.trim();
+  if (!institutionName) return _err(400, 'SCHEMA_ERROR', 'institutionName 필드 필수', corsHeaders);
+  const maxRegulations = Math.min(Number(body?.maxRegulations) || 15, 50); // 비용 상한
+
+  const ocId = env.LAW_GO_KR_OC;
+  if (!ocId) return _err(500, 'CONFIG_MISSING', 'LAW_GO_KR_OC 시크릿이 설정되지 않음', corsHeaders);
+
+  const callDeepSeekFn = async (prompt) => {
+    const text = await deepseekChatText({
+      env,
+      messages: [
+        { role: 'system', content: '너는 한국 행정규칙 원문에서 절차적 의무 항목을 정확히 추출하는 법률 보조 도구다. 반드시 지시된 JSON 형식으로만 답하고, 원문에 없는 내용을 지어내지 않는다.' },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 8000,
+      temperature: 0.1,
+      fallbackText: '',
+    });
+    return text.replace(/^```json\s*|\s*```$/g, '').trim();
+  };
+
+  const client = createLawApiClient(ocId);
+  const stats = { collected: 0, fetched: 0, regexPassed: 0, aiProcedural: 0, extracted: 0, errors: [] };
+  const reviewQueue = [];
+
+  try {
+    const regulations = await client.searchAdminRulesByInstitutionNameFallback(institutionName, { display: maxRegulations });
+    stats.collected = regulations.length;
+
+    for (const reg of regulations.slice(0, maxRegulations)) {
+      try {
+        const text = await client.fetchAdminRuleText(reg.행정규칙일련번호 || reg.행정규칙ID);
+        stats.fetched++;
+        if (!passesRegexFilter(text)) continue;
+        stats.regexPassed++;
+
+        const classification = await classifyRegulation(text, callDeepSeekFn);
+        if (!classification.is_procedural) continue;
+        stats.aiProcedural++;
+
+        const items = await extractChecklistItems(text, institutionName, callDeepSeekFn);
+        stats.extracted += items.length;
+        if (items.length === 0) continue;
+
+        const queued = enqueueForReview(items, {
+          institutionName,
+          source_regulation_id: reg.행정규칙ID || reg.행정규칙일련번호,
+          source_regulation_name: reg.행정규칙명,
+        });
+        reviewQueue.push(...queued);
+      } catch (e) {
+        stats.errors.push({ regulation: reg.행정규칙명, message: e.message });
+      }
+    }
+  } catch (e) {
+    return _err(502, 'SCAN_FAILED', e.message, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, stats, reviewQueue }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -11863,6 +11956,11 @@ export default {
     // ── Prompt Editor (관리자 — L1 prompt_admins 인증 + GitHub PR) ──
     if (pathname === '/admin/login' && request.method === 'POST')
       return handleAdminLogin(request, env, corsHeaders);
+
+    // POST /admin/regulation-scan — 훈령·예규 일괄수집 파이프라인
+    // (2026-08-17 신설, admin/login과 동일 Bearer 토큰 인증)
+    if (pathname === '/admin/regulation-scan' && request.method === 'POST')
+      return handleRegulationScan(request, env, corsHeaders);
 
     // GET /admin/stats — 대시보드 통계 (HMAC 인증, L1 PocketBase 프록시)
     if (pathname === '/admin/stats' && request.method === 'GET')
