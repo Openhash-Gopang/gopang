@@ -12,15 +12,15 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{background:#ffffff;font-family:'Pretendard',sans-serif;color:var(--ink);}
-  @page{ size:A4; margin:13mm 15mm; }
+  @page{ size:A4; margin-top:6mm; margin-bottom:6mm; margin-left:8mm; margin-right:8mm; }
   .sheet{ width:210mm; margin:10mm auto; background:var(--paper);
     padding:12mm 15mm; position:relative; border:1px solid #d9d9d9; }
   .cta-box{
     background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px;
     padding:9px 16px; margin:10px 0; text-align:center;
   }
-  .cta-box .cta-line1{ font-size:10.5px; line-height:1.5; color:var(--ink-soft); margin:0 0 5px; }
-  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; color:var(--ink); }
+  .cta-box .cta-line1{ font-size:10.5px; line-height:1.7; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.6; margin:0 0 4px; color:var(--ink); }
   .cta-box .cta-sub{ font-size:9.5px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
   .dev-report-note{
     font-size:9px; color:var(--ink-soft); text-align:center;
@@ -30,8 +30,8 @@
     .page-break{ page-break-before:always; } .avoid-break{ break-inside:avoid; page-break-inside:avoid; } }
 
   .doc-eyebrow{ font-size:9px; letter-spacing:.14em; color:var(--accent-soft); text-transform:uppercase; font-weight:600; margin-bottom:5px; }
-  h1.doc-title{ font-family:'Pretendard',serif; font-size:19px; line-height:1.3; font-weight:700; color:var(--ink); margin:0 0 6px; }
-  .doc-sub{ font-size:14.5px; color:var(--ink-soft); margin:0 0 9px; line-height:1.38; }
+  h1.doc-title{ font-family:'Pretendard',serif; font-size:19px; line-height:1.4; font-weight:700; color:var(--ink); margin:0 0 4px; }
+  .doc-sub{ font-size:14.5px; color:var(--ink-soft); margin:0 0 9px; line-height:1.6; }
   .doc-meta{ display:table; width:100%; font-size:9px; color:var(--ink-soft);
     border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
     padding:6px 0; margin-bottom:12px; }
@@ -39,34 +39,34 @@
   .doc-meta b{ color:var(--ink); font-weight:600; }
 
   h2.sec{ font-family:'Pretendard',serif; font-size:12.5px; font-weight:700; color:var(--accent);
-    margin:13px 0 5px; padding-bottom:4px; border-bottom:1.5px solid var(--accent); }
+    margin:9px 0 4px; padding-bottom:3px; border-bottom:1.5px solid var(--accent); }
   h2.sec .num{ font-size:9.5px; color:var(--accent-soft); font-weight:700; margin-right:6px; }
   h3.subsec{ font-size:10.5px; font-weight:700; color:var(--ink); margin:9px 0 3px; }
-  p{ font-size:13.5px; line-height:1.32; margin:0 0 6px; color:var(--ink); }
-  .note{ font-size:13px; line-height:1.28; color:var(--ink-soft); background:var(--tint);
+  p{ font-size:13.5px; line-height:1.65; margin:0 0 5px; color:var(--ink); }
+  .note{ font-size:13px; line-height:1.5; color:var(--ink-soft); background:var(--tint);
     border-left:2.5px solid var(--accent-soft); padding:6px 9px; margin:6px 0; }
   .note.warn{ border-left-width:3px; }
   .note b{ color:var(--ink); }
-  .quote{ font-family:'Pretendard',serif; font-style:italic; font-size:13.5px; line-height:1.35;
+  .quote{ font-family:'Pretendard',serif; font-style:italic; font-size:13.5px; line-height:1.6;
     color:var(--ink); background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
     padding:8px 12px; margin:7px 0; }
   .legend{ font-size:8px; color:var(--ink-soft); margin:2px 0 8px; }
   .legend b{ color:var(--ink); }
 
   table{ width:100%; border-collapse:collapse; margin:6px 0 8px; font-size:12.5px; }
-  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:4.5px 6px; text-align:left; font-size:10.5px; }
-  tbody td{ padding:4px 6px; border-bottom:1px solid var(--line); color:var(--ink); }
+  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:6px 8px; text-align:left; font-size:10.5px; }
+  tbody td{ padding:6px 8px; border-bottom:1px solid var(--line); color:var(--ink); line-height:1.4; }
   tbody tr:nth-child(even){ background:#f6f6f6; }
   .cmp-table td:last-child{ font-weight:500; }
   .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; }
 
   ul.list{ margin:0 0 7px; padding-left:14px; }
-  ul.list li{ font-size:12.5px; line-height:1.3; margin-bottom:2.5px; }
+  ul.list li{ font-size:12.5px; line-height:1.6; margin-bottom:2.5px; }
   ol.mech{ margin:4px 0 8px; padding-left:16px; }
-  ol.mech li{ font-size:13.5px; line-height:1.3; margin-bottom:5px; }
+  ol.mech li{ font-size:13.5px; line-height:1.6; margin-bottom:5px; }
   ol.mech b{ color:var(--ink); }
 
-  .footer-line{ margin-top:12px; display:table; width:100%;
+  .footer-line{ margin-top:5px; display:table; width:100%;
     font-size:8px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:4px; }
   .footer-line .cell{ display:table-cell; }
   .footer-line .cell:last-child{ text-align:right; }
@@ -75,7 +75,7 @@
   .dialogue{ margin:6px 0 4px; }
   .msg{ margin:0 0 3px; max-width:92%; }
   .msg .who{ font-size:8px; font-weight:700; letter-spacing:.04em; margin-bottom:2px; text-transform:uppercase; }
-  .msg .bubble{ display:inline-block; font-size:13px; line-height:1.28; padding:6px 9px; }
+  .msg .bubble{ display:inline-block; font-size:13px; line-height:1.5; padding:6px 9px; }
   .msg.user{ margin-left:auto; text-align:right; }
   .msg.user .who{ color:var(--ink-soft); text-align:right; }
   .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
@@ -225,7 +225,6 @@
     <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
     <div style="border-top:1px solid var(--line);margin:8px 0;"></div>
     <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
-    <div class="cta-price">혼디는 일반 AI보다 놀랍도록 더 똑똑하고, 놀랍도록 훨씬 저렴합니다.</div>
   </div>
 
   <div class="dev-report-note">모든 혼디 가입자에게 혼디 개발 진행 상황을 수시로 보고합니다. · 개발자 대표 도영민 · 제주시 한림읍 · tensor.city@gmail.com</div>
