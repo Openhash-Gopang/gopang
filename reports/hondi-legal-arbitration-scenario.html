@@ -8,7 +8,7 @@
   :root{
     --ink:#1c2430;
     --ink-soft:#4a5568;
-    --paper:#fbfaf7;
+    --paper:#ffffff;
     --line:#d8d3c8;
     --line-strong:#a89f8c;
     --accent:#1f3a5f;
@@ -25,7 +25,7 @@
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
-  @page{ size:A4; margin-top:16mm; margin-bottom:12mm; margin-left:16mm; margin-right:16mm; }
+  @page{ size:A4; margin-top:11mm; margin-bottom:11mm; margin-left:14mm; margin-right:14mm; }
   .sheet{
     width:210mm;
     min-height:297mm;
@@ -33,7 +33,7 @@
     background:var(--paper);
     padding:18mm 16mm 20mm;
     position:relative;
-    box-shadow:0 0 0 1.13px rgba(0,0,0,.04), 0 13.56px 31.64px rgba(30,25,15,.14);
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
   }
   @media print{
     body{background:none;}
@@ -43,115 +43,115 @@
   }
 
   .doc-eyebrow{
-    font-size:10.73px; letter-spacing:.16em; color:var(--accent-soft);
-    text-transform:uppercase; font-weight:600; margin-bottom:6.78px;
+    font-size:9.5px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:6px;
   }
   h1.doc-title{
     font-family:'Pretendard',serif;
-    font-size:22.6px; line-height:1.28; font-weight:700;
-    color:var(--ink); margin:0 0 5.65px;
+    font-size:23px; line-height:1.35; font-weight:700;
+    color:var(--ink); margin:0 0 8px;
   }
-  .doc-sub{ font-size:12.2px; color:var(--ink-soft); margin:0 0 9.04px; line-height:1.5; }
+  .doc-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6; }
   .doc-meta{
-    display:flex; gap:20.34px; font-size:10.17px; color:var(--ink-soft);
-    border-top:1.13px solid var(--line-strong); border-bottom:1.13px solid var(--line);
-    padding:5.65px 0; margin-bottom:11.3px; flex-wrap:wrap;
+    display:flex; gap:24px; font-size:10px; color:var(--ink-soft);
+    border-top:1px solid var(--line-strong); border-bottom:1px solid var(--line);
+    padding:8px 0; margin-bottom:20px; flex-wrap:wrap;
   }
   .doc-meta b{ color:var(--ink); font-weight:600; }
-  .doc-eyebrow{ margin-bottom:2.26px; }
 
   h2.sec{
     font-family:'Pretendard',serif;
-    font-size:13.56px; font-weight:700; color:var(--accent);
-    margin:10.17px 0 4.52px; padding-bottom:3.39px;
-    border-bottom:1.69px solid var(--accent);
-    display:flex; align-items:baseline; gap:9.04px;
+    font-size:13px; font-weight:700; color:var(--accent);
+    margin:12px 0 6px; padding-bottom:4px;
+    border-bottom:1.5px solid var(--accent);
+    display:flex; align-items:baseline; gap:8px;
   }
-  h2.sec .num{ font-size:12.43px; color:var(--accent-soft); font-weight:700; }
-  h3.subsec{ font-size:13.56px; font-weight:600; color:var(--ink); margin:18.08px 0 6.78px; }
-  p{ font-size:12.3px; line-height:1.62; margin:0 0 6.78px; color:var(--ink); }
+  h2.sec .num{ font-size:11px; color:var(--accent-soft); font-weight:700; }
+  h3.subsec{ font-size:12px; font-weight:600; color:var(--ink); margin:16px 0 6px; }
+  p{ font-size:11px; line-height:1.85; margin:0 0 9px; color:var(--ink); }
   .note{
-    font-size:10.4px; line-height:1.5; color:var(--ink-soft);
-    background:#fff; border:1.13px solid var(--line); border-left:2.82px solid var(--ink);
-    padding:6.78px 11.3px; margin:7.91px 0;
+    font-size:9.5px; line-height:1.5; color:var(--ink-soft);
+    background:#fff; border:1px solid var(--line); border-left:2.5px solid var(--ink);
+    padding:8px 11px; margin:10px 0;
   }
   .note.warn{ border-left-color:var(--danger); }
   .note b{ color:var(--ink); }
   .cta-box{
-    background:#fff; color:var(--ink); border:1.69px solid var(--ink); border-radius:4.52px;
-    padding:9px 16px; margin:8px 0; text-align:center;
+    background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px;
+    padding:8px 16px; margin:7px 0; text-align:center;
   }
-  .cta-box .cta-line1{ font-size:9.5px; line-height:1.4; color:var(--ink-soft); margin:0 0 4px; }
-  .cta-box .cta-price{ font-size:12.5px; font-weight:700; line-height:1.35; margin:0 0 3px; color:var(--ink); }
-  .cta-box .cta-sub{ font-size:9px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
+  .cta-box .cta-line1{ font-size:10.5px; line-height:1.75; color:var(--ink-soft); margin:0 0 7px; }
+  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; color:var(--ink); }
+  .cta-box .cta-sub{ font-size:9.5px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
   .dev-report-note{
-    font-size:9.6px; color:var(--ink-soft); text-align:center;
-    border-top:1.13px solid var(--line); padding-top:2px; margin-top:3px;
+    font-size:9px; color:var(--ink-soft); text-align:center;
+    border-top:1px solid var(--line); padding-top:5px; margin-top:8px;
   }
 
-  table{ width:100%; border-collapse:collapse; margin:11px 0 14px; font-size:14px; }
+  table{ width:100%; border-collapse:collapse; margin:12px 0 15px; font-size:11px; }
   thead th{
-    background:#fff; color:var(--ink); font-weight:700; border-bottom:1.69px solid var(--ink);
-    padding:8px 11px; text-align:left; font-size:13px; letter-spacing:.01em;
+    background:#fff; color:var(--ink); font-weight:700; border-bottom:1.5px solid var(--ink);
+    padding:8px 9px; text-align:left; font-size:9.5px; letter-spacing:.01em;
   }
-  tbody td{ padding:7px 10px; border-bottom:1.13px solid var(--line); color:var(--ink); }
+  tbody td{ padding:8px 9px; border-bottom:1px solid var(--line); color:var(--ink); line-height:1.6; }
   tbody tr:nth-child(even){ background:#fff; }
 
-  ul.list{ margin:0 0 12px; padding-left:19px; }
-  ul.list li{ font-size:13.5px; line-height:1.8; margin-bottom:8px; color:var(--ink); }
+  ul.list{ margin:0 0 6px; padding-left:15px; }
+  ul.list li{ font-size:11px; line-height:1.9; margin-bottom:6px; color:var(--ink); }
 
   .footer-line{
-    display:flex; justify-content:space-between; margin-top:4px;
-    font-size:9.6px; color:var(--ink-soft); border-top:1.13px solid var(--line); padding-top:3px;
+    display:flex; justify-content:space-between; margin-top:10px;
+    font-size:8.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
   }
 
   /* ── 이 문서 전용 컴포넌트 ── */
   .quote{
     font-family:'Pretendard',serif; font-style:italic;
-    font-size:12.43px; line-height:1.75; color:var(--ink);
-    background:#fff; border:1.13px solid var(--line); border-left:3.39px solid var(--accent);
-    padding:13.56px 18.08px; margin:11.3px 0 15.82px;
+    font-size:11px; line-height:2.0; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:12px 16px; margin:10px 0 14px;
   }
-  .dialogue{ margin:7.91px 0 4.52px; }
-  .msg{ margin:0 0 2.26px; max-width:90%; }
+  .dialogue{ margin:8px 0 4px; }
+  .msg{ margin:0 0 3px; max-width:90%; }
   .msg .who{
-    font-size:10.17px; font-weight:700; letter-spacing:.05em; margin-bottom:3.39px;
+    font-size:9px; font-weight:700; letter-spacing:.05em; margin-bottom:3px;
     text-transform:uppercase;
   }
   .msg .bubble{
-    display:inline-block; font-size:11.96px; line-height:1.55; padding:6.78px 12.43px; text-align:left;
+    display:inline-block; font-size:11px; line-height:1.85;
+    padding:7px 11px; text-align:left;
   }
   .msg.user{ margin-left:auto; text-align:right; }
   .msg.user .who{ color:var(--ink-soft); text-align:right; }
-  .msg.user .bubble{ background:#fff; border:1.13px solid var(--ink-soft); }
+  .msg.user .bubble{ background:#fff; border:1px solid var(--ink-soft); }
   .msg.hondi .who{ color:var(--accent); }
-  .msg.hondi .bubble{ background:#fff; border:1.13px solid var(--line); border-left:3.39px solid var(--accent); }
+  .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--accent); }
   /* 2026-08-11 신설 — 인간 중재인(변호사) 발화 전용 스타일. 혼디/K-Law와
      시각적으로 명확히 구분해서 "AI가 최종 판단자가 아니라 인간이 최종
      서명·책임을 진다"는 걸 색상으로도 드러낸다. */
-  .msg.arbiter .who{ color:#8a6d1f; }
-  .msg.arbiter .bubble{ background:#fff; border:1.13px solid var(--line-strong); border-left:3.39px solid var(--ink); }
+  .msg.arbiter .who{ color:var(--ink); }
+  .msg.arbiter .bubble{ background:#fff; border:1px solid var(--line-strong); border-left:3px solid var(--ink); }
   .aside{
-    font-size:10.49px; color:var(--ink-soft); font-style:italic;
-    margin:1.13px 0 5.65px 4.52px; line-height:1.4; max-width:94%;
+    font-size:10px; color:var(--ink-soft); font-style:italic;
+    margin:1px 0 12px 4px; line-height:1.7; max-width:93%;
   }
   .cmp-table td:first-child{ color:var(--ink-soft); }
   .cmp-table td:last-child{ color:var(--accent); font-weight:500; }
-  .cmp-table tr.highlight td{ background:#fff; font-weight:700; color:var(--ink); border-top:1.13px solid var(--ink-soft); border-bottom:1.13px solid var(--ink-soft); }
+  .cmp-table tr.highlight td{ background:#fff; font-weight:700; color:var(--ink); border-top:1px solid var(--ink-soft); border-bottom:1px solid var(--ink-soft); }
   .badge-live{
-    display:inline-block; font-size:9.6px; font-weight:700; letter-spacing:.03em;
-    color:#1f6f4a; background:#fff; border:1.13px solid #1f6f4a;
-    padding:1.13px 6.78px; border-radius:111.87px; margin-left:6.78px; vertical-align:1.13px;
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#1f6f4a; background:#e5f4ec; border:1px solid #b9e3c9;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
   }
   .badge-road{
-    display:inline-block; font-size:9.6px; font-weight:700; letter-spacing:.03em;
-    color:var(--danger); background:#fff; border:1.13px solid var(--danger);
-    padding:1.13px 6.78px; border-radius:111.87px; margin-left:6.78px; vertical-align:1.13px;
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--danger); background:#f3e7e2; border:1px solid #e0c3b6;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
   }
   .badge-fact{
-    display:inline-block; font-size:9.6px; font-weight:700; letter-spacing:.03em;
-    color:#8a6d1f; background:#fff; border:1.13px solid #8a6d1f;
-    padding:1.13px 6.78px; border-radius:111.87px; margin-left:6.78px; vertical-align:1.13px;
+    display:inline-block; font-size:8.5px; font-weight:700; letter-spacing:.03em;
+    color:#8a6d1f; background:#f7f0dd; border:1px solid #e6d49a;
+    padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:1px;
   }
 </style>
 </head>
@@ -160,7 +160,6 @@
 <!-- ═══════════════════ PAGE 1 ═══════════════════ -->
 <div class="sheet">
 
-  <div class="doc-eyebrow">혼디넷(hondi.net) 서비스 사례 연구 · K-Law</div>
   <h1 class="doc-title">혼디넷의 수백 개 AI 서비스,<br>그 실력을 사례 하나로 보여드립니다</h1>
   <p class="doc-sub">
     혼디넷(hondi.net)은 사법을 포함해 사회 전 분야에 걸쳐 수백 개의
@@ -286,6 +285,7 @@
 
   </div>
 
+
 <!-- ═══════════════════ SECTION 03 (same page) ═══════════════════ -->
   <h2 class="sec"><span class="num">03</span> 이 시나리오에서 실제로 무엇이 자동화됐는가</h2>
   <table class="avoid-break cmp-table">
@@ -327,18 +327,17 @@
 
   <div class="cta-box">
     <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
-    <div class="cta-price">고작 월 3천원~8천원으로, 기존 AI를 훨씬 더 똑똑하고, 저렴하게 이용할 수 있습니다.</div>
+    <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
     <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
   </div>
   <div class="cta-box">
     <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
-    <div class="cta-price">혼디는 일반 AI보다 놀랍도록 더 똑똑하고, 놀랍도록 훨씬 저렴합니다.</div>
   </div>
 
-  <div class="dev-report-note">모든 혼디 가입자에게 혼디 개발 진행 상황을 수시로 보고합니다.</div>
+  <div class="dev-report-note">혼디 개발자 대표 도 영민, 제주시 한림읍, tensor.city@gmail.com</div>
 
   <div class="footer-line">
-    <span>혼디(Hondi) 홍보 시나리오 — 법적 분쟁 중재 · 2026-08-11</span>
+    <span></span>
     <span>2 / 2</span>
   </div>
 </div>
