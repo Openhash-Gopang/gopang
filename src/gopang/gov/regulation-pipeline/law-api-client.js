@@ -77,22 +77,25 @@ export function createLawApiClient(ocId = 'test') {
    *   내용 없음)만 돌아오는 버그가 있었다. 호출부에서
    *   `reg.행정규칙일련번호 || reg.행정규칙ID` 순서를 반드시 지킬 것
    *   (반대로 하면 이 버그가 재발한다).
-   * @returns {Promise<string>} HTML 본문(type=HTML 기준 — 구조화된
-   *   조문 파싱이 필요하면 type=XML로 재요청해 별도 파서 작성 필요,
-   *   이 함수는 원문 텍스트만 반환).
+   * @returns {Promise<string>} XML 본문(2026-08-17부로 type=XML 사용 —
+   *   type=HTML은 JS 렌더링 뷰어 셸만 반환해 사용 불가로 확인됨).
+   *   태그 안에 실제 조문 텍스트가 들어있을 것으로 기대 — 정규식
+   *   필터(passesRegexFilter)는 태그 유무와 무관하게 원문 텍스트
+   *   패턴을 찾으므로 별도 XML 파싱 없이도 동작해야 하나, 다음
+   *   실측에서 실제로 원문이 담겼는지 재확인 필요.
    */
   async function fetchAdminRuleText(adminRuleId) {
     const params = new URLSearchParams({
       OC: ocId,
       target: 'admrul',
       ID: adminRuleId,
-      type: 'HTML',
-      // ★ 2026-08-16 재수정 ★ mobileYn=Y를 넣으면 jQuery+CSS만 로드하는
-      // JS 렌더링 셸(실제 조문은 클라이언트 JS가 별도 AJAX로 채워 넣는
-      // 구조로 추정)이 와서, 15건 전부 완전히 동일한 1589자 빈 껍데기만
-      // 받는 문제가 실측(GitHub Actions)으로 재확인됐다. mobileYn을
-      // 아예 빼서 데스크톱 버전 응답을 받도록 변경 — 이게 실제 조문
-      // 텍스트를 직접 포함할 가능성이 높다(다음 실측으로 재확인 필요).
+      // ★ 2026-08-16 세 번째 수정 ★ type=HTML은 mobileYn 유무와 무관하게
+      // jQuery AJAX 로더 뷰어 셸("$(document).ready(function(){...")만
+      // 반환함을 로컬 실측(2026-08-17)으로 재확인 — 이건 브라우저에서
+      // JS가 실행돼야 실제 내용을 채우는 미리보기 페이지지, 원문 API
+      // 응답이 아니다. 목록조회(searchAdminRules)가 type=XML로 완벽하게
+      // 구조화된 실제 데이터를 준 전례를 따라, 본문조회도 XML로 전환.
+      type: 'XML',
     });
     const url = `${LAW_API_BASE}/lawService.do?${params.toString()}`;
     const res = await fetch(url);
