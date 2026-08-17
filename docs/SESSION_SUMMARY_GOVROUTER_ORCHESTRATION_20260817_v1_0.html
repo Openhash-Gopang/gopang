@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-17 라우팅 카탈로그 문서화 + gov-router.js
+  실결함 발견·수정 + 오케스트레이션 e2e 검증 세션 전체 요약.
+  ① §CATALOG(GWP 24개)·§CATALOG-EXPERT(62개)·§ORCHESTRATION(K-Intent~
+     K-Report 5단계) 전수 문서화
+  ② 공공기관(입법/사법/행정/산하기관) 라우팅 검증용 100건 시나리오 작성
+  ③ 실측 중 policy-body/지사 키워드 충돌 발견 — 70×34 전수 감사로 18개
+     기관 충돌(7개는 기존에 알려짐, 11개는 신규 발견)
+  ④ 6개(NCA/CONSTCOURT/COTI/JPRI/SUPREMECOURT/MPVA) 근본 수정 — court/
+     veterans 지사 키워드 테이블의 과포괄 단독어 제거(PR #434)
+  ⑤ 나머지 5개 중 CIO/KMA 추가 수정 — 기관 고유명칭 충돌 전용 화이트리스트
+     (행위서술형 충돌 MOEL/MOJ/OKA와는 다른 메커니즘, PR #435)
+  ⑥ 국회 상임위원회 18개 배선 — national-division-router.js 최초 신설 시
+     "1차 배선 제외"로 남았던 갭 해소, gov-router.js -0.85 신규 단계(PR #435)
+  ⑦ K-Intent~K-Report 오케스트레이션 e2e 라이브 검증 하네스 신설 —
+     하네스 자체 버그 3건(max_tokens 부족·함수 삭제·PAUSED 오라벨링) 순차
+     수정 끝에, 검증 범위 내에서 제품 결함은 발견되지 않음(정직하게 밝힘)
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-17): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gov-router 키워드 충돌·상임위원회 배선·오케스트레이션 e2e 검증 — Gopang 개발자 문서</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --good:     #2e7d4f;
+  --good-lt:  #eaf6ef;
+  --bad:      #b3392c;
+  --bad-lt:   #fbeceb;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout.good { border-left-color: var(--good); background: var(--good-lt); }
+.callout.bad { border-left-color: var(--bad); background: var(--bad-lt); }
+.callout strong { color: var(--ink); }
+
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  padding: 9px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+.badge {
+  display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .3px;
+}
+.badge.pass { background: var(--good-lt); color: var(--good); border: 1px solid var(--good); }
+.badge.fail { background: var(--bad-lt); color: var(--bad); border: 1px solid var(--bad); }
+.badge.skip { background: var(--bg-3); color: var(--ink-3); border: 1px solid var(--line-2); }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .4s ease, transform .4s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+.doc-hero {
+  padding: 8px 0 30px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.4;
+  color: var(--ink); margin-bottom: 14px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  margin-top: 18px; font-size: 12px; color: var(--ink-4);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#catalog-doc">① §CATALOG·§CATALOG-EXPERT·§ORCHESTRATION 전수 문서화</a>
+    <a href="#scenarios-100">② 공공기관 라우팅 검증 시나리오 100건</a>
+    <a href="#collision-discovery">③ policy-body vs 지사 키워드 충돌 발견 — 70×34 전수 감사</a>
+    <a href="#collision-fix">④ 6개 근본 수정 — court/veterans 과포괄 단독어 제거</a>
+    <a href="#cio-kma-fix">⑤ CIO/KMA 추가 수정 — 기관 고유명칭 충돌 화이트리스트</a>
+    <a href="#committee-wiring">⑥ 국회 상임위원회 18개 배선 — 1차 배선 제외 갭 해소</a>
+    <a href="#orchestration-e2e">⑦ 오케스트레이션 e2e 라이브 검증 — 하네스 버그 3건, 제품 결함 0건</a>
+    <a href="#lessons">교훈</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SESSION SUMMARY — 2026-08-17</div>
+      <h1 class="doc-hero-title">라우팅 문서를 정리하려다,<br><em>18개 기관의 조용한 라우팅 실패</em>를 찾아냈다</h1>
+      <p class="doc-hero-desc">
+        GWP·EXPERT 카탈로그와 오케스트레이션 체인을 문서화하고 그 문서를
+        검증할 시나리오 100건을 쓰는 게 원래 목표였다. 그런데 "발화에
+        기관명을 그대로 넣으면 테스트 의미가 있나"라는 질문에 실측으로
+        답하는 과정에서, <code>gov-router.js</code>의 정책기관 매칭이
+        <strong>순수 문자열 포함 검사</strong>라는 게 드러났고, 곧이어
+        <strong>"법원행정처에 문의하고 싶어요"처럼 기관 이름을 그대로
+        말하는 가장 자연스러운 화법이 오히려 라우팅에 실패</strong>하는
+        실제 결함을 찾았다. 70개 정책기관과 34개 지사 키워드 도메인을
+        전수 대조해 18개 기관의 충돌을 확인했고, 그중 8개를 이 세션에서
+        근본 수정했다. 이어서 최초 설계 때 "1차 배선 범위 제외"로
+        남겨졌던 국회 상임위원회 18개도 전부 새로 배선했다. 마지막으로
+        오케스트레이션 5단계(K-Intent~K-Report)를 실제 DeepSeek 호출로
+        끝까지 태워보는 e2e 하네스를 처음부터 만들었는데, 이번엔 하네스
+        자체의 버그 3건(토큰 부족·함수 실수 삭제·정상 종료 오라벨링)을
+        순서대로 고친 끝에, 검증한 범위 안에서는 제품 결함을 찾지
+        못했다 — 그것도 정직하게 그대로 적는다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>작성</strong> 2026-08-17</span>
+        <span><strong>핵심 변경</strong> gov-router.js · national-division-router.js · tests/live_smoketest (PR #434, #435)</span>
+      </div>
+    </div>
+
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "라우팅 표를 문서화하고 검증 시나리오를 쓴다"는 조사성 작업이
+          어쩌다 실제 프로덕션 결함 발견·수정으로 이어졌는지, 그리고 그
+          과정에서 제가(Claude) 두 번 정도 잘못 판단했다가 실측으로
+          스스로 정정한 지점까지 포함해 남긴다. 특히 <strong>③의 발견은
+          사용자가 "메타 질문"(테스트 방법론 자체의 타당성)을 던진 데서
+          시작됐다</strong>는 게 이 세션의 핵심 교훈이다 — 시나리오
+          100건을 그냥 제출했다면 이 결함은 발견되지 않았을 것이다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="catalog-doc">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">① Catalog Docs</div>
+          <div class="gs-title">§CATALOG·§CATALOG-EXPERT·§ORCHESTRATION 전수 문서화</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이전 라우팅 표 문서에서 "필요하면 별도 나열 가능"으로 유보됐던
+          두 부분을 채웠다: GWP 카탈로그 24개(주체 판별 5단계 + 기관명
+          직접 언급 시 우회 규칙), EXPERT 페르소나 62개(기본값 편향
+          경계 원칙 — civil 삭제·kgov 흡수 포함), 그리고 오케스트레이션
+          5단계(K-Intent→K-Compose→K-Execute→K-Deliver→K-Report) 내부
+          STEP 전부를 SP-19~23 원문 근거로 정리했다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            메모리와의 대조로 발견한 것
+          </div>
+          기존 기록엔 "3단계 오케스트레이션(K-Intent→K-Compose→K-Deliver)"으로
+          남아있었는데, 실제 문서는 K-Execute·K-Report가 추가된 5단계였다 —
+          설계가 발전한 걸 기록이 못 따라간 사례라 바로잡았다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="scenarios-100">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">② Scenarios</div>
+          <div class="gs-title">공공기관(입법/사법/행정/산하기관) 라우팅 검증 시나리오 100건</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          처음엔 300건을 요청받았으나, 저장소를 직접 클론해보니
+          <code>tests/live_smoketest/scenarios.json</code> 등 이미 두꺼운
+          기존 인프라(300건 세트 여러 개, 62개 EXPERT 세트 등)가 있어
+          중복 작성 대신 실제 공백(신설된 입법/사법/산하기관 division
+          실사 데이터, §6-1~8 311건)을 겨냥한 100건으로 범위를 좁혔다.
+          judiciary/assembly-agency/assembly-committee/bureau/commission/
+          presidential 6개 division master-data 파일을 근거로 삼았다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="collision-discovery">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">③ Discovery</div>
+          <div class="gs-title">policy-body vs 지사 키워드 충돌 발견 — 70×34 전수 감사</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          사용자가 "발화에 기관명을 못박으면 테스트 의미가 있나"라고
+          물어서 실제로 <code>gov-router.js</code>를 클론해 라이브
+          호출해봤다. <code>_scoreMatchTies</code>가 <code>text.includes(k)</code>
+          순수 문자열 포함 검사라는 걸 확인했고, "법원 시설물 촬영
+          협조"(NCA의 정식 등록 트리거 문구!)를 그대로 넣었는데도
+          NCA로 안 가는 걸 발견했다. 원인은 4345행의 우선순위 가드
+          — <code>_NAT_AGENCY_DOMAIN_KEYWORDS.court</code>의 단독어
+          <code>'법원'</code>이 먼저 걸려 정책기관 매칭 자체를
+          건너뛰게 만들고 있었다.
+        </p>
+        <p>
+          <code>_POLICY_BODY_DOMAIN_KEYWORDS</code>(70개)와
+          <code>_NAT_AGENCY_DOMAIN_KEYWORDS</code>(34개)를 전부 파싱해
+          전수 대조한 결과, 2026-08-03에 이미 알려져 우회 키워드까지
+          추가됐던 7개(NTS·KCS·POLICE·MMA·KCG·PPS·PROSECUTION) 외에
+          <strong>동일 패턴의 충돌이 11개 더</strong> 있었다:
+          CIO·CONSTCOURT·COTI·JPRI·KMA·MOEL·MOJ·MPVA·NCA·OKA·SUPREMECOURT.
+        </p>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            실무적으로 가장 걱정스러운 패턴
+          </div>
+          "헌법재판소에 문의하고 싶어요", "법원행정처에 문의하고
+          싶어요", "대법원에 문의하고 싶어요"처럼 <strong>기관 이름을
+          그대로 말하는, 가장 자연스럽고 흔한 화법이 오히려
+          실패</strong>하고, 훨씬 덜 자연스러운 우회 표현만 통과하는
+          역설적인 상태였다.
+        </div>
+        <p>
+          22건(11개 기관 × 충돌표현/안전표현)을 <code>live-policy-body-collision-audit.mjs</code>로
+          직접 만들어 실행 — 가설대로 22/22 재현했다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="collision-fix">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">④ Root Fix</div>
+          <div class="gs-title">6개 근본 수정 — court/veterans 지사 키워드의 과포괄 단독어 제거</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          NCA/CONSTCOURT/COTI/JPRI/SUPREMECOURT 5개는 전부 <code>court</code>
+          도메인의 단독어 <code>'법원'</code>·<code>'재판'</code>이 원인이었고,
+          MPVA는 <code>veterans</code> 도메인의 단독어 <code>'보훈'</code>이
+          원인이었다. 둘 다 구체적인 지사 실행 키워드(지방법원·등기소·
+          보훈청·보훈급여 등)는 그대로 두고 지나치게 포괄적인 단독어만
+          제거했다.
+        </p>
+        <ul>
+          <li>기존 <code>live-national-agency-smoketest.mjs</code> 39건 중
+          "노원구 관할 법원이 어디예요"(지방법원을 포함하지 않는 표현)가
+          1건 회귀 — <code>'관할 법원'</code>을 좁게 추가해 재수정</li>
+          <li>최종 재검증: 기존 정책기관 70/70, 지사 39/39 전부 통과,
+          충돌했던 6개 기관은 전부 정상화 확인</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="cio-kma-fix">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑤ CIO/KMA</div>
+          <div class="gs-title">나머지 2개 추가 수정 — 기관 고유명칭 충돌 전용 화이트리스트</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          남은 5개(CIO·KMA·MOEL·MOJ·OKA) 중 MOEL/MOJ/OKA는 정식
+          명칭 자체는 이미 안전해(충돌은 "임금체불 진정"류 <em>행위
+          서술 문구</em>에서만 발생하고, 그건 지사가 처리하는 게 맞는
+          설계라 그대로 둠) 실사용 영향이 작았다. 반면 CIO("고위공직자
+          범죄수사처"의 '수사')와 KMA("기상청" — 지사 사전에도 동일
+          명칭 존재)는 <em>기관 고유명칭 자체</em>가 겹치는 별개
+          유형이었다.
+        </p>
+        <p>
+          지사 키워드를 또 건드리면 MOEL류의 정상 동작(임금체불 신고는
+          지사 우선)을 깰 위험이 있어, 대신 <code>_POLICY_BODY_NAME_COLLISION_EXEMPT</code>라는
+          좁은 화이트리스트를 신설했다 — "이 정책기관 코드에서, 이
+          고유명칭 문구가 매칭됐을 때만" 지사 우선 가드를 예외
+          처리한다. 행위 서술형 충돌에는 전혀 영향이 없다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            결과
+          </div>
+          CIO/KMA 정식 명칭 정상화 확인, MOEL의 "임금체불 진정"은
+          그대로 지사 우선 유지 확인(회귀 없음), 70+39건 전체 회귀
+          재검증 통과.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="committee-wiring">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑥ Committee Wiring</div>
+          <div class="gs-title">국회 상임위원회 18개 배선 — "1차 배선 범위 제외" 갭 해소</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>national-division-router.js</code>가 2026-08-16 최초
+          신설될 때, 상임위원회는 "합의제 위원회라 개별 부서가 아니다"는
+          이유로 배선 1차 범위에서 명시적으로 제외돼 있었다.
+          <code>SP-ASSEMBLYDIV-TEMPLATE_v1.0.md</code>와
+          <code>assembly-committee-master-data.json</code>(18개 위원회)은
+          이미 존재했지만 실제 코드와 연결된 적이 없었다.
+        </p>
+        <p>
+          division 모델(기관→부서, 1:N)과 달리 위원회는 여러 기관에
+          걸치는 N:M 구조라 기존 division 인덱스에 끼워넣지 않고,
+          <code>guessAssemblyCommitteeFromText</code>·
+          <code>resolveAssemblyCommitteeLazy</code> 전용 함수를 새로
+          만들어 <code>gov-router.js</code>에 -0.85 단계로 배선했다
+          (정책기관 -0.8 단계보다 먼저 실행 — 위원회명은
+          <code>_POLICY_BODY_DOMAIN_KEYWORDS</code>에 없어 겹치진
+          않지만, 순서를 명확히 하기 위함).
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>단계</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>18개 위원회 신규 라우팅 검증</td><td>18/18 PASS</td></tr>
+              <tr><td>기존 정책기관 회귀</td><td>70/70 PASS</td></tr>
+              <tr><td>기존 지사 회귀</td><td>39/39 PASS</td></tr>
+              <tr><td>NAS(국회사무처) 오분류 스팟체크</td><td>PASS — 위원회 매칭과 안 겹침 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="orchestration-e2e">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑦ Orchestration E2E</div>
+          <div class="gs-title">K-Intent~K-Report 라이브 검증 — 하네스 버그 3건, 제품 결함 0건</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>call-ai.js</code>를 실사해 실제 핸드오프 메커니즘(매
+          단계마다 히스토리를 통째로 비우고 완전히 새 시스템 프롬프트로
+          전환 — 연속 대화가 아니라 "각 단계마다 새 세션 + 인수인계
+          메시지 1개"의 연쇄)을 그대로 재현하는
+          <code>orchestration_chain_smoketest.py</code>를 새로 만들었다.
+          이 하네스는 실제 DeepSeek 호출이 필요해 개발 샌드박스에서
+          직접 실행할 수 없었고, 사용자가 로컬에서 여러 차례
+          실행하며 함께 디버깅했다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>회차</th><th>증상</th><th>실제 원인</th></tr></thead>
+            <tbody>
+              <tr><td>1차</td><td>10/10 ERROR</td><td>사용자가 <code>DEEPSEEK_API_KEY</code>에 예시 placeholder("sk-xxxx")를 그대로 입력 — 실제 키로 교체 후 해결</td></tr>
+              <tr><td>2차</td><td>0/10 COMPLETE, 다수 STUCK</td><td>하네스 <code>max_tokens=1200</code>이 K-Compose의 project 모드 다단계 출력을 자르고 있었음(트레이스가 "human_author"에서 뚝 끊긴 걸로 확인) — 4000으로 상향</td></tr>
+              <tr><td>3차</td><td>10/10 ERROR</td><td>제가 직전 수정 때 <code>call_deepseek</code> 함수 정의 자체를 실수로 지웠음 — 복구 후 해결(재발 방지로 함수 존재 여부를 코드로 assert하는 습관 추가)</td></tr>
+              <tr><td>4차</td><td>1/10 COMPLETE, 다수 STUCK/NO_ENTRY</td><td>K-Execute가 여러 턴에 걸쳐 진행해야 하는 실행형 작업을 한 번의 호출로는 못 끝냄 — "계속 진행하세요"로 이어가는 최대 5턴 재시도 루프 추가</td></tr>
+              <tr><td>5차</td><td>0/10 COMPLETE, 다양한 STUCK/PAUSED류</td><td>trace를 사람이 직접 읽어보니 전부 정상 동작(직행 라우팅·정상 일시정지·사용자 확인 대기)이었는데 하네스가 이를 "막힘"으로 오라벨링 — <code>NO_ENTRY_DIRECT_GWP(id)</code>·<code>PAUSED_CORRECTLY</code>·<code>HANDBACK_AT_*(reason)</code> 라벨 신설</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          최종적으로 자세히 들여다본 사례들 — 단순 요청이 무거운 체인
+          없이 kbusiness/kregionalgov/kcommerce로 직행한 것, R0(응급)
+          발화가 오케스트레이션을 거치지 않고 <code>[GWP: kemergency]</code>로
+          즉시 우선 처리된 것, K-Compose가 실제 K-Search로 법령 정보를
+          조회해 조건부 병렬 계획을 세운 것, 외부 승인(고용허가) 대기가
+          필요한 상황에서 <code>PROJECT_STATE_SAVE</code>로 정직하게
+          멈췄다가 <code>ORCHESTRATION_HANDOFF_BACK(reason=project_paused)</code>로
+          깔끔하게 AC에 반환한 것, K-Execute가 실행 중 사용자만 할 수
+          있는 행동(로그인해서 신고, 공고 선택)을 만나자 다음 확인을
+          기다리며 멈춘 것 — 전부 SP 설계 문서에 적힌 그대로였다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            정직하게 밝힘
+          </div>
+          이번 검증 범위(10개 시나리오, 최대 5턴 재시도) 안에서는 제품
+          결함을 발견하지 못했다. 다만 <strong>같은 발화에도 실행마다
+          mode 판단·경로가 달라지는 비결정성</strong>은 여러 차례
+          관찰됐다(예: 시나리오 3번은 실행마다 STUCK→COMPLETE→STUCK로
+          바뀜) — 버그로 단정할 근거는 없지만, LLM 기반 라우팅의
+          특성상 반복 실행 시 참고할 부분으로 남긴다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lessons">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Lessons</div>
+          <div class="gs-title">교훈</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <strong>메타 질문이 진짜 결함을 찾는다.</strong> "이 테스트
+          방법론 자체가 타당한가"라는 사용자의 질문이 없었다면 100건
+          시나리오는 그냥 제출됐을 것이고, 18개 기관의 라우팅 실패는
+          발견되지 않았을 것이다. 시나리오를 만드는 것과, 그 시나리오가
+          실제로 무엇을 테스트하는지 검증하는 것은 다른 작업이다.
+        </p>
+        <p>
+          <strong>키워드 기반 매칭에서 "포괄어 vs 구체어"는 항상
+          충돌 후보다.</strong> <code>'법원'</code>·<code>'재판'</code>·<code>'보훈'</code>처럼
+          짧고 일반적인 단어는 그 자체로 지사 실행 신호를 잡는 데는
+          유용하지만, 같은 단어가 우연히 포함된 다른 기관의 정식
+          명칭까지 전부 오탐 없이 걸러낸다는 보장은 없다. 이번처럼
+          한쪽(7개)만 수정하고 넘어가면, 똑같은 패턴이 문서화되지
+          않은 채 남는다.
+        </p>
+        <p>
+          <strong>하네스 자체도 코드다 — 버그가 난다.</strong> 이
+          세션에서 실제 제품 결함은 라우팅 쪽 8건이었지만, 제가 만든
+          검증 하네스 쪽 버그는 그보다 많은 5차례였다(placeholder API
+          키, 토큰 부족, 함수 실수 삭제, 멀티턴 미지원, 정상 종료
+          오라벨링). "테스트가 실패했다"는 신호를 받으면 제품 코드부터
+          의심하기 전에, 테스트 코드 자체를 먼저 의심하는 습관이
+          필요하다는 걸 반복해서 확인했다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li>저장소 내 <code>src/gopang/gov/gov-router.js</code> — ③④⑤의 <code>_POLICY_BODY_DOMAIN_KEYWORDS</code>·<code>_NAT_AGENCY_DOMAIN_KEYWORDS</code>·<code>_POLICY_BODY_NAME_COLLISION_EXEMPT</code>·-0.85 위원회 단계 전부</li>
+          <li>저장소 내 <code>src/gopang/gov/national-division-router.js</code> — ⑥의 <code>guessAssemblyCommitteeFromText</code>·<code>resolveAssemblyCommitteeLazy</code></li>
+          <li>저장소 내 <code>tests/live_smoketest/live-policy-body-collision-audit.mjs</code>·<code>live-assembly-committee-smoketest.mjs</code>·<code>orchestration_chain_smoketest.py</code>·<code>scenarios_orggov_100.json</code>·<code>scenarios_orchestration_chain.json</code></li>
+          <li>GitHub PR <code>Openhash-Gopang/gopang#434</code>(6개 근본 수정) · <code>#435</code>(CIO/KMA + 상임위원회 + 오케스트레이션 하네스)</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
