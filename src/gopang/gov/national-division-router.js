@@ -146,7 +146,103 @@ async function resolvePolicyDivisionLazy(기관코드, 부서코드, fetchTextFn
   }
 }
 
-// ── 공개 API 2: 라우팅 테이블 생성 (키워드 추출) ────────────────────
+// ── 국회 상임위원회 배선(2026-08-17 신설) ───────────────────────────
+// 위 division 모델(기관코드→부서코드, 1:N)과 달리 상임위원회는 여러
+// 기관에 걸치는 N:M 구조라(assembly-committee-master-data.json의
+// 소관_정책기관코드가 배열) division 인덱스에 억지로 끼워넣지 않고
+// 별도 경로로 뺐다 — national-division-router.js 최초 신설 시 주석에
+// "이번 배선 1차 범위에서 제외"라고 명시했던 부분을 이번에 채운다.
+// SP-ASSEMBLYDIV-TEMPLATE_v1.0.md는 다른 6개 템플릿과 플레이스홀더
+// 체계가 다르다({위원회이름}/{소관부처_문구}/{소관법률_문구}) — 그래서
+// _composeFromTemplate을 재사용하지 않고 전용 합성 함수를 둔다.
+const _COMMITTEE_MASTER_DATA_PATH =
+  '09-national/policy-bodies/divisions/assembly-committee-master-data.json';
+const _COMMITTEE_TEMPLATE_PATH =
+  '09-national/policy-bodies/divisions/SP-ASSEMBLYDIV-TEMPLATE_v1.0.md';
+
+let _committeeListCache = null;
+let _committeeTemplateCache = null;
+let _committeeSpCache = new Map(); // 위원회코드 → composed text
+
+async function _loadCommitteeList(fetchTextFn) {
+  if (_committeeListCache) return _committeeListCache;
+  const raw = await fetchTextFn(_COMMITTEE_MASTER_DATA_PATH);
+  const data = JSON.parse(raw);
+  _committeeListCache = data.위원회목록;
+  return _committeeListCache;
+}
+
+function _extractCommitteeKeywords(entry) {
+  const kw = new Set();
+  kw.add(entry.위원회명);
+  // "국회운영위원회" → "운영위원회"·"운영" 같은 축약도 잡되, 너무 짧은
+  // 축약(2자 미만)은 다른 위원회와 충돌 위험이 커서 제외한다.
+  const short = entry.위원회명.replace(/^국회/, '');
+  if (short.length >= 3 && short !== entry.위원회명) kw.add(short);
+  return kw;
+}
+
+async function getCommitteeRoutingTable(fetchTextFn) {
+  const list = await _loadCommitteeList(fetchTextFn);
+  return list.map(entry => ({ code: entry.위원회코드, kw: [..._extractCommitteeKeywords(entry)], entry }));
+}
+
+function _composeCommitteeTemplate(templateText, entry) {
+  let out = templateText;
+  out = out.split('{위원회이름}').join(entry.위원회명);
+  out = out.split('{소관부처_문구}').join(entry.소관_문구);
+  // ★ 정직하게 밝힘 ★ 위원회별 소관 법률 조문까지는 실사되지 않았다
+  // (assembly-committee-master-data.json에 그 필드가 없음) — 국회법
+  // 제37조(상임위원회 종류·소관 법정 근거) 하나로 통일해 채운다.
+  out = out.split('{소관법률_문구}').join('국회법 제37조(상임위원회의 종류와 소관)');
+  const leftover = out.match(/\{[가-힣A-Za-z_]+\}/g);
+  if (leftover) {
+    console.warn('[national-division-router] committee 미치환 플레이스홀더:', leftover, entry.위원회코드);
+  }
+  return out;
+}
+
+async function resolveAssemblyCommitteeLazy(위원회코드, fetchTextFn, onProgress) {
+  if (_committeeSpCache.has(위원회코드)) {
+    return { text: _committeeSpCache.get(위원회코드), source: 'cache' };
+  }
+  try {
+    onProgress?.({ stage: 'assembly-committee-fetch', 위원회코드 });
+    const list = await _loadCommitteeList(fetchTextFn);
+    const entry = list.find(e => e.위원회코드 === 위원회코드);
+    if (!entry) throw new Error(`위원회 인덱스에 없음: ${위원회코드}`);
+    if (!_committeeTemplateCache) {
+      _committeeTemplateCache = await fetchTextFn(_COMMITTEE_TEMPLATE_PATH);
+    }
+    const composed = _composeCommitteeTemplate(_committeeTemplateCache, entry);
+    _committeeSpCache.set(위원회코드, composed);
+    return { text: composed, source: 'composed' };
+  } catch (e) {
+    console.warn('[national-division-router] resolveAssemblyCommitteeLazy 실패:', e?.message);
+    return null;
+  }
+}
+
+async function guessAssemblyCommitteeFromText(text, fetchTextFn) {
+  const table = await getCommitteeRoutingTable(fetchTextFn);
+  const { best, topScore, tied } = _scoreCommitteeMatchTies(text, table);
+  if (!best || topScore === 0 || tied.length > 1) return null;
+  return best.code;
+}
+
+function _scoreCommitteeMatchTies(text, table) {
+  let bestScore = 0;
+  let tied = [];
+  for (const entry of table) {
+    const score = entry.kw.filter(k => text.includes(k)).length;
+    if (score === 0) continue;
+    if (score > bestScore) { bestScore = score; tied = [entry]; }
+    else if (score === bestScore) { tied.push(entry); }
+  }
+  return { best: tied[0] || null, topScore: bestScore, tied };
+}
+
+
 // CITY_DIVISION_TABLE과 동일한 형태({code, kw, ...})를 만들되, 파일
 // 경로 대신 (기관코드, 부서코드)를 실어 resolvePolicyDivisionLazy로
 // 넘긴다. 키워드는 부서명(전체/부분)과 소관업무_문구에서 나이브하게
@@ -273,4 +369,4 @@ async function getDivisionsForInstitution(기관코드, fetchTextFn) {
 //    확인할 것 — 불용어 목록(_GENERIC_ADMIN_STOPWORDS)은 이번 세션
 //    감사로 찾은 것만 반영했으므로 완전하지 않을 수 있다.
 
-export { resolvePolicyDivisionLazy, buildNationalDivisionTable, getDivisionsForInstitution, _composeFromTemplate, _extractKeywords };
+export { resolvePolicyDivisionLazy, buildNationalDivisionTable, getDivisionsForInstitution, _composeFromTemplate, _extractKeywords, resolveAssemblyCommitteeLazy, guessAssemblyCommitteeFromText };
