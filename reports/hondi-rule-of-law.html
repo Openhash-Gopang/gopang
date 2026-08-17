@@ -12,10 +12,21 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{ background:#e7e4dc; font-family:'Pretendard',sans-serif; color:var(--ink); }
+  body{ background:#fff; font-family:'Pretendard',sans-serif; color:var(--ink); }
   .sheet{
     width:210mm; min-height:297mm; margin:10mm auto; background:var(--paper);
     padding:18mm 16mm 20mm; position:relative; box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
+  }
+  .cta-box{
+    background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px;
+    padding:9px 16px; margin:10px 0; text-align:center;
+  }
+  .cta-box .cta-line1{ font-size:10.5px; line-height:1.5; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; color:var(--ink); }
+  .cta-box .cta-sub{ font-size:9.5px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
+  .dev-report-note{
+    font-size:9px; color:var(--ink-soft); text-align:center;
+    border-top:1px solid var(--line); padding-top:5px; margin-top:8px;
   }
   .icon{ display:inline-block; vertical-align:-3px; margin-right:6px; color:var(--accent); }
   .doc-eyebrow{
@@ -44,31 +55,31 @@
   p b{ color:var(--accent); font-weight:700; }
   .note{
     font-size:13.5px; line-height:1.65; color:var(--ink-soft);
-    background:var(--tint); border-left:2.5px solid var(--accent-soft); padding:9px 12px; margin:10px 0;
+    background:#fff; border:1px solid var(--line); border-left:2.5px solid var(--ink); padding:9px 12px; margin:10px 0;
   }
   .note b{ color:var(--ink); }
   .note.status{ border-left-color:var(--good); }
   .note.status b{ color:var(--good); }
-  .note.gap{ border-left-color:var(--danger); background:#f6ece9; }
+  .note.gap{ border-left-color:var(--ink); background:#fff; border:1px solid var(--ink-soft); }
   .note.gap b{ color:var(--danger); }
   .flow-row{ display:flex; align-items:stretch; gap:6px; margin:10px 0 14px; }
   .flow-step{ flex:1; border:1.5px solid var(--line); border-radius:8px; padding:9px 8px; text-align:center; background:#fff; }
   .flow-step .t{ font-size:12.5px; font-weight:700; color:var(--accent); }
   .flow-step .d{ font-size:11px; color:var(--ink-soft); margin-top:2px; line-height:1.4; }
-  .flow-step.gate{ border-color:var(--danger); border-width: 2px; background:#fdf6f4; }
+  .flow-step.gate{ border-color:var(--ink); border-width: 2px; background:#fff; }
   .flow-step.gate .t{ color:var(--danger); }
   .flow-arrow{ display:flex; align-items:center; color:var(--line-strong); font-size:14px; }
   table{ width:100%; border-collapse:collapse; margin:9px 0 12px; font-size:13px; }
-  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:6px 7px; text-align:left; font-size:12.5px; }
+  thead th{ background:#fff; color:var(--ink); font-weight:700; border-bottom:1.5px solid var(--ink); padding:6px 7px; text-align:left; font-size:12.5px; }
   tbody td{ padding:5px 7px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; }
-  tbody tr:nth-child(even){ background:#f6f4ee; }
+  tbody tr:nth-child(even){ background:#fff; }
   .dialogue{ margin:10px 0 6px; }
   .msg{ margin:0 0 4px; max-width:94%; }
   .msg .who{ font-size:12px; font-weight:700; letter-spacing:.05em; margin-bottom:3px; text-transform:uppercase; }
   .msg .bubble{ display:inline-block; font-size:14px; line-height:1.68; padding:8px 12px; text-align:left; }
   .msg.user{ margin-left:auto; text-align:right; }
   .msg.user .who{ color:var(--ink-soft); text-align:right; }
-  .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
+  .msg.user .bubble{ background:#fff; border:1px solid var(--ink-soft); }
   .msg.hondi .who{ color:var(--ink); }
   .msg.hondi .bubble{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--ink); }
   .msg.hondi2 .who{ color:var(--ink); }
@@ -218,9 +229,9 @@
     <div class="flow-step"><div class="t">소요 기간</div><div class="d">짧아도<br>며칠</div></div>
   </div>
   <div class="flow-row">
-    <div class="flow-step gate" style="border-color:var(--good); background:#f0f8f4;"><div class="t" style="color:var(--good);">혼디</div><div class="d">AI 비서 간 소통으로<br>준비·제출·검토 동시 처리</div></div>
+    <div class="flow-step gate" style="border-color:var(--ink); background:#fff;"><div class="t" style="color:var(--ink);">혼디</div><div class="d">AI 비서 간 소통으로<br>준비·제출·검토 동시 처리</div></div>
     <div class="flow-arrow">→</div>
-    <div class="flow-step gate" style="border-color:var(--good); background:#f0f8f4;"><div class="t" style="color:var(--good);">소요 시간</div><div class="d">1초<br>이내</div></div>
+    <div class="flow-step gate" style="border-color:var(--ink); background:#fff;"><div class="t" style="color:var(--ink);">소요 시간</div><div class="d">1초<br>이내</div></div>
   </div>
 
   <h2 class="sec"><span class="num">06</span>정직한 현재 상태 — 검증된 것과 아직인 것</h2>
@@ -274,6 +285,18 @@
     차가운 사회가 아니라 오히려 가장 공평하게 인정을 나눌 수 있는
     사회입니다.
   </div>
+
+  <div class="cta-box">
+    <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
+    <div class="cta-price">고작 월 3천원~8천원으로, 기존 AI를 훨씬 더 똑똑하고, 저렴하게 이용할 수 있습니다.</div>
+    <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
+  </div>
+  <div class="cta-box">
+    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+    <div class="cta-price">혼디는 일반 AI보다 놀랍도록 더 똑똑하고, 놀랍도록 훨씬 저렴합니다.</div>
+  </div>
+
+  <div class="dev-report-note">모든 혼디 가입자에게 혼디 개발 진행 상황을 수시로 보고합니다.</div>
 
   <div class="footer-line">
     <span class="contact-line">개발자 대표 도영민 · hondi.net · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com</span>
