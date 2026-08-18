@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디 Hondi — 오늘, 내일을 대비하십시오.</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-soft:#4d4d4d; --paper:#ffffff;
+    --line:#c8c8c8; --line-strong:#1a1a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#fff;font-family:'Pretendard',sans-serif;color:var(--ink);}
+  @page{ size:A4; margin:10mm 12mm; }
+  .sheet{ width:210mm; margin:10mm auto; background:var(--paper); padding:12mm 15mm; position:relative; border:1px solid #ddd; }
+  @media print{ body{background:none;} .sheet{ box-shadow:none; margin:0 auto; width:auto; border:none; padding:0; } .avoid-break{ break-inside:avoid; page-break-inside:avoid; } }
+
+  .page-num-badge{ position:absolute; top:22mm; right:5mm; font-size:22px; font-weight:800; color:var(--ink); z-index:10; }
+
+  .brand{ display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
+  .brand-mark{ width:34px; height:34px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .brand-tag{ font-size:10px; color:var(--ink-soft); margin-top:1px; }
+
+  h1{ font-size:24px; font-weight:800; margin:8px 0 8px; line-height:1.3; }
+  p{ font-size:13.5px; line-height:1.75; margin:0 0 9px; color:var(--ink); }
+  .lede{ font-size:14px; line-height:1.8; margin:0 0 12px; color:var(--ink); }
+
+  h2{ font-size:15px; font-weight:800; margin:16px 0 8px; display:flex; align-items:center; gap:7px; }
+  h2 .n{ width:24px; height:24px; border-radius:50%; border:1.5px solid var(--ink); display:inline-flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; flex-shrink:0; }
+
+  table{ width:100%; border-collapse:collapse; margin:13px 0 17px; font-size:13.5px; }
+  thead th{ text-align:left; font-weight:700; padding:10px 11px; border-bottom:1.5px solid var(--ink); }
+  tbody td{ padding:12px 11px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.7; }
+  tbody td:first-child{ font-weight:700; white-space:nowrap; width:20%; }
+
+  .timeline{ margin:9px 0 14px; }
+  .tl-row{ display:flex; gap:14px; border-top:1px dashed var(--line); padding:14px 0; }
+  .tl-row:first-child{ border-top:none; }
+  .tl-row .when{ width:115px; flex-shrink:0; font-size:13.5px; font-weight:700; }
+  .tl-row .what{ font-size:14px; line-height:1.75; }
+
+  .note{ border:1px solid var(--line); padding:14px 17px; margin:15px 0; font-size:13px; color:var(--ink-soft); line-height:1.75; }
+  .stat{ font-weight:700; color:var(--ink); }
+
+  .cta-box{ border:1.5px solid var(--ink); border-radius:4px; padding:19px 22px; margin:16px 0; text-align:center; }
+  .cta-box .cta-line1{ font-size:11px; line-height:1.6; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:14px; font-weight:700; line-height:1.4; margin:0 0 4px; }
+  .cta-box .cta-sub{ font-size:9.5px; font-weight:700; margin:0; }
+
+  .dev-report-note{ font-size:9px; color:var(--ink-soft); text-align:center; border-top:1px solid var(--line); padding-top:6px; margin-top:9px; }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="page-num-badge">10/10</div>
+
+  <p class="lede" style="font-weight:600;">혼디의 결제 수단인 GDC(Global Digital Currency)는 디지털 화폐에 은행, 보험, 증권, 거래소, 금융 감독 기능을 융합한 "화폐+금융 산업"으로, 현재, 기능 테스트 단계입니다.</p>
+
+  <h1>오늘, 내일을 대비하십시오.</h1>
+  <p class="lede">이 문서는 금융권 임직원을 위한 것입니다. 디지털 화폐로의 전환은 먼 미래의 가정이 아니라, 이미 세계 곳곳에서 진행 중인 현실입니다. 그 현실이 국내 시중은행·보험사·증권사에 닿기까지, 준비할 수 있는 시간은 생각보다 많지 않습니다.</p>
+
+  <h2><span class="n">1</span> 이미 시작된 전환 — 중국의 사례</h2>
+  <p>중국인민은행은 2026년부터 디지털 위안화(e-CNY)를 단순 결제 수단인 '디지털 현금'에서, 이자가 붙는 '예금형 화폐'로 격상시키는 '디지털 위안화 2.0' 체계를 공식화했습니다. 2025년 11월 말 기준 누적 거래액은 <span class="stat">16.7조 위안</span>, 개인 지갑은 <span class="stat">2억 3천만 개</span>를 넘어섰습니다. 국경 간 결제망 mBridge를 통해 기존 SWIFT망 없이도 직접 정산이 가능해졌고, 이 플랫폼에서 디지털 위안화의 비중은 이미 <span class="stat">95.3%</span>에 달합니다.</p>
+
+  <div class="note">
+    이것은 가정이 아니라 실제로 운영 중인 시스템의 통계입니다. 중앙은행 디지털화폐(CBDC)가 결제 인프라를 재편하는 속도는, 대부분의 예측보다 빠릅니다.
+  </div>
+
+  <h2><span class="n">2</span> 국내에서도 같은 구조가 반복될 수 있습니다</h2>
+  <p>국내 금융구조연구소가 2026년 8월 발표한 사고 실험 보고서는, GDC(Global Digital Currency)류의 디지털 화폐가 시중은행과 협약 형태로 상용화될 경우 벌어질 수 있는 단계별 시나리오를 제시합니다. 핵심은 비용 구조의 격차입니다 — 무지점·무인공·AI 심사 기반 디지털 화폐는 순이자마진(NIM) 0.3% 수준으로, 기존 은행 평균(1.6%) 대비 <span class="stat">1.3%p</span>의 절대적 비용 우위를 갖습니다.</p>
+
+  <table>
+    <thead><tr><th>시점(가정)</th><th>단계</th><th>핵심 내용</th></tr></thead>
+    <tbody>
+      <tr><td>1단계</td><td>공생의 환상</td><td>초기 협력 보도 확산, 요구불예금 대규모 이전 시작(분기 평균 12% 감소)</td></tr>
+      <tr><td>2단계</td><td>고정비의 저주</td><td>지점 통폐합 러시, 창구 직원 약 30% 희망·권고퇴직 대상화</td></tr>
+      <tr><td>3단계</td><td>역선택 현실화</td><td>우량 자산 이탈로 기존 은행 포트폴리오 악화, 서민·자영업자 대출 금리 상승</td></tr>
+      <tr><td>4단계</td><td>보험·증권 도미노</td><td>보험 설계사 절반 실직, 증권사 액티브 운용 수수료 80% 감소</td></tr>
+      <tr><td>5단계</td><td>두 개의 생태계</td><td>디지털 대중 금융 생태계 vs 압축된 소수 IB·PB 전문 생태계로 재편</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    ※ 위 시나리오는 실제 정책 제안이 아닌, 탐색적 사고 실험(Exploratory Thought Experiment)에 근거한 가정값입니다. 정확한 예측이 목적이 아니라, 구조적 충격의 메커니즘을 미리 조망하는 데 그 가치가 있습니다.
+  </div>
+
+</div>
+
+<div class="sheet">
+
+  <h2><span class="n">3</span> 혼디 GDC — 기술적 검증은 이미 끝났습니다</h2>
+  <p>혼디의 GDC는 Openhash 기반의 데이터 무결성 보장 기술 위에서 동작합니다. 거래 기록의 해시값에 따라 5개 계층(L1~L5) 중 하나가 확률적으로 뽑혀 검증을 맡는 구조로, 기존 블록체인 대비 에너지 소비를 최대 99.8%까지 줄이면서도 위조 없는 기록을 보장합니다(FPGA 실측: 18.2W vs GPU 160.3W). 이 핵심 기술은 기술적으로 검증이 완료된 상태입니다.</p>
+
+  <h2><span class="n">4</span> 상용화 이전, 필드 테스트를 시작합니다</h2>
+  <p>혼디는 GDC를 곧바로 상용화하지 않습니다. 대신 상용화 이전 단계로, 혼디의 구독료·K-Law 같은 개별 서비스 결제 수단으로 GDC를 먼저 사용하며 필드 테스트를 진행합니다. 이 단계에서 은행·보험·증권 업계 현직 종사자를 대상으로 실제 설계를 검증받는 것이 목표입니다.</p>
+
+  <div class="timeline">
+    <div class="tl-row"><div class="when">필드 테스트</div><div class="what">구독료·K-Law 등 소규모 결제부터 시작 — 은행·보험·증권 현직 종사자 참여</div></div>
+    <div class="tl-row"><div class="when">설계 검증</div><div class="what">재무제표 신용 기반 채권 발행, 실시간 상호검증 등 금융 기능의 실제 동작 확인</div></div>
+    <div class="tl-row"><div class="when">2030년</div><div class="what">GDC 상용화 목표 시점</div></div>
+  </div>
+
+  <h2><span class="n">5</span> 방관자가 아니라, 설계자로 참여하십시오</h2>
+  <p>위 사고 실험이 보여주듯, 디지털 화폐로의 전환에서 금융권 임직원이 맞이할 결과는 참여 여부에 따라 달라질 수 있습니다. 지금 GDC 필드 테스트에 참여하는 금융 전문가는, 훗날 압축된 소수의 전문 영역(IB·PB) 또는 새로운 디지털 금융 생태계 어느 쪽에서든 자신의 전문성을 살릴 수 있는 위치에 먼저 설 수 있습니다. 혼디는 이 설계 과정에 현직 은행·보험·증권 업계 종사자의 참여를 요청합니다.</p>
+
+  <div class="cta-box" style="text-align:left;">
+    <p style="font-size:14px;font-weight:700;line-height:1.85;margin:0;">화폐 속에 은행, 보험, 증권사는 물론 금융 감독 기관과 공정 거래 위원회 기능까지 융합한 디지털 AI 금융을 상상해 보십시오. 혼디의 GDC는 그 상상을 구현하였으며, 그 목표는 향후 2~3년 간 기술 검증을 거친 뒤, 기존 금융 산업과 협력하여, AI와 Openhash 기반의 글로벌 '통화+금융' 인프라를 구축하는 것입니다. GDC의 완전한 구현에 지금 참여하십시오.</p>
+  </div>
+
+  <div class="note">
+    혼디의 GDC는 예금자보호법상 예금보험 대상이 아니며, 실제 자산을 예치하기 전에는 최신 약관을 직접 확인하시고, 목돈이 걸린 결정이라면 인간 금융 전문가와 상담하시기 바랍니다.
+  </div>
+
+  <div class="cta-box">
+    <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
+    <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
+    <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
+  </div>
+  <div class="cta-box">
+    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+  </div>
+
+  <div class="dev-report-note">혼디 개발자 대표 도 영민, 제주시 한림읍, tensor.city@gmail.com</div>
+
+</div>
+
+</body>
+</html>
