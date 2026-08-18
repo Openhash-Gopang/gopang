@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디 Hondi — 나만의 AI 비서 & 그만의 AI 비서</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-soft:#4d4d4d; --paper:#ffffff;
+    --line:#c8c8c8; --line-strong:#1a1a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#fff;font-family:'Pretendard',sans-serif;color:var(--ink);}
+  @page{ size:A4; margin:10mm 12mm; }
+  .sheet{ width:210mm; margin:10mm auto; background:var(--paper); padding:12mm 15mm; position:relative; border:1px solid #ddd; }
+  @media print{ body{background:none;} .sheet{ box-shadow:none; margin:0 auto; width:auto; border:none; padding:0; } .avoid-break{ break-inside:avoid; page-break-inside:avoid; } }
+
+  .brand{ display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
+  .brand-mark{ width:34px; height:34px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .brand-tag{ font-size:10px; color:var(--ink-soft); margin-top:1px; }
+  .brand-meta{ margin-left:auto; font-size:10px; color:var(--ink-soft); }
+
+  h1{ font-size:23px; font-weight:800; margin:8px 0 8px; line-height:1.3; }
+  p{ font-size:13px; line-height:1.7; margin:0 0 9px; color:var(--ink); }
+  .lede{ font-size:13px; line-height:1.75; margin:0 0 12px; color:var(--ink); }
+
+  h2{ font-size:14.5px; font-weight:800; margin:16px 0 8px; display:flex; align-items:center; gap:7px; }
+  h2 .n{ width:20px; height:20px; border-radius:50%; border:1.5px solid var(--ink); display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+  h3{ font-size:12.5px; font-weight:700; margin:10px 0 5px; }
+
+  .dbox{ border:1.5px solid var(--ink); margin:11px 0; padding:11px 15px; }
+  .dbox .steph{ font-size:11.5px; font-weight:800; margin-bottom:7px; }
+  .drow{ display:flex; gap:12px; border-top:1px dashed var(--line); padding:7px 0; }
+  .drow:first-of-type{ border-top:none; }
+  .drow .who{ width:100px; flex-shrink:0; font-size:10px; font-weight:700; }
+  .drow .txt{ font-size:11px; line-height:1.6; }
+
+  table{ width:100%; border-collapse:collapse; margin:12px 0 16px; font-size:12.5px; }
+  thead th{ text-align:left; font-weight:700; padding:9px 10px; border-bottom:1.5px solid var(--ink); }
+  tbody td{ padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.65; }
+  tbody td:first-child{ font-weight:700; white-space:nowrap; }
+
+  .taglist{ font-size:11.8px; line-height:2.0; color:var(--ink); }
+  .taglist b{ color:var(--ink); }
+
+  .note{ border:1px solid var(--line); padding:12px 15px; margin:13px 0; font-size:11px; color:var(--ink-soft); line-height:1.65; }
+
+  .cta-box{ border:1.5px solid var(--ink); border-radius:4px; padding:16px 20px; margin:15px 0; text-align:center; }
+  .cta-box .cta-line1{ font-size:10.5px; line-height:1.6; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; }
+  .cta-box .cta-sub{ font-size:9.5px; font-weight:700; margin:0; }
+
+  .dev-report-note{ font-size:9px; color:var(--ink-soft); text-align:center; border-top:1px solid var(--line); padding-top:6px; margin-top:9px; }
+  .footer-line{ margin-top:8px; padding-top:5px; border-top:1px solid var(--line); font-size:9px; color:var(--ink-soft); text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <h1>나만의 AI 비서 & 그만의 AI 비서</h1>
+  <p class="lede">한 사람이 다른 한 사람(또는 기관)에게 업무를 처리해 달라고 요청할 때, 기존에는 사람이 사람을 직접 만나거나 전화·서류로 며칠씩 걸려 오갔습니다. 혼디에서는 요청하는 쪽에 "나만의 AI 비서"가, 처리하는 쪽에 "그만의 AI 비서"가 각각 있어서, 이 둘이 직접 대화로 업무를 주고받습니다 — 그 결과 며칠 걸리던 일이 수 초 안에 끝납니다.</p>
+
+  <div class="dbox avoid-break">
+    <div class="steph">예시 — 등본 발급을 요청하는 경우</div>
+    <div class="drow"><div class="who">이용자</div><div class="txt">"혼디야, 등본 두 통 발급해 줘."</div></div>
+    <div class="drow"><div class="who">나만의 AI 비서</div><div class="txt">이용자님을 대신해 행정복지센터의 AI 비서에게 주민등록등본 2통 발급을 요청합니다. 본인 인증은 완료된 상태입니다.</div></div>
+    <div class="drow"><div class="who">그만의 AI 비서<br><span style="font-weight:400;">(행정복지센터)</span></div><div class="txt">본인 확인되었습니다. 2통 모두 발급 가능하며, 전자문서 형태로 즉시 전달하겠습니다.</div></div>
+    <div class="drow"><div class="who">나만의 AI 비서</div><div class="txt">수신했습니다. 이용자님께 즉시 전달하겠습니다. 처리 시간: 접수부터 발급까지 4초.</div></div>
+  </div>
+
+  <h2><span class="n">①</span> 나만의 AI 비서 — 모든 시민에게</h2>
+  <p>혼디는 대한민국의 모든 시민 개개인에게 예외 없이 "나만의 AI 비서"를 제공합니다. 나이, 직업, 상황과 무관하게 누구나 자신의 AI 비서를 통해 필요한 업무를 지시하고, 그 처리 과정과 결과를 실시간으로 확인할 수 있습니다.</p>
+  <p class="taglist"><b>대상:</b> 어린이 · 학생 · 주부 · 직장인 · 자영업자 · 전문직(교수·의사·변호사·회계사·세무사 등) · 노약자 등 — 대한민국의 모든 개인</p>
+
+  <div class="note">
+    나만의 AI 비서는 이용자 개인의 상황(나이·직업·거주지·현재 처리 중인 업무 맥락)을 기억하고, 그에 맞춰 그만의 AI 비서들과 소통합니다 — 매번 처음부터 사연을 설명할 필요가 없습니다.
+  </div>
+
+  <h2><span class="n">②</span> 그만의 AI 비서 — 모든 공공 기관에</h2>
+  <p>혼디는 입법·사법·행정을 포함한 대한민국의 모든 공공 기관, 그리고 그 산하의 각 부서 하나하나에도 "그만의 AI 비서"를 제공합니다. 시민의 AI 비서가 실제로 접촉하는 상대는 사람이 아니라, 그 기관·부서를 설치한 법령과 업무 수행 규정을 근거로 응답하는 AI 비서입니다.</p>
+
+</div>
+
+<div class="sheet">
+
+  <h3>중앙 정부 (부처·청)</h3>
+  <table>
+    <thead><tr><th style="width:20%">구분</th><th>포함 기관(예시)</th></tr></thead>
+    <tbody>
+      <tr><td>입법부</td><td>국회사무처, 국회예산정책처, 국회입법조사처, 국회미래연구원, 국회도서관, 상임위원회(18개)</td></tr>
+      <tr><td>사법부</td><td>법원행정처, 헌법재판소사무처, 사법연수원, 법원공무원교육원, 대법원</td></tr>
+      <tr><td>행정부 — 19부</td><td>기획재정부, 교육부, 과학기술정보통신부, 외교부, 통일부, 법무부, 국방부, 행정안전부, 국가보훈부, 문화체육관광부, 농림축산식품부, 산업통상부, 보건복지부, 기후에너지환경부, 고용노동부, 여성가족부, 국토교통부, 해양수산부, 중소벤처기업부</td></tr>
+      <tr><td>행정부 — 청·처</td><td>국세청, 관세청, 조달청, 통계청, 검찰청, 병무청, 방위사업청, 경찰청, 소방청, 국가유산청, 농촌진흥청, 산림청, 지식재산처, 기상청, 해양경찰청, 법제처, 인사혁신처, 국가데이터처, 기획예산처 등</td></tr>
+      <tr><td>위원회·직속기관</td><td>금융위원회, 공정거래위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회, 중앙선거관리위원회, 감사원, 고위공직자범죄수사처, 국가정보원, 대통령비서실 등</td></tr>
+    </tbody>
+  </table>
+
+  <h3>지방 정부</h3>
+  <table>
+    <thead><tr><th style="width:20%">구분</th><th>포함 기관(예시)</th></tr></thead>
+    <tbody>
+      <tr><td>광역시도</td><td>서울·부산·대구·인천·광주·대전·울산·세종 + 경기·강원·충북·충남·전북·전남·경북·경남·제주(17개)</td></tr>
+      <tr><td>시·군·구</td><td>전국 기초자치단체(226개) 각각</td></tr>
+      <tr><td>읍·면·동</td><td>전국 읍면동 행정복지센터 각각</td></tr>
+    </tbody>
+  </table>
+
+  <h3>공기업 · 공공기관</h3>
+  <table>
+    <thead><tr><th style="width:20%">구분</th><th>포함 기관(예시)</th></tr></thead>
+    <tbody>
+      <tr><td>공기업</td><td>한국전력공사, 한국수자원공사, 한국토지주택공사, 한국철도공사, 인천국제공항공사, 한국가스공사, 한국도로공사 등</td></tr>
+      <tr><td>준정부기관·공공기관</td><td>국민건강보험공단, 국민연금공단, 근로복지공단, 신용보증기금, 한국장학재단, 대한법률구조공단, 한국소비자원 등</td></tr>
+    </tbody>
+  </table>
+
+  <h3>부서 단위 — 추상적 부서 명칭</h3>
+  <p>각 기관은 다시 실·국·과 단위의 부서로 나뉘고, 혼디는 이 부서 하나하나에도 그만의 AI 비서를 배정합니다. 부서명은 기관마다 다르지만, 아래처럼 공통적으로 반복되는 <b>추상적 명칭 패턴</b>을 따릅니다.</p>
+  <p class="taglist">기획조정실 · 행정관리실(국) · 총무과 · 인사과 · 예산과 · 감사담당관 · 민원봉사과 · 홍보담당관 · 정보화담당관(실) · 법무담당관 · 국제협력담당관 · 기획재정담당관 등 — 실제 부서명은 소관 업무에 따라 이 패턴 위에서 구체화됩니다.</p>
+
+  <div class="note">
+    나만의 AI 비서와 그만의 AI 비서는 전부 해당 개인·기관의 실제 신원과 설치 근거(법령·규정)에 결박되어 동작합니다. 근거 없는 응답, 권한 밖의 처리는 구조적으로 불가능하도록 설계돼 있습니다.
+  </div>
+
+  <div class="note">
+    ※ 혼디의 온전한 기능은 대한민국 정부의 AI 정부 시범사업이 완료되는 시점에 완성됩니다. 그 전까지 모든 기관·부서의 그만의 AI 비서는 <b>부분적으로만 동작</b>하며, 특히 대문(API)을 아직 개방하지 않은 기관은 혼디가 업무를 대행할 수 없어 절차 안내에 그치고, 이용자가 직접 처리해야 합니다.
+  </div>
+
+  <div class="cta-box">
+    <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
+    <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
+    <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
+  </div>
+  <div class="cta-box">
+    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+  </div>
+
+  <div class="dev-report-note">혼디 개발자 대표 도 영민, 제주시 한림읍, tensor.city@gmail.com</div>
+
+</div>
+
+</body>
+</html>
