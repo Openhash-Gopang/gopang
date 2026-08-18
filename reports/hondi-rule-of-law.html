@@ -6,7 +6,7 @@
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   :root{
-    --ink:#1c2430; --ink-soft:#4a5568; --paper:#fbfaf7;
+    --ink:#1c2430; --ink-soft:#4a5568; --paper:#ffffff;
     --line:#d8d3c8; --line-strong:#a89f8c; --accent:#1f3a5f;
     --accent-soft:#c9a45c; --tint:#f1efe6; --danger:#8a3b2b; --good:#1f6f4a;
   }
@@ -17,12 +17,17 @@
     width:210mm; min-height:297mm; margin:10mm auto; background:var(--paper);
     padding:18mm 16mm 20mm; position:relative; box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14);
   }
+  @page{ size:A4; margin:10mm 12mm; }
+  @media print{
+    body{ background:none; }
+    .sheet{ box-shadow:none; margin:0 auto; width:auto; min-height:auto; padding:0; }
+  }
   .cta-box{
     background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px;
     padding:9px 16px; margin:10px 0; text-align:center;
   }
   .cta-box .cta-line1{ font-size:10.5px; line-height:1.5; color:var(--ink-soft); margin:0 0 5px; }
-  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; color:var(--ink); }
+  .cta-box .cta-price{ font-size:12.5px; font-weight:700; line-height:1.4; margin:0 0 4px; color:var(--ink); }
   .cta-box .cta-sub{ font-size:9.5px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
   .dev-report-note{
     font-size:9px; color:var(--ink-soft); text-align:center;
@@ -45,17 +50,17 @@
   }
   .doc-meta b{ color:var(--ink); font-weight:600; }
   h2.sec{
-    font-family:'Pretendard',serif; font-size:18px; font-weight:700; color:var(--accent);
-    margin:24px 0 9px; padding-bottom:5px; border-bottom:1.5px solid var(--accent);
+    font-family:'Pretendard',serif; font-size:14px; font-weight:700; color:var(--accent);
+    margin:12px 0 6px; padding-bottom:4px; border-bottom:1.5px solid var(--accent);
     display:flex; align-items:center; gap:8px;
   }
   h2.sec .num{ font-size:13px; color:var(--accent-soft); font-weight:700; }
-  h3.subsec{ font-size:15px; font-weight:700; color:var(--ink); margin:14px 0 5px; }
-  p{ font-size:14.5px; line-height:1.8; margin:0 0 9px; color:var(--ink); }
+  h3.subsec{ font-size:12px; font-weight:700; color:var(--ink); margin:8px 0 4px; }
+  p{ font-size:11.5px; line-height:1.55; margin:0 0 6px; color:var(--ink); }
   p b{ color:var(--accent); font-weight:700; }
   .note{
-    font-size:13.5px; line-height:1.65; color:var(--ink-soft);
-    background:#fff; border:1px solid var(--line); border-left:2.5px solid var(--ink); padding:9px 12px; margin:10px 0;
+    font-size:12px; line-height:1.6; color:var(--ink-soft);
+    background:#fff; border:1px solid var(--line); border-left:2.5px solid var(--ink); padding:9px 12px; margin:9px 0;
   }
   .note b{ color:var(--ink); }
   .note.status{ border-left-color:var(--good); }
@@ -69,9 +74,9 @@
   .flow-step.gate{ border-color:var(--ink); border-width: 2px; background:#fff; }
   .flow-step.gate .t{ color:var(--danger); }
   .flow-arrow{ display:flex; align-items:center; color:var(--line-strong); font-size:14px; }
-  table{ width:100%; border-collapse:collapse; margin:9px 0 12px; font-size:13px; }
-  thead th{ background:#fff; color:var(--ink); font-weight:700; border-bottom:1.5px solid var(--ink); padding:6px 7px; text-align:left; font-size:12.5px; }
-  tbody td{ padding:5px 7px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; }
+  table{ width:100%; border-collapse:collapse; margin:12px 0 16px; font-size:14px; }
+  thead th{ background:#fff; color:var(--ink); font-weight:700; border-bottom:1.5px solid var(--ink); padding:9px 10px; text-align:left; font-size:13.5px; }
+  tbody td{ padding:10px 10px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; line-height:1.6; }
   tbody tr:nth-child(even){ background:#fff; }
   .dialogue{ margin:10px 0 6px; }
   .msg{ margin:0 0 4px; max-width:94%; }
@@ -88,19 +93,15 @@
     margin-top:16px; display:flex; justify-content:space-between;
     font-size:10.5px; color:var(--ink-soft); border-top:1px solid var(--line); padding-top:5px;
   }
+  .kt-badge{ font-size:14px; font-weight:800; color:var(--ink); letter-spacing:.02em; margin-bottom:8px; }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════ PAGE 1 ═══════════════════ -->
 <div class="sheet">
+  <div class="kt-badge">카톡대신 혼디</div>
 
-  <div class="doc-eyebrow">
-    <span class="icon" style="color:var(--accent-soft)">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6l-9-4z"/><path d="M9 12l2 2 4-4"/></svg>
-    </span>
-    Hondi(혼디) 사회 인프라 분석
-  </div>
   <h1 class="doc-title">혼디는 한국을 자연스레 법치 사회로 바꿉니다</h1>
   <p class="doc-sub">
     혼디는 한국 사회의 모든 기관·부서·직책의 임무·역할·기능과 업무 수행 규정을
@@ -175,14 +176,8 @@
     길이 없습니다.
   </div>
 
-  <div class="footer-line">
-    <span>혼디(Hondi) 법치 사회 · 2026-08-16</span>
-    <span>1 / 2</span>
-  </div>
-</div>
 
-<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
-<div class="sheet">
+<!-- ═══════════════════ SECTION (same page) ═══════════════════ -->
 
   <h2 class="sec"><span class="num">03</span>드리프트 감지 — 법이 바뀌면 규정도 따라 바뀐다</h2>
   <p>
@@ -234,19 +229,7 @@
     <div class="flow-step gate" style="border-color:var(--ink); background:#fff;"><div class="t" style="color:var(--ink);">소요 시간</div><div class="d">1초<br>이내</div></div>
   </div>
 
-  <h2 class="sec"><span class="num">06</span>정직한 현재 상태 — 검증된 것과 아직인 것</h2>
-  <p>
-    이 전환이 이미 완성됐다고 말하려는 게 아닙니다. 첨부된 구현체 자체가
-    스스로 검증 범위를 정직하게 구분해 두었고, 이 문서도 그 구분을
-    그대로 따릅니다.
-  </p>
-  <div class="note status">
-    <b>실제 검증됨</b> — law.go.kr 목록조회 API 실호출(경찰청 검색, 246건 중
-    20건 확인, 필드명 13개 전부 일치), CDATA 파싱 버그를 실제 응답으로
-    발견·수정, query 기반 검색의 신뢰성 확인.
-  </div>
-
-  <h2 class="sec"><span class="num">07</span> 법치 사회는 인정 없는 사회가 아닙니다</h2>
+  <h2 class="sec"><span class="num">06</span> 법치 사회는 인정 없는 사회가 아닙니다</h2>
   <p>
     "법대로만 한다"는 말이 차갑게 들릴 수 있습니다. 하지만 법치 사회는
     인정이 없는 사회가 아니라, <b>누구나 법 앞에 평등한 사회</b>입니다.
@@ -281,7 +264,7 @@
     인간 검수·드리프트 감지 파이프라인(§02~03)이고, 그 결과가 재량 대신
     근거가 기본값이 되는 사회 — 법치 사회(§04)이자 1초 만에 처리가
     끝나는 효용의 사회(§05)입니다. 그 법 자체를 시민이 직접 고칠 수 있는
-    절차(§07, DAWN)가 있기에, 법치 사회는
+    절차(§06, DAWN)가 있기에, 법치 사회는
     차가운 사회가 아니라 오히려 가장 공평하게 인정을 나눌 수 있는
     사회입니다.
   </div>
@@ -292,15 +275,13 @@
     <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
   </div>
   <div class="cta-box">
-    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+    <div class="cta-line1">현재, 혼디는 상용화까지 99% 준비를 완료한 베타 테스트 단계입니다. 나머지 1%를 함께 해주십시오. 첫째, 지인과 함께 카톡을 혼디로 대체하고, 둘째, 혼디 이용료(GDC) 충전으로 혼디의 완성을 지원바랍니다(GDC 충전은 1,000원 이상).</div>
     <div class="cta-price">혼디는 일반 AI보다 놀랍도록 더 똑똑하고, 놀랍도록 훨씬 저렴합니다.</div>
   </div>
 
-  <div class="dev-report-note">모든 혼디 가입자에게 혼디 개발 진행 상황을 수시로 보고합니다.</div>
-
   <div class="footer-line">
     <span class="contact-line">개발자 대표 도영민 · hondi.net · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com</span>
-    <span>2 / 2</span>
+    <span>1 / 1</span>
   </div>
 </div>
 

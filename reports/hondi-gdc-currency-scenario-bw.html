@@ -17,10 +17,10 @@
     padding:12mm 15mm; position:relative; border:1px solid #d9d9d9; }
   .cta-box{
     background:#fff; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px;
-    padding:9px 16px; margin:10px 0; text-align:center;
+    padding:6px 14px; margin:6px 0; text-align:center;
   }
   .cta-box .cta-line1{ font-size:10.5px; line-height:1.7; color:var(--ink-soft); margin:0 0 5px; }
-  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.6; margin:0 0 4px; color:var(--ink); }
+  .cta-box .cta-price{ font-size:12.5px; font-weight:700; line-height:1.6; margin:0 0 4px; color:var(--ink); }
   .cta-box .cta-sub{ font-size:9.5px; color:var(--ink); font-weight:700; letter-spacing:.02em; margin:0; }
   .dev-report-note{
     font-size:9px; color:var(--ink-soft); text-align:center;
@@ -42,7 +42,7 @@
     margin:9px 0 4px; padding-bottom:3px; border-bottom:1.5px solid var(--accent); }
   h2.sec .num{ font-size:9.5px; color:var(--accent-soft); font-weight:700; margin-right:6px; }
   h3.subsec{ font-size:10.5px; font-weight:700; color:var(--ink); margin:9px 0 3px; }
-  p{ font-size:13.5px; line-height:1.65; margin:0 0 5px; color:var(--ink); }
+  p{ font-size:12.5px; line-height:1.45; margin:0 0 4px; color:var(--ink); }
   .note{ font-size:13px; line-height:1.5; color:var(--ink-soft); background:var(--tint);
     border-left:2.5px solid var(--accent-soft); padding:6px 9px; margin:6px 0; }
   .note.warn{ border-left-width:3px; }
@@ -54,8 +54,8 @@
   .legend b{ color:var(--ink); }
 
   table{ width:100%; border-collapse:collapse; margin:6px 0 8px; font-size:12.5px; }
-  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:6px 8px; text-align:left; font-size:10.5px; }
-  tbody td{ padding:6px 8px; border-bottom:1px solid var(--line); color:var(--ink); line-height:1.4; }
+  thead th{ background:var(--accent); color:#fff; font-weight:600; padding:4px 7px; text-align:left; font-size:10.5px; }
+  tbody td{ padding:4px 7px; border-bottom:1px solid var(--line); color:var(--ink); line-height:1.3; }
   tbody tr:nth-child(even){ background:#f6f6f6; }
   .cmp-table td:last-child{ font-weight:500; }
   .cmp-table tr.highlight td{ background:var(--tint); font-weight:600; }
@@ -75,7 +75,7 @@
   .dialogue{ margin:6px 0 4px; }
   .msg{ margin:0 0 3px; max-width:92%; }
   .msg .who{ font-size:8px; font-weight:700; letter-spacing:.04em; margin-bottom:2px; text-transform:uppercase; }
-  .msg .bubble{ display:inline-block; font-size:13px; line-height:1.5; padding:6px 9px; }
+  .msg .bubble{ display:inline-block; font-size:12px; line-height:1.35; padding:5px 8px; }
   .msg.user{ margin-left:auto; text-align:right; }
   .msg.user .who{ color:var(--ink-soft); text-align:right; }
   .msg.user .bubble{ background:var(--tint); border:1px solid var(--line); }
@@ -87,14 +87,18 @@
   .badge-live{ border:1.5px solid var(--ink); }
   .badge-road{ border:1.5px dashed var(--ink-soft); }
   .badge-vision{ border:1.5px dotted var(--ink-soft); }
+.page-num-badge{ position:absolute; top:6mm; right:8mm; font-size:22px; font-weight:800; color:var(--ink); z-index:10; }
+  .kt-badge{ font-size:14px; font-weight:800; color:var(--ink); letter-spacing:.02em; margin-bottom:8px; }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════ PAGE 1 ═══════════════════ -->
 <div class="sheet">
+  <div class="page-num-badge">2/10</div>
 
-  <div class="doc-eyebrow">혼디넷(hondi.net) 서비스 사례 연구 · GDC</div>
+  <div class="kt-badge">카톡대신 혼디</div>
+
   <h1 class="doc-title">은행, 보험, 증권, 거래소, 금융감독 —<br>혼디의 GDC는 이 다섯을 디지털 화폐 안에 융합합니다.</h1>
   <p class="doc-sub">
     혼디넷(hondi.net)은 사법·행정·상거래·교육·의료를 아우르는 수백 개의 AI 서비스를
@@ -224,10 +228,10 @@
     <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
     <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
     <div style="border-top:1px solid var(--line);margin:8px 0;"></div>
-    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+    <div class="cta-line1">현재, 혼디는 상용화까지 99% 준비를 완료한 베타 테스트 단계입니다. 나머지 1%를 함께 해주십시오. 첫째, 지인과 함께 카톡을 혼디로 대체하고, 둘째, 혼디 이용료(GDC) 충전으로 혼디의 완성을 지원바랍니다(GDC 충전은 1,000원 이상).</div>
   </div>
 
-  <div class="dev-report-note">모든 혼디 가입자에게 혼디 개발 진행 상황을 수시로 보고합니다. · 개발자 대표 도영민 · 제주시 한림읍 · tensor.city@gmail.com</div>
+  <div class="dev-report-note">개발자 대표 도영민 · 제주시 한림읍 · tensor.city@gmail.com</div>
 
   <div class="footer-line"><div class="cell"></div><div class="cell">2 / 2</div></div>
 </div>
