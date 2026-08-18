@@ -1544,6 +1544,7 @@ section.section[data-tab].tab-active { display: block; }
       <button type="button" class="page-tab" data-tab-target="rpt-superconserve" role="tab" aria-selected="false">초절전 AI</button>
       <button type="button" class="page-tab" data-tab-target="rpt-mote-openhash" role="tab" aria-selected="false">MoTE와 Openhash</button>
       <button type="button" class="page-tab" data-tab-target="rpt-gdc" role="tab" aria-selected="false">GDC</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-prepare-finance" role="tab" aria-selected="false">금융권 대비</button>
       <button type="button" class="page-tab" data-tab-target="rpt-klaw" role="tab" aria-selected="false">K-Law</button>
       <button type="button" class="page-tab" data-tab-target="rpt-admin-scenario" role="tab" aria-selected="false">행정 서비스 사례</button>
       <button type="button" class="page-tab" data-tab-target="intro" role="tab" aria-selected="false">소개</button>
@@ -1564,7 +1565,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-klaw", "rpt-admin-scenario", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
+  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-prepare-finance", "rpt-klaw", "rpt-admin-scenario", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
   var tabButtons = document.querySelectorAll(".page-tab[data-tab-target]");
   var tabSections = document.querySelectorAll("section.section[data-tab]");
 
@@ -1682,6 +1683,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <section class="section rpt-embed" id="rpt-gdc-embed" data-tab="rpt-gdc">
   <iframe class="rpt-iframe" data-src="reports/hondi-gdc-currency-scenario-bw.html" title="GDC" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-prepare-finance-embed" data-tab="rpt-prepare-finance">
+  <iframe class="rpt-iframe" data-src="reports/hondi-prepare-today-finance.html" title="금융권 대비" loading="lazy"></iframe>
 </section>
 
 <section class="section rpt-embed" id="rpt-klaw-embed" data-tab="rpt-klaw">
