@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개발 진행 상황 | 혼디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2430; --ink-soft:#4a5568; --paper:#fbfaf7;
+    --line:#d8d3c8; --line-strong:#a89f8c; --accent:#1f3a5f;
+    --accent-soft:#c9a45c; --tint:#f1efe6; --danger:#8a3b2b; --ok:#1f6f4a; --amber:#92400e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:#e7e4dc; font-family:'Noto Sans KR',sans-serif; color:var(--ink); }
+  .wrap{ max-width:840px; margin:0 auto; background:var(--paper); padding:40px 48px 60px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 12px 28px rgba(30,25,15,.14); }
+  .doc-eyebrow{ font-size:11px; letter-spacing:.16em; color:var(--accent-soft);
+    text-transform:uppercase; font-weight:600; margin-bottom:8px; }
+  h1.doc-title{ font-family:'Noto Serif KR',serif; font-size:26px; line-height:1.4;
+    font-weight:700; color:var(--ink); margin:0 0 10px; }
+  .doc-sub{ font-size:14px; color:var(--ink-soft); margin:0 0 16px; line-height:1.7; }
+  .beta-banner{ display:flex; align-items:flex-start; gap:10px; background:#fffbeb;
+    border:1px solid #fcd34d; border-radius:8px; padding:14px 18px; margin:0 0 28px;
+    font-size:13.5px; line-height:1.75; color:var(--amber); }
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:18px; font-weight:700; color:var(--accent);
+    margin:32px 0 12px; padding-bottom:7px; border-bottom:2px solid var(--accent); }
+  h3.subsec{ font-size:14.5px; font-weight:700; color:var(--ink); margin:20px 0 8px; }
+  p{ font-size:13.5px; line-height:1.85; margin:0 0 12px; color:var(--ink); }
+  .note{ font-size:12.5px; line-height:1.75; color:var(--ink-soft); background:var(--tint);
+    border-left:3px solid var(--accent-soft); padding:12px 15px; margin:12px 0; }
+  ul.list{ margin:0 0 14px; padding-left:20px; }
+  ul.list li{ font-size:13px; line-height:1.85; margin-bottom:6px; color:var(--ink); }
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    padding:2px 8px; border-radius:99px; margin-left:6px; vertical-align:1px; }
+  .badge-done{ color:var(--ok); background:#e5f4ec; border:1px solid #b9e3c9; }
+  .badge-progress{ color:#5b4a8a; background:#eeeaf6; border:1px solid #d3c7ea; }
+  .badge-known{ color:var(--amber); background:#fef3c7; border:1px solid #fcd34d; }
+  .entry{ border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin:0 0 12px; background:#fff; }
+  .entry-date{ font-size:11px; color:var(--ink-soft); font-weight:600; margin-bottom:4px; }
+  .footer-line{ margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--ink-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-eyebrow">Hondi(혼디) 개발 현황 · 사용자 공개용</div>
+  <h1 class="doc-title">개발 진행 상황</h1>
+  <p class="doc-sub">혼디는 지금 기능 베타 테스트 단계입니다. 이 페이지는 무엇이
+  되고 무엇이 아직 안 되는지, 최근에 무엇이 새로 생겼는지를 계속 갱신해 알려드리기
+  위한 곳입니다.</p>
+
+  <div class="beta-banner">
+    🚧 <div>
+      <b>베타 테스트 단계입니다.</b> 일부 기능이 온전히 작동하지 않거나, 예고 없이
+      바뀌거나, 아직 준비 중일 수 있습니다. 문제를 발견하시면 알려주세요 — 실사용
+      과정에서 나온 지적이 실제로 가장 빠르게 반영됩니다.
+    </div>
+  </div>
+
+  <h2 class="sec">지금 무엇이 되나요</h2>
+  <ul class="list">
+    <li>중앙정부 70개 기관(입법·사법·행정부 전체) + 561개 실·국·과 단위까지 AI 비서가
+      해당 기관을 특정해 안내합니다.</li>
+    <li>법률·세무·의료 등 62개 분야 전문가 AI, 24개 K-서비스(결제·쇼핑·교통·부동산 등)
+      에 발화 의도에 맞춰 자동으로 연결됩니다.</li>
+    <li>여러 기관·절차가 얽힌 복합 요청(예: "전입신고하고 상수도 명의도 옮겨줘")도
+      순서를 나눠 처리합니다.</li>
+  </ul>
+
+  <h2 class="sec">알려진 제한 사항</h2>
+  <ul class="list">
+    <li><span class="badge badge-known">진행 중</span> 지자체(시·군·구·읍·면·동) 산하
+      부서 단위 안내는 아직 일부 기관만 반영돼 있습니다 — 계속 채워가는 중입니다.</li>
+    <li><span class="badge badge-known">알려진 제약</span> 정부 공개 API 중 일부는
+      클라우드 서버(GitHub Actions·Cloudflare 등)에서의 접근이 막혀 있어, 해당
+      기능은 당분간 사람이 수동으로 갱신합니다 — 사용자가 받는 정보 자체의 정확성에는
+      영향이 없지만, 갱신 주기가 자동은 아닙니다.</li>
+    <li><span class="badge badge-known">검토 중</span> AI가 새로 작성한 기관 안내(SP)는
+      사람이 검토·승인하기 전까지는 실제로 서빙되지 않습니다 — 없는 기관인데
+      있다고 안내하는 일을 막기 위한 절차입니다.</li>
+  </ul>
+
+  <h2 class="sec">최근 진행 기록</h2>
+  <p style="font-size:12px;color:var(--ink-soft);">최신순. 내부 개발 로그를 사용자가
+  읽기 쉬운 수준으로 요약한 것입니다 — 기술적으로 더 자세한 내용은 별도 문서에
+  있습니다.</p>
+
+  <div class="entry">
+    <div class="entry-date">2026-08-17</div>
+    <b>정부 규정 자동 확인 체계 시험 도입</b> <span class="badge badge-progress">시험 중</span>
+    <p style="margin:6px 0 0;">기관 안내가 실제 법령·규칙과 어긋나지 않는지 주기적으로
+    스스로 점검하는 체계를 시험하고 있습니다. 아직 일부 환경 제약으로 사람이 직접
+    실행해야 하는 단계입니다.</p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-date">2026-08-16</div>
+    <b>수사기관 절차 준수 점검 파일럿</b> <span class="badge badge-progress">파일럿</span>
+    <p style="margin:6px 0 0;">경찰 강력계·여성청소년과·사이버수사팀을 대상으로,
+    법정 절차(진술거부권 고지, 증거 관리 등)가 빠짐없이 지켜졌는지 스스로 점검·기록하는
+    보조 기능을 시범 설계했습니다. 실제 수사 판단에는 관여하지 않으며, 배포 전
+    현직 검토가 필요한 초안 단계입니다.</p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-date">2026-08-16</div>
+    <b>중앙정부 70개 기관 · 561개 부서 전수 확인 완료</b> <span class="badge badge-done">완료</span>
+    <p style="margin:6px 0 0;">국회·법원·헌법재판소·대통령실·독립기관·국무총리 산하
+    기관·행정각부 19곳·외청 17곳·검찰청까지, 입법·사법·행정부 전체 중앙기관과 그
+    산하 실·국·과 단위까지 확인해 반영했습니다.</p>
+  </div>
+
+  <div class="entry">
+    <div class="entry-date">2026-08-16</div>
+    <b>정부기관 세부 부서 라우팅 연결</b> <span class="badge badge-done">완료</span>
+    <p style="margin:6px 0 0;">"행정안전부"까지만이 아니라 "행정안전부 인공지능정부실"처럼
+    구체적인 담당 부서까지 짚어 안내할 수 있게 됐습니다.</p>
+  </div>
+
+  <p class="note">
+    이 페이지는 계속 갱신됩니다. 특정 기능이 왜 아직 안 되는지, 언제쯤 될 것 같은지
+    궁금하신 점이 있으면 언제든 문의해 주세요 — 베타 단계의 가장 큰 목적은 실제
+    사용에서 나오는 지적을 빠르게 반영하는 것입니다.
+  </p>
+
+  <div class="footer-line">
+    <span>혼디(Hondi) · AI City Inc.</span>
+    <span>최종 갱신: 2026-08-17</span>
+  </div>
+
+</div>
+</body>
+</html>
