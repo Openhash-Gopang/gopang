@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디 Hondi — 혼디로 구현하는 AI 도청, 시청, 읍면동사무소</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-soft:#4d4d4d; --paper:#ffffff;
+    --line:#c8c8c8; --line-strong:#1a1a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#fff;font-family:'Pretendard',sans-serif;color:var(--ink);}
+  @page{ size:A4; margin:10mm 12mm; }
+  .sheet{ width:210mm; margin:10mm auto; background:var(--paper); padding:12mm 15mm; position:relative; border:1px solid #ddd; }
+  @media print{ body{background:none;} .sheet{ box-shadow:none; margin:0 auto; width:auto; border:none; padding:0; } .avoid-break{ break-inside:avoid; page-break-inside:avoid; } }
+
+  .page-num-badge{ position:absolute; top:3mm; right:5mm; font-size:22px; font-weight:800; color:var(--ink); z-index:10; }
+
+  .brand{ display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
+  .brand-mark{ width:34px; height:34px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .brand-name{ font-size:20px; font-weight:800; }
+  .brand-tag{ font-size:11px; color:var(--ink-soft); margin-top:1px; }
+
+  h1{ font-size:22px; font-weight:800; margin:8px 0 6px; line-height:1.35; }
+  .subtitle{ font-size:14px; font-weight:600; color:var(--ink-soft); margin:0 0 12px; }
+  p{ font-size:14.5px; line-height:1.7; margin:0 0 9px; color:var(--ink); }
+  .lede{ font-size:14.5px; line-height:1.8; margin:0 0 12px; color:var(--ink); }
+
+  h2{ font-size:16px; font-weight:800; margin:16px 0 8px; display:flex; align-items:center; gap:7px; }
+  h2 .n{ width:24px; height:24px; border-radius:50%; border:1.5px solid var(--ink); display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; flex-shrink:0; }
+
+  .dbox{ border:1.5px solid var(--ink); margin:11px 0; padding:11px 15px; }
+  .dbox .steph{ font-size:14.5px; font-weight:800; margin-bottom:7px; }
+  .drow{ display:flex; gap:12px; border-top:1px dashed var(--line); padding:7px 0; }
+  .drow:first-of-type{ border-top:none; }
+  .drow .who{ width:115px; flex-shrink:0; font-size:13px; font-weight:700; }
+  .drow .txt{ font-size:14px; line-height:1.6; }
+
+  table{ width:100%; border-collapse:collapse; margin:11px 0 14px; font-size:14.5px; }
+  thead th{ text-align:left; font-weight:700; padding:10px 11px; border-bottom:1.5px solid var(--ink); }
+  tbody td{ padding:11px 11px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.7; }
+  tbody td:first-child{ font-weight:700; }
+  .ok{ font-weight:700; }
+  .todo{ color:var(--ink-soft); }
+
+  .note{ border:1px solid var(--line); padding:14px 17px; margin:15px 0; font-size:14.5px; color:var(--ink-soft); line-height:1.75; }
+  .stat{ font-weight:700; color:var(--ink); }
+
+  .cta-box{ border:1.5px solid var(--ink); border-radius:4px; padding:14px 20px; margin:11px 0; text-align:center; }
+  .cta-box .cta-line1{ font-size:11.5px; line-height:1.6; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:14.5px; font-weight:700; line-height:1.4; margin:0 0 4px; }
+  .cta-box .cta-sub{ font-size:10.5px; font-weight:700; margin:0; }
+
+  .dev-report-note{ font-size:10px; color:var(--ink-soft); text-align:center; border-top:1px solid var(--line); padding-top:6px; margin-top:9px; }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="page-num-badge">11</div>
+
+  <h1>혼디로 구현하는 전자동 AI 도청, 시청, 읍면동사무소(행정복지센터)</h1>
+  <p class="subtitle">추가적인 본인 인증 과정없이 상당수의 민원 신청과 결정을 수 초내에 완료합니다. 폰이나 PC에서 혼디 대화창을 열고, 직접 명령해 보세요.</p>
+
+  <p class="lede">혼디는 기존의 도청·시청·읍면동사무소(행정복지센터)를 완전히 대체하지 않습니다. 대한민국 정부의 AI 정부 전환 정책에 발맞추어, 시민에게 <b>오프라인 방문</b>과 <b>혼디를 통한 온라인 AI 처리</b> 중 하나를 고를 수 있는 또 하나의 대안을 제시합니다.</p>
+
+  <h2><span class="n">1</span> 시나리오 — AI 도청·시청·읍면동사무소</h2>
+  <p>이용자가 공공 기관의 서류 발급·제출을 혼디에게 상시 위임하면, 사용자가 공공 행정 기관을 방문할 필요가 있을 때마다, 혼디가 생성한 AI 행정 관청 및 부서의 "AI 비서"가 호출되어, 사용자의 "나만의 AI 비서"와 직접 대화로 사용자 요청을 빛의 속도로 처리하게 됩니다.</p>
+
+  <div class="dbox avoid-break">
+    <div class="steph">예시 — 등본 발급을 요청하는 경우</div>
+    <div class="drow"><div class="who">이용자</div><div class="txt">"혼디야, 등본 두 통 발급해 줘."</div></div>
+    <div class="drow"><div class="who">나만의 AI 비서</div><div class="txt">이용자님의 요청을 그대로 AI 읍면동사무소에 전달합니다. 판단이나 재량 없이, 요청 내용을 있는 그대로 옮깁니다.</div></div>
+    <div class="drow"><div class="who">AI 읍면동사무소</div><div class="txt">본인 확인되었습니다. 등본 2통 발급 가능하며, 전자문서로 즉시 전달합니다.</div></div>
+    <div class="drow"><div class="who">나만의 AI 비서</div><div class="txt">답변을 그대로 이용자님께 재전달합니다. 처리 시간: 수 초.</div></div>
+  </div>
+
+  <h2><span class="n">2</span> 혼디에 내장된 AI 도청, 시청, 행정복지센터의 법적 성격 — 순수 중개자</h2>
+  <p>AI 도청·시청·읍면동사무소는 정부기관을 자처하거나 대체하는 것이 아닙니다. 이용자를 대리하여 공공 행정 업무를 <b>중개</b>하는 역할만 합니다 — 요청을 그대로 해당 정부 기관에 전달하고, 그 답변을 재차 이용자에게 전달할 뿐, 판단이나 재량을 행사하지 않습니다. 실제 심사·결정 권한은 언제나 정부 기관에 있습니다.</p>
+
+  <h2><span class="n">3</span> 이미 갖춰진 인프라</h2>
+  <table>
+    <thead><tr><th style="width:26%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="ok">상시 위임 인증</td><td>개인정보 전송요구권(마이데이터법)·공공 마이데이터가 이미 법제화·상용화됨 — 케이뱅크·BC카드·KB저축은행이 통합인증 플랫폼으로 이미 활용 중(2026.5월 기준)</td></tr>
+      <tr><td class="ok">공공데이터 API</td><td>data.go.kr 인증키 기반 상시 API 접근 — 국가기록원·공정거래위원회 등 다수 기관이 이미 서비스에 활용</td></tr>
+      <tr><td class="ok">전자문서 양방향 유통</td><td>gdoc.go.kr — 민간이 정부기관 업무시간과 무관하게 인터넷으로 전자문서를 제출·수신할 수 있는 통합포털</td></tr>
+      <tr><td class="ok">PDV 무결성 보장</td><td>Openhash Network — PDV(프라이빗 데이터 금고)에 저장된 데이터의 위변조를 방지하는 장치</td></tr>
+    </tbody>
+  </table>
+
+</div>
+
+<div class="sheet">
+
+  <h2><span class="n">4</span> 본인 인증 완전 자동화</h2>
+  <p>기존에는 민원마다 주민등록증·등본·인감증명서 등을 각기 따로 확인받아야 했습니다. 혼디에서는 이 모든 종류의 본인 인증이 <b>디지털 신분증 하나</b>로 통합되어, 매 민원마다 추가 인증 절차 없이 자동으로 처리됩니다.</p>
+
+  <table>
+    <thead><tr><th>구분</th><th>기존 방식</th><th>혼디 방식</th></tr></thead>
+    <tbody>
+      <tr><td>본인 인증</td><td>서류별로 각각 확인(주민등록증·등본·인감 등)</td><td>디지털 신분증 1개로 통합 인증</td></tr>
+      <tr><td>처리 소요</td><td>방문·대기, 며칠~수 주</td><td><span class="stat">수 초</span> 내외</td></tr>
+      <tr><td>접근성</td><td>평일 09~18시, 방문 필수</td><td>24시간·365일, 스마트폰</td></tr>
+      <tr><td>선택권</td><td>오프라인만</td><td>오프라인 + 온라인(혼디) 중 선택</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="n">5</span> 남은 과제</h2>
+  <table>
+    <thead><tr><th style="width:26%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="todo">API 개방 불균형</td><td>기관마다 API 개방 수준이 달라, 대문을 닫아둔 기관은 혼디가 대행할 수 없고 절차 안내에 그침</td></tr>
+      <tr><td class="todo">읽기 vs 쓰기 격차</td><td>마이데이터는 기존 행정정보의 "조회·전송"엔 강하지만, "신청 접수→처리 대기→결과 수신"까지 이어지는 전체 워크플로우 표준은 아직 부분적</td></tr>
+      <tr><td class="todo">범용 AI 에이전트 위임 프레임워크</td><td>지금의 마이데이터는 기업·서비스별 개별 동의 구조 — "AI 비서 하나가 모든 기관을 상시 대리"하는 범용 표준은 정부·혼디 양쪽 다 아직 없음</td></tr>
+      <tr><td class="todo">gdoc.go.kr 활용</td><td>이미 존재하는 민관 전자문서 유통 통로가 혼디 설계에 아직 반영되지 않음</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    ※ 혼디의 온전한 기능은 대한민국 정부의 AI 정부 시범사업이 완료되는 시점에 완성됩니다. 그 전까지 AI 도청·시청·읍면동사무소는 부분적으로만 동작하며, 대문(API)을 아직 개방하지 않은 기관은 혼디가 업무를 대행할 수 없어 절차 안내에 그치고, 이용자가 직접 처리해야 합니다.
+  </div>
+
+  <div class="cta-box">
+    <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
+    <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
+    <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
+  </div>
+  <div class="cta-box">
+    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+  </div>
+
+  <div class="dev-report-note">혼디 개발자 대표 도 영민, 제주시 한림읍, tensor.city@gmail.com</div>
+
+</div>
+
+</body>
+</html>
