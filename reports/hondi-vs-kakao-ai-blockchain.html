@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>혼디 Hondi — 혼디는 카톡·AI·블록체인과 무엇이 다른가</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-soft:#4d4d4d; --paper:#ffffff;
+    --line:#c8c8c8; --line-strong:#1a1a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#fff;font-family:'Pretendard',sans-serif;color:var(--ink);}
+  @page{ size:A4; margin:10mm 12mm; }
+  .sheet{ width:210mm; margin:10mm auto; background:var(--paper); padding:12mm 15mm; position:relative; border:1px solid #ddd; }
+  @media print{ body{background:none;} .sheet{ box-shadow:none; margin:0 auto; width:auto; border:none; padding:0; } .avoid-break{ break-inside:avoid; page-break-inside:avoid; } }
+
+  .page-num-badge{ position:absolute; top:6mm; right:8mm; font-size:22px; font-weight:800; color:var(--ink); z-index:10; }
+
+  .brand{ display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:14px; }
+  .brand-mark{ width:34px; height:34px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .brand-tag{ font-size:10px; color:var(--ink-soft); margin-top:1px; }
+
+  h1{ font-size:22px; font-weight:800; margin:8px 0 8px; line-height:1.3; }
+  p{ font-size:14px; line-height:1.75; margin:0 0 9px; color:var(--ink); }
+  .lede{ font-size:13.5px; line-height:1.8; margin:0 0 12px; color:var(--ink); }
+
+  h2{ font-size:15px; font-weight:800; margin:16px 0 8px; display:flex; align-items:center; gap:7px; }
+  h2 .n{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink); display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+
+  table{ width:100%; border-collapse:collapse; margin:13px 0 17px; font-size:13.5px; }
+  thead th{ text-align:left; font-weight:700; padding:10px 11px; border-bottom:1.5px solid var(--ink); }
+  tbody td{ padding:12px 11px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.7; }
+  tbody td:first-child{ font-weight:700; white-space:nowrap; width:22%; }
+
+  .note{ border:1px solid var(--line); padding:10px 13px; margin:9px 0; font-size:11px; color:var(--ink-soft); line-height:1.55; }
+  .stat{ font-weight:700; color:var(--ink); }
+
+  .cta-box{ border:1.5px solid var(--ink); border-radius:4px; padding:12px 17px; margin:10px 0; text-align:center; }
+  .cta-box .cta-line1{ font-size:10.5px; line-height:1.6; color:var(--ink-soft); margin:0 0 5px; }
+  .cta-box .cta-price{ font-size:13.5px; font-weight:700; line-height:1.4; margin:0 0 4px; }
+  .cta-box .cta-sub{ font-size:9.5px; font-weight:700; margin:0; }
+
+  .dev-report-note{ font-size:9px; color:var(--ink-soft); text-align:center; border-top:1px solid var(--line); padding-top:6px; margin-top:9px; }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="page-num-badge">8/10</div>
+
+  <div class="brand">
+    <div class="brand-mark">혼</div>
+    <div>
+      <div class="brand-name">혼디 Hondi</div>
+      <div class="brand-tag">DAWN — Democracy is All We Need · 실행 대행 AI 플랫폼</div>
+    </div>
+  </div>
+
+  <h1>혼디는 카톡·여타 AI·블록체인과 무엇이 다른가</h1>
+  <p class="lede"><b>혼디는 대한민국 정부의 'AI 정부' 정책에 호응하는 민간 프로젝트입니다.</b> 행정안전부 인공지능정부실은 2026년 8월 3일부터 거대언어모델(LLM) 기반의 'AI 기반 공공데이터포털' 시범서비스를 운영하며 정부 스스로 AI 전환을 시작했습니다. 혼디는 이 흐름의 민간 쪽 응답으로, 정부가 공공데이터 검색에 적용한 것과 같은 방향을 시민 개개인과 모든 공공 기관의 실제 업무 처리로 확장합니다.</p>
+  <p class="lede">혼디는 겉모습은 메신저 같고, 안에는 AI가 있고, 기록은 블록체인 같은 방식으로 남습니다. 그래서 셋 중 하나로 오해받기 쉽습니다. 세 가지 모두와 실제로 어떻게 다른지, 정확히 짚어드립니다.</p>
+
+  <h2><span class="n">①</span> 카카오톡과 다른 점</h2>
+  <p>혼디는 '카톡+AI+로봇'을 합친 형태입니다. 카톡과 달리 대화 상대가 사람에 그치지 않고, 사물(자율주행차량·주택·냉장고 등)과 개념(민법·헌법 등)까지 포함합니다. 그리고 그냥 대화만 하는 게 아니라, 등본 발급·인허가 신청 같은 실제 지시를 수행합니다.</p>
+
+  <table>
+    <thead><tr><th>구분</th><th>카카오톡</th><th>혼디</th></tr></thead>
+    <tbody>
+      <tr><td>대화 상대</td><td>사람만</td><td>사람 + 사물 + 개념(법령 등)</td></tr>
+      <tr><td>기능</td><td>메시지 전달</td><td>지시 수행(실행 대행)</td></tr>
+      <tr><td>데이터 저장</td><td>회사 서버</td><td>사용자 단말기(폰·PC)만</td></tr>
+      <tr><td>장애 구조</td><td>중앙 서버 하나가 멈추면 전체 정지</td><td>한 곳이 멈춰도 전체는 유지</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    2022년 카카오톡이 데이터센터 화재로 통째로 멈췄던 사고를 기억하실 겁니다. 한 곳이 멈추면 전체가 멈추는 구조였기 때문입니다. 혼디는 모든 대화·데이터가 각자의 단말기에만 저장되므로, 이런 대규모 먹통 사고 자체가 구조적으로 불가능합니다. 회사 서버가 해킹당해도, 애초에 훔쳐갈 데이터가 그곳에 없습니다.
+  </div>
+
+  <h2><span class="n">②</span> 챗GPT·클로드 등 여타 AI와 다른 점</h2>
+  <p>혼디는 챗GPT, 클로드, 제미나이 같은 일반 대화형 AI와 두 가지가 다릅니다 — 무엇을 하느냐, 그리고 어떻게 작동하느냐입니다.</p>
+
+  <table>
+    <thead><tr><th>구분</th><th>일반 AI(ChatGPT 등)</th><th>혼디</th></tr></thead>
+    <tbody>
+      <tr><td>기본 동작</td><td>질문에 답변</td><td>지시를 실제로 수행(실행 대행)</td></tr>
+      <tr><td>내부 구조</td><td>거대 모델 하나가 모든 질문 처리</td><td>MoTE — 특정 기능에 특화된 소형 모델 수백 개 중 필요한 것만 호출</td></tr>
+      <tr><td>전력·비용</td><td>매 질문마다 거대 모델 전체 가동</td><td>필요한 부분만 가동 — 전기 사용량 <span class="stat">최대 96%</span> 절감</td></tr>
+      <tr><td>개인화</td><td>대화 맥락 안에서만 개인화</td><td>PDV(개인 데이터 금고)에 평생 기록을 쌓아 그 사람만의 맥락으로 응답</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    비유하자면 — 아파트 단지에서 특정 호수를 찾아갈 때, 일반 거대 AI 모델은 단지 전체의 불을 다 켭니다. 혼디의 MoTE는 해당 호수만 불을 켭니다. 같은 답을 찾는 데 드는 전력 차이가 여기서 발생합니다. 이렇게 아낀 비용 덕분에 요금도 기존 AI보다 훨씬 저렴합니다.
+  </div>
+
+</div>
+
+<div class="sheet">
+
+  <h2><span class="n">③</span> 블록체인과 다른 점</h2>
+  <p>혼디의 기록 검증 기술 Openhash는 종종 블록체인으로 오해받습니다. 데이터 위변조를 막는다는 목적은 같지만, 그 방식이 근본적으로 다릅니다.</p>
+
+  <table>
+    <thead><tr><th>구분</th><th>기존 블록체인</th><th>Openhash</th></tr></thead>
+    <tbody>
+      <tr><td>검증 방식</td><td>전 세계 모든 참여 컴퓨터가 거래 하나하나를 전부 검증</td><td>해시값에 따라 5개 계층(L1~L5) 중 딱 하나가 확률적으로 뽑혀 검증</td></tr>
+      <tr><td>검증 계층</td><td>구분 없음(전원 참여)</td><td>L1 읍면동(60%) → L2 시군구(20%) → L3 광역시도(10%) → L4 중앙정부(6%) → L5 국제기구(4%)</td></tr>
+      <tr><td>원본 데이터</td><td>참여자 다수가 사본 보관</td><td>사용자 단말기(PDV)에만 보관 — 계층에는 지문(해시)만 기록</td></tr>
+      <tr><td>에너지 소비</td><td>참여자가 많을수록 전력 소비 급증</td><td>기존 블록체인 대비 <span class="stat">최대 99.8%</span> 절감(FPGA 실측: 18.2W vs GPU 160.3W)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    아파트 단지에 비유하면, 기존 블록체인은 동네에서 일어난 사건 하나를 확인하려고 지구 반대편 주민들까지 전부 불러 모아 검증시키는 것과 같습니다. Openhash는 대부분의 거래를 사건이 일어난 바로 그 동의 경비실(L1) 선에서, 아주 짧은 시간 안에 끝냅니다. 참여자를 줄이는 대신 확률적 계층 선택으로 신뢰도는 그대로 유지합니다.
+  </div>
+
+  <div class="note">
+    한 곳에 모인 데이터가 없으므로, 대량 유출될 "표적" 자체가 없습니다. 혼디 서버는 대화·거래 원본을 저장하지 않으며, Openhash 계층에도 원문이 아닌 지문(해시)만 올라갑니다.
+  </div>
+
+  <h2><span class="n">④</span> 세 가지를 한 문장으로</h2>
+  <p>혼디는 <b>카카오톡의 익숙한 사용성</b> 위에, <b>MoTE로 전력을 아끼는 AI</b>가 <b>Openhash로 위변조 없이 기록</b>하며 실제 업무를 대신 처리하는 플랫폼입니다 — 메신저도, 일반 AI도, 블록체인도 아닌, 이 셋을 가장 적은 전력으로 결합한 새로운 인프라입니다.</p>
+
+  <div class="cta-box">
+    <div class="cta-line1">혼디 MoTE 기술의 압도적인 성능을 기존 AI들(ChatGPT, Claude, Gemini, DeepSeek 등)의 일반적인 모드와 비교해 보십시오.</div>
+    <div class="cta-price">평균 월 5~8천원으로, 기존의 값비싼 AI(Claude, Gemini, ChatGPT, DeepSeek 등)를 훨씬 더 똑똑한 혼디로 대체하십시오.</div>
+    <div class="cta-sub">PC와 폰으로 각기 hondi.net에 접속해 보세요</div>
+  </div>
+  <div class="cta-box">
+    <div class="cta-line1">모든 가입자는 1일 무료 체험, 이후, GDC 최소 충전 금액 10,000원 충전 후, 자신의 사용량(비용)을 실시간으로 모니터링할 수 있습니다.</div>
+  </div>
+
+  <div class="dev-report-note">혼디 개발자 대표 도 영민, 제주시 한림읍, tensor.city@gmail.com</div>
+
+</div>
+
+</body>
+</html>
