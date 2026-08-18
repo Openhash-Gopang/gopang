@@ -1547,6 +1547,7 @@ section.section[data-tab].tab-active { display: block; }
       <button type="button" class="page-tab" data-tab-target="rpt-prepare-finance" role="tab" aria-selected="false">금융권 대비</button>
       <button type="button" class="page-tab" data-tab-target="rpt-klaw" role="tab" aria-selected="false">K-Law</button>
       <button type="button" class="page-tab" data-tab-target="rpt-admin-scenario" role="tab" aria-selected="false">행정 서비스 사례</button>
+      <button type="button" class="page-tab" data-tab-target="rpt-ai-gov" role="tab" aria-selected="false">AI 정부</button>
       <button type="button" class="page-tab" data-tab-target="intro" role="tab" aria-selected="false">소개</button>
       <button type="button" class="page-tab" data-tab-target="parallel" role="tab" aria-selected="false">평행세계 비교</button>
       <button type="button" class="page-tab" data-tab-target="features" role="tab" aria-selected="false">핵심 기능</button>
@@ -1565,7 +1566,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-prepare-finance", "rpt-klaw", "rpt-admin-scenario", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
+  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-prepare-finance", "rpt-klaw", "rpt-admin-scenario", "rpt-ai-gov", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
   var tabButtons = document.querySelectorAll(".page-tab[data-tab-target]");
   var tabSections = document.querySelectorAll("section.section[data-tab]");
 
@@ -1695,6 +1696,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <section class="section rpt-embed" id="rpt-admin-scenario-embed" data-tab="rpt-admin-scenario">
   <iframe class="rpt-iframe" data-src="reports/hondi-business-admin-scenario.html" title="행정 서비스 사례" loading="lazy"></iframe>
+</section>
+
+<section class="section rpt-embed" id="rpt-ai-gov-embed" data-tab="rpt-ai-gov">
+  <iframe class="rpt-iframe" data-src="reports/hondi-ai-town-office.html" title="AI 정부" loading="lazy"></iframe>
 </section>
 
 <section class="section rpt-embed" id="rpt-4day-week-embed" data-tab="rpt-4day-week">
