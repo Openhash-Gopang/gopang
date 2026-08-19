@@ -11428,6 +11428,9 @@ export default {
     // ── PDV ──────────────────────────────────────────────
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
+    // 2026-08-20 신설 — 갭② 보완 (record.js Supabase 직접 접근 대체)
+    if (pathname === '/pdv/ledger-hash'   && request.method === 'PATCH') return handlePdvLedgerHash(request, env, corsHeaders);
+    if (pathname === '/pdv/chain-height'  && request.method === 'PATCH') return handlePdvChainHeight(request, env, corsHeaders);
 
     // ── 기관측 PDV (§7, SP_PDV v1.2, 2026-07-20 신설) ──────────
     // 사용자측 /pdv/report와 별개 — K-서비스/전문가 페르소나가 자신의
@@ -15110,6 +15113,17 @@ async function handlePdvReport(request,env,corsHeaders){
       // 처리되면 최악의 경우 work 스코프 조회에 안 걸릴 뿐이다).
       domain: (r.domain === 'work') ? 'work' : 'personal',
       affiliation_org_id: (r.domain === 'work' && typeof r.affiliation_org_id === 'string') ? r.affiliation_org_id : null,
+      // 2026-08-20 신설 — GWP 결제 흐름(gwp/engine.js)의 chain_height/user_hash
+      // 소급 PATCH가 Supabase 자격증명 비활성화(2026-08-12)로 죽어있던 갭을
+      // 메운다. session_id를 report_id 조합(sessionId:reporterSvc)과 별개로
+      // 단독 필드로도 저장해 PATCH /pdv/chain-height가 report_id 문자열을
+      // 몰라도 session_id만으로 대상을 찾을 수 있게 한다. chain_height/
+      // chain_local_hash는 결제 미완료 시점(redeemClaim 전) 삽입이면 null —
+      // 정상이며, 이후 PATCH /pdv/chain-height가 채운다.
+      session_id:       sessionId || null,
+      chain_height:     (typeof r.chain_height === 'number') ? r.chain_height : null,
+      chain_local_hash: r.chain_local_hash || null,
+      user_hash:        null,
     }),
   });
 
@@ -15143,6 +15157,90 @@ async function handlePdvReport(request,env,corsHeaders){
     svc_level:reg.level,
     message:`PDV 기록 완료. ${resolvedSvcId} (Level ${reg.level})`,
   }),{status:200,headers:corsHeaders});
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-08-20 신설 — pdv_records 소급 PATCH 2종 (갭② 보완).
+// 기존 record.js의 _patchL1LedgerUserHash·_patchPdvChainHeight가 Supabase
+// l1_ledger/pdv_log 테이블을 직접 두드리던 걸 대체한다(2026-08-12 시크릿
+// 유출 사고로 자격증명 비워지며 무성 실패 중이었음 — GWP 정산 흐름에서
+// 실사용되는 경로, 죽은 코드 아님. gwp/engine.js 649·676행 참조).
+// 인증: handlePdvReport와 동일하게 origin 기반 _getSvcRegistration()으로
+// 등록된 서비스만 허용 — 임의 클라이언트가 타인의 block_hash/session_id를
+// 추측해 레코드를 훔쳐 읽거나 덮어쓰지 못하게 한다(단, 이 두 엔드포인트는
+// 필드 하나만 PATCH하고 값을 반환하지 않으므로 조회 위험은 없음 — 무결성
+// 보호가 목적).
+// ═══════════════════════════════════════════════════════════
+async function handlePdvLedgerHash(request, env, corsHeaders) {
+  if (request.method !== 'PATCH') return new Response('Method Not Allowed', { status: 405 });
+  const origin = request.headers.get('Origin') || '';
+  const body = await request.json().catch(() => null);
+  if (!body?.block_hash || !body?.user_hash)
+    return _err(400, 'SCHEMA_ERROR', 'block_hash/user_hash 필수', corsHeaders);
+  const svcId = request.headers.get('X-Gopang-Svc') || 'gopang';
+  if (!_getSvcRegistration(origin, svcId))
+    return _err(403, 'SERVICE_NOT_REGISTERED', `${svcId} (${origin})은 등록된 서비스가 아닙니다`, corsHeaders);
+
+  try {
+    const findRes = await fetch(
+      `${L1_DEFAULT}/api/collections/pdv_records/records?filter=` +
+      encodeURIComponent(`block_hash="${body.block_hash}"`) + `&perPage=1`
+    );
+    const found = await findRes.json().catch(() => null);
+    const rec = found?.items?.[0];
+    if (!rec) return _err(404, 'PDV_RECORD_NOT_FOUND', 'block_hash에 대응하는 pdv_records 없음', corsHeaders);
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records/${rec.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_hash: body.user_hash }),
+    });
+    if (!patchRes.ok) return _err(503, 'PDV_PATCH_FAILED', 'user_hash 교정 실패, 잠시 후 재시도', corsHeaders);
+
+    return new Response(JSON.stringify({ ok: true, id: rec.id }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(503, 'PDV_PATCH_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handlePdvChainHeight(request, env, corsHeaders) {
+  if (request.method !== 'PATCH') return new Response('Method Not Allowed', { status: 405 });
+  const origin = request.headers.get('Origin') || '';
+  const body = await request.json().catch(() => null);
+  if (!body?.session_id || typeof body?.chain_height !== 'number')
+    return _err(400, 'SCHEMA_ERROR', 'session_id/chain_height 필수', corsHeaders);
+  const svcId = request.headers.get('X-Gopang-Svc') || 'gopang';
+  if (!_getSvcRegistration(origin, svcId))
+    return _err(403, 'SERVICE_NOT_REGISTERED', `${svcId} (${origin})은 등록된 서비스가 아닙니다`, corsHeaders);
+
+  try {
+    // reporter_svc가 다른(market 등 하위 시스템이 먼저 기록한) 레코드를
+    // 찾는 경로라 session_id 단독 필드로 매칭한다 — report_id는
+    // `${sessionId}:${reporterSvc}` 합성값이라 reporterSvc를 모르면
+    // 여기서 재조합할 수 없다(설계상 의도적으로 session_id를 별도
+    // 필드로도 저장해둔 이유).
+    const findRes = await fetch(
+      `${L1_DEFAULT}/api/collections/pdv_records/records?filter=` +
+      encodeURIComponent(`session_id="${body.session_id}"`) + `&perPage=1`
+    );
+    const found = await findRes.json().catch(() => null);
+    const rec = found?.items?.[0];
+    if (!rec) return _err(404, 'PDV_RECORD_NOT_FOUND', 'session_id에 대응하는 pdv_records 없음', corsHeaders);
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records/${rec.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chain_height:     body.chain_height,
+        chain_local_hash: body.chain_local_hash || null,
+      }),
+    });
+    if (!patchRes.ok) return _err(503, 'PDV_PATCH_FAILED', 'chain_height 소급 실패, 잠시 후 재시도', corsHeaders);
+
+    return new Response(JSON.stringify({ ok: true, id: rec.id }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(503, 'PDV_PATCH_FAILED', e.message, corsHeaders);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
