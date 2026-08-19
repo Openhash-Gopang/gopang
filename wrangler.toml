@@ -25,6 +25,10 @@ id = "e1ae4dd08b344f9c9208ea4235e17d3e"
 binding = "QR_SESSIONS_KV"
 id = "af7cad0be99e4072bbca8d81d71edd98"
 
+[[kv_namespaces]]
+   binding = "RATE_LIMIT_KV"
+   id = "9c29fda136eb4d12b694f7e8a9864ac6"
+
 # 2026-07-16 추가 — GOV_OPEN_DATA_MAP 리졸버(/api/stats/resolve)용 캐시.
 # [정정 2026-07-16] 이 주석은 원래 "Wrangler가 .toml을 우선 읽는다"고
 # 적혀 있었으나 이는 사실과 반대다 — Wrangler는 wrangler.json이 있으면
