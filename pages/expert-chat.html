@@ -107,7 +107,7 @@ import { _missingNextStepMarker } from '/src/gopang/ai/expert-session.js';
 // 실제 라이브 경로이므로(위 주석 참조), 세션 종료 리포팅도 여기 붙여야 실제로
 // 동작한다. expert-session.js의 endExpertSession()에 붙이면 죽은 코드에
 // 연결하는 셈이라 아무 효과가 없다.
-import { recordOwnerPDV, queryOwnerPdvSelfHistory } from '/src/gopang/gwp/gwp-report-client.js';
+import { recordOwnerPDV, queryOwnerPdvSelfHistory, recordUserPdvForExpert } from '/src/gopang/gwp/gwp-report-client.js';
 import { escHtml, appendBubble, appendTyping as _sharedAppendTyping } from '/src/gopang/ui/chat-shell.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -586,6 +586,22 @@ async function _recordExpertOwnerPDV(reason) {
     where: location.href,
     outcomeSignals: { explicit_rating: explicitRating },
   }).catch(e => console.warn('[Expert] §7 기관측 PDV 기록 실패(무시):', e.message));
+
+  // 2026-08-20 신설 — 갭① 보완. 위 recordOwnerPDV()는 기관측 가명화
+  // 로그(owner_pdv)에만 남기고, 사용자 본인의 "나의 기록 금고"(pdv_records)
+  // 에는 지금까지 아무것도 남지 않았다(실사로 확인된 갭). 같은 정보를
+  // 사용자측에도 요약 한 줄로 남겨 본인이 자기 상담 이력을 조회할 수
+  // 있게 한다 — 실패해도 위 owner_pdv 기록 흐름을 막지 않도록 별도로
+  // catch한다(사이드이펙트, 세션 종료 흐름 자체를 지연·차단하지 않음).
+  recordUserPdvForExpert({
+    ownerAgency,
+    personaKey: PERSONA,
+    guid: user.ipv6,
+    what,
+    why,
+    when: _sessionStartedAt,
+    where: location.href,
+  }).catch(e => console.warn('[Expert] 사용자측 PDV 기록 실패(무시):', e.message));
 }
 
 async function ensureSystemPrompt() {
