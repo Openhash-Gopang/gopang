@@ -1,7 +1,7 @@
 /**
  * pdv/record.js — PDV 기록·체인·Supabase 연동
  */
-import { _SUPABASE_URL, _SUPABASE_KEY, USER_GUID, _USER, _userLocation } from '../core/state.js';
+import { USER_GUID, _USER, _userLocation } from '../core/state.js';
 import { CFG } from '../core/config.js';
 // ★ 2026-07-30 버그 수정 — 아래 221행 부근에서 _klawReview를 호출하는데
 // import가 없어 실행 시 "Uncaught ReferenceError: _klawReview is not
@@ -334,39 +334,27 @@ export async function _submitUserFeedback(feedback) {
 
 
 /**
- * l1_ledger.user_hash를 클라이언트 local_hash로 교정
+ * pdv_records.user_hash를 클라이언트 local_hash로 교정
  * Worker의 단순화 공식과 클라이언트 h_i 공식이 달라 불일치 발생
  * → 클라이언트가 redeemClaim 직후 PATCH로 덮어씀
+ * (2026-08-20: Supabase l1_ledger 직접 접근 → Worker PATCH /pdv/ledger-hash로
+ *  교체 — 2026-08-12 시크릿 유출로 자격증명이 비워지며 무성 실패하던 갭 보완.
+ *  l1_ledger 테이블은 애초에 pdv_records로 통합됐던 대상이라 별도 컬렉션
+ *  확정이 필요 없어졌다.)
  */
 export async function _patchL1LedgerUserHash(blockHash, localHash) {
   if (!blockHash || !localHash) return;
-  // ★ 2026-08-12 — _SUPABASE_URL/_KEY가 시크릿 유출 사고로 값이 비워짐
-  // (state.js 참조). l1_ledger가 L1 PocketBase의 어느 컬렉션에 대응하는지
-  // 확정 전까지는 조용히 실패하는 대신 명확히 실패한다.
-  if (!_SUPABASE_URL || !_SUPABASE_KEY) {
-    console.error('[PDV] _patchL1LedgerUserHash 비활성 — l1_ledger의 PocketBase 목적지 미확정(TODO, state.js 참조)');
-    return;
-  }
   try {
-    const res = await fetch(
-      _SUPABASE_URL + '/rest/v1/l1_ledger'
-        + '?block_hash=eq.' + encodeURIComponent(blockHash),
-      {
-        method: 'PATCH',
-        headers: {
-          'apikey':        _SUPABASE_KEY,
-          'Authorization': 'Bearer ' + _SUPABASE_KEY,
-          'Content-Type':  'application/json',
-          'Prefer':        'return=minimal',
-        },
-        body: JSON.stringify({ user_hash: localHash }),
-      }
-    );
+    const res = await fetch(CFG.endpoint + '/pdv/ledger-hash', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ block_hash: blockHash, user_hash: localHash }),
+    });
     if (res.ok) {
-      console.info('[PDV] l1_ledger.user_hash 교정 완료 | block_hash:',
+      console.info('[PDV] user_hash 교정 완료 | block_hash:',
         blockHash.slice(0, 8), '| user_hash:', localHash.slice(0, 8));
     } else {
-      console.warn('[PDV] l1_ledger.user_hash PATCH 실패 | status:', res.status);
+      console.warn('[PDV] user_hash PATCH 실패 | status:', res.status);
     }
   } catch(e) {
     console.warn('[PDV] _patchL1LedgerUserHash 오류:', e.message);
@@ -374,36 +362,24 @@ export async function _patchL1LedgerUserHash(blockHash, localHash) {
 }
 
 /**
- * B-3: market 등 하위 시스템이 이미 INSERT한 pdv_log 레코드에
+ * B-3: market 등 하위 시스템이 이미 INSERT한 pdv_records 레코드에
  *      chain_height / chain_local_hash 소급 기록
  * 타이밍 경쟁 조건 대응: 실패 시 300ms 후 1회 재시도 (설계서 E2 수정)
+ * (2026-08-20: Supabase pdv_log 직접 접근 → Worker PATCH /pdv/chain-height로
+ *  교체. pdv_log는 이미 pdv_records로 이관 완료된 옛 이름이었다.)
  */
 export async function _patchPdvChainHeight(sessionId, chainHeight, chainLocalHash, retry = true) {
   if (!sessionId || chainHeight == null) return;
-  // ★ 2026-08-12 — 위 _patchL1LedgerUserHash와 동일 사유(state.js TODO 참조).
-  if (!_SUPABASE_URL || !_SUPABASE_KEY) {
-    console.error('[PDV] _patchPdvChainHeight 비활성 — pdv_log의 PocketBase 목적지 미확정(TODO, state.js 참조)');
-    return;
-  }
   try {
-    const res = await fetch(
-      _SUPABASE_URL + '/rest/v1/pdv_log'
-        + '?session_id=eq.' + encodeURIComponent(sessionId)
-        + '&chain_height=is.null',
-      {
-        method: 'PATCH',
-        headers: {
-          'apikey':        _SUPABASE_KEY,
-          'Authorization': 'Bearer ' + _SUPABASE_KEY,
-          'Content-Type':  'application/json',
-          'Prefer':        'return=minimal',
-        },
-        body: JSON.stringify({
-          chain_height:     chainHeight,
-          chain_local_hash: chainLocalHash,
-        }),
-      }
-    );
+    const res = await fetch(CFG.endpoint + '/pdv/chain-height', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        session_id:       sessionId,
+        chain_height:     chainHeight,
+        chain_local_hash: chainLocalHash,
+      }),
+    });
     if (res.ok) {
       console.info('[PDV] chain_height 소급 완료 | session_id:',
         sessionId.slice(0, 8), '| height:', chainHeight);
