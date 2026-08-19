@@ -15124,6 +15124,13 @@ async function handlePdvReport(request,env,corsHeaders){
       chain_height:     (typeof r.chain_height === 'number') ? r.chain_height : null,
       chain_local_hash: r.chain_local_hash || null,
       user_hash:        null,
+      // 2026-08-20 신설 — 갭① 보완. 전문가 페르소나 상담이 사용자측
+      // pdv_records에 전혀 기록되지 않던 문제(expert-chat.html이
+      // recordOwnerPDV()만 호출하고 사용자측 기록은 빠져있었음 — 실사로
+      // 확인)를 메우며, 어느 페르소나였는지 사용자 본인이 "나의 기록
+      // 금고"에서 구분할 수 있도록 persona_key도 함께 저장한다.
+      // K-서비스 자체 GWP 상담(persona 없음)은 null.
+      persona_key:      r.persona_key || null,
     }),
   });
 

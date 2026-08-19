@@ -288,6 +288,71 @@ export async function recordOwnerPDV({
 }
 
 /**
+ * recordUserPdvForExpert — 갭① 보완 (2026-08-20 신설)
+ *
+ * 배경: expert-chat.html(_recordExpertOwnerPDV)은 지금까지 recordOwnerPDV()
+ * (§7 기관측 PDV, 가명화 요약)만 호출했다 — reportGwpSessionEnd()의 (a)
+ * "서브시스템 자기 PDV"·(b) "사용자 PDV" 두 경로가 EXPERT 페르소나 경로에는
+ * 아예 없었다(실사로 확인). 그 결과 전문가 페르소나와의 상담은 사용자
+ * 본인의 "나의 기록 금고"(pdv_records)에 단 한 건도 남지 않고 있었다 —
+ * 기관측 가명화 로그(owner_pdv)에만 존재해 본인도 조회할 수 없는 상태였다.
+ *
+ * reportGwpSessionEnd()의 (a) 경로와 동일하게 /pdv/report를 직접 호출한다.
+ * 다만 대화 원문 전체(transcript)는 보내지 않는다 — EXPERT 상담은 K-서비스
+ * 자체 상담보다 민감한 내용(의료·법률 등)이 섞일 가능성이 높고, 원문은
+ * 이미 owner_pdv 쪽 가명화 원칙(§7.3 원문 미저장)과 결이 다르게 사용자측에
+ * 평문으로 쌓이는 셈이라 요약 한 줄(what)만 남긴다 — GWP 경로보다 보수적.
+ *
+ * @param {Object} opts
+ * @param {string} opts.ownerAgency - 소유 K-서비스 id (svc 필드로 저장됨)
+ * @param {string} opts.personaKey  - 상담한 전문가 페르소나 (예: 'lawyer-tax')
+ * @param {string} opts.guid        - 사용자 GUID
+ * @param {string} opts.what        - 1문장 요약
+ * @param {string} [opts.why]
+ * @param {string} [opts.when]      - 세션 시작 시각(없으면 now)
+ * @param {string} [opts.where]
+ * @param {string} [opts.proxyBase]
+ * @returns {Promise<{recorded: boolean}>}
+ */
+export async function recordUserPdvForExpert({
+  ownerAgency,
+  personaKey,
+  guid,
+  what,
+  why = null,
+  when,
+  where,
+  proxyBase = DEFAULT_PROXY,
+} = {}) {
+  if (!ownerAgency || !personaKey || !guid || !what) {
+    console.warn('[PDV] recordUserPdvForExpert: ownerAgency/personaKey/guid/what 필수 — 호출 무시');
+    return { recorded: false };
+  }
+  const now = new Date().toISOString();
+  try {
+    const res = await _fetchKeepaliveSafe(proxyBase + '/pdv/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        report: {
+          svc: ownerAgency, type: 'expert_consultation', persona_key: personaKey,
+          who: { ipv6: guid, role: 'user' },
+          when: { period_start: when || now, period_end: now },
+          where: { svc_url: where || (typeof location !== 'undefined' ? location.href : null) },
+          what: { summary: what },
+          how: { method: 'expert_chat' },
+          why: { goal: why || what },
+        },
+      }),
+    });
+    return { recorded: res.ok };
+  } catch (e) {
+    console.warn('[PDV] recordUserPdvForExpert 실패(무시):', e.message);
+    return { recorded: false };
+  }
+}
+
+/**
  * queryOwnerPdvSelfHistory — §U0-1(UNIVERSAL-common 제1원칙) "즉시조회
  * 가능성" 구현 (2026-08-10 신설)
  *
