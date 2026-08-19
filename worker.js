@@ -15352,6 +15352,26 @@ async function _writeOwnerPdvRecord(env, r) {
 
 async function handleOwnerPdvReport(request, env, corsHeaders) {
   if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+
+  // 2026-08-20 신설 — 갭③ 보완. 이 엔드포인트는 origin 기반
+  // _getSvcRegistration() 검사가 없어(위 주석 참조, 호출 주체가
+  // hondi.net/pages/expert-chat.html이라 K-서비스 도메인 화이트리스트와
+  // 1:1로 안 맞음) 임의 오리진이 owner_agency를 사칭해 대량 주입할 수
+  // 있었다. 완벽한 인증(세션 서명 토큰) 대신 최소한의 두 방어선을 먼저
+  // 건다 — (1) hondi.net 계열 오리진만 허용, (2) 접속 IP당 요청 빈도
+  // 제한. 세션 서명 토큰 인증은 별도 작업으로 남긴다(알려진 한계).
+  const origin = request.headers.get('Origin') || '';
+  if (!/^https:\/\/([a-z0-9-]+\.)*hondi\.net$/.test(origin)) {
+    return _err(403, 'ORIGIN_NOT_ALLOWED', `${origin || '(오리진 없음)'}은 허용되지 않은 출처입니다`, corsHeaders);
+  }
+  const clientIp = request.headers.get('cf-connecting-ip') || 'unknown';
+  // IP당 60회/5분 — 공유 IP(모바일 통신사 NAT 등) 뒤 다수 정상 사용자의
+  // 상담 종료 보고가 몰려도 안 걸리도록 _checkRateLimit(3/300초, pdv_query
+  // 전용 한도)보다 훨씬 관대하게 잡는다. 그래도 스크립트성 대량 주입은
+  // 60/5분이면 충분히 걸러진다.
+  const withinLimit = await _checkRateLimitN(env, clientIp, 'owner_pdv_report', 60, 300);
+  if (!withinLimit) return _err(429, 'RATE_LIMITED', '기관측 PDV 기록 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
+
   const body = await request.json().catch(() => null);
   const r = body?.record;
   if (!r) return _err(400, 'SCHEMA_ERROR', 'record 필드 필수', corsHeaders);
@@ -16349,7 +16369,13 @@ async function handleConsentRespond(request,env,corsHeaders){
     consent_token: patch.consent_token || null,
   }),{status:200,headers:corsHeaders});
 }
-async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
+// 2026-08-20 — 한도(limit)/TTL을 매개변수로 뺀 일반형. 기존 _checkRateLimit
+// 호출부(pdv_query 등)는 그대로 3회/300초 동작하도록 아래에서 위임한다.
+// owner_pdv_report처럼 대량 정상 트래픽(공유 IP 뒤 다수 사용자)이 걸리는
+// 엔드포인트는 훨씬 관대한 한도가 필요해서 하드코딩 3회를 그대로 재사용하면
+// 안 된다는 게 갭③ 보완 중 발견됨.
+async function _checkRateLimitN(env,key,action,limit,ttlSeconds){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${key}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=limit)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:ttlSeconds});return true;}return true;}
+async function _checkRateLimit(env,ipv6,action){return _checkRateLimitN(env,ipv6,action,3,300);}
 // (2026-07-14: Supabase pdv_log → L1 pdv_records 이관. PocketBase 필터
 //  문법으로 날짜범위+source 목록을 직접 표현한다 — Supabase의
 //  created_at=gte./lte., source=in.()와 동등한 PocketBase 문법.)
