@@ -580,7 +580,7 @@ const JEJU_L2_TABLE = [
   { code: 'SP-DO-CULTURE',  file: '02-do-dept/SP-DO-CULTURE_v1.1.md',
     domain: 'culture', 도코드: 'jeju',
     kw: ['문화체육교육국', '생활체육', '평생교육', '평생학습', '문화예술', '체육', '도서관', '문화'] },
-  { code: 'SP-DO-TOURISM',  file: '02-do-dept/SP-DO-TOURISM_v1.1.md',
+  { code: 'SP-DO-TOURISM',  file: '02-do-dept/SP-DO-TOURISM_v1.2.md',
     domain: 'tourism', 도코드: 'jeju',
     kw: ['관광교류국', '관광지', '숙박업', '게스트하우스', '여행업', '국제교류', '관광'] },
   { code: 'SP-DO-AGRI',     file: '02-do-dept/SP-DO-AGRI_v1.1.md',

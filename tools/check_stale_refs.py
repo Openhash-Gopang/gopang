@@ -212,6 +212,52 @@ def check_hondi_faq_registry(results: list):
             ))
 
 
+# ── 검사 4(2026-08-20 신설) — gov-router.js / division-tables.js의 file: 필드 ──
+# 배경: 두 파일 합쳐 489개 항목이 `file: "04-city/divisions/SP-....md"`처럼
+# gov-tree 최상위 폴더명으로 시작하는 접두사 없는 상대경로를 쓴다(런타임엔
+# _fetchText()가 'prompts/gov-tree/'를 앞에 붙여 resolve). 기존 FILE_REF_RE는
+# 문자열에 'prompts/' 또는 'gov-tree/'가 리터럴로 있어야만 매칭돼서 이 489개
+# 전부 사각지대였다 — 두 파일 모두 JS_FILES_TO_SCAN에 없었고, 있었어도 정규식이
+# 안 잡았을 것. 2026-08-20 division-tables.js 패치 작업 중 실사로 발견(BUILDING이
+# 존재하지 않는 v1.2를 가리켜 404 직전이었음) — 같은 로직으로 전체 스캔해보니
+# 이미 8건의 실제 MISSING/STALE이 방치돼 있었다(SP-AGY-WATER, SP-DO-TOURISM,
+# JEJUSI-JACHI 6개과).
+GOV_FILE_FIELD_RE = re.compile(
+    r"""file:\s*['"]((?:01-do|02-do-dept|03-do-agency|04-city|05-emd|06-expert|"""
+    r"""07-org|09-national|benefit-categories|00-common)/[\w./-]+\.(?:md|txt))['"]"""
+)
+
+GOV_TABLE_FILES = [
+    ROOT / 'src' / 'gopang' / 'gov' / 'gov-router.js',
+    ROOT / 'src' / 'gopang' / 'gov' / 'division-tables.js',
+]
+
+
+def check_gov_file_fields(results: list):
+    for path in GOV_TABLE_FILES:
+        if not path.exists():
+            continue
+        label = str(path.relative_to(ROOT))
+        text = path.read_text(encoding='utf-8', errors='ignore')
+        for m in GOV_FILE_FIELD_RE.finditer(text):
+            ref = m.group(1)
+            target = PROMPTS / 'gov-tree' / ref
+            if target.exists():
+                results.append(('OK', label, ref, ref))
+                continue
+            # 최신 버전이 실존하는지(STALE) 아니면 아예 없는지(MISSING) 구분 —
+            # base_key 방식 재사용(디렉터리+버전 제거 기준 최신 파일 탐색)
+            key_dir = str(Path(ref).parent)
+            key_name = re.sub(r'_v\d+[._]\d+(?:[._]\d+)?\.(md|txt)$', '', Path(ref).name)
+            candidates = list((PROMPTS / 'gov-tree' / key_dir).glob(f"{key_name}_v*.{Path(ref).suffix[1:]}")) \
+                if (PROMPTS / 'gov-tree' / key_dir).exists() else []
+            if candidates:
+                latest = max(candidates, key=lambda p: parse_version(p.name))
+                results.append(('STALE', label, ref, f"gov-tree/{key_dir}/{latest.name}"))
+            else:
+                results.append(('MISSING', label, ref, '(gov-tree 어디에도 없음)'))
+
+
 def main():
     latest_map = index_prompts_dir()
     results = []
@@ -231,6 +277,7 @@ def main():
 
     # (2026-07-17) check_router_registry_sync() 호출 제거 — 위 주석 참조
     check_hondi_faq_registry(results)
+    check_gov_file_fields(results)
 
     problems = [r for r in results if r[0] != 'OK']
     ok_count = len(results) - len(problems)
