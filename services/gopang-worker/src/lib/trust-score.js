@@ -45,10 +45,22 @@ function scoreToLevel(score) {
  * 이미 사기 탐지 오버라이드(step_up_required)가 걸려있으면 그대로 유지하고
  * 배치 계산 결과로 덮어쓰지 않는다.
  */
+const RECOMPUTE_THROTTLE_MS = 5 * 60 * 1000; // 5분
+
 export async function computeTrustScore(env, guid) {
   const existing = await getAccountRisk(env, guid);
   if (existing?.step_up_required) {
     return { skipped: true, reason: 'FRAUD_OVERRIDE_ACTIVE', existing };
+  }
+  // [2026-08-20] handleInternalLedgerEntry가 거래마다 이 함수를 호출하므로,
+  // 고빈도 계정이 PocketBase를 과도하게 재조회하지 않도록 최소 간격을 둔다.
+  // (배치/수동 재계산 경로에서는 이 스킵을 우회하고 싶을 수 있으니, 필요해지면
+  //  force 파라미터를 추가할 것 — 지금은 이벤트 트리거 단일 경로라 불필요.)
+  if (existing?.last_computed_at) {
+    const elapsed = Date.now() - new Date(existing.last_computed_at).getTime();
+    if (elapsed < RECOMPUTE_THROTTLE_MS) {
+      return { skipped: true, reason: 'THROTTLED', existing };
+    }
   }
 
   const { l1Base } = await resolveGuidToL1(env, guid);

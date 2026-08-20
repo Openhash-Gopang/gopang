@@ -21,6 +21,7 @@
 import { insertFsLedger } from './ledger.js';
 import { resolveL1Base } from '../lib/l1-registry.js';
 import { jsonResponse } from '../lib/http.js';
+import { computeTrustScore } from '../lib/trust-score.js';
 
 /** 상수시간 문자열 비교 — 타이밍 공격 방지 */
 function timingSafeEqual(a, b) {
@@ -38,7 +39,14 @@ function timingSafeEqual(a, b) {
  *   ledger_write_secret: string,
  * }
  */
-export async function handleInternalLedgerEntry(request, env) {
+/**
+ * [2026-08-20 추가] K-Market_Architecture_Master 항목 25 "재무제표
+ * 이벤트기반 갱신" — ledger_entries 기록이 실제로 성공한 직후, 해당 guid의
+ * trust_level을 비동기(ctx.waitUntil)로 재계산한다. 원장 쓰기 응답 지연에
+ * 영향을 주지 않도록 반드시 waitUntil로 분리하고, 실패해도 원장 쓰기 자체
+ * 결과(ok:true)는 그대로 반환한다.
+ */
+export async function handleInternalLedgerEntry(request, env, ctx) {
   const body = await request.json();
   const { l1_node, ledger_write_secret, ...entry } = body;
 
@@ -65,6 +73,15 @@ export async function handleInternalLedgerEntry(request, env) {
     if (!result.ok) {
       return jsonResponse({ ok: false, reason: 'LEDGER_WRITE_FAILED', detail: result.error }, 502);
     }
+
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(
+        computeTrustScore(env, entry.guid).catch((e) => {
+          console.warn('[internal/ledger-entries] trust-score 재계산 실패(원장 기록 자체는 정상):', e.message);
+        })
+      );
+    }
+
     return jsonResponse({ ok: true, record: result.record });
   } catch (e) {
     // 호출자(main.pb.js)는 이미 "실패해도 정산/발행 자체는 안 막는다"는
