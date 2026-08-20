@@ -42,6 +42,18 @@ function _currentAffiliationOrgId() {
   catch { return null; }
 }
 
+// ── SHA-256 해시 유틸 (2026-08-20 신설) ─────────────────────────────────
+// "서버는 사용자 데이터를 저장하면 안 됨, 오직 해시만"(주피터 지시)에
+// 따라, 서버로 나가는 모든 PDV 콘텐츠(what/why/how 프로즈)는 이 함수를
+// 거쳐 해시로 치환된 뒤에만 전송한다. 원문 자체는 이 함수를 벗어나지
+// 않는다 — 로컬 저장(localStorage/IndexedDB)은 이 변경과 무관하게 계속
+// 원문을 보관한다(기기 로컬 보관 자체는 원래 설계 그대로).
+async function _sha256Hex(str) {
+  const buf = new TextEncoder().encode(str ?? '');
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ── recordPDV — 하위 시스템 공통 PDV 표준 함수 (STEP 20) ────────
 // 설계 원칙 P2: 모든 하위 시스템 PDV는 Worker /pdv/report 경유 필수
 // 하위 시스템(market, gdc 등)이 window.recordPDV()를 호출하면
@@ -65,11 +77,24 @@ export async function recordPDV({ report }) {
   if (report.domain === 'work' && !report.affiliation_org_id) {
     report.affiliation_org_id = _currentAffiliationOrgId();
   }
+  // 2026-08-20 신설 — 하위 시스템(market/school/klaw 등)의 report.js가
+  // 여전히 what.summary 등에 프로즈를 담아 이 공유 함수를 호출하더라도
+  // (각자 report.js가 원본을 자기 DB에 보관하는 건 그대로 정상 — §7.3
+  // 원칙과 무관), 네트워크로 나가기 직전 여기 한 곳에서 콘텐츠를 해시로
+  // 치환한다. 16개 K-서비스 report.js를 개별 수정할 필요 없이 이 공유
+  // 함수만 고치면 전체에 적용된다.
+  const narrative = JSON.stringify({
+    what: report.what?.summary ?? null,
+    why:  report.why?.goal ?? null,
+    how:  report.how?.method ?? null,
+  });
+  const contentHash = await _sha256Hex(narrative);
+  const sanitizedReport = { ...report, what: undefined, why: undefined, how: undefined, content_hash: contentHash };
   try {
     const res = await fetch(CFG.endpoint + '/pdv/report', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ report }),
+      body:    JSON.stringify({ report: sanitizedReport }),
     });
     if (!res.ok) {
       const err = await res.text().catch(() => res.status);
@@ -191,6 +216,16 @@ export async function _recordPDV(record) {
     //  이미 이 경로로 정상 이관돼 있었는데 _recordPDV만 옛 방식으로 남아있던
     //  것을 발견해 통일한다. handlePdvReport(worker.js)가 기대하는 report
     //  스키마에 맞춰 6하원칙 필드를 구성한다.)
+    // 2026-08-20 — 서버로 프로즈를 보내지 않는다. what/why/how는 로컬
+    // 캐시(위 gopang_pdv_log)에만 남고, 서버로는 SHA-256 해시만 전송된다.
+    // record.chain_local_hash는 별개 목적(GDC 체인 해시)이라 콘텐츠
+    // 해시와 혼동하지 않도록 필드명을 분리한다(content_hash로 통일).
+    const narrative = JSON.stringify({
+      what: record.what || record.summary || null,
+      why:  whyStr,
+      how:  howStr,
+    });
+    const contentHash = await _sha256Hex(narrative);
     const res = await fetch(CFG.endpoint + '/pdv/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -199,16 +234,13 @@ export async function _recordPDV(record) {
           svc:  'gopang',
           type: record.type,
           who:   { role: 'user', ipv6: _effectiveGuid },
-          what:  { summary: record.what || record.summary || null },
-          why:   { goal: whyStr },
-          how:   { method: howStr },
           where: { svc_url: locStr || undefined },
           session_id:        record.session_id        ?? null,
           reporter_svc:      null,
           domain:            record.domain             ?? 'personal',
           affiliation_org_id: record.affiliation_org_id ?? null,
           block_hash:        record.block_hash         ?? null,
-          content_hash:      record.chain_local_hash   ?? null,
+          content_hash:      contentHash,
         },
       }),
     });

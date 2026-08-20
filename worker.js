@@ -15065,14 +15065,17 @@ async function handlePdvReport(request,env,corsHeaders){
   const resolvedSvcId=_resolveSvcId(svcId);
   const reportId=r.id||`RPT-${resolvedSvcId}-${Date.now()}-auto`;
   const pdvReportId = sessionId ? `${sessionId}:${reporterSvc || resolvedSvcId}` : reportId;
-  const summary6w={
-    who:`${r.who?.role||'user'} (${ipv6.slice(0,20)}...)`,
-    when:`${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
-    where:r.where?.svc_url||`https://${resolvedSvcId}.hondi.net`,
-    what:r.what?.summary||'(요약 없음)',
-    how:r.how?.method||'자동 집계',
-    why:r.why?.goal||'(목표 미지정)',
-  };
+  // 2026-08-20 설계 변경 — "서버는 사용자 데이터를 저장하지 않는다, 오직
+  // 해시만"(주피터 지시). 이전엔 what.summary/why.goal/how.method 평문이
+  // 그대로 summary6w에 담겨 pdv_records에 저장되고 있었다(실사로 발견된
+  // 문서-구현 불일치). 이제 클라이언트가 계산한 content_hash(SHA-256)만
+  // 받는다 — 서버는 평문을 아예 요구하지 않고, 받아도 즉시 버린다(아래
+  // r.what 등을 summary 조립에 쓰지 않음).
+  // 부수 효과(의도된 것): 재방문 인사말(U0-2)·타기관 조회(U8)는 서버가
+  // 콘텐츠를 못 읽으므로 여기서부터 이미 무력화된다 — 두 기능은
+  // handleOwnerPdvSelfHistory/handlePdvQuery에서 별도로 410 처리했다.
+  const contentHash = r.content_hash || body.content_hash || null;
+  if (!contentHash) return _err(400, 'CONTENT_HASH_REQUIRED', '평문 대신 content_hash(SHA-256, 클라이언트 계산) 필수 — 서버는 콘텐츠를 저장하지 않습니다', corsHeaders);
   const pdvId=`PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
   const now = new Date().toISOString();
 
@@ -15081,12 +15084,15 @@ async function handlePdvReport(request,env,corsHeaders){
   const blockId     = r.block_id     || body.block_id     || null;
   const isAnchored  = !!blockHash;
 
-  // pdv_records 스키마에 없는 필드(period/raw_hash/openhash_block_id/openhash_anchored_at)는
-  // summary_6w(JSON, 스키마리스) 안에 같이 보존 — 컬렉션 스키마 변경 없이 무손실 이관
+  // 2026-08-20 — summary_6w는 이제 콘텐츠(who/what/why/how 프로즈)를 전혀
+  // 담지 않는다. period/블록 정보 같은 운영 메타데이터 + content_hash만
+  // 보존한다(콘텐츠 무결성 검증은 클라이언트가 자기 로컬 원문으로 해시를
+  // 재계산해 이 값과 대조하는 방식으로 이뤄진다 — 서버는 검증 못 함, 이는
+  // 의도된 설계다: 서버가 원문을 갖고 있지 않으므로 서버 스스로 검증할
+  // 방법이 없는 게 오히려 "서버는 못 읽는다"는 원칙의 자연스러운 귀결).
   const summary6wFull = {
-    ...summary6w,
+    content_hash:       contentHash,
     period:             r.when ?? r.period ?? null,
-    raw_hash:           r.content_hash || null,
     openhash_block_id:  blockId,
     openhash_anchored_at: isAnchored ? now : null,
   };
@@ -15100,7 +15106,10 @@ async function handlePdvReport(request,env,corsHeaders){
       reporter_svc: reporterSvc || resolvedSvcId,
       svc:          resolvedSvcId,
       type:         r.type || 'report',
-      summary:      r.what?.summary || '',
+      // 2026-08-20 — 평문 삭제. summary 필드엔 이제 content_hash(SHA-256
+      // hex)만 들어간다 — 프로즈 요약은 클라이언트 로컬(IndexedDB/
+      // localStorage)에만 남고 서버로는 절대 전송되지 않는다.
+      summary:      contentHash,
       summary_6w:   JSON.stringify(summary6wFull),
       block_hash:   blockHash,
       risk_level:   r.analysis?.risk_level || 'low',
@@ -15319,7 +15328,10 @@ async function _writeOwnerPdvRecord(env, r) {
   if (!RECORD_TYPES.includes(r.recordType)) throw new Error(`record_type은 ${RECORD_TYPES.join('|')} 중 하나여야 합니다`);
   const ownerAgency = String(r.ownerAgency || '').trim();
   if (!ownerAgency) throw new Error('owner_agency 필수');
-  if (!r.what) throw new Error('what 필수');
+  // 2026-08-20 설계 변경 — what/why/detail은 이제 클라이언트가 계산한
+  // SHA-256 해시로만 받는다(whatHash 등). 프로즈 원문(r.what)은 더 이상
+  // 받지 않는다 — 호출부(handleOwnerPdvReport)도 함께 갱신했다.
+  if (!r.whatHash) throw new Error('what_hash 필수');
 
   const HOW_VALUES = ['completed', 'escalated_success', 'escalated_ai_limit', 'early_exit'];
   const how = HOW_VALUES.includes(r.how) ? r.how : 'completed';
@@ -15345,10 +15357,13 @@ async function _writeOwnerPdvRecord(env, r) {
       who_hash:        whoHash,
       when:            r.when || now,
       where:           r.where || null,
-      what:            String(r.what).slice(0, 500),
+      // 2026-08-20 — what/why/detail 필드에 이제 프로즈가 아니라 해시가
+      // 들어간다. how는 예외 — 'completed' 등 고정된 카테고리 값이라
+      // "사용자 데이터"(내용)가 아니라 상태 코드이므로 평문 유지.
+      what:            r.whatHash,
       how,
-      why:             r.why || null,
-      detail:          r.detail ? JSON.stringify(r.detail) : null,
+      why:             r.whyHash || null,
+      detail:          r.detailHash || null,
       outcome_signals: r.outcomeSignals ? JSON.stringify(r.outcomeSignals) : null,
       source_ref:      null, // §7.3 원칙 — 원문 미저장
       confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
@@ -15423,7 +15438,9 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   if (!OWNER_AGENCY_WHITELIST.has(ownerAgency))
     return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 owner_agency: ${ownerAgency}`, corsHeaders);
 
-  if (!r.what || !r.how) return _err(400, 'SCHEMA_ERROR', 'what/how 필수', corsHeaders);
+  // 2026-08-20 설계 변경 — what_hash(클라이언트가 계산한 SHA-256) 필수,
+  // 평문 what은 더 이상 받지 않는다.
+  if (!r.what_hash || !r.how) return _err(400, 'SCHEMA_ERROR', 'what_hash/how 필수', corsHeaders);
 
   const HOW_VALUES = ['completed', 'escalated_success', 'escalated_ai_limit', 'early_exit'];
   if (!HOW_VALUES.includes(r.how))
@@ -15436,8 +15453,8 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
     await _writeOwnerPdvRecord(env, {
       recordType: r.record_type, ownerAgency, guidForHashing: r.guid_for_hashing || null,
       personaKey: r.persona_key, personaVersion: r.persona_version,
-      when: r.when, where: r.where, what: r.what, how: r.how, why: r.why,
-      detail: r.record_type === 'own_output' ? r.detail : null,
+      when: r.when, where: r.where, whatHash: r.what_hash, how: r.how, whyHash: r.why_hash || null,
+      detailHash: r.record_type === 'own_output' ? (r.detail_hash || null) : null,
       outcomeSignals: r.outcome_signals, confidence: r.confidence,
     });
   } catch (e) {
@@ -15467,6 +15484,18 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
 // owner_pdv를 읽어 요약만 돌려준다(원문 who_hash·내부 id는 클라이언트에
 // 노출하지 않음).
 async function handleOwnerPdvSelfHistory(request, env, corsHeaders) {
+  // 2026-08-20 설계 변경 — "서버는 사용자 데이터를 저장하면 안 됨, 오직
+  // 해시만"(주피터 지시)에 따라 owner_pdv.what/why/detail이 프로즈가 아닌
+  // 해시로만 저장되면서, 이 엔드포인트의 존재 이유(과거 상담 요약을 읽어
+  // 재방문 인사말(U0-2)에 반영)가 서버 쪽에서 성립하지 않게 됐다 — 서버가
+  // 해시만 갖고 있어 "무슨 상담이었는지"를 재구성할 방법이 없다.
+  // 완전 제거(옵션 A, 명시적으로 선택됨) — 기기 로컬 재구현은 별도
+  // 과제로 남긴다(이 커밋 범위 밖).
+  return _err(410, 'FEATURE_REMOVED_HASH_ONLY_REDESIGN',
+    'owner_pdv가 해시 전용으로 전환되며 서버측 자기이력 조회가 제거됐습니다. ' +
+    '기기 로컬 재구현 전까지 이 기능은 비활성 상태입니다.', corsHeaders);
+
+  // eslint-disable-next-line no-unreachable
   if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'SCHEMA_ERROR', 'JSON body 필수', corsHeaders);
@@ -15985,6 +16014,15 @@ async function _verifiedPdvSession(request,env){
 }
 
 async function handlePdvQuery(request,env,corsHeaders){
+  // 2026-08-20 설계 변경 — 완전 제거(옵션 A, 명시적으로 선택됨). U8(동의
+  // 기반 타기관 조회)은 pdv_records.summary/summary_6w가 이제 콘텐츠가
+  // 아니라 해시만 담고 있어 서버가 반환할 읽을 수 있는 내용이 없다.
+  // _fetchPdvByScope/_aggregateRiskFactors도 같은 이유로 이 경로에서만
+  // 죽은 코드가 됐다(다른 호출부 없음 확인) — 별도 정리는 후속 과제.
+  return _err(410, 'FEATURE_REMOVED_HASH_ONLY_REDESIGN',
+    'pdv_records가 해시 전용으로 전환되며 동의 기반 타기관 조회(U8)가 제거됐습니다.', corsHeaders);
+
+  // eslint-disable-next-line no-unreachable
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
   const origin=request.headers.get('Origin')||'';
   try{
