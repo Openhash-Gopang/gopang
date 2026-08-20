@@ -37,6 +37,19 @@
 
 const DEFAULT_PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
+// ── SHA-256 해시 유틸 (2026-08-20 신설) ─────────────────────────────────
+// "서버는 사용자 데이터를 저장하면 안 됨, 오직 해시만"(주피터 지시).
+// 이 파일의 세 기록 함수(reportGwpSessionEnd/recordOwnerPDV/
+// recordUserPdvForExpert) 모두, 네트워크로 나가기 직전 콘텐츠를 이
+// 함수로 해시화한다 — pdv/record.js에도 동일한 헬퍼가 있으나 이 파일은
+// 독립 모듈(별도 오리진에서 <script type="module" src="https://hondi.net/...">
+// 로 로드됨)이라 import로 공유하지 않고 각자 유지한다(기존 관례).
+async function _sha256Hex(str) {
+  const buf = new TextEncoder().encode(str ?? '');
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ── keepalive-safe fetch (2026-07-26 신설) ──────────────────────────────
 // 배경: reportGwpSessionEnd()/recordOwnerPDV()는 beforeunload/pagehide/
 // visibilitychange 등 "탭이 곧 사라지는" 시점에 호출되는 경우가 실사용에서
@@ -119,8 +132,14 @@ export async function reportGwpSessionEnd({
   const whenObj = { period_start: startedAt, period_end: now };
   const whatText = summaryLine || `${agencyId} 상담 완료`;
 
-  // (a) 서브시스템 자기 PDV — 대화 원문 시간순 저장
+  // (a) 서브시스템 자기 PDV — 대화 원문 "시간순 저장"이었으나, 2026-08-20
+  // 설계 변경으로 서버는 콘텐츠를 저장하지 않는다. transcript는 더 이상
+  // 서버로 전송되지 않고, SHA-256 해시만 전송한다 — K-서비스가 자기
+  // 운영 목적으로 원문을 남기고 싶다면 자체 DB(각 서비스 report.js가
+  // 이미 하고 있는 패턴, gopang_pdv_rules.md §1 참조)에 별도로 저장해야
+  // 한다. pdv_records는 더 이상 그 역할을 하지 않는다.
   try {
+    const transcriptHash = await _sha256Hex(JSON.stringify({ transcript, why: whatText }));
     await _fetchKeepaliveSafe(proxyBase + '/pdv/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -130,9 +149,7 @@ export async function reportGwpSessionEnd({
           who: { ipv6: resolvedGuid, role: 'user' },
           when: whenObj,
           where: { svc_url: location.href },
-          what: { summary: transcript },
-          how: { method: 'gov_relay_conversation' },
-          why: { goal: whatText },
+          content_hash: transcriptHash,
         },
       }),
     });
@@ -256,6 +273,15 @@ export async function recordOwnerPDV({
   }
 
   const now = new Date().toISOString();
+  // 2026-08-20 — what/why/detail은 콘텐츠(사용자 데이터)이므로 해시로만
+  // 전송한다. how는 고정된 카테고리 값(§7.4의 4개 enum 중 하나)이라
+  // 예외 — 상태 코드지 사용자 콘텐츠가 아니다.
+  const detailObj = recordType === 'own_output' ? (detail || null) : null;
+  const [whatHash, whyHash, detailHash] = await Promise.all([
+    _sha256Hex(what),
+    why ? _sha256Hex(why) : Promise.resolve(null),
+    detailObj ? _sha256Hex(JSON.stringify(detailObj)) : Promise.resolve(null),
+  ]);
   const record = {
     record_id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2),
     record_type: recordType,
@@ -265,10 +291,10 @@ export async function recordOwnerPDV({
     guid_for_hashing: guid || null, // 프록시가 해싱 후 폐기 — owner_pdv에는 who_hash만 저장
     when: when || now,
     where: where || (typeof location !== 'undefined' ? location.href : null),
-    what,
+    what_hash: whatHash,
     how,
-    why,
-    detail: recordType === 'own_output' ? (detail || null) : null,
+    why_hash: whyHash,
+    detail_hash: detailHash,
     outcome_signals: outcomeSignals || null,
     source_ref: null, // 원문 미저장 원칙(SP_PDV §1/§7.3)
     confidence: 1,
@@ -330,6 +356,8 @@ export async function recordUserPdvForExpert({
   }
   const now = new Date().toISOString();
   try {
+    // 2026-08-20 — what/why(상담 요약 한 줄)는 콘텐츠라 해시로만 전송한다.
+    const contentHash = await _sha256Hex(JSON.stringify({ what, why: why || what }));
     const res = await _fetchKeepaliveSafe(proxyBase + '/pdv/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -339,9 +367,7 @@ export async function recordUserPdvForExpert({
           who: { ipv6: guid, role: 'user' },
           when: { period_start: when || now, period_end: now },
           where: { svc_url: where || (typeof location !== 'undefined' ? location.href : null) },
-          what: { summary: what },
-          how: { method: 'expert_chat' },
-          why: { goal: why || what },
+          content_hash: contentHash,
         },
       }),
     });
@@ -399,6 +425,10 @@ export async function queryOwnerPdvSelfHistory({
       }),
     });
     if (!res.ok) {
+      // 2026-08-20 — 해시 전용 재설계로 이 엔드포인트는 서버에서 410을
+      // 반환하도록 의도적으로 바뀌었다(U0-2 서버측 제거, 기기 로컬
+      // 재구현 전까지). 기존의 "실패 시 새 세션으로 진행" 폴백이 그대로
+      // 이 상황도 우아하게 처리한다 — 별도 분기 불필요.
       console.warn('[owner-pdv] 자기이력 조회 실패(무시 — 새 세션으로 진행):', res.status);
       return { ok: false, found: false };
     }
