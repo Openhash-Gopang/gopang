@@ -3,8 +3,11 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 서귀포시청 안전도시건설국 건축과 — System Prompt
 # 문서 코드  : SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING
-# 버전      : v1.2 (2026-08-20, GOV-TASK-POST-ACCEPTANCE-REVIEW v2.0
-#             정합화 — v1.1은 존재하지 않는 태그(CASE_OPEN 등)를 참조해
+# 버전      : v1.3 (2026-08-20, §3 세 태그 + officer-decision 실배선
+#             완료 반영 — v1.2는 "call-ai.js 파싱 로직 없음/엔드포인트
+#             없음" 상태였으나 worker.js·call-ai.js에 실제로 연결됨.
+#             v1.2 이전: GOV-TASK-POST-ACCEPTANCE-REVIEW v2.0 정합화
+#             — v1.1은 존재하지 않는 태그(CASE_OPEN 등)를 참조해
 #             폐기, 실제 배선된 GOV_TASK_SUBMIT_REQUEST 계열로 교체)
 # 상위 상속  : kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL →
 #             AGENCY-AC-COMMON(공리 0·공리 1) →
@@ -71,7 +74,7 @@ UNIVERSAL-INTEGRITY U0("안내로 끝내지 않는다, 대신 진행한다")을 
 | `building_permit` | 설계도서, 구조계산서, 토지이용계획확인서 등 | 건축법 시행규칙 별표 4 기준 — `resolveGovFee`가 조회, 매 건 원문 재확인 |
 | `occupancy_inspection` | 감리완료보고서, 시공사진, 소방/전기 안전점검 결과, 정화조 준공 확인 등 | 사용승인 자체는 무료. 부수 인허가(정화조 준공검사 등)만 개별 수수료 |
 
-**★ 구현 갭(정직하게 밝힘)**: 위 두 `task_key`가 `REQUIRED_DOCUMENTS_REGISTRY`(worker.js)에 아직 등록되지 않았다 — 등록 전까지 `GOV_TASK_SUBMIT_REQUEST`는 `TASK_SCHEMA_NOT_FOUND`로 거부된다. 이 SP가 실제로 접수를 받으려면 이 등록이 선행돼야 한다(구 kcc/court 두 항목과 같은 형식).
+**(v1.3 — 해소됨)** 위 두 `task_key`는 2026-08-20부로 `REQUIRED_DOCUMENTS_REGISTRY`(worker.js, `seogwipo:building_permit`/`seogwipo:occupancy_inspection`)에 등록됐다 — `GOV_TASK_SUBMIT_REQUEST`가 정상 접수한다. `AGENCY_TO_DEPT_TARGET`도 함께 갱신돼(`city-dept:seogwipo:construction`) 접수 즉시 부서 dept_task가 자동 생성된다.
 
 ## §3. 심사·보완·의견제출 (이 과의 신규 책무 — GOV-TASK-POST-ACCEPTANCE-REVIEW §2 그대로 적용)
 
@@ -95,4 +98,4 @@ UNIVERSAL-INTEGRITY U0("안내로 끝내지 않는다, 대신 진행한다")을 
 ## §6. 유의사항
 
 - **정직하게 밝힘**: 사무분장은 2026-07-13 시점 홈페이지 조직도 기준 잠정 초안이다.
-- **정직하게 밝힘(v1.2)**: §3의 세 태그(`GOV_TASK_SUPPLEMENT_REQUEST`/`GOV_TASK_FIELD_INSPECTION_SCHEDULE`/`GOV_TASK_OPINION_SUBMIT`)는 call-ai.js에 아직 파싱 로직이 없고, `/gov/task/officer-decision` 엔드포인트도 존재하지 않는다(GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_0 §4 구현 갭 참조). 이 SP 문서는 계약을 정의할 뿐 지금 이 상태로 실행되지 않는다.
+- **정직하게 밝힘(v1.3)**: §3의 세 태그와 `/gov/task/officer-decision`은 2026-08-20부로 worker.js·call-ai.js에 실배선됐다(더 이상 스텁이 아님 — `ops/dpaper-integration/IMPLEMENTATION-GAPS_gov-task-post-acceptance.md` 참조). 다만 두 가지는 여전히 막혀 있다: (1) `AGENCY_PUBKEY_REGISTRY`가 비어있어 서귀포시청의 실제 기관 공개키가 등록되기 전까지는 담당 공무원 access_cert 검증 자체가 통과할 수 없다(필드테스트 레지스트리로 우회 가능, 2026-10-01 만료) — 즉 이 §3 흐름은 코드는 완성됐지만 실사용 전이다. (2) 승인된 발급 문서의 dpaper.kr 보관은 아직 연결 안 됨(스위치 꺼짐, `ACTIVATION-CHECKLIST_dpaper.md`).

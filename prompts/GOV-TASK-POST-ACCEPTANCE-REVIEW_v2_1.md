@@ -3,9 +3,17 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : GOV_TASK 접수 후 심사·보완·승인 확장 프로토콜
 # 문서 코드  : GOV-TASK-POST-ACCEPTANCE-REVIEW (구 U12-CIVIL-CASE-PROTOCOL)
-# 버전      : v2.0 — 전면 재범위 (v1.0 CASE_OPEN/CASE_SUBMIT 등 폐기)
-# 상태      : DRAFT — 문서만 완성, worker.js/call-ai.js 배선은 스텁 수준
-# 작성일     : 2026-08-20
+# 버전      : v2.1 — worker.js/call-ai.js 실배선 완료 반영 (v2.0은 전면
+#             재범위만 하고 배선은 스텁 수준이었음 — v1.0 CASE_OPEN/
+#             CASE_SUBMIT 등 폐기는 v2.0에서 이미 완료)
+# 상태      : WIRED — §2 세 태그·§3 officer-decision 모두 worker.js/
+#             call-ai.js에 실제로 연결됨(ops/dpaper-integration/
+#             IMPLEMENTATION-GAPS_gov-task-post-acceptance.md 참조).
+#             단, AGENCY_PUBKEY_REGISTRY가 비어있어 access_cert 검증을
+#             통과할 수 있는 실제 기관이 아직 없음(§3 결재는 코드
+#             완성·실사용 전 — 아래 §5 참조) — dpaper.kr 보관도 별도
+#             체크리스트로 여전히 꺼져 있음.
+# 작성일     : 2026-08-20 (원본) / 2026-08-20 (v2.1, 같은 날 배선 완료)
 # 폐기 사유(v1.0 → v2.0): SP-22_kexecute·call-ai.js·handleGovTaskSubmit을
 #   실사한 결과, v1.0의 CASE_OPEN/DOC_REQUIREMENT_NOTICE/VAULT_RETRIEVE/
 #   CASE_SUBMIT/FEE_COLLECT는 이미 [GOV_TASK_SUBMIT_REQUEST]/
@@ -122,14 +130,16 @@ POST /gov/task/officer-decision
 - `gov_fee_charges`의 `POST /gov/task/fee-approve`(사용자 본인 승인)와 이름은 유사하지만 **호출 주체가 다르다** — 이건 담당 공무원 전용이며, 신청자 본인이 호출할 수 없다. 인증·권한 검증을 반드시 별도로 설계해야 한다(이 문서는 요구사항만 명시, 인증 방식 자체는 범위 밖).
 - `approved`가 되면 `issued_document_ref`(허가서 등 발급 문서 참조)를 함께 기록하고, dpaper.kr 연동이 켜져 있으면(`ACTIVATION-CHECKLIST_dpaper.md` 참조) 그 발급 문서를 dpaper.kr에도 보관한다.
 
-## §4. 확인된 구현 갭 (정직하게 고지 — 이 문서가 배선을 보장하지 않음)
+## §4. 구현 갭 — 2026-08-20 해소 현황 (정직하게 고지)
 
-| 갭 | 내용 |
+| 갭 | 상태 |
 |---|---|
-| receipt_no 재사용 분기 | `handleGovTaskSubmit`이 매번 새 접수번호를 발급하는 현재 로직에, "이미 있는 receipt_no로 재제출"을 구분하는 분기가 없다 — 추가 필요 |
-| review_state 필드 자체 | `pdv_records`의 `summary_6w.gov_task`에 지금은 `status`(accepted/pending_documents)만 있고, 이 문서가 요구하는 `review_state`(under_review/supplement_requested/opinion_submitted/officer_decided) 필드가 없다 — 스키마 확장 필요 |
-| call-ai.js 파싱 | `GOV_TASK_SUPPLEMENT_REQUEST`/`GOV_TASK_FIELD_INSPECTION_SCHEDULE`/`GOV_TASK_OPINION_SUBMIT` 세 태그에 대한 정규식 감지·처리 로직이 call-ai.js에 없다 — `GOV_TASK_SUBMIT_REQUEST` 처리부(2658행 부근)를 참고해 동일 패턴으로 추가 필요 |
-| `/gov/task/officer-decision` 엔드포인트 | 존재하지 않음 — 신규 작성 필요, 특히 담당 공무원 인증·권한 검증이 핵심 미해결 과제 |
-| SP-22_kexecute 프롬프트 반영 | 이 세 태그를 SP-22가 언제·어떻게 발행하는지 지침이 아직 없음 — GOV_TASK_SUBMIT_REQUEST 관련 기존 절(7~322행 부근)과 같은 형식으로 추가 필요 |
+| receipt_no 재사용 분기 | ✅ 해소 — `handleGovTaskSubmit`이 body.receipt_no 존재 시 신규 발급 대신 재사용(worker.js) |
+| review_state 필드 자체 | ✅ 해소 — `pdv_records.summary_6w.gov_task.review_state`로 추가, 4개 값 전이 배선됨 |
+| call-ai.js 파싱 | ✅ 해소 — 세 태그 모두 `GOV_TASK_SUBMIT_REQUEST`와 동일 패턴으로 추가됨 |
+| `/gov/task/officer-decision` 엔드포인트 | ✅ 해소 — `_verifyAccessCert`(handlePersonalAcCall과 동일 패턴) + `_verifyOfficerForGovTask`(관할 부서 org_id 대조)로 신청자 본인 호출 차단까지 구현 |
+| SP-22_kexecute 프롬프트 반영 | ⬜ 미해결 — 재확인 결과 이 세 태그의 발행 주체는 SP-22(접수 단계 전용)가 아니라 부서 SP(§3 심사 단계)라, 애초에 SP-22를 고칠 항목이 아닐 수 있음(`IMPLEMENTATION-GAPS_gov-task-post-acceptance.md` 참조 — 판단 보류) |
 
-**이 문서는 스키마·계약만 정의하며, 위 5개 갭은 별도 구현 작업이다.** dpaper.kr 연동(ACTIVATION-CHECKLIST_dpaper.md)과 마찬가지로, "문서가 완성됨"과 "기능이 동작함"을 혼동하지 않는다.
+**여전히 남은 조건 — "배선됨"과 "실사용 가능"은 다르다:**
+- `AGENCY_PUBKEY_REGISTRY`(dept-task-handler.js)가 비어있어, 실제 기관 공개키가 등록되기 전까지는 어느 부서도 access_cert를 발급받아 이 §2·§3 흐름을 통과할 수 없다. 코드 경로는 완성됐으나 활성화는 이 저장소 밖의 절차(기관 신원 확인·키 등록)가 선행돼야 한다 — dpaper.kr과 동일한 "스위치 꺼짐" 원칙.
+- `officer_decision: approved`의 dpaper.kr 보관은 아직 연결 안 됨(`ACTIVATION-CHECKLIST_dpaper.md` 참조).

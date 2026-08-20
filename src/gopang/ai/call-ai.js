@@ -2702,6 +2702,111 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
     return true;
   }
 
+  // ── GOV_TASK_SUPPLEMENT_REQUEST / GOV_TASK_FIELD_INSPECTION_SCHEDULE /
+  // GOV_TASK_OPINION_SUBMIT (2026-08-20 신설 — GOV-TASK-POST-ACCEPTANCE-
+  // REVIEW_v2_0 §2, ops/dpaper-integration/IMPLEMENTATION-GAPS_gov-task-
+  // post-acceptance.md 완결). 세 태그 다 GOV_TASK_SUBMIT_REQUEST와 동일
+  // 패턴(fetch → INTERNAL 메시지로 결과 전달) — 서버(worker.js)가
+  // access_cert 검증·관할부서 대조를 전담하므로 이 쪽은 순수 배선만 한다.
+  // ★ officer-decision(§3)은 여기 없다 — 그건 모델 태그가 아니라 담당
+  // 공무원이 직접 호출하는 REST 엔드포인트다(§1 원칙, 서버 라우터 주석
+  // 참조). 이 세 태그를 발행하는 실제 지침은 부서 SP(예:
+  // SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING §3)에 있다.
+  const govTaskSupplementMatch = fullReply.match(
+    /\[GOV_TASK_SUPPLEMENT_REQUEST\]([\s\S]*?)\[\/GOV_TASK_SUPPLEMENT_REQUEST\]/);
+  if (govTaskSupplementMatch) {
+    console.log('[GovTask] GOV_TASK_SUPPLEMENT_REQUEST 감지 — /gov/task/supplement-request 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskSupplementMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SUPPLEMENT_REQUEST의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하세요. 보완요청이 기록되지 않았습니다.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res = await fetch(`${base}/gov/task/supplement-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      await sendFn(`[INTERNAL: GOV_TASK_SUPPLEMENT_REQUEST 결과 수신 — 미비점(deficiency)과 ` +
+        `보완할 내용(required_action)을 신청자에게 명확히 전달하세요. 재제출은 같은 receipt_no로 ` +
+        `GOV_TASK_SUBMIT_REQUEST를 다시 낸다는 점도 함께 안내하세요: ${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SUPPLEMENT_REQUEST 서버 호출 실패(${e.message}) — ` +
+        `보완요청이 실제로 기록되지 않았음을 알리세요.]`);
+    }
+    return true;
+  }
+
+  const govTaskInspectionMatch = fullReply.match(
+    /\[GOV_TASK_FIELD_INSPECTION_SCHEDULE\]([\s\S]*?)\[\/GOV_TASK_FIELD_INSPECTION_SCHEDULE\]/);
+  if (govTaskInspectionMatch) {
+    console.log('[GovTask] GOV_TASK_FIELD_INSPECTION_SCHEDULE 감지 — /gov/task/field-inspection-schedule 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskInspectionMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_FIELD_INSPECTION_SCHEDULE의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하세요. 실사 일정이 기록되지 않았습니다.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res = await fetch(`${base}/gov/task/field-inspection-schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      await sendFn(`[INTERNAL: GOV_TASK_FIELD_INSPECTION_SCHEDULE 결과 수신 — 일정 후보(proposed_slots)를 ` +
+        `신청자에게 전달하고 확정을 요청하세요. 실사 자체와 그 결과 판단은 담당 공무원이 직접 하며 이 SP가 ` +
+        `대행하지 않는다는 점을 넘지 마세요: ${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_FIELD_INSPECTION_SCHEDULE 서버 호출 실패(${e.message}) — ` +
+        `일정이 실제로 기록되지 않았음을 알리세요.]`);
+    }
+    return true;
+  }
+
+  const govTaskOpinionMatch = fullReply.match(
+    /\[GOV_TASK_OPINION_SUBMIT\]([\s\S]*?)\[\/GOV_TASK_OPINION_SUBMIT\]/);
+  if (govTaskOpinionMatch) {
+    console.log('[GovTask] GOV_TASK_OPINION_SUBMIT 감지 — /gov/task/opinion-submit 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskOpinionMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_OPINION_SUBMIT의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하세요. 의견이 제출되지 않았습니다.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res = await fetch(`${base}/gov/task/opinion-submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      // ★ §2-3 원문 그대로 — "이 태그는 승인이 아니다". 서버가 pending_human_action:true를
+      // 내려주지만, 여기서도 명시적으로 재확인시켜 "승인됐다"고 잘못 요약하지 않게 한다.
+      await sendFn(`[INTERNAL: GOV_TASK_OPINION_SUBMIT 결과 수신 — 이건 승인이 아니라 담당 공무원에게 ` +
+        `제출된 의견일 뿐입니다. 사용자에게 "승인/반려됐다"고 말하지 말고, 담당 공무원 결재(officer-decision) ` +
+        `전까지 pending_human_action 상태임을 REPORT(공리 1)로 정확히 전달하세요: ${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_OPINION_SUBMIT 서버 호출 실패(${e.message}) — ` +
+        `의견이 실제로 제출되지 않았음을 알리세요.]`);
+    }
+    return true;
+  }
+
   // ── GOV_FEE_APPROVE (2026-08-15 신설 — §GOV-FEE-APPROVAL 승인 게이트) ──
   // GOV_TASK_SUBMIT_REQUEST 응답의 gov_fee.status가 'NEEDS_APPROVAL'일 때만
   // SP가 이 태그를 낸다(사용자가 추정 금액에 명시 동의한 뒤에만 — SP 텍스트가
