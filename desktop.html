@@ -1535,6 +1535,7 @@ section.section[data-tab].tab-active { display: block; }
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <nav class="page-tabs" id="page-tabs" role="tablist" aria-label="혼디 소개 탭">
+      <button type="button" class="page-tab" data-tab-target="rpt-hondi-example" role="tab" aria-selected="false">혼디 예시</button>
       <button type="button" class="page-tab" data-tab-target="rpt-mine-vs-their" role="tab" aria-selected="false">AI 비서</button>
       <button type="button" class="page-tab" data-tab-target="rpt-mine-secretary" role="tab" aria-selected="false">나만의 AI 비서</button>
       <button type="button" class="page-tab" data-tab-target="rpt-vs-kakao-ai-blockchain" role="tab" aria-selected="false">카톡·AI·블록체인 비교</button>
@@ -1566,7 +1567,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-prepare-finance", "rpt-klaw", "rpt-admin-scenario", "rpt-ai-gov", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
+  var TABS = ["pamphlet", "intro", "parallel", "features", "pdv-ac", "usage", "structure", "rpt-hondi-example", "rpt-mine-vs-their", "rpt-mine-secretary", "rpt-vs-kakao-ai-blockchain", "rpt-lifelong-professor", "rpt-rule-of-law", "rpt-superconserve", "rpt-mote-openhash", "rpt-gdc", "rpt-prepare-finance", "rpt-klaw", "rpt-admin-scenario", "rpt-ai-gov", "rpt-4day-week", "rpt-usage-scenarios", "rpt-public-service"];
   var tabButtons = document.querySelectorAll(".page-tab[data-tab-target]");
   var tabSections = document.querySelectorAll("section.section[data-tab]");
 
@@ -1658,6 +1659,9 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <!-- ── 한눈에 보기 (2026-08-09 신설, 대중용 2페이지 홍보 팜플렛 통합) ── -->
+<section class="section rpt-embed" id="rpt-hondi-example-embed" data-tab="rpt-hondi-example">
+  <iframe class="rpt-iframe" data-src="reports/hondi-example.html" title="혼디 예시" loading="lazy"></iframe>
+</section>
 <section class="section rpt-embed" id="rpt-mine-vs-their-embed" data-tab="rpt-mine-vs-their">
   <iframe class="rpt-iframe" data-src="reports/hondi-mine-vs-their-ai.html" title="AI 비서" loading="lazy"></iframe>
 </section>
