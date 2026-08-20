@@ -18721,6 +18721,26 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'license_proof',  name: '면허증(이용업·미용업만 해당)', required: false, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 07-org(출자출연기관) 최초 등록. 04-city 부서 15건과
+  // 달리 이 기관은 도청과 별도 법인격(재단법인) — REQUIRED_DOCUMENTS_REGISTRY
+  // 항목 구조 자체는 동일하게 재사용되지만, AGENCY_TO_DEPT_TARGET 쪽은
+  // target_type:'org'(DEPT_TASK_TAXONOMY.org에 'org:JCGF' 사전 등록 확인됨)로
+  // 다르게 배선한다. 법적 근거는 웹검색으로 확인(2026-08-20): 지역신용보증재단법
+  // 제17조(보증 업무처리) — 정부24 민원안내(소기업·소상공인 신용보증 지원) 기준
+  // 구비서류 확인.
+  'jcgf:credit_guarantee_application': {
+    agency:      'jcgf',
+    agency_name: '제주신용보증재단',
+    task_name:   '신용보증 신청',
+    legal_basis: '지역신용보증재단법 제17조',
+    documents: [
+      { id: 'guarantee_form', name: '신용보증 신청서',       required: true, acquisition: 'user_authored' },
+      { id: 'biz_reg',        name: '사업자등록증',           required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.business_registration', max_age_days: 30 }, // 정부24 안내 기준 관공서 발급서류는 최근 1개월 이내 — 강원신보 등 타 지역재단 공통 안내로 확인, 제주신보 자체 규정 재확인 필요
+      { id: 'financials',     name: '재무제표',               required: true, acquisition: 'user_authored' },
+      { id: 'lease_contract', name: '임대차계약서(임차인인 경우만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18762,6 +18782,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:public_sanitation_business_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:food_business_report':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  // ── 07-org(출자출연기관) — target_type:'org' (DEPT_TASK_TAXONOMY.org에 사전 등록된 코드) ──
+  'jcgf:credit_guarantee_application': { target_type: 'org', target_id: 'org:JCGF' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
