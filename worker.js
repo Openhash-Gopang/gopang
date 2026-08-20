@@ -15369,7 +15369,15 @@ async function _writeOwnerPdvRecord(env, r) {
       confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
     }),
   });
-  if (!pbFetch.ok) throw new Error(`owner_pdv 저장 실패 HTTP ${pbFetch.status}`);
+  if (!pbFetch.ok) {
+    // 2026-08-20 임시 진단 패치 — 503만 반환하고 실제 원인(PocketBase 필드
+    // 검증 오류 등)을 삼키고 있어 실사용 검증에서 원인을 알 수 없었다.
+    // PocketBase의 실제 응답 본문을 에러 메시지에 포함시켜 handleOwnerPdvReport의
+    // catch 블록(아래)이 이를 클라이언트로 돌려주도록 한다 — 원인 확인
+    // 후 되돌릴 임시 조치.
+    const pbErrBody = await pbFetch.text().catch(() => '(본문 읽기 실패)');
+    throw new Error(`owner_pdv 저장 실패 HTTP ${pbFetch.status}: ${pbErrBody}`);
+  }
 }
 
 async function handleOwnerPdvReport(request, env, corsHeaders) {
@@ -15483,7 +15491,10 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
       outcomeSignals: r.outcome_signals, confidence: r.confidence,
     });
   } catch (e) {
-    return _err(503, 'OWNER_PDV_WRITE_FAILED', '기관측 PDV 저장 실패, 잠시 후 재시도', corsHeaders);
+    // 2026-08-20 임시 진단 패치 — 원인 확인을 위해 e.message를 그대로
+    // 노출한다(내부 API라 민감정보 유출 우려는 낮음). 원인 확정 후
+    // 원래의 일반 메시지로 되돌릴 것.
+    return _err(503, 'OWNER_PDV_WRITE_FAILED', `기관측 PDV 저장 실패(진단용 상세): ${e.message}`, corsHeaders);
   }
 
   return new Response(JSON.stringify({
