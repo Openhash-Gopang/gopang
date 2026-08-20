@@ -18933,6 +18933,32 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'facility_desc',name: '시설·설비 내역서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 경제일자리국(제주시)/자치행정국(서귀포) 마을활력과
+  // 마을기업 지정신청. 지금까지와 다른 종류 — **법률이 아닌 행정지침
+  // 근거**다: 한국법제연구원 연구보고서(2024, "마을기업 육성 관련 법제
+  // 분석")가 "마을기업 육성사업은... 아직 명확한 법적 근거가 없는 상황"
+  // 이라고 명시 — 유일한 근거는 「마을기업 육성사업 시행지침」(행정안전부,
+  // 매년 개정되는 행정지침)이다. 웹검색으로 확인(2026-08-20). 사용자
+  // 승인하에 이 사실을 legal_basis에 정직하게 표기하고 진행 — 조례
+  // 원문(제주시/서귀포시 개별 조례)이 확인되면 나중에 교체할 자리표시자.
+  'jejusi:village_enterprise_designation': {
+    agency: 'jejusi', agency_name: '제주시청 경제일자리국 마을활력과',
+    task_name: '마을기업 지정신청',
+    legal_basis: '마을기업 육성사업 시행지침(행정안전부, 법률 아닌 행정지침 — 국가법령 근거 없음, 2026-08-20 웹검색 확인)',
+    documents: [
+      { id: 'application',  name: '마을기업 지정신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:village_enterprise_designation': {
+    agency: 'seogwipo', agency_name: '서귀포시청 자치행정국 마을활력과',
+    task_name: '마을기업 지정신청',
+    legal_basis: '마을기업 육성사업 시행지침(행정안전부, 법률 아닌 행정지침 — 국가법령 근거 없음, 2026-08-20 웹검색 확인)',
+    documents: [
+      { id: 'application',  name: '마을기업 지정신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18992,6 +19018,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:park_occupancy_permit': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
   'jejusi:tourism_business_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
   'seogwipo:tourism_business_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
+  'jejusi:village_enterprise_designation':   { target_type: 'dept', target_id: 'city-dept:jeju:econ' },
+  'seogwipo:village_enterprise_designation': { target_type: 'dept', target_id: 'city-dept:seogwipo:jachi' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
