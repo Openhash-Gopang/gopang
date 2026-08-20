@@ -59,25 +59,24 @@ worker.js 19044행).
 | 소스 | 등록된 task_key 수 |
 |---|---|
 | `main`(병합 완료, 원래 있던 것) | 2 (`kcc:location_service_registration`, `court:personal_bankruptcy_filing`) |
-| `feat/dpaper-and-gov-task-review-protocol`(이번 세션, 병합 대기) | +2 (`seogwipo:building_permit`, `seogwipo:occupancy_inspection`) |
-| `feat/required-documents-registry-construction`(별도 세션, **미병합**) | +13 (`seogwipo` 7개, `jejusi` 6개 — 서귀포·제주시 건설 계열) |
+| 이번 세션 작업 전체(§4 병합 포함, 병합 대기) | +13 (`seogwipo` 7개, `jejusi` 6개 — 서귀포·제주시 건설 계열, 중복 없음 확인됨) |
 | **SP 파일 자체에 REQUIRED_DOCUMENTS_REGISTRY/task_key를 언급하는 파일** | **1개** (`SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING`, 이번 세션 작업 대상) |
 
 **핵심 발견 ②(가장 중요)**: 1,115개 SP 중 991개(89%)가 "허가"/"신청"/
-"등록"/"신고"/"승인" 등 실제 처분·접수 업무를 명시하는데도, 병합 완료
-기준 실제로 서류를 접수할 수 있는 기관은 **2개 task_key(kcc, court)
-뿐**이다. 미병합 브랜치 두 개를 전부 합쳐도 15~17개 — 필요 추정치
-991개 대비 **1.5~1.7%**. 즉 공리 2(원칙)는 전 기관에 자동 상속됐지만,
-그 원칙을 실제로 실행할 "하위 SP의 구체적 업무 수행 코드"는 거의
-전무한 상태다 — 이번 세션 시작 시점 지적("상위는 원칙, 하위는 실제
-수행")이 정확히 이 공백을 가리킨 것으로 보인다.
+"등록"/"신고"/"승인" 등 실제 처분·접수 업무를 명시하는데도, 이번 세션
+작업분을 전부 병합해도 실제로 서류를 접수할 수 있는 기관은
+**15개 task_key뿐**이다 — 필요 추정치 991개 대비 **1.5%**. 즉 공리
+2(원칙)는 전 기관에 자동 상속됐지만, 그 원칙을 실제로 실행할 "하위
+SP의 구체적 업무 수행 코드"는 거의 전무한 상태다 — 이번 세션 시작
+시점 지적("상위는 원칙, 하위는 실제 수행")이 정확히 이 공백을 가리킨
+것으로 보인다.
 
-## 4. 발견된 위험 — 병합 대기 중인 두 브랜치의 키 충돌
+## 4. 발견된 위험 — 병합 대기 중인 두 브랜치의 키 충돌 (2026-08-20 해소됨)
 
 `feat/dpaper-and-gov-task-review-protocol`(이번 세션)과
 `feat/required-documents-registry-construction`(별도 세션)이 **서로
 모른 채** 정확히 같은 두 키(`seogwipo:building_permit`,
-`seogwipo:occupancy_inspection`)를 각자 다른 내용으로 등록했다:
+`seogwipo:occupancy_inspection`)를 각자 다른 내용으로 등록했었다:
 
 | 필드 | 이번 세션 버전 | 별도 세션 버전 |
 |---|---|---|
@@ -86,12 +85,17 @@ worker.js 19044행).
 | 시공사진 id | `construction_photos` | `construction_photo` |
 | land_use_cert `max_age_days` | 90(보수적 추정치 명시) | null |
 
-JS 객체 리터럴은 같은 키가 중복되면 **에러 없이 나중 값이 조용히
-이긴다** — 두 브랜치를 그대로 순서대로 병합하면 어느 한쪽 작업이
-말없이 사라진다. **이 저장소를 검토·병합하는 사람(주피터님 또는
-jejuro)이 병합 순서를 정하기 전에 반드시 인지해야 하는 충돌이다** —
-이 문서 작성 시점에는 어느 쪽도 임의로 수정하지 않았다(자동으로 한쪽을
-지우면 검토자의 판단을 대신하는 것이 되므로).
+**해소 방식**: `git cherry-pick`으로 `feat/required-documents-registry-
+construction`(57f235c9)을 이 브랜치에 병합하면서, 겹치는 두 키는 조문을
+더 구체적으로 특정한 이번 세션 버전을 유지하고 나머지 11개(서귀포 5·
+제주시 6, 겹치지 않는 키)는 그대로 합쳤다 — 정보 손실 없이 15개
+task_key(`kcc`/`court` 포함) 전부 하나의 커밋 이력에 통합됐다.
+worker.js의 REQUIRED_DOCUMENTS_REGISTRY에 중복 키 없음을 코드로
+재확인했다. 결정 근거는 worker.js 해당 위치 주석에도 남겨뒀다. **단,
+어느 쪽 legal_basis/문서 목록도 이번 병합에서 웹검색으로 재검증하지는
+않았다** — "조문이 더 구체적인 쪽을 택했다"는 것과 "그 조문이 실제로
+맞다"는 것은 다른 주장이다.
+
 
 ## 5. 기관 신원(access_cert 결재) 축 — 별도 병목
 
@@ -111,7 +115,7 @@ IMPLEMENTATION-GAPS 문서에 이미 기록돼 있다.
 공리 2(원칙, AGENCY-AC-COMMON)          ✅ 1,115개 기관 전부 자동 상속(2026-08-20)
         │
         ▼
-REQUIRED_DOCUMENTS_REGISTRY(실행 코드)   ⚠️  991개 후보 중 2~17개만 등록(병합 상태 따라)
+REQUIRED_DOCUMENTS_REGISTRY(실행 코드)   ⚠️  991개 후보 중 15개만 등록(병합 대기, 1.5%)
         │
         ▼
 AGENCY_PUBKEY_REGISTRY(기관 신원)        ❌  0개 — 어느 기관도 결재 단계 도달 불가
@@ -124,11 +128,10 @@ AGENCY_PUBKEY_REGISTRY(기관 신원)        ❌  0개 — 어느 기관도 결�
 
 ## 7. 권고 (우선순위, 실행은 별도 세션 판단)
 
-1. **키 충돌 해소(§4)** — 두 브랜치 병합 전 사람이 직접 어느 쪽
-   `legal_basis`/`documents` 값이 맞는지 대조 확인 후 병합. 자동으로
-   한쪽을 택하지 않는다(조문 특정 여부가 다른 걸 보면 어느 한쪽이
-   더 정확할 가능성이 있으나, 웹검색 재확인 없이 이번 조사에서
-   판정하지 않는다).
+1. **키 충돌 해소(§4) — 완료** — 조문을 더 구체적으로 특정한 쪽을
+   유지하고 나머지 11개를 합쳐 15개로 병합했다. 다만 어느 쪽
+   `legal_basis`도 웹검색으로 재검증하지 않았으니, 실제 등록 전
+   최종 확인은 여전히 필요하다.
 2. **REQUIRED_DOCUMENTS_REGISTRY 등록 확대** — 991개 후보 중 등록
    순서를 정할 기준 필요(민원 빈도, 이미 §LEGAL-BASIS가 정밀한 기관
    우선 등). 이번 조사는 "무엇이 비었는지"만 확인했고 "어떤 순서로
