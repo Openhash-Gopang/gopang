@@ -761,7 +761,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-DISABLED_v1.0.md,서귀포시청 복지위생국 장애인복지과,Y,N,완료,"jejusi:disability_registration, seogwipo:disability_registration 등록 — 읍면동 1차접수/시청 최종심사 2단계 구조를 복지로형 온라인접수 disclaimer로 반영한 최초 사례(복지 계열 재사용 템플릿)",PR#477,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-CITRUS_v1.0.md,서귀포시청 농수축산경제국 감귤유통과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-EASTCENTER_v1.0.md,서귀포시청 서귀포보건소 동부보건소,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-ENVMGMT_v1.0.md,서귀포시청 청정환경국 기후환경과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-ENVMGMT_v1.0.md,서귀포시청 청정환경국 기후환경과,Y,N,완료,"air_emission_facility_report 등록 — 단, 행정시 사무위임 여부 TBD로 SP에 명시(재확인 필요)",PR#482,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-ARTMUSEUM_v1.0.md,서귀포시청 문화관광체육국 서귀포 공립미술관,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-TRAFFIC_v1.0.md,서귀포시청 안전도시건설국 교통행정과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-ELDERLY_v1.0.md,서귀포시청 복지위생국 노인복지과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
@@ -809,7 +809,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-GENERAL_v1.0.md,서귀포시청 자치행정국 총무과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-WATER_v1.0.md,서귀포시청 안전도시건설국 상하수도과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-ECON-SMB_v1.0.md,제주시청 경제일자리국 경제소상공인과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-ENVMGMT_v1.0.md,제주시청 청정환경국 환경관리과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-ENVMGMT_v1.0.md,제주시청 청정환경국 환경관리과,Y,N,완료,"air_emission_facility_report 등록 — 단, 행정시 사무위임 여부 TBD로 SP에 명시(재확인 필요)",PR#482,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-VILLAGE_v1.0.md,서귀포시청 자치행정국 마을활력과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-ARTCENTER_v1.0.md,제주시청 문화관광체육국 제주아트센터,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-DISABLED_v1.0.md,제주시청 복지위생국 장애인복지과,Y,N,완료,"jejusi:disability_registration, seogwipo:disability_registration 등록 — 읍면동 1차접수/시청 최종심사 2단계 구조를 복지로형 온라인접수 disclaimer로 반영한 최초 사례(복지 계열 재사용 템플릿)",PR#477,2026-08-20
