@@ -783,11 +783,11 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-JOBS_v1.0.md,서귀포시청 농수축산경제국 경제일자리과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-ECON-JOBENERGY_v1.0.md,제주시청 경제일자리국 일자리에너지과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-CONSTRUCT_v1.0.md,서귀포시청 안전도시건설국 건설과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-PARKS_v1.0.md,제주시청 청정환경국 공원녹지과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-PARKS_v1.0.md,제주시청 청정환경국 공원녹지과,Y,N,완료,"park_occupancy_permit 등록 — 도시공원법 제24조 시장 권한 명문, 위임 이슈 없음",PR#484,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-RESIDENT_v1.0.md,제주시청 복지위생국 주민복지과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-ADMIN_v1.0.md,서귀포시청 서귀포보건소 보건행정과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-ARTSHALL_v1.0.md,서귀포시청 문화관광체육국 서귀포예술의전당,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-PARKS_v1.0.md,서귀포시청 청정환경국 공원녹지과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-PARKS_v1.0.md,서귀포시청 청정환경국 공원녹지과,Y,N,완료,"park_occupancy_permit 등록 — 도시공원법 제24조 시장 권한 명문, 위임 이슈 없음",PR#484,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING_v1.0.md,서귀포시청 안전도시건설국 건축과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-WOMENFAMILY_v1.0.md,제주시청 복지위생국 여성가족과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-LIBRARYMGMT_v1.0.md,서귀포시청 문화관광체육국 도서관운영사무소,Y,N,미착수,,,
