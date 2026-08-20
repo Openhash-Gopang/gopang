@@ -12104,6 +12104,14 @@ export default {
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/fee-approve')      return handleGovFeeApprove(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
+    // ★ 2026-08-20 신설 — GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 §2·§3.
+    // 앞 3개는 부서 SP가 [GOV_TASK_SUPPLEMENT_REQUEST] 등 태그로 호출
+    // (call-ai.js 배선), officer-decision은 모델 태그 없이 담당 공무원(또는
+    // 그의 내부 결재 시스템)이 access_cert를 실어 직접 호출한다(§1 원칙).
+    if (pathname === '/gov/task/supplement-request')        return handleGovTaskSupplementRequest(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/field-inspection-schedule') return handleGovTaskFieldInspectionSchedule(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/opinion-submit')            return handleGovTaskOpinionSubmit(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/officer-decision')          return handleGovTaskOfficerDecision(bodyText, env, corsHeaders);
     if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
     if (pathname === '/stats/self')                return handleStatsSelf(bodyText, env, corsHeaders);
     if (pathname === '/gov/dept-task/my-assignments') return handleMyAssignments(bodyText, env, corsHeaders);
@@ -18484,6 +18492,174 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'debtCause',        label: '채무 발생 경위 요약', required: true },
     ],
   },
+  // ★ 2026-08-20 추가 — GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 파일럿
+  // (SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING_v1.3 §2). 근거: 건축법,
+  // 건축법 시행령, 건축법 시행규칙(수수료 별표 4). 두 항목 다 문서 목록은
+  // 위 SP §2 표를 그대로 옮긴 초안 수준 — kcc/court 두 기존 항목과 달리
+  // acquisition별 세부 발급처(gov24 여부 등)는 세움터(eais.go.kr) 연동
+  // 확인 전까지 'user_authored'로 보수적으로 둔다(실제로는 감리자·설계사
+  // 등 제3자가 작성하는 문서라 사용자 본인이 정부24에서 발급받는 유형이
+  // 아니다 — 그렇다고 새 acquisition 값을 지어내지 않는다, U2).
+  //
+  // ★ 2026-08-20 병합 — feat/required-documents-registry-construction
+  // 브랜치(57f235c9)가 같은 시각 독립적으로 seogwipo:building_permit/
+  // occupancy_inspection 두 키를 다른 내용으로 등록해뒀다(서귀포+제주시
+  // 건설 계열 13개 일괄 등록). 두 세션이 서로 몰랐던 충돌이라
+  // AUDIT-gov-task-execution-readiness_2026-08-20.md §4에 먼저 표로
+  // 대조해뒀고, 병합 시 겹치는 두 키는 조문을 구체적으로 특정한 이쪽
+  // 버전(legal_basis에 시행령·시행규칙 조항 명시, land_use_plan
+  // max_age_days 근거 주석 포함)을 유지한다 — 정보 손실 없음, 반대쪽은
+  // 두 키 모두 "건축법"까지만 특정하고 근거 없이 max_age_days:null이라
+  // 상대적으로 덜 구체적이었다. 나머지 11개(서귀포 5·제주시 6, 겹치지
+  // 않는 키)는 그대로 아래에 합쳤다 — 이 문서가 어느 항목도 웹검색으로
+  // 재검증하지 않았다는 점은 두 세션 다 동일하게 정직히 고지한 상태다.
+  'seogwipo:building_permit': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 건축과',
+    task_name:   '건축허가',
+    legal_basis: '건축법 제11조, 건축법 시행령 제9조, 건축법 시행규칙 별표 4',
+    documents: [
+      { id: 'design_docs',    name: '설계도서',                 required: true, acquisition: 'user_authored' },
+      { id: 'structure_calc', name: '구조계산서',               required: true, acquisition: 'user_authored' },
+      { id: 'land_use_plan',  name: '토지이용계획확인서',       required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.land_use_plan', max_age_days: 90 }, // ★ 2026-08-20: 법정 유효기간 규정 미확인 — 다른 gov24 서류와 동일하게 보수적 90일, 재확인 시 정정 필요
+    ],
+  },
+  'seogwipo:disaster_relief_grant': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 안전총괄과',
+    task_name:   '재난지원금 지급 신청',
+    legal_basis: '재난 및 안전관리 기본법',
+    documents: [
+      { id: 'damage_confirm', name: '피해사실확인서',       required: true, acquisition: 'user_authored' },
+      { id: 'damage_proof',   name: '재산피해 증빙',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:passenger_transport_registration': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 교통행정과',
+    task_name:   '여객자동차운송사업 등록',
+    legal_basis: '여객자동차 운수사업법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true,  acquisition: 'user_authored' },
+      { id: 'garage_proof',   name: '차고지 증빙',          required: true,  acquisition: 'user_authored' },
+      { id: 'insurance_proof',name: '보험가입증명',         required: true,  acquisition: 'external_insurer' },
+    ],
+  },
+  'seogwipo:development_act_permit': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 도시과',
+    task_name:   '개발행위허가',
+    legal_basis: '국토의 계획 및 이용에 관한 법률',
+    documents: [
+      { id: 'dev_plan',       name: '개발행위계획서',       required: true, acquisition: 'user_authored' },
+      { id: 'land_use_cert',  name: '토지이용계획확인서',    required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.land_use_plan', max_age_days: null },
+      { id: 'layout',         name: '배치도',               required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:road_occupancy_permit': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 건설과',
+    task_name:   '도로점용허가',
+    legal_basis: '도로법',
+    documents: [
+      { id: 'occ_plan',       name: '점용계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'location_map',   name: '위치도',               required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan', name: '시공계획서',           required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:water_sewer_construction_approval': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 상하수도과',
+    task_name:   '상하수도 신설·철거 공사 승인',
+    legal_basis: '수도법, 하수도법',
+    documents: [
+      { id: 'facility_design', name: '시설설계도',          required: true, acquisition: 'user_authored' },
+      { id: 'layout',          name: '배치도',              required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan',  name: '시공계획서',          required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:occupancy_inspection': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 건축과',
+    task_name:   '사용승인(준공검사)',
+    legal_basis: '건축법 제22조, 건축법 시행령 제17조',
+    documents: [
+      { id: 'supervision_report', name: '감리완료보고서',                     required: true, acquisition: 'user_authored' },
+      { id: 'construction_photos',name: '시공사진',                           required: true, acquisition: 'user_authored' },
+      { id: 'safety_inspection',  name: '소방/전기 안전점검 결과',            required: true, acquisition: 'user_authored' },
+      { id: 'septic_completion',  name: '정화조 준공 확인',                   required: false, acquisition: 'user_authored' }, // SP §2: "부수 인허가(정화조 준공검사 등)만 개별 수수료" — 모든 건물에 정화조가 있는 게 아니므로 선택
+    ],
+    // ★ 사용승인 자체는 무료(SP §2) — resolveGovFee가 매칭 실패해도(NOT_FOUND)
+    // 접수 자체를 막지 않는 기존 동작으로 충분하며 이 항목만을 위한 특례
+    // 분기는 만들지 않는다.
+  },
+  'jejusi:urban_management_plan_change': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 도시계획과',
+    task_name:   '도시관리계획 변경',
+    legal_basis: '국토의 계획 및 이용에 관한 법률, 제주특별자치도 도시계획 조례',
+    documents: [
+      { id: 'change_plan',    name: '변경계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'land_use_status',name: '토지이용현황도',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:urban_regeneration_project': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 도시재생과',
+    task_name:   '도시재생사업 신청',
+    legal_basis: '도시재생 활성화 및 지원에 관한 특별법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'resident_consent', name: '주민동의서',         required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:road_occupancy_permit': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 건설과',
+    task_name:   '도로점용허가',
+    legal_basis: '도로법',
+    documents: [
+      { id: 'occ_plan',       name: '점용계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'location_map',   name: '위치도',               required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan', name: '시공계획서',           required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:housing_project_plan_approval': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 주택과',
+    task_name:   '주택사업계획승인',
+    legal_basis: '주택법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'design_docs',    name: '설계도서',             required: true, acquisition: 'user_authored' },
+      { id: 'funding_plan',   name: '자금조달계획서',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:building_permit': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 건축과',
+    task_name:   '건축허가·신고',
+    legal_basis: '건축법',
+    documents: [
+      { id: 'design_docs',    name: '설계도서',             required: true, acquisition: 'user_authored' },
+      { id: 'structural_calc',name: '구조계산서',           required: true, acquisition: 'user_authored' },
+      { id: 'land_use_cert',  name: '토지이용계획확인서',    required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.land_use_plan', max_age_days: null },
+    ],
+  },
+  'jejusi:water_sewer_construction_approval': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 상하수도과',
+    task_name:   '상하수도 신설·철거 공사 승인',
+    legal_basis: '수도법, 하수도법',
+    documents: [
+      { id: 'facility_design', name: '시설설계도',          required: true, acquisition: 'user_authored' },
+      { id: 'layout',          name: '배치도',              required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan',  name: '시공계획서',          required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18492,9 +18668,25 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
 // 뜻이므로 dept_task 생성을 건너뛴다(누락이 GOV_TASK 접수 자체를 막지
 // 않도록 — 아래 handleGovTaskSubmit 호출부 참고). REQUIRED_DOCUMENTS_REGISTRY에
 // 새 agency:task_key를 등록할 때는 이 표에도 대응 항목을 함께 추가할 것.
+//
+// ★ 2026-08-20 — 'jejusi'/'seogwipo' 추가하며 발견한 네이밍 불일치(GOV-TASK-
+// POST-ACCEPTANCE-REVIEW 심사 엔드포인트 설계 중 실사로 확인): 이 레지스트리의
+// agency 키는 REQUIRED_DOCUMENTS_REGISTRY(feat/required-documents-registry-
+// construction, 2026-08-19)가 이미 등록해둔 문자열을 그대로 쓴다 —
+// 'jejusi'(제주시), 'seogwipo'(서귀포시). 반면 DEPT_TASK_TAXONOMY.dept
+// (dept-task-handler.js 74행)의 city-dept 네임스페이스는 ['jeju','seogwipo']
+// 두 시 코드로 크로스곱돼 있어 제주시가 'jejusi'가 아니라 'jeju'다 — 그대로
+// target_id: 'city-dept:jejusi:construction'처럼 이어붙이면 DEPT_TASK_TAXONOMY에
+// 없는 값이라 _validateTarget이 TARGET_NOT_REGISTERED로 항상 거부한다.
+// 이 표가 바로 그 두 네임스페이스를 잇는 지점이므로, 여기서 target_id만
+// 정확한 시 코드('jeju')로 고쳐 매핑한다 — REQUIRED_DOCUMENTS_REGISTRY의
+// agency 값 자체는 이미 다른 용도(§요금조회 캐시 키 등)로 쓰이고 있어
+// 손대지 않는다(회귀 위험, 2026-08-19 발견된 원칙과 동일).
 const AGENCY_TO_DEPT_TARGET = {
-  kcc:   { target_type: 'national', target_id: 'national:kcc' },
-  court: { target_type: 'national', target_id: 'national:court' },
+  kcc:      { target_type: 'national', target_id: 'national:kcc' },
+  court:    { target_type: 'national', target_id: 'national:court' },
+  seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' },
+  jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조)
 };
 
 // ── 신규 기관/업무 판단절차 (agency/task_key 미등록 시) ──────────────
@@ -18865,6 +19057,101 @@ async function _govFeeTaskCacheSet(env, agency, taskKey, recordId) {
   if (!res.ok) throw new Error(`_govFeeTaskCacheSet 실패 (HTTP ${res.status})`);
 }
 
+// ── receipt_no로 GOV_TASK 케이스 조회 (2026-08-20 신설) ──────────────────
+// pdv_records.receipt_no(1787500100 마이그레이션, 인덱스)로 직접 filter한다
+// — handleGovTaskBatchStatus처럼 guid+type으로 넓게 긁어와 서버에서
+// JSON.parse 순회하지 않는다. 한 receipt_no에 여러 이벤트(접수→보완요청→
+// 재제출→의견제출→결재)가 쌓이므로 -created 정렬로 최신 이벤트를 우선
+// 반환한다. guid가 주어지면(대부분의 호출부) 본인 소유 확인까지 한 번에
+// 건다 — 다른 사람의 receipt_no를 넣어보는 것만으로 케이스 존재 여부를
+// 확인하는 사이드채널을 막는다.
+async function _l1FindGovTaskByReceiptNo(env, receiptNo, guid = null) {
+  if (!receiptNo) return null;
+  const esc = s => String(s).replace(/'/g, "\\'");
+  const token = await _l1AdminToken(env);
+  // ★ 2026-08-20 정정 — type='gov_task_submission'으로 좁히면 이 케이스의
+  // 최초 접수 레코드만 찾게 되어, 그 뒤 append된 심사 이벤트(review_update/
+  // officer_decision)의 최신 review_state를 절대 못 본다. type을 걸지 않고
+  // receipt_no(+guid) 하나로만 걸러 -created 정렬 최신 1건을 가져와야
+  // "지금 이 케이스가 어느 review_state인지"가 정확하다. agency/task_key는
+  // _appendGovTaskReviewEvent가 모든 이벤트에 동일하게 채워 넣으므로(아래),
+  // 최신 이벤트에서 읽어도 접수 시점 값과 항상 같다.
+  const filterParts = [`receipt_no='${esc(receiptNo)}'`];
+  if (guid) filterParts.push(`guid='${esc(guid)}'`);
+  const filter = encodeURIComponent(filterParts.join(' && '));
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/pdv_records/records?filter=${filter}&sort=-created&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } },
+  ).catch(() => null);
+  if (!res || !res.ok) return null;
+  const data = await res.json().catch(() => ({ items: [] }));
+  const record = data.items?.[0];
+  if (!record) return null;
+  let summary6w = null;
+  try { summary6w = JSON.parse(record.summary_6w); } catch { return null; }
+  const govTask = summary6w?.gov_task;
+  if (!govTask) return null;
+  return { record, summary6w, govTask };
+}
+
+// ── GOV_TASK 심사 이벤트를 pdv_records에 append하는 공통 헬퍼 (2026-08-20) ──
+// handleGovTaskSubmit이 최초 접수를 남기는 것과 같은 컬렉션·같은 형식으로,
+// §2 신규 태그 3종 + officer-decision이 만드는 후속 이벤트를 남긴다.
+// pdv_records는 append-only 감사로그(이 파일 다른 곳과 동일 관례)이므로
+// 기존 레코드를 PATCH하지 않고 매번 새 레코드를 만든다 — receipt_no로
+// 묶인 이벤트열 전체가 그대로 이력이 된다.
+async function _appendGovTaskReviewEvent(env, { guid, agency, task_key, receipt_no, review_state, type, summary_what, extra = {} }) {
+  const now = new Date().toISOString();
+  const summary6w = {
+    who: `${agency} 담당 부서 AI비서`, when: now, where: `${agency} GOV_TASK 심사`,
+    what: summary_what, how: 'GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1', why: '접수 이후 심사·보완·의견제출·결재 절차',
+    gov_task: { agency, task_key, receipt_no, review_state, ...extra },
+  };
+  const pdvReportId = `govtask-review:${agency}:${task_key}:${receipt_no}:${Date.now()}`;
+  const res = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      guid, report_id: pdvReportId, reporter_svc: agency, svc: agency,
+      type, summary: summary_what, summary_6w: JSON.stringify(summary6w),
+      block_hash: null, risk_level: 'low', source: agency, openhash_anchored: false,
+      domain: 'personal', receipt_no,
+    }),
+  }).catch(e => { console.warn('[GovTaskReview] PDV 기록 실패:', e.message); return null; });
+  return !!(res && res.ok);
+}
+
+// ── 담당 공무원 access_cert 검증 + 관할 부서 대조 공통 헬퍼 (2026-08-20 신설) ──
+// GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 §4 구현 갭 중 "핵심 미해결 과제"로
+// 지목됐던 부분. 새 암호 로직을 만들지 않고 dept-task-handler.js의
+// _verifyAccessCert를 그대로 재사용한다(handlePersonalAcCall과 동일 호출
+// 패턴 — 이 파일 §PERSONAL-AC-CALL-PROTOCOL 부근 참고). 서명 검증만으로는
+// "이 사람이 공무원인지"만 확인될 뿐 "이 케이스를 심사할 자격이 있는
+// 부서인지"는 별도 검증이 필요하다 — AGENCY_TO_DEPT_TARGET으로 이 케이스의
+// 관할 부서 org_id를 계산해 cert의 org_id와 정확히 일치하는지까지 대조한다
+// (다른 부서 공무원이 남의 케이스에 결재하는 것을 막음 — _authoritativeCheck와
+// 동일 원칙, 다만 이건 dept_task가 아니라 GOV_TASK 케이스라 별도 함수로 둠).
+async function _verifyOfficerForGovTask(env, accessCert, agency) {
+  if (!accessCert?.official_guid) return { ok: false, reason: 'MISSING_FIELD', detail: 'access_cert.official_guid 필수' };
+  const verifiedOrgId = await _verifyAccessCert(
+    env, accessCert, accessCert.official_guid, { _verifyEd25519Simple, _l1FindProfileByGuid },
+  ).catch(() => null);
+  if (!verifiedOrgId) {
+    return { ok: false, reason: 'ACCESS_CERT_INVALID', detail: '공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다' };
+  }
+  const target = AGENCY_TO_DEPT_TARGET[agency];
+  if (!target) {
+    // AGENCY_TO_DEPT_TARGET에 없는 agency는 애초에 dept_task 자동생성도
+    // 안 되는 agency다(handleGovTaskSubmit과 동일 전제) — 관할 부서를
+    // 계산할 방법이 없으므로 안전한 기본값(거부)을 유지한다.
+    return { ok: false, reason: 'AGENCY_NOT_MAPPED', detail: `AGENCY_TO_DEPT_TARGET에 '${agency}' 매핑이 없어 관할 부서를 확인할 수 없습니다` };
+  }
+  if (verifiedOrgId !== target.target_id) {
+    return { ok: false, reason: 'OFFICER_AGENCY_MISMATCH', detail: `이 케이스의 관할 부서(${target.target_id})와 인증서의 소속(${verifiedOrgId})이 다릅니다` };
+  }
+  return { ok: true, orgId: verifiedOrgId, officialGuid: accessCert.official_guid, role: accessCert.role || null, jobSeries: accessCert.job_series || null };
+}
+
 async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   // ★ 2026-07-12 정정 — 라우터가 이미 bodyText로 본문을 읽어놓은 뒤 호출되므로
   // request.json()이 아니라 bodyText를 직접 파싱한다(handleGovTaskSchemaDraft와 동일 원인).
@@ -18875,6 +19162,25 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   const { guid, agency, task_key, documents, notes } = body;
   if (!guid || !agency || !task_key) {
     return _err(400, 'MISSING_FIELD', 'guid/agency/task_key 필수', corsHeaders);
+  }
+
+  // ── 2026-08-20 신설 — receipt_no 재사용 분기 (GOV-TASK-POST-ACCEPTANCE-
+  // REVIEW_v2_0 §2-1의 "재제출은 새 태그가 아니다" 계약). 기존 receipt_no가
+  // 실려 오면 신규 접수가 아니라 해당 케이스의 재제출이다 — 새 접수번호를
+  // 발급하지 않고 기존 번호를 그대로 재사용한다(§4 구현 갭이었던 항목).
+  // 본인 소유 확인은 _l1FindGovTaskByReceiptNo에 guid를 함께 넘겨 한 번에
+  // 건다 — 없거나 본인 것이 아니면 재제출이 아니라 그냥 새 접수로 취급하지
+  // 않고 명시적으로 거부한다(엉뚱한 케이스에 몰래 병합되는 사고 방지).
+  const existingReceiptNo = typeof body.receipt_no === 'string' ? body.receipt_no.trim() : null;
+  let priorCase = null;
+  if (existingReceiptNo) {
+    priorCase = await _l1FindGovTaskByReceiptNo(env, existingReceiptNo, guid);
+    if (!priorCase) {
+      return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없거나 본인 소유가 아닙니다', corsHeaders);
+    }
+    if (priorCase.govTask.agency !== agency || priorCase.govTask.task_key !== task_key) {
+      return _err(409, 'RECEIPT_TASK_MISMATCH', '이 접수번호는 다른 agency/task_key의 케이스입니다', corsHeaders);
+    }
   }
   // 2026-07-13 신설 — GAP-LIST-50 B-3(병렬·팬아웃 처리 모델 부재) 해소.
   // batch_id가 있으면 이 제출이 "한 사건을 여러 기관에 동시 처리"하는
@@ -18924,9 +19230,21 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   const matchedDocs   = schema.documents.filter(d => submittedIds.has(d.id));
 
   const status     = missingDocs.length === 0 ? 'accepted' : 'pending_documents';
-  const receiptNo  = status === 'accepted'
+  // ★ 2026-08-20 — 재제출(existingReceiptNo)이면 새 번호를 발급하지 않고
+  // 그대로 재사용한다. 재제출인데 이번에도 서류가 미비하면(status가 여전히
+  // pending_documents) 기존 번호를 그대로 물고 있는다 — 애초에 accepted가
+  // 아니었던 케이스는 receipt_no 자체가 없었을 것이므로 이 분기에 오지
+  // 않는다(위 RECEIPT_NOT_FOUND에서 이미 걸러짐, priorCase가 있다는 건
+  // 최소 한 번은 accepted였다는 뜻).
+  const receiptNo  = existingReceiptNo || (status === 'accepted'
     ? `GOV-${agency}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
-    : null;
+    : null);
+  // ★ 2026-08-20 신설 — review_state(GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1
+  // §4 구현 갭). accepted 시점부터 REG_CROSS_CHECK(법령 대조 심사)가 시작
+  // 되므로 'under_review'로 둔다. 재제출로 다시 accepted가 됐다면(보완
+  // 완료) §0 다이어그램대로 REG_CROSS_CHECK로 복귀 — 마찬가지로
+  // 'under_review'. pending_documents(서류 미비, 심사 시작 전)는 null.
+  const reviewState = status === 'accepted' ? 'under_review' : null;
   const now = new Date().toISOString();
 
   // ── 2026-08-15 신설(4단계 배선 — 조회만, 아직 청구 안 함) ──────────
@@ -19030,6 +19348,13 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
       status,
       schema_verified: verified,
       receipt_no:  receiptNo,
+      // ★ 2026-08-20 신설 — GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 §4 구현 갭.
+      // 접수 이후 심사·보완·의견제출·결재 단계의 진행 상태를 여기부터
+      // 채우기 시작한다(아래 4개 신규 엔드포인트가 이후 전이를 이어받음).
+      review_state: reviewState,
+      // ★ 2026-08-20 — 재제출 여부 감사 기록(existingReceiptNo가 있으면
+      // 이번 제출이 재제출이라는 뜻). 최초 접수는 false.
+      is_resubmission: !!existingReceiptNo,
       documents_required: requiredDocs.map(d => d.id),
       documents_matched:  matchedDocs.map(d => ({ id: d.id, name: d.name, sha256: submitted.find(s => s.doc_id === d.id)?.sha256 })),
       documents_missing:  missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
@@ -19071,6 +19396,11 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
       // "업무"가 아니다(위생과 "직원"의 업무 대행과는 다른 축) —
       // 명시적으로 personal로 태깅해 혼동을 막는다.
       domain: 'personal',
+      // ★ 2026-08-20 신설 — 1787500100 마이그레이션으로 추가된 인덱스
+      // 필드. accepted가 아니면(receiptNo가 null) 빈 문자열로 둔다 —
+      // _l1FindGovTaskByReceiptNo는 빈 문자열 필터를 걸지 않으므로
+      // (호출부가 항상 실제 receipt_no를 넘김) 문제 없다.
+      receipt_no: receiptNo || '',
     }),
   }).catch(e => { console.warn('[GovTaskSubmit] PDV 기록 실패:', e.message); return null; });
 
@@ -19120,6 +19450,8 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
     ok: true,
     status,
     receipt_no: receiptNo,
+    review_state: reviewState, // ★ 2026-08-20 신설 — GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1
+    is_resubmission: !!existingReceiptNo,
     dept_task_id: deptTaskId,
     // ★ 2026-07-12 신설 — 강제 면책 필드. AC가 사용자에게 언급하는 걸
     // "잊을 수 있는" 방식(프롬프트 지시만으로는 누락 가능)이 아니라,
@@ -19155,7 +19487,198 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   }), { status: 200, headers: corsHeaders });
 }
 
-// POST /gov/task/fee-approve — {guid, receipt_no} → gov_fee_charges의
+// ═══════════════════════════════════════════════════════════
+// GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 — accepted 이후 심사·보완·의견제출·
+// 결재 엔드포인트 4종 (2026-08-20 신설, ops/dpaper-integration/
+// IMPLEMENTATION-GAPS_gov-task-post-acceptance.md 완결)
+//
+// 공통 설계: 앞 3개(§2 신규 태그 3종)는 부서 SP가 발행 — 그 SP 세션이
+// 이미 담당 부서로 인증됐다는 전제이므로 access_cert를 요구해 그 전제를
+// 서버가 직접 검증한다(자기신고로 통과하지 못하도록, DEPT_TASK_REQUEST와
+// 동일 원칙). 마지막(officer-decision)은 §3이 명시한 대로 "모델이 흉내
+// 낼 수 없는 물리적 채널"이어야 하므로 애초에 모델 태그가 아니라 REST
+// 엔드포인트로만 존재한다 — call-ai.js에 이 엔드포인트를 호출하는 태그
+// 파싱은 만들지 않는다(§1 원칙 그대로).
+// ═══════════════════════════════════════════════════════════
+
+// POST /gov/task/supplement-request — [GOV_TASK_SUPPLEMENT_REQUEST] 처리
+async function handleGovTaskSupplementRequest(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { receipt_no, deficiency, legal_basis_ref, required_action, access_cert } = body;
+  if (!receipt_no || !deficiency || !legal_basis_ref) {
+    return _err(400, 'MISSING_FIELD', 'receipt_no/deficiency/legal_basis_ref 필수', corsHeaders);
+  }
+  const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
+  if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
+
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  if (!officerCheck.ok) {
+    const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
+      : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
+    return _err(httpStatus, officerCheck.reason, officerCheck.detail, corsHeaders);
+  }
+
+  const ok = await _appendGovTaskReviewEvent(env, {
+    guid: priorCase.record.guid, agency: priorCase.govTask.agency, task_key: priorCase.govTask.task_key,
+    receipt_no, review_state: 'supplement_requested', type: 'gov_task_review_update',
+    summary_what: `보완요청 — ${deficiency}`,
+    extra: {
+      deficiency, legal_basis_ref, required_action: required_action || null,
+      reviewed_by: officerCheck.orgId, reviewed_by_official_guid: officerCheck.officialGuid,
+    },
+  });
+  if (!ok) return _err(503, 'PDV_WRITE_FAILED', '보완요청 기록에 실패했습니다', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true, receipt_no, review_state: 'supplement_requested',
+    // 재제출 안내 — §2-1: "재제출은 새 태그가 아니다", 같은 receipt_no로
+    // GOV_TASK_SUBMIT_REQUEST를 다시 낸다.
+    resubmit_via: 'GOV_TASK_SUBMIT_REQUEST', resubmit_with_same_receipt_no: true,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/field-inspection-schedule — [GOV_TASK_FIELD_INSPECTION_SCHEDULE] 처리
+async function handleGovTaskFieldInspectionSchedule(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { receipt_no, inspection_type, proposed_slots, officer_ref, access_cert } = body;
+  if (!receipt_no || !inspection_type || !Array.isArray(proposed_slots) || !proposed_slots.length) {
+    return _err(400, 'MISSING_FIELD', 'receipt_no/inspection_type/proposed_slots(비어있지 않은 배열) 필수', corsHeaders);
+  }
+  const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
+  if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
+
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  if (!officerCheck.ok) {
+    const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
+      : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
+    return _err(httpStatus, officerCheck.reason, officerCheck.detail, corsHeaders);
+  }
+
+  // ★ review_state는 여기서 바꾸지 않는다 — §4 review_state 값 4종
+  // (under_review/supplement_requested/opinion_submitted/officer_decided)
+  // 어디에도 "실사 일정 조율 중"에 해당하는 상태가 정의돼 있지 않다.
+  // 없는 상태값을 지어내기보다(U2) 기존 review_state를 그대로 유지하고
+  // 이 이벤트는 감사로그로만 남긴다 — §2-2 원문("일정 조율까지만
+  // 대행한다")과도 부합한다.
+  const ok = await _appendGovTaskReviewEvent(env, {
+    guid: priorCase.record.guid, agency: priorCase.govTask.agency, task_key: priorCase.govTask.task_key,
+    receipt_no, review_state: priorCase.govTask.review_state || null, type: 'gov_task_review_update',
+    summary_what: `현장 실사 일정 후보 제시 — ${inspection_type}`,
+    extra: {
+      inspection_type, proposed_slots, officer_ref: officer_ref || null,
+      scheduled_by: officerCheck.orgId, scheduled_by_official_guid: officerCheck.officialGuid,
+    },
+  });
+  if (!ok) return _err(503, 'PDV_WRITE_FAILED', '실사 일정 기록에 실패했습니다', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true, receipt_no, review_state: priorCase.govTask.review_state || null,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/opinion-submit — [GOV_TASK_OPINION_SUBMIT] 처리
+async function handleGovTaskOpinionSubmit(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { receipt_no, reviewed_criteria, recommends, opinion_summary, access_cert } = body;
+  if (!receipt_no || !opinion_summary || !['approve', 'reject'].includes(recommends)) {
+    return _err(400, 'MISSING_FIELD', "receipt_no/opinion_summary 필수, recommends는 'approve'|'reject'여야 합니다", corsHeaders);
+  }
+  const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
+  if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
+
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  if (!officerCheck.ok) {
+    const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
+      : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
+    return _err(httpStatus, officerCheck.reason, officerCheck.detail, corsHeaders);
+  }
+
+  const ok = await _appendGovTaskReviewEvent(env, {
+    guid: priorCase.record.guid, agency: priorCase.govTask.agency, task_key: priorCase.govTask.task_key,
+    receipt_no, review_state: 'opinion_submitted', type: 'gov_task_review_update',
+    summary_what: `심사 의견 제출 — ${recommends === 'approve' ? '승인 의견' : '반려 의견'}`,
+    extra: {
+      reviewed_criteria: Array.isArray(reviewed_criteria) ? reviewed_criteria : [],
+      recommends, opinion_summary,
+      submitted_by: officerCheck.orgId, submitted_by_official_guid: officerCheck.officialGuid,
+    },
+  });
+  if (!ok) return _err(503, 'PDV_WRITE_FAILED', '심사 의견 기록에 실패했습니다', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true, receipt_no, review_state: 'opinion_submitted',
+    // ★ §2-3 원문 — "이 태그는 승인이 아니다". 클라이언트(call-ai.js)가
+    // 이 응답을 REPORT의 pending_human_action으로 보고하도록 명시적으로
+    // 신호를 함께 내려준다 — "완료됐다"고 잘못 요약될 여지를 줄인다.
+    pending_human_action: true,
+    message: '담당 공무원 결재(officer-decision) 전까지 최종 승인/반려가 아닙니다.',
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/officer-decision — 담당 공무원 전용 결재 확정 (§3)
+// ★ 모델 태그가 아니다 — call-ai.js에 이 엔드포인트를 호출하는 파싱 로직을
+// 만들지 않는다(§1 "사람의 결재가 태그가 아니라 REST 엔드포인트인 이유"
+// 원칙). 담당 공무원 본인 또는 그의 내부 결재 시스템이 access_cert를
+// 실어 직접 호출해야 한다.
+async function handleGovTaskOfficerDecision(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { receipt_no, decision, decision_note, issued_document_ref, access_cert } = body;
+  if (!receipt_no || !['approved', 'rejected'].includes(decision)) {
+    return _err(400, 'MISSING_FIELD', "receipt_no 필수, decision은 'approved'|'rejected'여야 합니다", corsHeaders);
+  }
+  const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
+  if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
+
+  // ★ 핵심 미해결 과제였던 부분 — 신청자 본인이 이 엔드포인트를 호출할 수
+  // 없어야 한다는 요구사항은, 담당 공무원 access_cert 검증(신청자는 발급
+  // 받을 수 없는 인증서)만으로 이미 충족된다. 신청자의 guid로는 애초에
+  // AGENCY_TO_DEPT_TARGET의 org_id를 발급받을 access_cert 자체가 없다
+  // (기관장 서명이 필요 — §AGENCY_PUBKEY_REGISTRY, 신청자는 기관장이 아님).
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  if (!officerCheck.ok) {
+    const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
+      : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
+    return _err(httpStatus, officerCheck.reason, officerCheck.detail, corsHeaders);
+  }
+
+  const ok = await _appendGovTaskReviewEvent(env, {
+    guid: priorCase.record.guid, agency: priorCase.govTask.agency, task_key: priorCase.govTask.task_key,
+    receipt_no, review_state: 'officer_decided', type: 'gov_task_officer_decision',
+    summary_what: `담당 공무원 결재 — ${decision === 'approved' ? '승인' : '반려'}`,
+    extra: {
+      decision, decision_note: decision_note ? String(decision_note).slice(0, 2000) : null,
+      issued_document_ref: decision === 'approved' ? (issued_document_ref || null) : null,
+      decided_by: officerCheck.orgId, decided_by_official_guid: officerCheck.officialGuid,
+      decided_at: new Date().toISOString(),
+      // ★ 2026-08-20 — dpaper.kr 연동은 ops/dpaper-integration/
+      // ACTIVATION-CHECKLIST_dpaper.md 기준 아직 스위치가 꺼져 있다
+      // (외부 API 승인 대기). 여기서 dpaper.kr 호출을 시도하지 않는다 —
+      // 기능은 완성해두되 활성화는 별도 체크리스트를 통해서만 한다는
+      // 이 저장소의 기존 원칙(FIELD_TEST_MODE_EXPIRY와 동일 사상)을
+      // 그대로 따른다. approved && issued_document_ref가 있는 케이스를
+      // dpaper.kr 승인 후 일괄 보관 처리할 수 있도록 이 필드 자체는
+      // 지금부터 기록해둔다.
+      dpaper_archived: false,
+    },
+  });
+  if (!ok) return _err(503, 'PDV_WRITE_FAILED', '결재 기록에 실패했습니다', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true, receipt_no, review_state: 'officer_decided', decision,
+    issued_document_ref: decision === 'approved' ? (issued_document_ref || null) : null,
+    dpaper_note: 'dpaper.kr 연동 스위치가 꺼져 있어 이 발급 문서는 아직 dpaper.kr에 보관되지 않았습니다(ACTIVATION-CHECKLIST_dpaper.md 참조).',
+  }), { status: 200, headers: corsHeaders });
+}
+
+
 // pending_approval 레코드를 사용자 명시 승인으로 실제 청구한다
 // (2026-08-15 신설, 5단계). SP-10_kpublic.txt §GOV-FEE-APPROVAL의
 // GOV_FEE_APPROVE 태그가 이 엔드포인트를 호출한다 — 반드시 사용자가
