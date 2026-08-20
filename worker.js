@@ -18109,7 +18109,7 @@ async function _loadGovCommonChain(doCode) {
   const now = Date.now();
   if (cached && (now - cached.at) < _GOV_COMMON_CHAIN_TTL_MS) return cached.text;
 
-  const [kgov, overlayTemplate, overlayDataRaw, treeProtocol] = await Promise.all([
+  const [kgov, overlayTemplate, overlayDataRaw, treeProtocol, agencyAcCommon] = await Promise.all([
     _fetchDelegationPrompt('public'), // kgov == SP-10_kpublic, 'public' 항목과 동일 소스 재사용
     // ★ 2026-07-29 정정 — 이전엔 GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md·
     // GOV-TREE-PROTOCOL_v1.0.md를 URL에 버전을 직접 박아 fetch했다.
@@ -18124,6 +18124,15 @@ async function _loadGovCommonChain(doCode) {
       return r.json();
     }),
     _fetchByManifestKeyFromGithub('GOV-TREE-PROTOCOL'),
+    // ★ 2026-08-20 신설 — gov-router.js(클라이언트, 04-city 등 city/division
+    // 계층)는 2026-08-02부터 AGENCY-AC-COMMON을 이미 포함하고 있었으나,
+    // 이 함수(worker.js 서버측, gov_do/gov_national 위임 — 01-do/02-do-dept/
+    // 09-national 약 570개 파일이 거치는 경로)는 별도 체인이라 그 승격에서
+    // 빠져 있었다(PR #465 병합 후 실사로 확인). 공리 2(GOV_TASK 접수 후
+    // 심사·보완·의견제출·결재)가 도청·중앙부처 계층에는 전혀 도달하지
+    // 않고 있었던 것 — gov-router.js와 동일한 fetch 패턴으로 여기에도 추가한다.
+    fetch(GITHUB_RAW_BASE + '/prompts/AGENCY-AC-COMMON_v1.5.md?t=' + Math.floor(Date.now() / 3600000))
+      .then(r => { if (!r.ok) throw new Error(`AGENCY-AC-COMMON fetch 실패: HTTP ${r.status}`); return r.text(); }),
   ]);
 
   const rec = (overlayDataRaw.도목록 || []).find(r => r['도코드'] === doCode);
@@ -18137,7 +18146,7 @@ async function _loadGovCommonChain(doCode) {
     .replaceAll('{행정시목록_문구}', rec['행정시목록_문구'] || '')
     .replaceAll('{관할예시_문구}', rec['관할예시_문구'] || '');
 
-  const text = kgov + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+  const text = kgov + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol + '\n\n---\n\n' + agencyAcCommon;
   _govCommonChainCache.set(doCode, { text, at: now });
   return text;
 }
