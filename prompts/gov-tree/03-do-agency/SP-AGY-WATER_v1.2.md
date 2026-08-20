@@ -88,8 +88,9 @@ kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 상하수도본�
 
 | 업무영역 | 실질 처리 주체 | 연결 SP |
 |---|---|---|
-| 제주시 지역 상하수도 실제 민원창구 | 읍면동 사무소(접수 대행) | SP-CITY-JEJU → SP-EMD-{읍면동} → SP-EXP-WATER |
+| 제주시 지역 상하수도 실제 민원창구(요금·계량·운영·누수민원) | 읍면동 사무소(접수 대행) | SP-CITY-JEJU → SP-EMD-{읍면동} → SP-EXP-WATER |
 | 서귀포시 지역 상하수도 | 서귀포시청 안전도시건설국 상하수도과 | SP-CITY-SEOGWIPO → SP-SGP-CONSTRUCT |
+| ★ 제주시 개별 신축·철거 시 상하수도 공사 승인(가설, 확인 필요) | 제주시청 도시건설국 상하수도과 — 2026-08-20 확인, 이 문서 작성(2026-07-11) 시점엔 미반영 | SP-CITYDIV-JEJUSI-URBANCONSTRUCTION-WATER |
 
 ## §4. 연락처 및 안내 원칙
 
