@@ -18500,6 +18500,19 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
   // 확인 전까지 'user_authored'로 보수적으로 둔다(실제로는 감리자·설계사
   // 등 제3자가 작성하는 문서라 사용자 본인이 정부24에서 발급받는 유형이
   // 아니다 — 그렇다고 새 acquisition 값을 지어내지 않는다, U2).
+  //
+  // ★ 2026-08-20 병합 — feat/required-documents-registry-construction
+  // 브랜치(57f235c9)가 같은 시각 독립적으로 seogwipo:building_permit/
+  // occupancy_inspection 두 키를 다른 내용으로 등록해뒀다(서귀포+제주시
+  // 건설 계열 13개 일괄 등록). 두 세션이 서로 몰랐던 충돌이라
+  // AUDIT-gov-task-execution-readiness_2026-08-20.md §4에 먼저 표로
+  // 대조해뒀고, 병합 시 겹치는 두 키는 조문을 구체적으로 특정한 이쪽
+  // 버전(legal_basis에 시행령·시행규칙 조항 명시, land_use_plan
+  // max_age_days 근거 주석 포함)을 유지한다 — 정보 손실 없음, 반대쪽은
+  // 두 키 모두 "건축법"까지만 특정하고 근거 없이 max_age_days:null이라
+  // 상대적으로 덜 구체적이었다. 나머지 11개(서귀포 5·제주시 6, 겹치지
+  // 않는 키)는 그대로 아래에 합쳤다 — 이 문서가 어느 항목도 웹검색으로
+  // 재검증하지 않았다는 점은 두 세션 다 동일하게 정직히 고지한 상태다.
   'seogwipo:building_permit': {
     agency:      'seogwipo',
     agency_name: '서귀포시청 안전도시건설국 건축과',
@@ -18510,6 +18523,61 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'structure_calc', name: '구조계산서',               required: true, acquisition: 'user_authored' },
       { id: 'land_use_plan',  name: '토지이용계획확인서',       required: true, acquisition: 'gov24',
         idv_type: 'idv.cert.land_use_plan', max_age_days: 90 }, // ★ 2026-08-20: 법정 유효기간 규정 미확인 — 다른 gov24 서류와 동일하게 보수적 90일, 재확인 시 정정 필요
+    ],
+  },
+  'seogwipo:disaster_relief_grant': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 안전총괄과',
+    task_name:   '재난지원금 지급 신청',
+    legal_basis: '재난 및 안전관리 기본법',
+    documents: [
+      { id: 'damage_confirm', name: '피해사실확인서',       required: true, acquisition: 'user_authored' },
+      { id: 'damage_proof',   name: '재산피해 증빙',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:passenger_transport_registration': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 교통행정과',
+    task_name:   '여객자동차운송사업 등록',
+    legal_basis: '여객자동차 운수사업법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true,  acquisition: 'user_authored' },
+      { id: 'garage_proof',   name: '차고지 증빙',          required: true,  acquisition: 'user_authored' },
+      { id: 'insurance_proof',name: '보험가입증명',         required: true,  acquisition: 'external_insurer' },
+    ],
+  },
+  'seogwipo:development_act_permit': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 도시과',
+    task_name:   '개발행위허가',
+    legal_basis: '국토의 계획 및 이용에 관한 법률',
+    documents: [
+      { id: 'dev_plan',       name: '개발행위계획서',       required: true, acquisition: 'user_authored' },
+      { id: 'land_use_cert',  name: '토지이용계획확인서',    required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.land_use_plan', max_age_days: null },
+      { id: 'layout',         name: '배치도',               required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:road_occupancy_permit': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 건설과',
+    task_name:   '도로점용허가',
+    legal_basis: '도로법',
+    documents: [
+      { id: 'occ_plan',       name: '점용계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'location_map',   name: '위치도',               required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan', name: '시공계획서',           required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:water_sewer_construction_approval': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 안전도시건설국 상하수도과',
+    task_name:   '상하수도 신설·철거 공사 승인',
+    legal_basis: '수도법, 하수도법',
+    documents: [
+      { id: 'facility_design', name: '시설설계도',          required: true, acquisition: 'user_authored' },
+      { id: 'layout',          name: '배치도',              required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan',  name: '시공계획서',          required: true, acquisition: 'user_authored' },
     ],
   },
   'seogwipo:occupancy_inspection': {
@@ -18526,6 +18594,71 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     // ★ 사용승인 자체는 무료(SP §2) — resolveGovFee가 매칭 실패해도(NOT_FOUND)
     // 접수 자체를 막지 않는 기존 동작으로 충분하며 이 항목만을 위한 특례
     // 분기는 만들지 않는다.
+  },
+  'jejusi:urban_management_plan_change': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 도시계획과',
+    task_name:   '도시관리계획 변경',
+    legal_basis: '국토의 계획 및 이용에 관한 법률, 제주특별자치도 도시계획 조례',
+    documents: [
+      { id: 'change_plan',    name: '변경계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'land_use_status',name: '토지이용현황도',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:urban_regeneration_project': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 도시재생과',
+    task_name:   '도시재생사업 신청',
+    legal_basis: '도시재생 활성화 및 지원에 관한 특별법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'resident_consent', name: '주민동의서',         required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:road_occupancy_permit': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 건설과',
+    task_name:   '도로점용허가',
+    legal_basis: '도로법',
+    documents: [
+      { id: 'occ_plan',       name: '점용계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'location_map',   name: '위치도',               required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan', name: '시공계획서',           required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:housing_project_plan_approval': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 주택과',
+    task_name:   '주택사업계획승인',
+    legal_basis: '주택법',
+    documents: [
+      { id: 'biz_plan',       name: '사업계획서',           required: true, acquisition: 'user_authored' },
+      { id: 'design_docs',    name: '설계도서',             required: true, acquisition: 'user_authored' },
+      { id: 'funding_plan',   name: '자금조달계획서',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:building_permit': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 건축과',
+    task_name:   '건축허가·신고',
+    legal_basis: '건축법',
+    documents: [
+      { id: 'design_docs',    name: '설계도서',             required: true, acquisition: 'user_authored' },
+      { id: 'structural_calc',name: '구조계산서',           required: true, acquisition: 'user_authored' },
+      { id: 'land_use_cert',  name: '토지이용계획확인서',    required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.land_use_plan', max_age_days: null },
+    ],
+  },
+  'jejusi:water_sewer_construction_approval': {
+    agency:      'jejusi',
+    agency_name: '제주시청 도시건설국 상하수도과',
+    task_name:   '상하수도 신설·철거 공사 승인',
+    legal_basis: '수도법, 하수도법',
+    documents: [
+      { id: 'facility_design', name: '시설설계도',          required: true, acquisition: 'user_authored' },
+      { id: 'layout',          name: '배치도',              required: true, acquisition: 'user_authored' },
+      { id: 'construct_plan',  name: '시공계획서',          required: true, acquisition: 'user_authored' },
+    ],
   },
 };
 
