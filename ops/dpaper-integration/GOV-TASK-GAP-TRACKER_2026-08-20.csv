@@ -580,7 +580,7 @@
 07-org,07-org/SP-ORG-GNTP_v1.0.md,SP-ORG-GNTP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMEDX5_v1.0.md,SP-ORG-GWMEDX5_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBDOKDO_v1.0.md,SP-ORG-GBDOKDO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JCGF_v1.0.md,제주신용보증재단,Y,N,진행중,"jcgf:credit_guarantee_application 등록 작업 완료, PR 생성 명령어 전달함 — main 병합 확인 대기 중",,
+07-org,07-org/SP-ORG-JCGF_v1.0.md,제주신용보증재단,Y,N,완료,"jcgf:credit_guarantee_application 등록 — 07-org 최초 사례, target_type:org 패턴 검증",PR#475,2026-08-20
 07-org,07-org/SP-ORG-JEJUMED_v1.0.md,제주의료원,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNRIX2_v1.0.md,SP-ORG-GNRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGSE_v1.0.md,SP-ORG-GGSE_v1.0,Y,N,미착수,,,
@@ -752,7 +752,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-GENERAL_v1.0.md,서귀포시청 안전도시건설국 안전총괄과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-FISHERY_v1.0.md,서귀포시청 농수축산경제국 해양수산과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-TOURISM_v1.0.md,제주시청 문화관광체육국 관광진흥과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-HYGIENE_v1.0.md,제주시청 복지위생국 위생관리과,Y,N,완료,"jejusi:food_business_report, jejusi:public_sanitation_business_report 등록","(번호 미확인 — main 병합은 확인됨, git log로 조회 가능)",2026-08-20
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-HYGIENE_v1.0.md,제주시청 복지위생국 위생관리과,Y,N,완료,"jejusi:food_business_report, jejusi:public_sanitation_business_report 등록",PR#474,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-BASICLIVELIHOOD_v1.0.md,제주시청 복지위생국 기초생활보장과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-JEOLMUL_v1.0.md,제주시청 청정환경국 절물생태관리소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-BASICGOVPREP_v1.0.md,서귀포시청 자치행정국 기초자치단체설치준비지원단,Y,N,미착수,,,
@@ -792,7 +792,7 @@
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-WOMENFAMILY_v1.0.md,제주시청 복지위생국 여성가족과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-LIBRARYMGMT_v1.0.md,서귀포시청 문화관광체육국 도서관운영사무소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-ART_v1.0.md,제주시청 문화관광체육국 문화예술과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-HYGIENE_v1.0.md,서귀포시청 복지위생국 위생관리과,Y,N,완료,"seogwipo:food_business_report, seogwipo:public_sanitation_business_report 등록","(번호 미확인 — main 병합은 확인됨, git log로 조회 가능)",2026-08-20
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-HYGIENE_v1.0.md,서귀포시청 복지위생국 위생관리과,Y,N,완료,"seogwipo:food_business_report, seogwipo:public_sanitation_business_report 등록",PR#474,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-ECON-VILLAGE_v1.0.md,제주시청 경제일자리국 마을활력과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-FORESTRECREATION_v1.0.md,서귀포시청 청정환경국 산림휴양관리소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-DIGITAL_v1.0.md,서귀포시청 농수축산경제국 디지털혁신과,Y,N,미착수,,,

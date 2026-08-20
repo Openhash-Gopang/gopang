@@ -44,8 +44,7 @@
 
 | 상태 | 건수 |
 |---|---|
-| 완료 | 2 (jejusi:food_business_report, jejusi:public_sanitation_business_report, seogwipo:food_business_report, seogwipo:public_sanitation_business_report — main 병합 확인됨, 정확한 PR 번호는 `git log --oneline --grep=위생관리과`로 조회) |
-| 진행중 | 1 (SP-ORG-JCGF — jcgf:credit_guarantee_application 작업은 끝났고 PR 생성 명령어까지 전달했으나, 이 문서 작성 시점에 main 병합 확인을 아직 못 받음. 다음 세션은 먼저 `git log --oneline --grep=JCGF`로 병합 여부부터 확인할 것 — 병합됐으면 상태=완료로 갱신, 안 됐으면 이어서 병합 진행) |
+| 완료 | 3 (jejusi:food_business_report, jejusi:public_sanitation_business_report, seogwipo:food_business_report, seogwipo:public_sanitation_business_report — PR#474 / jcgf:credit_guarantee_application — PR#475) |
 | 제외(오탐) | 2 (SP-EXP-EMERGENCY, SP-EXP-WATER) |
 | 재정의 | 4 (JEJU-DO-SP 버전 3개 + JEJU-DO-AGENT-COMMON — 참고: 이 중 v1.0/v1.4는 감사 자체의 중복 카운트 노이즈, 실제 작업 대상은 v1.5와 AGENT-COMMON 2건뿐) |
 | 미착수 | 895 |
