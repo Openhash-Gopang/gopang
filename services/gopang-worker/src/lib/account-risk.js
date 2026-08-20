@@ -7,9 +7,11 @@ import { pbFetch } from './pb-admin.js';
 import { buildFilter } from './pb-filter.js';
 import { resolveGuidToL1 } from '../routes/ledger.js';
 
-export async function getAccountRisk(env, guid) {
+export async function getAccountRisk(env, guid, l1Base) {
   try {
-    const { l1Base } = await resolveGuidToL1(env, guid);
+    if (!l1Base) {
+      ({ l1Base } = await resolveGuidToL1(env, guid));
+    }
     const filter = buildFilter([['guid', '=', guid]]);
     const res = await pbFetch(env, l1Base, `/api/collections/account_risk_score/records?${new URLSearchParams({ filter, perPage: '1' })}`);
     const data = await res.json();

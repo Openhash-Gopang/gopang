@@ -47,8 +47,8 @@ function scoreToLevel(score) {
  */
 const RECOMPUTE_THROTTLE_MS = 5 * 60 * 1000; // 5분
 
-export async function computeTrustScore(env, guid) {
-  const existing = await getAccountRisk(env, guid);
+export async function computeTrustScore(env, guid, l1Base) {
+  const existing = await getAccountRisk(env, guid, l1Base);
   if (existing?.step_up_required) {
     return { skipped: true, reason: 'FRAUD_OVERRIDE_ACTIVE', existing };
   }
@@ -63,7 +63,9 @@ export async function computeTrustScore(env, guid) {
     }
   }
 
-  const { l1Base } = await resolveGuidToL1(env, guid);
+  if (!l1Base) {
+    ({ l1Base } = await resolveGuidToL1(env, guid));
+  }
   const filter = buildFilter([['guid', '=', guid]]);
   const res = await pbFetch(
     env,

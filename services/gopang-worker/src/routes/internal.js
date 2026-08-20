@@ -76,7 +76,7 @@ export async function handleInternalLedgerEntry(request, env, ctx) {
 
     if (ctx?.waitUntil) {
       ctx.waitUntil(
-        computeTrustScore(env, entry.guid).catch((e) => {
+        computeTrustScore(env, entry.guid, l1Base).catch((e) => {
           console.warn('[internal/ledger-entries] trust-score 재계산 실패(원장 기록 자체는 정상):', e.message);
         })
       );
