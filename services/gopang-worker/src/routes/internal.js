@@ -75,11 +75,18 @@ export async function handleInternalLedgerEntry(request, env, ctx) {
     }
 
     if (ctx?.waitUntil) {
+      console.log('[internal/ledger-entries] trust-score waitUntil 등록:', entry.guid, 'l1Base=', l1Base);
       ctx.waitUntil(
-        computeTrustScore(env, entry.guid, l1Base).catch((e) => {
-          console.warn('[internal/ledger-entries] trust-score 재계산 실패(원장 기록 자체는 정상):', e.message);
-        })
+        computeTrustScore(env, entry.guid, l1Base)
+          .then((r) => {
+            console.log('[internal/ledger-entries] trust-score 재계산 완료:', entry.guid, JSON.stringify(r));
+          })
+          .catch((e) => {
+            console.warn('[internal/ledger-entries] trust-score 재계산 실패(원장 기록 자체는 정상):', e.message, e.stack);
+          })
       );
+    } else {
+      console.warn('[internal/ledger-entries] ctx.waitUntil 없음 — trust-score 재계산 건너뜀. ctx=', typeof ctx);
     }
 
     return jsonResponse({ ok: true, record: result.record });
