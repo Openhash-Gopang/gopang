@@ -18741,6 +18741,39 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'lease_contract', name: '임대차계약서(임차인인 경우만 해당)', required: false, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 복지위생국 장애인복지과(제주시청/서귀포시청).
+  // 전통적으로 이 업무는 읍면동(주민센터)이 1차 접수, 시청 복지 담당국이
+  // 최종 심사를 하는 2단계 구조다(SP-EMD-TEMPLATE_v1.3 §3 "주민복지팀"에
+  // 이미 명시됨). 05-emd는 정적 SP 파일 없이 동적 렌더링돼 이 감사 스캔
+  // 대상 자체가 아니고, 새로 만들면 큰 별도 프로젝트가 된다 — 대신 기존
+  // 정부 시스템의 복지로(bokjiro.go.kr, 읍면동 방문 없이 직접 온라인
+  // 신청 가능) 선례를 그대로 따라, 시청 명의로 온라인 접수 통로를 열되
+  // 심사 주체는 원래도 시청 복지 담당국이므로 권한 문제가 없다. SP
+  // §INPUT_SCHEMA에 이 관계를 disclaimer로 명시(아래 SP 파일 patch 참조).
+  // 법적 근거는 웹검색으로 확인(2026-08-20): 장애인복지법 제32조(장애인
+  // 등록), 장애인복지법 시행규칙 제3조제1항 별지 제1호의2서식.
+  'jejusi:disability_registration': {
+    agency:      'jejusi',
+    agency_name: '제주시청 복지위생국 장애인복지과',
+    task_name:   '장애인 등록 신청',
+    legal_basis: '장애인복지법 제32조, 장애인복지법 시행규칙 제3조제1항 별지 제1호의2서식',
+    documents: [
+      { id: 'reg_form',       name: '장애인등록 및 서비스 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'photo',          name: '증명사진(3.5cm×4.5cm)',       required: true, acquisition: 'user_authored' },
+      { id: 'diagnosis',      name: '장애정도 심사용 진단서(장애유형별)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:disability_registration': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 복지위생국 장애인복지과',
+    task_name:   '장애인 등록 신청',
+    legal_basis: '장애인복지법 제32조, 장애인복지법 시행규칙 제3조제1항 별지 제1호의2서식',
+    documents: [
+      { id: 'reg_form',       name: '장애인등록 및 서비스 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'photo',          name: '증명사진(3.5cm×4.5cm)',       required: true, acquisition: 'user_authored' },
+      { id: 'diagnosis',      name: '장애정도 심사용 진단서(장애유형별)', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18784,6 +18817,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   // ── 07-org(출자출연기관) — target_type:'org' (DEPT_TASK_TAXONOMY.org에 사전 등록된 코드) ──
   'jcgf:credit_guarantee_application': { target_type: 'org', target_id: 'org:JCGF' },
+  'seogwipo:disability_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:disability_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
