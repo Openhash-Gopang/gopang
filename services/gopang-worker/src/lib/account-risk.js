@@ -24,12 +24,21 @@ export async function getAccountRisk(env, guid, l1Base) {
 export async function upsertAccountRisk(env, l1Base, guid, patch) {
   const filter = buildFilter([['guid', '=', guid]]);
   const res = await pbFetch(env, l1Base, `/api/collections/account_risk_score/records?${new URLSearchParams({ filter, perPage: '1' })}`);
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`account_risk_score 조회 실패 (${res.status}): ${detail}`);
+  }
   const data = await res.json();
   const existing = data.items?.[0];
   const body = { guid, last_computed_at: new Date().toISOString(), ...patch };
+  let writeRes;
   if (existing) {
-    await pbFetch(env, l1Base, `/api/collections/account_risk_score/records/${existing.id}`, { method: 'PATCH', body });
+    writeRes = await pbFetch(env, l1Base, `/api/collections/account_risk_score/records/${existing.id}`, { method: 'PATCH', body });
   } else {
-    await pbFetch(env, l1Base, '/api/collections/account_risk_score/records', { method: 'POST', body: { current_score: 0, open_case_count: 0, step_up_required: false, ...body } });
+    writeRes = await pbFetch(env, l1Base, '/api/collections/account_risk_score/records', { method: 'POST', body: { current_score: 0, open_case_count: 0, step_up_required: false, ...body } });
+  }
+  if (!writeRes.ok) {
+    const detail = await writeRes.text().catch(() => '');
+    throw new Error(`account_risk_score ${existing ? 'PATCH' : 'POST'} 실패 (${writeRes.status}): ${detail}`);
   }
 }
