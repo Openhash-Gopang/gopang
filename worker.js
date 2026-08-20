@@ -18669,6 +18669,58 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'construct_plan',  name: '시공계획서',          required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 복지위생국 위생관리과(제주시청/서귀포시청) 최초
+  // 등록. 안전도시건설국 계열이 아닌 첫 사례라 AGENCY_TO_DEPT_TARGET
+  // 세분화(agency:task_key)를 함께 도입한 계기가 됨(아래 표 주석 참조).
+  // 법적 근거는 웹검색으로 확인(2026-08-20): 식품위생법 제37조제4항
+  // (식품접객업 영업신고, 시행규칙 제42조 별지37호 서식), 공중위생관리법
+  // 제3조제1항(숙박업·미용업 등 공중위생영업 신고, 시행규칙 제3조).
+  'seogwipo:food_business_report': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 복지위생국 위생관리과',
+    task_name:   '식품접객업 영업신고',
+    legal_basis: '식품위생법 제37조제4항, 식품위생법 시행규칙 제42조제1항 별지37호',
+    documents: [
+      { id: 'report_form',    name: '영업신고서',           required: true, acquisition: 'user_authored' },
+      { id: 'hygiene_edu',    name: '위생교육이수증',        required: true, acquisition: 'user_authored' }, // 식품위생법 제41조제2항 — 미리 이수한 경우만 첨부, 미이수 시 신고 후 교육
+      { id: 'facility_layout',name: '시설 배치도(주방·객장 등)', required: false, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:public_sanitation_business_report': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 복지위생국 위생관리과',
+    task_name:   '공중위생영업 신고 (숙박업·미용업 등)',
+    legal_basis: '공중위생관리법 제3조제1항, 공중위생관리법 시행규칙 제3조제1항',
+    documents: [
+      { id: 'report_form',    name: '영업신고서',                 required: true, acquisition: 'user_authored' },
+      { id: 'facility_desc',  name: '영업시설 및 설비개요서',     required: true, acquisition: 'user_authored' },
+      { id: 'hygiene_edu',    name: '위생교육필증',               required: true, acquisition: 'user_authored' }, // 공중위생관리법 제17조 — 미리 받은 경우만 첨부
+      { id: 'license_proof',  name: '면허증(이용업·미용업만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:food_business_report': {
+    agency:      'jejusi',
+    agency_name: '제주시청 복지위생국 위생관리과',
+    task_name:   '식품접객업 영업신고',
+    legal_basis: '식품위생법 제37조제4항, 식품위생법 시행규칙 제42조제1항 별지37호',
+    documents: [
+      { id: 'report_form',    name: '영업신고서',           required: true, acquisition: 'user_authored' },
+      { id: 'hygiene_edu',    name: '위생교육이수증',        required: true, acquisition: 'user_authored' },
+      { id: 'facility_layout',name: '시설 배치도(주방·객장 등)', required: false, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:public_sanitation_business_report': {
+    agency:      'jejusi',
+    agency_name: '제주시청 복지위생국 위생관리과',
+    task_name:   '공중위생영업 신고 (숙박업·미용업 등)',
+    legal_basis: '공중위생관리법 제3조제1항, 공중위생관리법 시행규칙 제3조제1항',
+    documents: [
+      { id: 'report_form',    name: '영업신고서',                 required: true, acquisition: 'user_authored' },
+      { id: 'facility_desc',  name: '영업시설 및 설비개요서',     required: true, acquisition: 'user_authored' },
+      { id: 'hygiene_edu',    name: '위생교육필증',               required: true, acquisition: 'user_authored' },
+      { id: 'license_proof',  name: '면허증(이용업·미용업만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18691,12 +18743,38 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
 // 정확한 시 코드('jeju')로 고쳐 매핑한다 — REQUIRED_DOCUMENTS_REGISTRY의
 // agency 값 자체는 이미 다른 용도(§요금조회 캐시 키 등)로 쓰이고 있어
 // 손대지 않는다(회귀 위험, 2026-08-19 발견된 원칙과 동일).
+// ★ 2026-08-20 — 세분화(agency:task_key 단위). 위생관리과(복지위생국) 항목을
+// 등록하려다 발견: 기존엔 agency 코드 하나(seogwipo/jejusi)당 target이
+// 딱 하나뿐이라, 지금까지 등록된 15개 REQUIRED_DOCUMENTS_REGISTRY 항목이
+// 우연히 전부 같은 국(안전도시건설국/도시건설국) 소관이라 문제가 안 드러났을
+// 뿐이다. 다른 국(복지위생국 등) 업무를 같은 agency 코드로 등록하면 부서
+// 알림(dept_task)이 엉뚱한 국으로 갔다 — 아래처럼 `${agency}:${task_key}`
+// 세분 키를 먼저 찾고, 없으면 agency 단위 값으로 폴백한다
+// (_resolveDeptTarget 참조, 기존 15개는 전부 같은 국이라 폴백만으로도 여전히
+// 정확해 하위호환 깨지지 않음 — 이번엔 새로 추가하는 항목만 세분 키로 등록).
 const AGENCY_TO_DEPT_TARGET = {
   kcc:      { target_type: 'national', target_id: 'national:kcc' },
   court:    { target_type: 'national', target_id: 'national:court' },
-  seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' },
-  jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조)
+  seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' }, // 폴백 — 기존 8개(전부 안전도시건설국) 전용, 새 항목은 세분 키를 쓸 것
+  jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조). 폴백 — 기존 6개(전부 도시건설국) 전용
+  // ── 여기부터 agency:task_key 세분 항목 (국 단위 폴백과 다른 국일 때 필수) ──
+  'seogwipo:food_business_report':           { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'seogwipo:public_sanitation_business_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:food_business_report':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
 };
+
+// agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
+// AGENCY_TO_DEPT_TARGET을 직접 인덱싱하던 기존 두 지점(_verifyOfficerForGovTask,
+// handleGovTaskSubmit) 모두 이 함수로 교체 — 반드시 이 함수를 거칠 것,
+// 새 항목 추가 시 직접 AGENCY_TO_DEPT_TARGET[agency]로 조회하면 다시 같은
+// 버그(엉뚱한 국으로 dept_task 생성)가 재발한다.
+function _resolveDeptTarget(agency, task_key) {
+  if (task_key && AGENCY_TO_DEPT_TARGET[`${agency}:${task_key}`]) {
+    return AGENCY_TO_DEPT_TARGET[`${agency}:${task_key}`];
+  }
+  return AGENCY_TO_DEPT_TARGET[agency] || null;
+}
 
 // ── 신규 기관/업무 판단절차 (agency/task_key 미등록 시) ──────────────
 // kgov(SP-10_kpublic)가 REQUIRED_DOCUMENTS_REGISTRY에 없는 요청을 받으면:
@@ -19140,7 +19218,7 @@ async function _appendGovTaskReviewEvent(env, { guid, agency, task_key, receipt_
 // 관할 부서 org_id를 계산해 cert의 org_id와 정확히 일치하는지까지 대조한다
 // (다른 부서 공무원이 남의 케이스에 결재하는 것을 막음 — _authoritativeCheck와
 // 동일 원칙, 다만 이건 dept_task가 아니라 GOV_TASK 케이스라 별도 함수로 둠).
-async function _verifyOfficerForGovTask(env, accessCert, agency) {
+async function _verifyOfficerForGovTask(env, accessCert, agency, task_key) {
   if (!accessCert?.official_guid) return { ok: false, reason: 'MISSING_FIELD', detail: 'access_cert.official_guid 필수' };
   const verifiedOrgId = await _verifyAccessCert(
     env, accessCert, accessCert.official_guid, { _verifyEd25519Simple, _l1FindProfileByGuid },
@@ -19148,7 +19226,7 @@ async function _verifyOfficerForGovTask(env, accessCert, agency) {
   if (!verifiedOrgId) {
     return { ok: false, reason: 'ACCESS_CERT_INVALID', detail: '공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다' };
   }
-  const target = AGENCY_TO_DEPT_TARGET[agency];
+  const target = _resolveDeptTarget(agency, task_key);
   if (!target) {
     // AGENCY_TO_DEPT_TARGET에 없는 agency는 애초에 dept_task 자동생성도
     // 안 되는 agency다(handleGovTaskSubmit과 동일 전제) — 관할 부서를
@@ -19427,9 +19505,9 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   // 실패해도 시민에게 보여줄 접수 응답 자체는 막지 않는다(아래 catch).
   let deptTaskId = null;
   if (status === 'accepted') {
-    const target = AGENCY_TO_DEPT_TARGET[agency];
+    const target = _resolveDeptTarget(agency, task_key);
     if (!target) {
-      console.warn(`[GovTaskSubmit] AGENCY_TO_DEPT_TARGET에 '${agency}' 매핑 없음 — dept_task 생성 건너뜀`);
+      console.warn(`[GovTaskSubmit] AGENCY_TO_DEPT_TARGET에 '${agency}:${task_key}' 및 '${agency}' 매핑 모두 없음 — dept_task 생성 건너뜀`);
     } else {
       try {
         const deptResult = await createDeptTaskCore(env, {
@@ -19522,7 +19600,7 @@ async function handleGovTaskSupplementRequest(bodyText, env, corsHeaders) {
   const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
   if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
 
-  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency, priorCase.govTask.task_key);
   if (!officerCheck.ok) {
     const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
       : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
@@ -19560,7 +19638,7 @@ async function handleGovTaskFieldInspectionSchedule(bodyText, env, corsHeaders) 
   const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
   if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
 
-  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency, priorCase.govTask.task_key);
   if (!officerCheck.ok) {
     const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
       : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
@@ -19601,7 +19679,7 @@ async function handleGovTaskOpinionSubmit(bodyText, env, corsHeaders) {
   const priorCase = await _l1FindGovTaskByReceiptNo(env, receipt_no);
   if (!priorCase) return _err(404, 'RECEIPT_NOT_FOUND', '해당 접수번호의 케이스를 찾을 수 없습니다', corsHeaders);
 
-  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency, priorCase.govTask.task_key);
   if (!officerCheck.ok) {
     const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
       : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
@@ -19651,7 +19729,7 @@ async function handleGovTaskOfficerDecision(bodyText, env, corsHeaders) {
   // 받을 수 없는 인증서)만으로 이미 충족된다. 신청자의 guid로는 애초에
   // AGENCY_TO_DEPT_TARGET의 org_id를 발급받을 access_cert 자체가 없다
   // (기관장 서명이 필요 — §AGENCY_PUBKEY_REGISTRY, 신청자는 기관장이 아님).
-  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency);
+  const officerCheck = await _verifyOfficerForGovTask(env, access_cert, priorCase.govTask.agency, priorCase.govTask.task_key);
   if (!officerCheck.ok) {
     const httpStatus = officerCheck.reason === 'OFFICER_AGENCY_MISMATCH' ? 403
       : officerCheck.reason === 'MISSING_FIELD' ? 400 : 401;
