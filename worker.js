@@ -18910,6 +18910,29 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'biz_plan',     name: '사업계획서(위치도·평면도 포함)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 문화관광체육국 관광진흥과(제주시청/서귀포시청).
+  // 관광진흥법 제4조상 등록 권한자가 "시장·군수·구청장"(제주는 행정시장
+  // 포함)으로 명문 규정 — 위임 이슈 없음(웹검색 확인, 2026-08-20).
+  'jejusi:tourism_business_registration': {
+    agency: 'jejusi', agency_name: '제주시청 문화관광체육국 관광진흥과',
+    task_name: '관광사업(여행업·관광숙박업 등) 등록',
+    legal_basis: '관광진흥법 제4조, 관광진흥법 시행령 제3조',
+    documents: [
+      { id: 'reg_form',     name: '관광사업 등록신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
+      { id: 'facility_desc',name: '시설·설비 내역서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:tourism_business_registration': {
+    agency: 'seogwipo', agency_name: '서귀포시청 문화관광체육국 관광진흥과',
+    task_name: '관광사업(여행업·관광숙박업 등) 등록',
+    legal_basis: '관광진흥법 제4조, 관광진흥법 시행령 제3조',
+    documents: [
+      { id: 'reg_form',     name: '관광사업 등록신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
+      { id: 'facility_desc',name: '시설·설비 내역서', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18967,6 +18990,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:air_emission_facility_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
   'jejusi:park_occupancy_permit':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
   'seogwipo:park_occupancy_permit': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
+  'jejusi:tourism_business_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
+  'seogwipo:tourism_business_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
