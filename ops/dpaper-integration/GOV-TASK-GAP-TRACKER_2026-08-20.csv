@@ -758,7 +758,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-BASICGOVPREP_v1.0.md,서귀포시청 자치행정국 기초자치단체설치준비지원단,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-VEHICLE_v1.0.md,제주시청 안전교통국 차량관리과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-ELDERLY_v1.0.md,제주시청 복지위생국 노인복지과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-DISABLED_v1.0.md,서귀포시청 복지위생국 장애인복지과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-DISABLED_v1.0.md,서귀포시청 복지위생국 장애인복지과,Y,N,완료,"jejusi:disability_registration, seogwipo:disability_registration 등록 — 읍면동 1차접수/시청 최종심사 2단계 구조를 복지로형 온라인접수 disclaimer로 반영한 최초 사례(복지 계열 재사용 템플릿)",PR#477,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-CITRUS_v1.0.md,서귀포시청 농수축산경제국 감귤유통과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-EASTCENTER_v1.0.md,서귀포시청 서귀포보건소 동부보건소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-ENVMGMT_v1.0.md,서귀포시청 청정환경국 기후환경과,Y,N,미착수,,,
@@ -812,7 +812,7 @@
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-ENVMGMT_v1.0.md,제주시청 청정환경국 환경관리과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-VILLAGE_v1.0.md,서귀포시청 자치행정국 마을활력과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-ARTCENTER_v1.0.md,제주시청 문화관광체육국 제주아트센터,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-DISABLED_v1.0.md,제주시청 복지위생국 장애인복지과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-DISABLED_v1.0.md,제주시청 복지위생국 장애인복지과,Y,N,완료,"jejusi:disability_registration, seogwipo:disability_registration 등록 — 읍면동 1차접수/시청 최종심사 2단계 구조를 복지로형 온라인접수 disclaimer로 반영한 최초 사례(복지 계열 재사용 템플릿)",PR#477,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-BASICGOVPREP_v1.2.md,제주시청 자치행정국 기초자치단체 설치준비지원단,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-WESTCENTER_v1.0.md,서귀포시청 서귀포보건소 서부보건소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-WOMENFAMILY_v1.0.md,서귀포시청 복지위생국 여성가족과,Y,N,미착수,,,
