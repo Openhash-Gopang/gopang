@@ -18889,6 +18889,27 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'emission_est', name: '원료(연료)·생산량·오염물질 배출량 예측 명세서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 청정환경국 공원녹지과(제주시청/서귀포시청). 도시
+  // 공원 점용허가는 도시공원법 제24조상 "시장·군수" 권한 — 위임 문제 없이
+  // 시청 고유 사무로 명확함(웹검색 확인, 2026-08-20).
+  'jejusi:park_occupancy_permit': {
+    agency: 'jejusi', agency_name: '제주시청 청정환경국 공원녹지과',
+    task_name: '도시공원 점용허가',
+    legal_basis: '도시공원 및 녹지 등에 관한 법률 제24조, 같은 법 시행령 제20조',
+    documents: [
+      { id: 'permit_form',  name: '도시공원점용허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서(위치도·평면도 포함)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:park_occupancy_permit': {
+    agency: 'seogwipo', agency_name: '서귀포시청 청정환경국 공원녹지과',
+    task_name: '도시공원 점용허가',
+    legal_basis: '도시공원 및 녹지 등에 관한 법률 제24조, 같은 법 시행령 제20조',
+    documents: [
+      { id: 'permit_form',  name: '도시공원점용허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서(위치도·평면도 포함)', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18944,6 +18965,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:emergency_welfare_support_request':              { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:air_emission_facility_report':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
   'seogwipo:air_emission_facility_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
+  'jejusi:park_occupancy_permit':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
+  'seogwipo:park_occupancy_permit': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
