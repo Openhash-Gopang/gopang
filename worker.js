@@ -15429,11 +15429,36 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   // 안 드러났을 뿐 — tax부터 SSOT 마이그레이션하며 실제로 걸렸다. 이미 있는
   // SVC_ALIAS(위 1332행, k표준형→로컬형)를 뒤집어 재사용한다 — 새 매핑을
   // 또 만들지 않는다(단일 진실 공급원 원칙).
-  const REVERSE_SVC_ALIAS = Object.fromEntries(
-    Object.entries(SVC_ALIAS).map(([kForm, localForm]) => [localForm, kForm])
-  );
+  //
+  // ★ 2026-08-20 실사로 발견된 버그 수정 — SVC_ALIAS는 여러 k-form이 같은
+  // local-form으로 매핑되는 경우가 있다(예: 'ktax'와 'k-tax' 둘 다 'tax').
+  // 기존엔 Object.fromEntries(...)로 단순 역변환했는데, 이 함수는 "나중에
+  // 등장하는 키가 이긴다" — 그런데 'k-tax'/'k-health'/'k-insurance'/
+  // 'k-logistics'/'k-traffic'/'k-public' 등 "백업 별칭"(★2026-07-23 주석
+  // 참조, 하이픈 포함형)이 원본 SVC_ALIAS 객체 안에서 정규형(ktax 등)보다
+  // *뒤에* 선언돼 있어, 역변환 시 정규형을 덮어써버렸다. 그 결과
+  // owner_agency:"tax"로 들어온 요청이 "ktax"가 아니라 화이트리스트에
+  // 없는 "k-tax"로 잘못 해석돼 UNKNOWN_AGENCY 400을 반환했다 — 영향
+  // 범위(실사 확인): tax/health/insurance/traffic/logistics/public/gopang
+  // 7개 서비스, reportGwpSessionEnd()가 로컬형 agencyId를 그대로
+  // recordOwnerPDV()에 넘기는 표준 호출 경로에서 전부 재현됨. 아래 두
+  // 겹장치로 고친다:
+  //   (1) "k-"로 시작하는 하이픈형 별칭은 역변환 결과 후보에서 제외 —
+  //       원래 "백업 입력 별칭"(이런 값도 입력으로 받아주자는 용도)이지,
+  //       역변환의 출력으로 선택돼선 안 됐다.
+  //   (2) 입력값이 이미 화이트리스트에 있는 정상 K-form이면(예: 이미
+  //       "ktax"를 보낸 경우) 역변환 자체를 건너뛰고 그대로 사용 — (1)만으론
+  //       못 잡는 'gopang'→'profile-assistant' 충돌(비하이픈형끼리의 충돌)
+  //       까지 이 겹장치로 방어된다.
+  const REVERSE_SVC_ALIAS = {};
+  for (const [kForm, localForm] of Object.entries(SVC_ALIAS)) {
+    if (REVERSE_SVC_ALIAS[localForm] && kForm.startsWith('k-')) continue;
+    REVERSE_SVC_ALIAS[localForm] = kForm;
+  }
   const ownerAgencyRaw = String(r.owner_agency || '').trim().toLowerCase();
-  const ownerAgency = REVERSE_SVC_ALIAS[ownerAgencyRaw] || ownerAgencyRaw;
+  const ownerAgency = OWNER_AGENCY_WHITELIST_SHARED.has(ownerAgencyRaw)
+    ? ownerAgencyRaw
+    : (REVERSE_SVC_ALIAS[ownerAgencyRaw] || ownerAgencyRaw);
   if (!ownerAgency) return _err(400, 'SCHEMA_ERROR', 'owner_agency 필수', corsHeaders);
   if (!OWNER_AGENCY_WHITELIST.has(ownerAgency))
     return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 owner_agency: ${ownerAgency}`, corsHeaders);
