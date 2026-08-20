@@ -18774,6 +18774,97 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'diagnosis',      name: '장애정도 심사용 진단서(장애유형별)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 복지위생국 나머지 4개 과(주민복지·노인복지·
+  // 기초생활보장·여성가족, 제주시청/서귀포시청). 장애인복지과와 같은
+  // 읍면동 1차접수/시청 최종심사 패턴 확인(웹검색): 기초연금(기초연금법
+  // 제10조, 시행규칙 제7조) — 읍면동·국민연금공단·복지로. 국민기초생활
+  // 보장(국민기초생활보장법 제21조) — 관할 시장·군수·구청장에게 신청,
+  // 읍면동 경유 관례. 한부모가족지원(한부모가족지원법 제11조, 시행규칙
+  // 제7조) — 거주지관할 읍면동장을 거쳐 시장 등에게 신청, 복지로 병행.
+  // 단, 긴급복지지원(긴급복지지원법 제7조)만 예외 — "관할 시장·군수·
+  // 구청장에게 구술 또는 서면으로 직접 요청" 가능하다고 명시돼 있어
+  // 읍면동 경유가 필수가 아님(시급성이 핵심인 제도라 오히려 시청 직접
+  // 접수가 자연스러움) — 이 task_key만 disclaimer 생략.
+  'jejusi:basic_pension_application': {
+    agency: 'jejusi', agency_name: '제주시청 복지위생국 노인복지과',
+    task_name: '기초연금 지급 신청',
+    legal_basis: '기초연금법 제10조, 기초연금법 시행규칙 제7조',
+    documents: [
+      { id: 'application',  name: '기초연금 지급신청서',      required: true, acquisition: 'user_authored' },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+      { id: 'financial_consent', name: '금융정보등 제공 동의서', required: true, acquisition: 'user_authored' },
+      { id: 'bankbook',     name: '본인 통장 사본',            required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:basic_pension_application': {
+    agency: 'seogwipo', agency_name: '서귀포시청 복지위생국 노인복지과',
+    task_name: '기초연금 지급 신청',
+    legal_basis: '기초연금법 제10조, 기초연금법 시행규칙 제7조',
+    documents: [
+      { id: 'application',  name: '기초연금 지급신청서',      required: true, acquisition: 'user_authored' },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+      { id: 'financial_consent', name: '금융정보등 제공 동의서', required: true, acquisition: 'user_authored' },
+      { id: 'bankbook',     name: '본인 통장 사본',            required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:basic_livelihood_benefit_application': {
+    agency: 'jejusi', agency_name: '제주시청 복지위생국 기초생활보장과',
+    task_name: '국민기초생활보장 급여 신청 (생계·의료·주거·교육급여)',
+    legal_basis: '국민기초생활보장법 제21조',
+    documents: [
+      { id: 'application',  name: '사회보장급여 신청(변경)서', required: true, acquisition: 'user_authored' },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+      { id: 'financial_consent', name: '금융정보등 제공 동의서(수급권자·부양의무자)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:basic_livelihood_benefit_application': {
+    agency: 'seogwipo', agency_name: '서귀포시청 복지위생국 기초생활보장과',
+    task_name: '국민기초생활보장 급여 신청 (생계·의료·주거·교육급여)',
+    legal_basis: '국민기초생활보장법 제21조',
+    documents: [
+      { id: 'application',  name: '사회보장급여 신청(변경)서', required: true, acquisition: 'user_authored' },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+      { id: 'financial_consent', name: '금융정보등 제공 동의서(수급권자·부양의무자)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:single_parent_family_support_application': {
+    agency: 'jejusi', agency_name: '제주시청 복지위생국 여성가족과',
+    task_name: '한부모가족 복지급여 신청',
+    legal_basis: '한부모가족지원법 제11조, 한부모가족지원법 시행규칙 제7조',
+    documents: [
+      { id: 'application',  name: '복지급여 신청서',           required: true, acquisition: 'user_authored' },
+      { id: 'family_cert',  name: '가족관계증명서',             required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.family_relation', max_age_days: 30 },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:single_parent_family_support_application': {
+    agency: 'seogwipo', agency_name: '서귀포시청 복지위생국 여성가족과',
+    task_name: '한부모가족 복지급여 신청',
+    legal_basis: '한부모가족지원법 제11조, 한부모가족지원법 시행규칙 제7조',
+    documents: [
+      { id: 'application',  name: '복지급여 신청서',           required: true, acquisition: 'user_authored' },
+      { id: 'family_cert',  name: '가족관계증명서',             required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.family_relation', max_age_days: 30 },
+      { id: 'income_report',name: '소득·재산 신고서',          required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:emergency_welfare_support_request': {
+    agency: 'jejusi', agency_name: '제주시청 복지위생국 주민복지과',
+    task_name: '긴급복지지원 요청',
+    legal_basis: '긴급복지지원법 제7조',
+    documents: [
+      { id: 'request',      name: '긴급지원 요청서(구술·서면 모두 가능, 서면 접수 시 서식)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:emergency_welfare_support_request': {
+    agency: 'seogwipo', agency_name: '서귀포시청 복지위생국 주민복지과',
+    task_name: '긴급복지지원 요청',
+    legal_basis: '긴급복지지원법 제7조',
+    documents: [
+      { id: 'request',      name: '긴급지원 요청서(구술·서면 모두 가능, 서면 접수 시 서식)', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18819,6 +18910,14 @@ const AGENCY_TO_DEPT_TARGET = {
   'jcgf:credit_guarantee_application': { target_type: 'org', target_id: 'org:JCGF' },
   'seogwipo:disability_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:disability_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'jejusi:basic_pension_application':                        { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'seogwipo:basic_pension_application':                      { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:basic_livelihood_benefit_application':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'seogwipo:basic_livelihood_benefit_application':           { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:single_parent_family_support_application':         { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'seogwipo:single_parent_family_support_application':       { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:emergency_welfare_support_request':                { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
+  'seogwipo:emergency_welfare_support_request':              { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
