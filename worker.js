@@ -18865,6 +18865,30 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'request',      name: '긴급지원 요청서(구술·서면 모두 가능, 서면 접수 시 서식)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 청정환경국 환경관리과(제주시청)/기후환경과(서귀포시청).
+  // 법조문상 대기배출시설 설치신고 권한자는 "시·도지사"(대기환경보전법
+  // 제23조제1항)로 원칙은 도지사 소관이나, SP 본문이 "관내 환경 인허가·
+  // 관리 실무를 집행한다"고 이미 명시(도청과 역할 분리 서술)하고 있어
+  // 제주특별법상 행정시 사무위임을 전제로 등록한다 — 위임 여부 자체는
+  // 재확인 필요(TBD, 아래 SP patch에도 동일하게 명시).
+  'jejusi:air_emission_facility_report': {
+    agency: 'jejusi', agency_name: '제주시청 청정환경국 환경관리과',
+    task_name: '대기배출시설 설치신고',
+    legal_basis: '대기환경보전법 제23조제1항, 대기환경보전법 시행령 제11조제2항, 대기환경보전법 시행규칙 제25조',
+    documents: [
+      { id: 'report_form',  name: '대기배출시설 설치신고서(별지 제2호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'emission_est', name: '원료(연료)·생산량·오염물질 배출량 예측 명세서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:air_emission_facility_report': {
+    agency: 'seogwipo', agency_name: '서귀포시청 청정환경국 기후환경과',
+    task_name: '대기배출시설 설치신고',
+    legal_basis: '대기환경보전법 제23조제1항, 대기환경보전법 시행령 제11조제2항, 대기환경보전법 시행규칙 제25조',
+    documents: [
+      { id: 'report_form',  name: '대기배출시설 설치신고서(별지 제2호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'emission_est', name: '원료(연료)·생산량·오염물질 배출량 예측 명세서', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -18918,6 +18942,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:single_parent_family_support_application':       { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:emergency_welfare_support_request':                { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   'seogwipo:emergency_welfare_support_request':              { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
+  'jejusi:air_emission_facility_report':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
+  'seogwipo:air_emission_facility_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
