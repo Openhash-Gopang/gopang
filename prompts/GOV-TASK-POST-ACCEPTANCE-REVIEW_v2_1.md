@@ -6,14 +6,18 @@
 # 버전      : v2.1 — worker.js/call-ai.js 실배선 완료 반영 (v2.0은 전면
 #             재범위만 하고 배선은 스텁 수준이었음 — v1.0 CASE_OPEN/
 #             CASE_SUBMIT 등 폐기는 v2.0에서 이미 완료)
-# 상태      : WIRED — §2 세 태그·§3 officer-decision 모두 worker.js/
-#             call-ai.js에 실제로 연결됨(ops/dpaper-integration/
-#             IMPLEMENTATION-GAPS_gov-task-post-acceptance.md 참조).
-#             단, AGENCY_PUBKEY_REGISTRY가 비어있어 access_cert 검증을
-#             통과할 수 있는 실제 기관이 아직 없음(§3 결재는 코드
-#             완성·실사용 전 — 아래 §5 참조) — dpaper.kr 보관도 별도
-#             체크리스트로 여전히 꺼져 있음.
-# 작성일     : 2026-08-20 (원본) / 2026-08-20 (v2.1, 같은 날 배선 완료)
+# 상태      : WIRED + 전 기관 공통 승격 — §2 세 태그·§3 officer-decision
+#             모두 worker.js/call-ai.js에 실제로 연결됐고(ops/dpaper-
+#             integration/IMPLEMENTATION-GAPS_gov-task-post-acceptance.md
+#             참조), 2026-08-20 AGENCY-AC-COMMON_v1.5 공리 2로 승격돼
+#             REQUIRED_DOCUMENTS_REGISTRY에 task_key를 등록한 모든
+#             기관·부서가 자동 상속한다 — SP-CITYDIV-SEOGWIPO-
+#             CONSTRUCTION-BUILDING §3(원형)을 개별 SP가 다시 옮겨 적을
+#             필요가 없어졌다. 단, AGENCY_PUBKEY_REGISTRY가 비어있어
+#             access_cert 검증을 통과할 수 있는 실제 기관이 아직 없음
+#             (코드 완성·실사용 전) — dpaper.kr 보관도 여전히 꺼져 있음.
+# 작성일     : 2026-08-20 (원본) / 2026-08-20 (v2.1, 같은 날 배선 완료) /
+#             2026-08-20 (본 갱신, AGENCY-AC-COMMON 공리 2로 승격 반영)
 # 폐기 사유(v1.0 → v2.0): SP-22_kexecute·call-ai.js·handleGovTaskSubmit을
 #   실사한 결과, v1.0의 CASE_OPEN/DOC_REQUIREMENT_NOTICE/VAULT_RETRIEVE/
 #   CASE_SUBMIT/FEE_COLLECT는 이미 [GOV_TASK_SUBMIT_REQUEST]/

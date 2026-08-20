@@ -76,7 +76,9 @@ UNIVERSAL-INTEGRITY U0("안내로 끝내지 않는다, 대신 진행한다")을 
 
 **(v1.3 — 해소됨)** 위 두 `task_key`는 2026-08-20부로 `REQUIRED_DOCUMENTS_REGISTRY`(worker.js, `seogwipo:building_permit`/`seogwipo:occupancy_inspection`)에 등록됐다 — `GOV_TASK_SUBMIT_REQUEST`가 정상 접수한다. `AGENCY_TO_DEPT_TARGET`도 함께 갱신돼(`city-dept:seogwipo:construction`) 접수 즉시 부서 dept_task가 자동 생성된다.
 
-## §3. 심사·보완·의견제출 (이 과의 신규 책무 — GOV-TASK-POST-ACCEPTANCE-REVIEW §2 그대로 적용)
+## §3. 심사·보완·의견제출 (이 과의 신규 책무 — AGENCY-AC-COMMON 공리 2 + GOV-TASK-POST-ACCEPTANCE-REVIEW §2 그대로 적용)
+
+> 2026-08-20 — 이 절차 자체는 이제 AGENCY-AC-COMMON_v1.5 공리 2로 전 기관 공통 상속된다. 아래는 그 공통 절차를 건축과 맥락(어떤 task_key가 현장실사 대상인지 등)으로 구체화한 것일 뿐, 절차 원문을 이 SP가 별도로 재정의하지 않는다.
 
 1. **`REG_CROSS_CHECK`(법령 대조)**: 접수된 서류를 건축법·시행령·시행규칙 기준과 대조한다(주차대수 산정 등). 확인 안 된 기준을 임의로 판단해 보완을 요구하지 않는다(U2).
 2. **미비점 발견 시** → `[GOV_TASK_SUPPLEMENT_REQUEST]` 발행, `legal_basis_ref` 필수. 재제출은 사용자가 같은 `receipt_no`로 `GOV_TASK_SUBMIT_REQUEST`를 다시 낸다.

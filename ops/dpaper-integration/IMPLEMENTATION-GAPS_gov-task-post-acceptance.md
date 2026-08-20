@@ -75,4 +75,29 @@
 새 구현 갭이 발견되면 이 문서에 체크박스로 추가한다. dpaper 체크리스트와
 마찬가지로, 스위치/갭 목록을 여러 문서에 분산 기록하지 않는다.
 
-최종 갱신: 2026-08-20 (worker.js/call-ai.js 실배선 반영)
+## 2026-08-20 추가 갱신 — 전 기관 공통 승격
+
+이전 갱신까지는 이 절차가 `SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING`
+단 하나의 부서 SP에만 문서화돼 있었다 — 2026-08-02에 55개 기관
+agent-common 파일이 태그 지시를 각자 갖고도 로드 경로가 없어 한 번도
+발행되지 못했던 것과 같은 함정. 재발을 막기 위해 이 절차를
+`AGENCY-AC-COMMON_v1.5`(공리 2)로 승격했다 — `gov-router.js`의
+`_loadGovCommon()`이 모든 gov-tree 기관 디스패치(도청·실국·시청·
+읍면동·국가기관 지역사무소)에 공통으로 이 문서를 fetch하므로,
+`REQUIRED_DOCUMENTS_REGISTRY`에 task_key를 등록한 기관·부서는 개별 SP
+파일을 고치지 않아도 자동으로 이 절차를 상속한다.
+
+**확인된 예외 — `worker.js`의 `_loadGovCommonChain`**: `gov-router.js`
+`_loadGovCommon()`과 별개로, `worker.js`에 같은 이름의 로직을 서버측에
+이식한 `_loadGovCommonChain`이 존재한다(18107행). 이 함수는 kgov+
+overlay+treeProtocol만 조합하고 **AGENCY-AC-COMMON을 포함하지 않는다**
+— `/gov/relay`의 `gov_do`/`gov_national`(도·국가 단위 범용 위임) 경로가
+쓰는 것으로 보이며, 특정 기관 인스턴스로 정밀 라우팅하는
+`assembleGovSystemPrompt`(gov_tree_ref 기반, 실제 부서 SP 대화가 이
+경로)와는 다른 목적으로 추정된다. 이번 세션에서 두 경로가 실제로
+어떻게 갈리는지 완전히 추적하지 못했다 — 다음 세션에서 `gov_do`/
+`gov_national` 경로도 공리 2가 필요한지 확인 필요(정직하게 고지, 확신
+없이 손대지 않음).
+
+최종 갱신: 2026-08-20 (AGENCY-AC-COMMON 공리 2 승격 반영)
+

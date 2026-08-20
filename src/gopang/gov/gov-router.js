@@ -378,7 +378,9 @@ async function _loadGovCommon() {
     // 적용한다(agent-common 개별 파일들의 §1 정체성·§2-3 COMPOSE는
     // 이미 상위 기관 SP 자체 및 이번 세션의 division/team 라우팅이
     // 각각 대체하고 있어 중복 삽입하지 않는다 — 이 문서만 필요).
-    fetch(_RAW_ROOT + 'AGENCY-AC-COMMON_v1.4.md?t=' + Math.floor(Date.now() / 3600000))
+    // ★ 2026-08-20 — v1.4→v1.5(공리 2: 접수 이후 심사·보완·의견제출·결재
+    // 절차 신설, GOV-TASK-POST-ACCEPTANCE-REVIEW_v2_1 전 기관 공통 승격).
+    fetch(_RAW_ROOT + 'AGENCY-AC-COMMON_v1.5.md?t=' + Math.floor(Date.now() / 3600000))
       .then(r => { if (!r.ok) throw new Error(`AGENCY-AC-COMMON fetch 실패: HTTP ${r.status}`); return r.text(); }),
   ]);
   const rec = overlayRecords.find(r => r.도코드 === provinceCode);
