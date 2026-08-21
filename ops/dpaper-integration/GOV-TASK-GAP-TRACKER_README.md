@@ -44,10 +44,10 @@
 
 | 상태 | 건수 |
 |---|---|
-| 완료 | 41 (04-city 실작업 28건 + 서귀포 안전도시건설국 구버전 감사행 7건(실작업 아님) + 02-do-dept: 4·3보상금·도유재산 사용허가(PR#492) + 01-do JEJU-DO-SP 3건(PR#493/#494) + 03-do-agency: 소방안전본부 완공검사(PR#496, 최초 사례)) |
-| 제외(오탐) | 2 (SP-EXP-EMERGENCY, SP-EXP-WATER) |
-| 재정의 | 1 (JEJU-DO-AGENT-COMMON_v1.2 — 죽은 파일 여부 미확인, 다음 세션 확인 필요) |
-| 미착수 | 860 |
+| 완료 | 43 (2026-08-20분 41건 + 2026-08-21분 2건: 02-do-dept JACHI 누락분 CSV 정정 + INNOV 전기차 구매보조금 신규) |
+| 제외(오탐) | 9 (2026-08-20분 SP-EXP-EMERGENCY·SP-EXP-WATER 2건 + 2026-08-21분 02-do-dept 순수내부행정형 7건: SPOKES·GENERAL·COMM·AUTONOMY·AIRPORTSUP·LIAISON·GENDER) |
+| 재정의 | 13 (2026-08-20분 JEJU-DO-AGENT-COMMON 1건(죽은 파일 확정) + 2026-08-21분 02-do-dept 12건: 정책총괄형 8 + ECON·AGRI·BALANCE·GANGJEONG 4) |
+| 미착수 | 839 |
 
 **04-city 최종 상태(2026-08-20)**: 74건 중 34건 실작업 완료, 나머지 40건은
 시설예약형(도서관·공연장·휴양림 등)/정책문의형/지원사업형(법적근거 미확인)
@@ -132,6 +132,57 @@ TBD로 표시할 것 — 확인됐다는 근거 없이 임의로 "위임됐다"�
 `고유사무_문구` 필드)을 그대로 쓸 것. 나머지 14개 도는 아직 빈 문자열
 (TBD)이다. `JEJU-DO-AGENT-COMMON_v1.2.md`도 같은 방식으로 대체됐을
 가능성이 있으나 이번 세션에서 확인 못함 — 다음 세션이 먼저 확인할 것.
+
+## 2026-08-21 세션 — 02-do-dept 40건 중 25건 처리
+
+**JEJU-DO-AGENT-COMMON_v1.2.md 죽은 파일 확정**: gov-router.js/worker.js
+어디서도 fetch 안 함, 전국 공통 `prompts/AGENCY-AC-COMMON_v1.5.md`를 모든
+기관이 공통 로드. 등록 대상 아님(재정의 유지).
+
+**인프라 버그 발견·수정**: `do-dept-master-data.json`에 2026-08-04
+COMM/GENERAL/LIAISON/SPOKES 4개 도메인 템플릿 레코드가 이미 신설됐는데,
+`JEJU_L2_TABLE`(gov-router.js)에 domain/도코드 필드가 안 걸려 있어서
+**한 번도 그 템플릿이 렌더링된 적이 없었다** — 만들어놓고 안 쓰인 죽은
+코드. 4개 항목에 domain/도코드 추가해 템플릿 경로로 전환 완료(로컬
+gov-router.js 수정, 아래 배포 절차로 커밋). GENDER/AIRPORTSUP/AUTONOMY/
+BALANCE/GANGJEONG 5개는 마스터데이터에 레코드가 없어 정적 방식 유지가
+맞음(확인만 하고 안 건드림).
+
+**22개 SP-DO-* 전수 스크리닝**(§INPUT_SCHEMA 텍스트 근거): 순수 내부
+행정/조정형 7개(SPOKES·GENERAL·COMM·AUTONOMY·AIRPORTSUP·LIAISON·GENDER)
+는 제외(오탐) — 조직 성격상 인허가·등록 기능이 구조적으로 없음.
+정책총괄형 8개(OCEAN·HOUSING·CLIMATE·WELFARE·SAFETY·TRANSPORT·TOURISM·
+CULTURE)는 재정의 — 개별 처분은 04-city·03-do-agency 소관, 도청은
+정책총괄만(HOUSING/WELFARE에서 이미 확인된 패턴과 동일).
+
+**지원사업형 웹검색 확인**(6개 중 5개 완료):
+- ECON(소상공인 정책자금) → 재정의: 제주경제통상진흥원/소상공인시장
+  진흥공단(중앙기관)이 실제 접수·심사, 도청은 정책총괄
+- AGRI(친환경농업직불제) → 재정의: 농지 소재지 읍·면·동에서 접수
+  (뉴스라인제주 2026-06-08 확인), 도청은 정책총괄
+- BALANCE(지역균형발전) → 재정의: 「제주특별자치도 지역균형발전 지원
+  조례」 확인 — 도지사가 지원지역·사업 지정하는 위원회형 구조, 실집행은
+  제주지역균형발전지원센터(전담기관)
+- GANGJEONG(강정마을 상생사업) → 재정의: 「강정지역 주민 공동체 회복
+  지원 조례」·기금 확인 — 심의위원회 사업계획 심의·도지사 결정 구조
+  (개인 신청 접수형 아님, 마을 단위 사업선정)
+- **INNOV(전기차 구매보조금) → 완료**: 실제 도청(혁신산업국) 직접
+  접수·지급 사무 확인(경향신문 2026년 하반기 전기차 민간보급 공고,
+  ev.or.kr 절차안내) — `jeju:ev_purchase_subsidy_application` 신규
+  등록. 단, 정확한 보조금 지급 근거조항은 TBD(환경친화적 자동차의
+  개발 및 보급 촉진에 관한 법률 vs 대기환경보전법 중 확정 못함)
+- **PLAN은 아직 미착수** — 다음 배치로 이월
+
+**이미 완료였는데 CSV만 안 갱신됨**: JACHI — 4·3보상금·도유재산
+PR#492로 이미 등록 완료였는데 이번 세션에서 CSV 누락 발견·정정.
+
+**02-do-dept 남은 미착수 19건**: PLAN(실·국 1) + 과(division) 18건
+(WELFARE-DISABLED/CHILDCARE/POLICY/ELDERLY, SAFETY-POLICY/HEALTHPOLICY/
+HEALTHHYGIENE/NATURALDISASTER/SOCIALDISASTER, PLAN-TAXADMIN/YOUTH/
+POPULATION, JACHI-GENERAL/SELFGOV, INNOV-ENERGYINDUSTRY/SPACEMOBILITY/
+DIGITAL/FUTUREGROWTH) — §INPUT_SCHEMA 1차 스크리닝은 해뒀으나(PLAN-YOUTH/
+POPULATION/INNOV-* 4개가 "지원 신청" 명시로 유력 후보) 개별 법적근거
+확인은 다음 세션 몫.
 
 ## 다음 세션이 할 일
 
