@@ -19480,6 +19480,162 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'tech_docs', name: '기술·광고·작업 관련 서류(최종본, 행사 7일 전 제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 전국 평생교육·장학진흥원류 15곳 일괄 등록. 제주
+  // 원형(jiles:scholarship_application, 재단이 자체 공고·심사위원회
+  // 심사로 직접 선발하는 운영 패턴, 2026-08-21 검증)을 복제 — 단 개별
+  // 설립·운영 조례는 도마다 다르므로 정확한 조례번호는 TBD(전국 공통
+  // 모법이 아니라 개별 도조례 근거이기 때문, 마을기업 사례와 같은 유형의
+  // 주의사항 — 사용자 지시: 우선 복제, 개별 customization은 추후).
+  'seoulschol:scholarship_application': {
+    agency: 'seoulschol', agency_name: '서울장학재단',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'sile:scholarship_application': {
+    agency: 'sile', agency_name: '서울특별시평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gglife:scholarship_application': {
+    agency: 'gglife', agency_name: '경기도평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'iclife:scholarship_application': {
+    agency: 'iclife', agency_name: '재단법인 인천인재평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gjlife:scholarship_application': {
+    agency: 'gjlife', agency_name: '재단법인 광주광역시인재평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'jnlife:scholarship_application': {
+    agency: 'jnlife', agency_name: '재단법인 전남인재평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'jnschol:scholarship_application': {
+    agency: 'jnschol', agency_name: '남도장학회',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'djlife:scholarship_application': {
+    agency: 'djlife', agency_name: '대전평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gwtalent:scholarship_application': {
+    agency: 'gwtalent', agency_name: '재단법인 강원인재원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gbmisc2:scholarship_application': {
+    agency: 'gbmisc2', agency_name: '재단법인 경상북도인재평생교육재단',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gnschol:scholarship_application': {
+    agency: 'gnschol', agency_name: '경상남도장학회',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'gnlife:scholarship_application': {
+    agency: 'gnlife', agency_name: '재단법인 경상남도인재평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'cblife:scholarship_application': {
+    agency: 'cblife', agency_name: '재단법인 충북인재평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'cnlife:scholarship_application': {
+    agency: 'cnlife', agency_name: '재단법인 충남평생교육진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  'jbmisc1:scholarship_application': {
+    agency: 'jbmisc1', agency_name: '재단법인 전북특별자치도평생교육장학진흥원',
+    task_name: '장학금 신청',
+    legal_basis: '지방자치단체 출자·출연 기관의 운영에 관한 법률 및 개별 설립·운영 조례(정확한 조례번호는 도별로 달라 TBD — 제주 원형 JILES 복제, 2026-08-21)',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 07-org, 제주평생교육장학진흥원(JILES). 웹검색
   // 확인 — 제주평생교육장학진흥원 설립 및 운영 조례(제주특별자치도조례
   // 제3239호). 재단이 매년 자체 공고로 장학생을 선발·심사(장학생선발
@@ -19940,6 +20096,21 @@ const AGENCY_TO_DEPT_TARGET = {
   'cntp:equipment_testing_request': { target_type: 'org', target_id: 'org:CNTP' },
   'jbtp:equipment_testing_request': { target_type: 'org', target_id: 'org:JBTP' },
   'iccjeju:venue_rental_application': { target_type: 'org', target_id: 'org:ICCJEJU' },
+  'seoulschol:scholarship_application': { target_type: 'org', target_id: 'org:SEOULSCHOL' },
+  'sile:scholarship_application': { target_type: 'org', target_id: 'org:SILE' },
+  'gglife:scholarship_application': { target_type: 'org', target_id: 'org:GGLIFE' },
+  'iclife:scholarship_application': { target_type: 'org', target_id: 'org:ICLIFE' },
+  'gjlife:scholarship_application': { target_type: 'org', target_id: 'org:GJLIFE' },
+  'jnlife:scholarship_application': { target_type: 'org', target_id: 'org:JNLIFE' },
+  'jnschol:scholarship_application': { target_type: 'org', target_id: 'org:JNSCHOL' },
+  'djlife:scholarship_application': { target_type: 'org', target_id: 'org:DJLIFE' },
+  'gwtalent:scholarship_application': { target_type: 'org', target_id: 'org:GWTALENT' },
+  'gbmisc2:scholarship_application': { target_type: 'org', target_id: 'org:GBMISC2' },
+  'gnschol:scholarship_application': { target_type: 'org', target_id: 'org:GNSCHOL' },
+  'gnlife:scholarship_application': { target_type: 'org', target_id: 'org:GNLIFE' },
+  'cblife:scholarship_application': { target_type: 'org', target_id: 'org:CBLIFE' },
+  'cnlife:scholarship_application': { target_type: 'org', target_id: 'org:CNLIFE' },
+  'jbmisc1:scholarship_application': { target_type: 'org', target_id: 'org:JBMISC1' },
   'jiles:scholarship_application': { target_type: 'org', target_id: 'org:JILES' },
   'transweak:special_transport_registration': { target_type: 'org', target_id: 'org:TRANSWEAK' },
   'jtp:equipment_testing_request': { target_type: 'org', target_id: 'org:JTP' },
