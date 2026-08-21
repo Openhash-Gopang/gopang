@@ -2466,6 +2466,17 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-VEHICLE-TEMPLATE_v1.0.md',
     },
   ],
+  econ: [
+    {
+      // ★ 법률이 아닌 행정지침(행안부 마을기업 육성사업 시행지침) 근거
+      // — 템플릿 §LEGAL-BASIS 참고. econ 국의 다른 하위 업무(SMB/
+      // INFOSUPPORT/JOBENERGY)는 전부 지원사업형(공모·심사, GOV_TASK
+      // 파이프라인 없음)이라 이번 배선에서 제외 — VILLAGE만 등록.
+      subCode: 'VILLAGE', name: '마을활력과(마을기업 지정)',
+      kw: ['마을기업 지정', '마을기업', '마을활력과', '마을기업 신청'],
+      file: '04-city/templates/divisions/SP-CITYDIV-ECON-VILLAGE-TEMPLATE_v1.0.md',
+    },
+  ],
   // 다른 도메인은 개별 검증 후 순차 추가 예정.
 };
 
