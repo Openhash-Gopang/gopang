@@ -2456,6 +2456,16 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-HEALTH-ADMIN-TEMPLATE_v1.0.md',
     },
   ],
+  safety: [
+    {
+      // ★ 원본이 겸하던 차고지증명제(제주 특유)는 제외 — 자동차 이전
+      // 등록(자동차관리법, 전국 공통)만 등록한다. 템플릿 §LEGAL-BASIS 참고.
+      subCode: 'VEHICLE', name: '차량관리과(자동차 이전등록)',
+      kw: ['자동차 이전등록', '자동차 등록', '차량관리과', '자동차 명의이전',
+        '자동차등록 이전'],
+      file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-VEHICLE-TEMPLATE_v1.0.md',
+    },
+  ],
   // 다른 도메인은 개별 검증 후 순차 추가 예정.
 };
 
