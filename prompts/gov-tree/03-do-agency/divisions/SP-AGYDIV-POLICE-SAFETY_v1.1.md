@@ -3,7 +3,8 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 자치경찰단 생활안전과 — System Prompt
 # 문서 코드  : SP-AGYDIV-POLICE-SAFETY
-# 버전      : v1.0 (2026-07-13)
+# 버전      : v1.1 (2026-08-20, GOV-TASK-904-GAP 배치 — §3에 REQUIRED_
+#             DOCUMENTS_REGISTRY 미해당 판단·근거 추가, 실질 변경 없음)
 # 상위 상속  : kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL →
 #             AGENCY-AC-COMMON → SP-DO-000 → SP-AGY-POLICE →
 #             [본 SP: 생활안전과]
@@ -56,4 +57,5 @@ kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL → AGENCY-AC-COMMON
 ## §3. 유의사항
 
 - **정직하게 밝힘**: 세부 신고 접수 절차는 확인하지 못했다.
+- **v1.1 — GOV-TASK-904-GAP 판정(2026-08-20)**: 이 과의 §2 업무(분실물·소음 신고 등)는 REQUIRED_DOCUMENTS_REGISTRY/GOV_TASK 파이프라인 대상이 아니라고 판단해 등록하지 않는다 — 서류를 갖춰 심사받는 "신청"이 아니라 즉시 접수·출동이 필요한 "신고"이기 때문이다(§INPUT_SCHEMA가 이미 "진행 중인 범죄는 즉시 112"로 같은 성격을 명시). GOV_TASK의 접수→심사→보완→의견제출 흐름은 문서 기반 처분에 맞는 구조이지 실시간 신고에는 맞지 않는다 — 억지로 끼워 맞추지 않는다(HANDOFF §4-③ 교훈).
 - 연락처: 진행 중 범죄는 112, 비응급은 제주콜센터(064-120).

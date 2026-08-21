@@ -19191,6 +19191,26 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '탐방로 정기예약(성판악·관음사 등 일반 탐방)은 이 항목이 아니다 — 그건 국립공원 탐방예약시스템(별도 온라인, SP §3 참조)이 처리하며 Hondi가 대행하지 않는다. 이 항목은 특별보호구역·통제탐방로처럼 자연공원법 제28조가 원칙적으로 막아둔 구역에 학술조사 등 예외 사유로 들어가려는 경우만 해당.',
   },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-POLICE
+  // 산하 교통과 실작업. 교통과 SP §3이 스스로 "주차단속 현재 소관은
+  // 확인하지 못했다"고 밝혀둔 지점 — 웹검색으로 해소.
+  //
+  // ★★ 관할 확인(HANDOFF §4-⑥ 교훈): 위키백과("2008년 7월 1일: 행정시
+  // 주정차 단속사무 이관") + 자치경찰단 공식 과태료조회 시스템
+  // (jmpfine.jeju.go.kr, "제주자치경찰단" 도메인)으로 2026-08-20 현재도
+  // 자치경찰단 소관임을 교차확인. 행정시로 다시 넘어갔다는 최근 근거는
+  // 못 찾음 — SP 본문의 "계속 오락가락" 서술과 달리 최소 2008년 이후
+  // 계속 자치경찰단 소관으로 유지되고 있는 것으로 보인다(반증 없음).
+  'jeju:parking_violation_fine_objection': {
+    agency: 'jeju', agency_name: '제주특별자치도 자치경찰단 교통과',
+    task_name: '주정차 위반 과태료 사전통지 의견제출·이의제기',
+    legal_basis: '질서위반행위규제법 제16조(사전통지 및 의견 제출 등)·제20조(이의제기), 도로교통법 제32조·제33조(정차 및 주차의 금지)',
+    documents: [
+      { id: 'application',    name: '의견진술서·이의제기서', required: true, acquisition: 'user_authored' },
+      { id: 'evidence',       name: '증빙자료(현장사진, 정황설명 등)', required: false, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 제20조 이의제기가 정식 접수되면 과태료 부과처분은 그 즉시 효력을 상실하고 관할 법원에 통보돼 별도 과태료 재판 절차로 넘어간다(자치경찰단이 아니라 법원이 최종 판단). 이 SP·`/gov/task/officer-decision`이 실제로 처리·확정할 수 있는 범위는 그 이전 단계(제16조 사전통지에 대한 의견제출 — 자치경찰단이 검토해 감경·취소 여부를 자체 결정할 수 있는 구간)까지다. 제20조 단계까지 간 건은 접수·법원 통보 여부 확인 정도만 안내하고, "자치경찰단이 최종 결정한다"고 말하지 않는다.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19273,6 +19293,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGY-HERITAGE 실작업.
   // 'do-agency:HERITAGE'는 DEPT_TASK_TAXONOMY.dept에 이미 등록된 도메인.
   'jeju:hallasan_special_entry_permit': { target_type: 'dept', target_id: 'do-agency:HERITAGE' },
+  // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGY-POLICE 실작업.
+  // 'do-agency:POLICE'는 DEPT_TASK_TAXONOMY.dept에 이미 등록된 도메인.
+  'jeju:parking_violation_fine_objection': { target_type: 'dept', target_id: 'do-agency:POLICE' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
