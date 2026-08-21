@@ -19089,6 +19089,39 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 07-org, 어린이급식관리지원센터(CHILDMEAL). 웹검색
+  // 확인 — 「어린이 식생활안전관리 특별법」 제21조의2제1항, 같은 법
+  // 시행규칙 제15조: 소규모 급식소(영유아 100명 미만 어린이집, 원아
+  // 100명 미만 사립유치원, 상시 1회 급식인원 50명 미만 시설)는 이
+  // 센터에 등록 의무(영양사 배치 시 예외) — 미등록 시 시정명령·과태료
+  // 1천만원 이하(같은 법 제27조·제29조). 법정 의무등록 사무로 명확히
+  // 확인됨.
+  'childmeal:kids_food_service_registration': {
+    agency: 'childmeal', agency_name: '제주 어린이급식관리지원센터',
+    task_name: '어린이급식소 등록 신청',
+    legal_basis: '어린이 식생활안전관리 특별법 제21조의2제1항, 같은 법 시행규칙 제15조',
+    documents: [
+      { id: 'application', name: '급식소 등록신청서', required: true, acquisition: 'user_authored' },
+      { id: 'facility_license', name: '어린이집(또는 유치원) 인가·설립 서류', required: true, acquisition: 'user_authored' },
+      { id: 'meal_headcount', name: '상시 급식인원 확인서류', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  // ★ 2026-08-21 추가 — 07-org, 제주특별자치도개발공사(JPDC). 웹검색
+  // 확인 — 「공공주택 특별법」·같은 법 시행령에 따라 JPDC가 사업주체로
+  // 직접 입주자(청약) 모집·심사·계약을 진행(무주택세대구성원 검증,
+  // 소득연계형 임대료 등). 삼다수 유통은 순수 상거래라 GOV_TASK 대상
+  // 아님, 공공주택만 등록.
+  'jpdc:public_housing_application': {
+    agency: 'jpdc', agency_name: '제주특별자치도개발공사(JPDC)',
+    task_name: '공공임대주택 입주자(청약) 신청',
+    legal_basis: '공공주택 특별법, 공공주택 특별법 시행령(제55조 등), 통합공공임대주택의 표준임대보증금 및 표준임대료 등에 관한 기준',
+    documents: [
+      { id: 'application', name: '공급 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '본인 및 배우자 신분증(주민등록증·운전면허증·여권만 인정)', required: true, acquisition: 'user_authored' },
+      { id: 'household_cert', name: '주민등록표등본(세대구성원 확인용)', required: true, acquisition: 'gov24' },
+      { id: 'income_proof', name: '세대구성원 소득 확인서류', required: true, acquisition: 'gov24' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 07-org, 제주국제컨벤션센터(ICCJEJU). 웹검색
   // 확인 — 행사계획서를 행사 15일 전, 최종 관련서류를 7일 전까지 제출해
   // 담당자 승인을 받는 정형화된 대관 절차 확인(ICC JEJU 공식 대관 절차
@@ -19529,6 +19562,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:food_business_report':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   // ── 07-org(출자출연기관) — target_type:'org' (DEPT_TASK_TAXONOMY.org에 사전 등록된 코드) ──
+  'childmeal:kids_food_service_registration': { target_type: 'org', target_id: 'org:CHILDMEAL' },
+  'jpdc:public_housing_application': { target_type: 'org', target_id: 'org:JPDC' },
   'iccjeju:venue_rental_application': { target_type: 'org', target_id: 'org:ICCJEJU' },
   'jiles:scholarship_application': { target_type: 'org', target_id: 'org:JILES' },
   'transweak:special_transport_registration': { target_type: 'org', target_id: 'org:TRANSWEAK' },
