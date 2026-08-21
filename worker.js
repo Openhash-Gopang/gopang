@@ -19089,6 +19089,42 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 07-org(출자출연기관), 제주테크노파크(JTP). 웹검색
+  // 확인 — 「산업기술단지 지원에 관한 특례법」이 전국 테크노파크 공통
+  // 모법, 제주는 「재단법인 제주테크노파크 설립 및 운영 조례」(제주특별
+  // 자치도조례 제1781호)로 설립. "기업 기술지원 신청"·"창업지원 프로그램
+  // 신청"은 공모형 지원사업(재정의 대상에 가까움)이나, "시험분석 의뢰"는
+  // 장비 사용료 기반의 정형화된 서비스 신청이라 GOV_TASK 등록에 적합.
+  'jtp:equipment_testing_request': {
+    agency: 'jtp', agency_name: '제주테크노파크',
+    task_name: '시험분석(장비 사용) 의뢰',
+    legal_basis: '산업기술단지 지원에 관한 특례법, 재단법인 제주테크노파크 설립 및 운영 조례(제주특별자치도조례 제1781호)',
+    documents: [
+      { id: 'application', name: '시험분석 의뢰서', required: true, acquisition: 'user_authored' },
+      { id: 'sample_info', name: '시료(시험대상물) 정보서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_reg', name: '사업자등록증(기업 의뢰인만 해당)', required: false, acquisition: 'gov24', idv_type: 'idv.cert.business_registration', max_age_days: 30 },
+    ],
+  },
+  // ★ 2026-08-21 추가 — 07-org, 제주경제통상진흥원(JEDA/JBA). 웹검색
+  // 확인(2026-08-21) — 소상공인 디지털전환패키지 지원사업(신청서·평가
+  // 항목서식·개인정보동의서·사업자등록증·소상공인확인서·부가가치세
+  // 과세표준증명원·납세증명서, 소상공인24 또는 방문 접수). 앞선 02-do-dept
+  // ECON 조사(2026-08-21)에서 확인한 것처럼 실제 접수·심사 주체가 도청이
+  // 아니라 이 기관임 — 그 GOV_TASK를 여기로 옮겨 등록.
+  'jeda:digital_transformation_package_support': {
+    agency: 'jeda', agency_name: '제주경제통상진흥원',
+    task_name: '소상공인 디지털전환패키지 지원사업 신청',
+    legal_basis: '소상공인기본법 — 개별 사업별 공고 근거(매년 공고 내용 변경 가능, 정확한 지원 근거조항은 TBD)',
+    documents: [
+      { id: 'application', name: '지원사업 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'evaluation_form', name: '평가항목 서식', required: true, acquisition: 'user_authored' },
+      { id: 'privacy_consent', name: '개인정보 수집·이용 동의서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_reg', name: '사업자등록증', required: true, acquisition: 'gov24', idv_type: 'idv.cert.business_registration', max_age_days: 30 },
+      { id: 'sobizcert', name: '소상공인확인서', required: true, acquisition: 'user_authored' },
+      { id: 'vat_cert', name: '부가가치세 과세표준증명원', required: true, acquisition: 'gov24' },
+      { id: 'tax_cert', name: '납세증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 02-do-dept divisions, SP-DIV-SAFETY-HEALTHPOLICY.
   // 웹검색 확인(의료법 제33조 관련법령 원문) — 종합병원·병원·치과병원·
   // 한방병원·요양병원·정신병원 개설은 시·도 의료기관개설위원회 심의를
@@ -19449,6 +19485,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:food_business_report':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   // ── 07-org(출자출연기관) — target_type:'org' (DEPT_TASK_TAXONOMY.org에 사전 등록된 코드) ──
+  'jtp:equipment_testing_request': { target_type: 'org', target_id: 'org:JTP' },
+  'jeda:digital_transformation_package_support': { target_type: 'org', target_id: 'org:JEDA' },
   'jcgf:credit_guarantee_application': { target_type: 'org', target_id: 'org:JCGF' },
   'seogwipo:disability_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:disability_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
