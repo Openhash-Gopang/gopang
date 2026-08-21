@@ -18959,6 +18959,95 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 대규모 확장 배치 — 04-city 나머지 실사에서 확인한 9건.
+  // 전부 웹검색으로 법적 근거 실확인. 감귤출하신고·친환경농업인증·
+  // 디지털혁신 지원사업 등은 이번 배치에서 원문 확인 못해 보류.
+  'seogwipo:fishery_permit': {
+    agency: 'seogwipo', agency_name: '서귀포시청 농수축산경제국 해양수산과',
+    task_name: '어업면허·허가 신청',
+    legal_basis: '수산업법 제40조·제41조, 어업의 허가 및 신고 등에 관한 규칙 제6조',
+    documents: [
+      { id: 'application',  name: '어업허가 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'vessel_reg',   name: '어선검사증서·어선등록필증 사본', required: true, acquisition: 'user_authored' },
+      { id: 'edu_cert',     name: '어업 관련 교육 이수증명서(해당자만)', required: false, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:vehicle_transfer_registration': {
+    agency: 'jejusi', agency_name: '제주시청 안전교통국 차량관리과',
+    task_name: '자동차 이전등록',
+    legal_basis: '자동차관리법 제12조, 자동차등록령 제26조, 자동차등록규칙 제33조',
+    documents: [
+      { id: 'application',  name: '자동차 이전등록 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'transfer_doc', name: '양도증명서 및 매도용 인감증명서(또는 본인서명사실확인서)', required: true, acquisition: 'user_authored' },
+      { id: 'garage_cert',  name: '차고지증명서 사본(제주 차고지증명제 대상 차량만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:garage_certification': {
+    agency: 'jejusi', agency_name: '제주시청 안전교통국 차량관리과',
+    task_name: '차고지증명',
+    legal_basis: '제주특별자치도 차고지증명 및 관리 조례',
+    documents: [
+      { id: 'application',  name: '차고지증명 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'garage_proof', name: '차고지 확보 증빙서류(임대차계약서 또는 소유권 증빙)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:medical_institution_report': {
+    agency: 'seogwipo', agency_name: '서귀포시청 서귀포보건소 보건행정과',
+    task_name: '의료기관 개설신고 (의원·치과의원·한의원·조산원)',
+    legal_basis: '의료법 제33조제3항, 의료법 시행규칙 제25조 별지 제14호서식',
+    documents: [
+      { id: 'report_form',  name: '의료기관 개설신고서', required: true, acquisition: 'user_authored' },
+      { id: 'facility_desc',name: '시설 및 장비 개요서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:tax_objection': {
+    agency: 'jejusi', agency_name: '제주시청 자치행정국 세무과',
+    task_name: '지방세 이의신청',
+    legal_basis: '지방세기본법 제90조, 지방세기본법 시행령 제59조제1항',
+    documents: [
+      { id: 'objection_form', name: '이의신청서(별지 제56호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'disposition_notice', name: '처분 통지서 사본', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:tax_objection': {
+    agency: 'seogwipo', agency_name: '서귀포시청 자치행정국 세무과',
+    task_name: '지방세 이의신청',
+    legal_basis: '지방세기본법 제90조, 지방세기본법 시행령 제59조제1항',
+    documents: [
+      { id: 'objection_form', name: '이의신청서(별지 제56호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'disposition_notice', name: '처분 통지서 사본', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:livestock_business_permit': {
+    agency: 'seogwipo', agency_name: '서귀포시청 농수축산경제국 청정축산과',
+    task_name: '가축사육업 허가·등록 및 배출시설 신고',
+    legal_basis: '축산법 제22조, 가축분뇨의 관리 및 이용에 관한 법률 제11조·제12조',
+    documents: [
+      { id: 'application',  name: '가축사육업 허가(등록)신청서', required: true, acquisition: 'user_authored' },
+      { id: 'discharge_permit', name: '가축분뇨 배출시설 허가증 또는 신고확인증', required: true, acquisition: 'user_authored' },
+      { id: 'treatment_facility', name: '처리시설 설치 증명서류', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  // 아래 2건은 기존 seogwipo 항목과 동일 업무의 jejusi측 등록 — 법적근거 동일,
+  // 이미 확인된 것 재사용(중복 웹검색 불필요).
+  'jejusi:disaster_relief_grant': {
+    agency: 'jejusi', agency_name: '제주시청 안전교통국 안전총괄과',
+    task_name: '재난지원금 지급 신청',
+    legal_basis: '재난 및 안전관리 기본법',
+    documents: [
+      { id: 'damage_confirm', name: '피해사실확인서',       required: true, acquisition: 'user_authored' },
+      { id: 'damage_proof',   name: '재산피해 증빙',        required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:passenger_transport_registration': {
+    agency: 'jejusi', agency_name: '제주시청 안전교통국 교통행정과',
+    task_name: '여객자동차운송사업 등록',
+    legal_basis: '여객자동차 운수사업법',
+    documents: [
+      { id: 'application',  name: '여객자동차운송사업 등록신청서', required: true, acquisition: 'user_authored' },
+      { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -19020,6 +19109,15 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:tourism_business_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
   'jejusi:village_enterprise_designation':   { target_type: 'dept', target_id: 'city-dept:jeju:econ' },
   'seogwipo:village_enterprise_designation': { target_type: 'dept', target_id: 'city-dept:seogwipo:jachi' },
+  'seogwipo:fishery_permit':                      { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
+  'jejusi:vehicle_transfer_registration':         { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
+  'jejusi:garage_certification':                  { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
+  'seogwipo:medical_institution_report':          { target_type: 'dept', target_id: 'city-dept:seogwipo:health' },
+  'jejusi:tax_objection':                         { target_type: 'dept', target_id: 'city-dept:jeju:jachi' },
+  'seogwipo:tax_objection':                       { target_type: 'dept', target_id: 'city-dept:seogwipo:jachi' },
+  'seogwipo:livestock_business_permit':           { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
+  'jejusi:disaster_relief_grant':                 { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
+  'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
