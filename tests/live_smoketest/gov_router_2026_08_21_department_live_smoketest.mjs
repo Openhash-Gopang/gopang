@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 /**
- * GOV-TASK-904-GAP 2026-08-21 세션 — 부서 미지정 발화 라이브 스모크테스트.
+ * GOV-TASK-904-GAP 2026-08-21 세션 — 부서 미지정 발화 라이브 스모크테스트
+ * (v2: 실제 프로덕션 배선 재현).
  *
- * gov-router-2026-08-21-session-smoketest.test.mjs(로컬, mockClassify)가
- * 발견한 "kw 미스 → LLM 폴백 필요" 케이스들을, 실제 DeepSeek API를
- * classifyFn으로 연결해 다시 돌린다. 3가지를 확인한다:
- *   1) 최종적으로 기대 부서(org/do-dept)로 도달하는가
- *   2) classifyFn(K-Intent 성격의 판단 요청)이 실제로 호출됐는가
- *   3) 그 부서 SP가 실제 사용자 발화에 적절히 응답하는가(간이 품질 체크 —
- *      나열식 답변 여부, 부서 정체성 언급 여부)
+ * ★ 2026-08-21 재작성 — v1은 classifyFn을 이 스크립트가 즉석에서 만든
+ * 프롬프트(api.deepseek.com 직접 호출, model=deepseek-chat)로 대체해서
+ * 돌렸다. 이건 실제 프로덕션 어느 진입점과도 다른 "제3의 배선"이었다
+ * (worker.js의 handleGovTreeStepExecute는 classifyFn=null이라 애초에
+ * LLM 폴백을 안 쓰고, pages/regional-gov.html이 진짜 사용자 채팅 진입점
+ * 이며 _govClassifyFn을 씀 — 이번 세션 사용자 지적으로 발견).
+ *
+ * v2는 pages/regional-gov.html의 _govClassifyFn을 그대로 복제한다 —
+ * 같은 프록시(hondi-proxy.tensor-city.workers.dev), 같은 모델
+ * (deepseek-v4-flash), 같은 프롬프트 문구. DEEPSEEK_API_KEY는 이제
+ * classifyFn(체크1·2)에는 안 쓰고, SP 응답 품질(체크3)만 확인할 때
+ * 보조로 쓴다(프록시가 아닌 별도 호출).
  *
  * Usage:
  *   DEEPSEEK_API_KEY=... node gov_router_2026_08_21_department_live_smoketest.mjs
@@ -23,6 +29,9 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 const MODEL = 'deepseek-chat';
 const API_KEY = process.env.DEEPSEEK_API_KEY;
+
+// ★ pages/regional-gov.html의 PROXY 상수와 완전히 동일한 값.
+const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
 if (!API_KEY) {
   console.error('DEEPSEEK_API_KEY 환경변수가 없습니다.');
@@ -48,26 +57,46 @@ async function callDeepSeek(messages, { maxTokens = 400 } = {}) {
     throw new Error(`DeepSeek API ${res.status}: ${text.slice(0, 300)}`);
   }
   const data = await res.json();
+
   return data.choices?.[0]?.message?.content ?? '';
 }
 
-// classifyFn 시그니처는 gov-router.js의 _classifyDivisionFallback/
-// _classifyFallback과 동일: async (text, candidatesText) => code|'NONE'|null.
-// 실제 DeepSeek 호출로 연결 — K-Intent가 하는 "후보 중 하나를 판단해
-// 고르는" 역할을 그대로 재현한다.
+// ★ 2026-08-21 재작성 — pages/regional-gov.html의 _govClassifyFn을
+// 토씨 하나 안 틀리고 그대로 복제(system 프롬프트 문구, model=
+// deepseek-v4-flash, max_tokens=20, temperature=0, hondi-proxy 엔드포인트,
+// 코드 추출 정규식까지 동일). 이게 진짜 프로덕션에서 사용자가 겪는
+// K-Intent 폴백이다 — 이 스크립트가 즉석에서 만든 프롬프트가 아니다.
 let classifyCallCount = 0;
 async function realClassifyFn(text, candidatesText) {
   classifyCallCount++;
-  const prompt = `사용자 발화: "${text}"\n\n아래는 이 발화가 갈 수 있는 후보 기관/부서 목록이다. 가장 적합한 후보의 code를 정확히 그대로 출력하라. 확신이 없으면 NONE만 출력하라. code 또는 NONE 외의 다른 말은 절대 출력하지 마라.\n\n${candidatesText}`;
-  const reply = await callDeepSeek(
-    [
-      { role: 'system', content: '너는 제주 행정 라우팅 분류기다. 후보 목록에서 code 하나만 정확히 출력하거나 NONE만 출력한다.' },
-      { role: 'user', content: prompt },
-    ],
-    { maxTokens: 40 },
-  );
-  const trimmed = reply.trim().split(/\s+/)[0] || 'NONE';
-  return trimmed;
+  try {
+    const r = await fetch(`${PROXY}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-v4-flash', max_tokens: 20, temperature: 0,
+        messages: [
+          { role: 'system', content:
+            '아래는 제주 지방행정 라우팅 코드 후보 목록이다. 사용자 발화를 읽고 ' +
+            '가장 알맞은 코드 하나만 답하라. 확신이 없거나 해당하는 코드가 없으면 ' +
+            'NONE이라고만 답하라. 다른 설명·문장부호 없이 코드 또는 NONE만 출력한다.\n\n' +
+            candidatesText },
+          { role: 'user', content: text },
+        ],
+      }),
+    });
+    if (!r.ok) {
+      console.warn(`  [_govClassifyFn] 프록시 응답 실패: ${r.status}`);
+      return null;
+    }
+    const d = await r.json();
+    const raw = (d.choices?.[0]?.message?.content || '').trim();
+    const m = raw.match(/[A-Z0-9][A-Z0-9-]*/);
+    return m ? m[0] : (raw === 'NONE' ? 'NONE' : null);
+  } catch (e) {
+    console.warn(`  [_govClassifyFn] 실패(무시): ${e.message}`);
+    return null;
+  }
 }
 
 const SCENARIOS = [
