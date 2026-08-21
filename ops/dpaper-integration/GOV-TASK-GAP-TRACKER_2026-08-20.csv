@@ -446,7 +446,7 @@
 07-org,07-org/SP-ORG-BTIP_v1.0.md,SP-ORG-BTIP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGEEA_v1.0.md,SP-ORG-GGEEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JPASS_v1.0.md,제주특별자치도사회서비스원,Y,N,재정의,"SP 본문 자체: ""실제 시설별 절차를 통해서만 확정"" — 개별 산하시설 소관, 사회서비스원 자체는 조정기관(2026-08-21)",,
-07-org,07-org/SP-ORG-ICLIFE_v1.0.md,SP-ORG-ICLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-ICLIFE_v1.0.md,SP-ORG-ICLIFE_v1.0,Y,N,완료,장학금 신청(iclife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GBRI_v1.0.md,SP-ORG-GBRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBMEDX2_v1.0.md,SP-ORG-GBMEDX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMEMORIAL_v1.0.md,SP-ORG-GWMEMORIAL_v1.0,Y,N,미착수,,,
@@ -473,7 +473,7 @@
 07-org,07-org/SP-ORG-JNBIZ_v1.0.md,SP-ORG-JNBIZ_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNCGF_v1.0.md,SP-ORG-CNCGF_v1.0,Y,N,완료,"신용보증 신청(cncgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-USJOB_v1.0.md,SP-ORG-USJOB_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CBLIFE_v1.0.md,SP-ORG-CBLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CBLIFE_v1.0.md,SP-ORG-CBLIFE_v1.0,Y,N,완료,장학금 신청(cblife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GBSAEMAUL_v1.0.md,SP-ORG-GBSAEMAUL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SFAC_v1.0.md,SP-ORG-SFAC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWCF_v1.0.md,SP-ORG-GWCF_v1.0,Y,N,미착수,,,
@@ -506,13 +506,13 @@
 07-org,07-org/SP-ORG-ICMISC1_v1.0.md,SP-ORG-ICMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-USCGF_v1.0.md,SP-ORG-USCGF_v1.0,Y,N,완료,"신용보증 신청(uscgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGSTEP_v1.0.md,SP-ORG-GGSTEP_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GNSCHOL_v1.0.md,SP-ORG-GNSCHOL_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GNSCHOL_v1.0.md,SP-ORG-GNSCHOL_v1.0,Y,N,완료,장학금 신청(gnschol:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GGACE_v1.0.md,SP-ORG-GGACE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BTP_v1.0.md,SP-ORG-BTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(btp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GBKOREANOLOGY_v1.0.md,SP-ORG-GBKOREANOLOGY_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DASAN120_v1.0.md,SP-ORG-DASAN120_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNCGF_v1.0.md,SP-ORG-GNCGF_v1.0,Y,N,완료,"신용보증 신청(gncgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
-07-org,07-org/SP-ORG-GGLIFE_v1.0.md,SP-ORG-GGLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GGLIFE_v1.0.md,SP-ORG-GGLIFE_v1.0,Y,N,완료,장학금 신청(gglife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GBMISC1_v1.0.md,SP-ORG-GBMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNMISC1_v1.0.md,SP-ORG-GNMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBMISC2_v1.0.md,SP-ORG-CBMISC2_v1.0,Y,N,미착수,,,
@@ -533,7 +533,7 @@
 07-org,07-org/SP-ORG-GWWIND_v1.0.md,SP-ORG-GWWIND_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMISC2_v1.0.md,SP-ORG-GWMISC2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNBEA_v1.0.md,SP-ORG-CNBEA_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JNLIFE_v1.0.md,SP-ORG-JNLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JNLIFE_v1.0.md,SP-ORG-JNLIFE_v1.0,Y,N,완료,장학금 신청(jnlife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-CNCONTENT_v1.0.md,SP-ORG-CNCONTENT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGMARKET_v1.0.md,SP-ORG-GGMARKET_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGRI_v1.0.md,SP-ORG-DGRI_v1.0,Y,N,미착수,,,
@@ -554,7 +554,7 @@
 07-org,07-org/SP-ORG-CNMEDX2_v1.0.md,SP-ORG-CNMEDX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNCF_v1.0.md,SP-ORG-JNCF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SJRI_v1.0.md,SP-ORG-SJRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GNLIFE_v1.0.md,SP-ORG-GNLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GNLIFE_v1.0.md,SP-ORG-GNLIFE_v1.0,Y,N,완료,장학금 신청(gnlife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-JBTOURISM_v1.0.md,SP-ORG-JBTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWWOMENTRAIN_v1.0.md,SP-ORG-GWWOMENTRAIN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-MAEUL_v1.0.md,제주마을만들기종합지원센터,Y,N,재정의,"SP 본문 자체: 공모 선정은 실제 심사를 통해서만 확정, 위탁운영조직 — 마을기업 사례처럼 행정지침 근거 가능성(기존 확립된 패턴)(2026-08-21)",,
@@ -573,8 +573,8 @@
 07-org,07-org/SP-ORG-GNWOMEN_v1.0.md,SP-ORG-GNWOMEN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBWOMEN_v1.0.md,SP-ORG-GBWOMEN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SJMISC1_v1.0.md,SP-ORG-SJMISC1_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GJLIFE_v1.0.md,SP-ORG-GJLIFE_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-DJLIFE_v1.0.md,SP-ORG-DJLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GJLIFE_v1.0.md,SP-ORG-GJLIFE_v1.0,Y,N,완료,장학금 신청(gjlife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
+07-org,07-org/SP-ORG-DJLIFE_v1.0.md,SP-ORG-DJLIFE_v1.0,Y,N,완료,장학금 신청(djlife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GBAGRI_v1.0.md,SP-ORG-GBAGRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BEPA_v1.0.md,SP-ORG-BEPA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNTP_v1.0.md,SP-ORG-GNTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(gntp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
@@ -601,7 +601,7 @@
 07-org,07-org/SP-ORG-ICSSO_v1.0.md,SP-ORG-ICSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBTP_v1.0.md,SP-ORG-CBTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(cbtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-SJTP_v1.0.md,SP-ORG-SJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(sjtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
-07-org,07-org/SP-ORG-SILE_v1.0.md,SP-ORG-SILE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-SILE_v1.0.md,SP-ORG-SILE_v1.0,Y,N,완료,장학금 신청(sile:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-JNTOURISM_v1.0.md,SP-ORG-JNTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBVETERAN_v1.0.md,SP-ORG-GBVETERAN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMEDX3_v1.0.md,SP-ORG-GWMEDX3_v1.0,Y,N,미착수,,,
@@ -618,7 +618,7 @@
 07-org,07-org/SP-ORG-JEA_v1.0.md,제주에너지공사(JEA),Y,N,재정의,"SP 본문 자체: 신재생에너지 사업자 선정은 공모 절차 — 대표 GOV_TASK로 특정 불가, 발전사업허가 자체는 이미 도청(INNOV-ENERGYINDUSTRY)에 등록됨(2026-08-21)",,
 07-org,07-org/SP-ORG-SJAGRICORP_v1.0.md,SP-ORG-SJAGRICORP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWBEA_v1.0.md,SP-ORG-GWBEA_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GWTALENT_v1.0.md,SP-ORG-GWTALENT_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GWTALENT_v1.0.md,SP-ORG-GWTALENT_v1.0,Y,N,완료,장학금 신청(gwtalent:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-SBA_v1.0.md,SP-ORG-SBA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JSPO_v1.0.md,제주특별자치도체육회,Y,N,재정의,"SP 본문 자체: ""세부 종목별 운영은 가맹 경기단체 소관"" — 체육회 자체는 조정기관(2026-08-21)",,
 07-org,07-org/SP-ORG-JBCGF_v1.0.md,SP-ORG-JBCGF_v1.0,Y,N,완료,"신용보증 신청(jbcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
@@ -641,7 +641,7 @@
 07-org,07-org/SP-ORG-JNIPAX2_v1.0.md,SP-ORG-JNIPAX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GJCF_v1.0.md,SP-ORG-GJCF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BGCF_v1.0.md,SP-ORG-BGCF_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JBMISC1_v1.0.md,SP-ORG-JBMISC1_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JBMISC1_v1.0.md,SP-ORG-JBMISC1_v1.0,Y,N,완료,장학금 신청(jbmisc1:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GWRIX3_v1.0.md,SP-ORG-GWRIX3_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-ASIADCC_v1.0.md,SP-ORG-ASIADCC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGCONTENT_v1.0.md,SP-ORG-GGCONTENT_v1.0,Y,N,미착수,,,
@@ -667,15 +667,15 @@
 07-org,07-org/SP-ORG-JNRIX2_v1.0.md,SP-ORG-JNRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SWF_v1.0.md,SP-ORG-SWF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGINNO_v1.0.md,SP-ORG-DGINNO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GBMISC2_v1.0.md,SP-ORG-GBMISC2_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GBMISC2_v1.0.md,SP-ORG-GBMISC2_v1.0,Y,N,완료,장학금 신청(gbmisc2:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GJJOB_v1.0.md,SP-ORG-GJJOB_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-SEOULSCHOL_v1.0.md,SP-ORG-SEOULSCHOL_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-SEOULSCHOL_v1.0.md,SP-ORG-SEOULSCHOL_v1.0,Y,N,완료,장학금 신청(seoulschol:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-CHILDMEAL_v1.0.md,"제주 어린이급식관리지원센터(1~4, 원형)",Y,N,완료,"어린이급식소 등록 신청(childmeal:kids_food_service_registration) 신규 등록 — 어린이 식생활안전관리 특별법 제21조의2제1항, 시행규칙 제15조. 법정 의무등록(미등록 시 과태료 1천만원 이하), 이 센터가 직접 접수(웹검색 확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-BCC_v1.0.md,SP-ORG-BCC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBBEA_v1.0.md,SP-ORG-GBBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNRI_v1.0.md,SP-ORG-CNRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGWCST_v1.0.md,SP-ORG-GGWCST_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JNSCHOL_v1.0.md,SP-ORG-JNSCHOL_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JNSCHOL_v1.0.md,SP-ORG-JNSCHOL_v1.0,Y,N,완료,장학금 신청(jnschol:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-GNMED_v1.0.md,SP-ORG-GNMED_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWTOURISM_v1.0.md,SP-ORG-GWTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SDI_v1.0.md,SP-ORG-SDI_v1.0,Y,N,미착수,,,
@@ -689,7 +689,7 @@
 07-org,07-org/SP-ORG-BSDESIGN_v1.0.md,SP-ORG-BSDESIGN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGCGF_v1.0.md,SP-ORG-DGCGF_v1.0,Y,N,완료,"신용보증 신청(dgcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGFUTURE_v1.0.md,SP-ORG-GGFUTURE_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CNLIFE_v1.0.md,SP-ORG-CNLIFE_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CNLIFE_v1.0.md,SP-ORG-CNLIFE_v1.0,Y,N,완료,장학금 신청(cnlife:scholarship_application) 등록 — 제주 원형(JILES) 복제. 단 개별 설립·운영 조례는 도별 상이해 정확한 조례번호는 TBD(2026-08-21),,2026-08-21
 07-org,07-org/SP-ORG-JBSSO_v1.0.md,SP-ORG-JBSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGSSO_v1.0.md,SP-ORG-GGSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SDF_v1.0.md,SP-ORG-SDF_v1.0,Y,N,미착수,,,

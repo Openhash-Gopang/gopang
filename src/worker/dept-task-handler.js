@@ -103,6 +103,10 @@ const DEPT_TASK_TAXONOMY = {
     'org:BTP', 'org:GGTP', 'org:GGDJTP', 'org:DGTP', 'org:ICTP', 'org:GJTP',
     'org:JNTP', 'org:DJTP', 'org:SJTP', 'org:GWTP', 'org:GBTP', 'org:GNTP',
     'org:USTP', 'org:CBTP', 'org:CNTP', 'org:JBTP',
+    // ★ 2026-08-21 추가 — 전국 평생교육·장학진흥원류 15곳(제주 JILES 원형 복제).
+    'org:SEOULSCHOL', 'org:SILE', 'org:GGLIFE', 'org:ICLIFE', 'org:GJLIFE',
+    'org:JNLIFE', 'org:JNSCHOL', 'org:DJLIFE', 'org:GWTALENT', 'org:GBMISC2',
+    'org:GNSCHOL', 'org:GNLIFE', 'org:CBLIFE', 'org:CNLIFE', 'org:JBMISC1',
   ]),
   national: new Set([
     // 09-national/agencies 28개 domain (national-agency-master-data.json 실사)
