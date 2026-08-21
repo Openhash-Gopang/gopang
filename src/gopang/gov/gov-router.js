@@ -2500,6 +2500,13 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '가축사육업 등록'],
       file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-LIVESTOCK-TEMPLATE_v1.0.md',
     },
+    {
+      // ★ 같은 국의 감귤(CITRUS)·친환경농업(ECOFARM)은 제주 특화 작물
+      // 이라 제외 — 수산업은 전국 연안 지자체에 보편적이라 등록.
+      subCode: 'FISHERY', name: '해양수산과(어업면허·허가)',
+      kw: ['어업면허', '어업허가', '해양수산과', '어선등록', '수산업 신고'],
+      file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-FISHERY-TEMPLATE_v1.0.md',
+    },
   ],
   // 다른 도메인은 개별 검증 후 순차 추가 예정.
 };
