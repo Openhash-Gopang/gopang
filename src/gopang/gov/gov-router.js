@@ -2598,8 +2598,13 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
   //   JACHI-PROPERTYTAX(정기 부과·고지형, 세무과 신고납부형과 다름)
   // - 지역 분산 지소·안내형 — HEALTH-WESTCENTER/EASTCENTER/PROMOTION,
   //   CLIMATE-LIVINGENV(제주시+서귀포, 생활폐기물 수거 정책 안내)
-  // - AGRIECONOMY-ECOFARM(친환경농정과): 전국 일반화 가능성 있으나
-  //   GOV_TASK 미배선(count=0) 확인 — 추가 조사 필요, 이번 배선 보류
+  // - AGRIECONOMY-ECOFARM(친환경농정과): 2026-08-22 웹검색으로 추가
+  //   확인 완료 — 제외 확정(더 이상 보류 아님). 친환경농어업법 제35조
+  //   제1항상 인증 권한은 국립농산물품질관리원 또는 지정 민간인증기관
+  //   소관이지 시장·군수·구청장 권한이 아니다(easylaw.go.kr 원문 확인).
+  //   "친환경농업직접지불" 지원사업은 시·군·구가 관여하나 매년 농림
+  //   축산식품부 지침에 따른 예산 기반 직불금 사업이라, 고정 법적
+  //   처분이 아닌 다른 지원사업(ECON-SMB 등)과 동일 패턴으로 제외한다.
   // (jachi.VILLAGE·culture.LIBRARY의 jejusi-UDANGLIB 중복분은 기존
   // 등록 항목 재사용으로 이미 커버 — 별도 항목 불필요)
 };
