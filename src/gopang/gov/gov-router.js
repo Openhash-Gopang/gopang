@@ -2416,7 +2416,17 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-BASICLIVELIHOOD-TEMPLATE_v1.0.md',
     },
   ],
-  // 다른 도메인(climate/culture 등)은 개별 검증 후 순차 추가 예정.
+  climate: [
+    {
+      // ★ 위임 여부 TBD — 템플릿 파일 §LEGAL-BASIS 참고. 원권한자는
+      // 법문상 시·도지사이며, 시/군/구 집행은 인스턴스별 재확인 필요.
+      subCode: 'ENVMGMT', name: '환경관리과(대기·수질 배출시설 신고)',
+      kw: ['대기배출시설', '배출시설 설치신고', '대기오염', '수질오염',
+        '환경관리과', '배출시설 신고'],
+      file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-ENVMGMT-TEMPLATE_v1.0.md',
+    },
+  ],
+  // 다른 도메인(culture 등)은 개별 검증 후 순차 추가 예정.
 };
 
 function _makeGenericCityDivisionEntries() {
