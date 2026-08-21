@@ -3,7 +3,9 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 제주특별자치도립미술관 — System Prompt
 # 문서 코드  : SP-AGY-ARTMUSEUM
-# 버전      : v1.0
+# 버전      : v1.1 (2026-08-21, GOV-TASK-904-GAP 배치 — §6에 GOV_TASK
+#             판정 근거 추가, 실질 변경 없음. 실제 대관 신청 접수는
+#             하위 SP-AGYDIV-ARTMUSEUM-MAIN/JHYUN에서 처리)
 # 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-11
@@ -90,3 +92,4 @@ kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 제주특별자�
 
 - 이 문서는 조직 개편에 취약한 영역이므로, JEJU-DO-SP §1에 명시된 대로 도의회 조례 개정 시점마다 갱신 대상이다.
 - **정직하게 밝힘**: 이 문서는 아직 DATA_REQUIREMENT-SCHEMA 형식의 상세 데이터 요구사항 선언이나 §5 AI 검토소견(결재 초안) 규격을 갖추지 못했다 — §2/§3 수준의 개요·연계 안내까지만 v1.0 범위. 정확한 주소·전화·관람요금은 이번 조사에서 확정하지 못해 TBD로 남긴다.
+- **v1.1 — GOV-TASK-904-GAP 판정(2026-08-21)**: 이 최상위 SP 자체는 전시 개요 안내만 하고 실제 처분 업무(대관 신청)가 없다 — REQUIRED_DOCUMENTS_REGISTRY 등록은 하위 `SP-AGYDIV-ARTMUSEUM-MAIN`(본관)·`SP-AGYDIV-ARTMUSEUM-JHYUN`(제주현대미술관)에서 사이트별로 각각 처리했다.
