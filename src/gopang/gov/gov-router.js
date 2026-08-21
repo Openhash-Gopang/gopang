@@ -2465,6 +2465,14 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '자동차등록 이전'],
       file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-VEHICLE-TEMPLATE_v1.0.md',
     },
+    {
+      // ★ 시/군/구 "등록"만 다룸 — 시내버스·택시 "면허"는 도청(시·도지사)
+      // 소관 별개 계층. 템플릿 §LEGAL-BASIS 참고.
+      subCode: 'TRAFFIC', name: '교통행정과(여객자동차운송사업 등록)',
+      kw: ['여객자동차운송사업 등록', '운송사업 등록', '교통행정과',
+        '전세버스 등록', '교통안전시설물'],
+      file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-TRAFFIC-TEMPLATE_v1.0.md',
+    },
   ],
   econ: [
     {
