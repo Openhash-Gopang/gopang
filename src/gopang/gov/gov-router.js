@@ -2473,6 +2473,12 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '전세버스 등록', '교통안전시설물'],
       file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-TRAFFIC-TEMPLATE_v1.0.md',
     },
+    {
+      subCode: 'GENERAL', name: '안전총괄과(재난지원금 신청)',
+      kw: ['재난지원금', '재난안전대책본부', '안전총괄과', '민방위 훈련',
+        '재난 신고', '피해사실확인서'],
+      file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-GENERAL-TEMPLATE_v1.0.md',
+    },
   ],
   econ: [
     {
