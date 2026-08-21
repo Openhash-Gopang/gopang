@@ -868,7 +868,7 @@
 03-do-agency,03-do-agency/SP-AGY-BOHWAN_v1.1.md,SP-AGY-BOHWAN_v1.1,Y,N,완료,jeju:groundwater_quality_test_request(지하수법 제20조) 등록. 시료 채취는 서류로 대신 못함 — 의뢰서·수수료 접수까지만 대행함을 SP에 명시.,,
 03-do-agency,03-do-agency/SP-AGY-FOLKMUSEUM_v1.1.md,SP-AGY-FOLKMUSEUM_v1.1,Y,N,재정의,"최상위 SP는 안내만, 대관 신청 처리는 하위 SP-AGYDIV-FOLKMUSEUM-ADMIN에서.",,
 03-do-agency,03-do-agency/SP-AGY-WATER_v1.3.md,SP-AGY-WATER_v1.3,Y,N,완료,"jeju:water_leak_fee_reduction(옥내누수, 조번호 TBD)·jeju:water_social_fee_reduction(사회적배려대상자, 제48조3항) 등록. §5 AI검토소견 시범규격 존치하되 §1-2로 표준경로 일원화.",,
-03-do-agency,03-do-agency/SP-AGY-AGRITECH_v1.0.md,SP-AGY-AGRITECH_v1.0,Y,N,미착수,,,
+03-do-agency,03-do-agency/SP-AGY-AGRITECH_v1.1.md,SP-AGY-AGRITECH_v1.1,Y,N,완료,"jeju:pest_diagnosis_request(식물방역법, 제주 자체 조례명 TBD) 등록. 정밀분석 시 물리적 시료 필요할 수 있음(BOHWAN과 동일 한계).",,
 03-do-agency,03-do-agency/SP-AGY-LIBRARY_v1.0.md,SP-AGY-LIBRARY_v1.0,Y,N,미착수,,,
 03-do-agency,03-do-agency/SP-AGY-CHUKSAN_v1.0.md,SP-AGY-CHUKSAN_v1.0,Y,N,미착수,,,
 03-do-agency,03-do-agency/SP-AGY-POLICE_v1.0.md,SP-AGY-POLICE_v1.0,Y,N,재정의,최상위 SP는 SAFETY/TRAFFIC 두 과로 라우팅만 함 — 자체 GOV_TASK 없음. 실제 처리는 하위 두 과에서.,,
