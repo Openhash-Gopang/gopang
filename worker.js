@@ -19089,6 +19089,50 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 07-org, 제주국제컨벤션센터(ICCJEJU). 웹검색
+  // 확인 — 행사계획서를 행사 15일 전, 최종 관련서류를 7일 전까지 제출해
+  // 담당자 승인을 받는 정형화된 대관 절차 확인(ICC JEJU 공식 대관 절차
+  // 안내). 법령상 인허가가 아니라 시설 이용계약(대관) 성격 — legal_basis는
+  // 재단 자체 대관운영 규정(정확한 근거 문서명 TBD, 공식 홈페이지 재확인
+  // 필요).
+  'iccjeju:venue_rental_application': {
+    agency: 'iccjeju', agency_name: '제주국제컨벤션센터(ICC JEJU)',
+    task_name: '컨벤션 시설 대관 신청',
+    legal_basis: 'ICC JEJU 대관운영 규정(재단 자체 규정 — 정확한 근거 문서명 TBD)',
+    documents: [
+      { id: 'event_plan', name: '행사계획서(행사 15일 전 제출)', required: true, acquisition: 'user_authored' },
+      { id: 'tech_docs', name: '기술·광고·작업 관련 서류(최종본, 행사 7일 전 제출)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  // ★ 2026-08-21 추가 — 07-org, 제주평생교육장학진흥원(JILES). 웹검색
+  // 확인 — 제주평생교육장학진흥원 설립 및 운영 조례(제주특별자치도조례
+  // 제3239호). 재단이 매년 자체 공고로 장학생을 선발·심사(장학생선발
+  // 심사위원회) — 도청 위임 없이 재단이 직접 접수·심사하는 사무.
+  'jiles:scholarship_application': {
+    agency: 'jiles', agency_name: '제주평생교육장학진흥원',
+    task_name: '장학금(인재육성장학생 등) 신청',
+    legal_basis: '제주평생교육장학진흥원 설립 및 운영 조례(제주특별자치도조례 제3239호), 재단 정관 및 인재육성사업 운영 규정',
+    documents: [
+      { id: 'application', name: '장학생 선발 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'income_proof', name: '소득·건강보험료 증빙서류', required: true, acquisition: 'gov24' },
+      { id: 'enrollment_cert', name: '재학증명서', required: true, acquisition: 'gov24' },
+    ],
+  },
+  // ★ 2026-08-21 추가 — 07-org, 제주특별자치도 교통약자 이동지원센터
+  // (TRANSWEAK). 웹검색 확인 — 「제주특별자치도교통약자의 이동편의
+  // 증진 조례」 제13조(요금), 교통약자의 이동편의 증진법(상위법),
+  // 장애인복지법 시행규칙 제28조(대상자 기준). 센터가 회원등록·이용
+  // 신청을 온라인/전화/팩스로 직접 접수·운영.
+  'transweak:special_transport_registration': {
+    agency: 'transweak', agency_name: '제주특별자치도 교통약자 이동지원센터',
+    task_name: '특별교통수단(교통약자 콜택시) 이용자 등록',
+    legal_basis: '교통약자의 이동편의 증진법, 제주특별자치도교통약자의 이동편의 증진 조례 제13조, 장애인복지법 시행규칙 제28조제1항',
+    documents: [
+      { id: 'application', name: '특별교통수단 이용신청서', required: true, acquisition: 'user_authored' },
+      { id: 'consent', name: '이용자준수사항 동의 및 개인정보 수집·이용 동의서', required: true, acquisition: 'user_authored' },
+      { id: 'disability_cert', name: '복지카드(장애인증명서) 또는 진단서', required: true, acquisition: 'gov24' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 07-org(출자출연기관), 제주테크노파크(JTP). 웹검색
   // 확인 — 「산업기술단지 지원에 관한 특례법」이 전국 테크노파크 공통
   // 모법, 제주는 「재단법인 제주테크노파크 설립 및 운영 조례」(제주특별
@@ -19485,6 +19529,9 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:food_business_report':             { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   'jejusi:public_sanitation_business_report':   { target_type: 'dept', target_id: 'city-dept:jeju:welfare' },
   // ── 07-org(출자출연기관) — target_type:'org' (DEPT_TASK_TAXONOMY.org에 사전 등록된 코드) ──
+  'iccjeju:venue_rental_application': { target_type: 'org', target_id: 'org:ICCJEJU' },
+  'jiles:scholarship_application': { target_type: 'org', target_id: 'org:JILES' },
+  'transweak:special_transport_registration': { target_type: 'org', target_id: 'org:TRANSWEAK' },
   'jtp:equipment_testing_request': { target_type: 'org', target_id: 'org:JTP' },
   'jeda:digital_transformation_package_support': { target_type: 'org', target_id: 'org:JEDA' },
   'jcgf:credit_guarantee_application': { target_type: 'org', target_id: 'org:JCGF' },
