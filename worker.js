@@ -19303,6 +19303,63 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — BOHWAN(보건환경연구원) 수질검사와 동일한 한계: 심각한 병해충 의심 시 실제 시료(병든 잎·가지 등)를 검사기관에 인계해야 하는 경우가 있다 — 사진 진단으로 충분한 경증은 서류(사진)만으로 완결 가능하나, 정밀분석이 필요하면 물리적 시료 제출이 추가로 필요할 수 있음을 사용자에게 안내할 것.',
   },
+  // ★ 2026-08-21 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-CHUKSAN
+  // (축산생명연구원) 실작업. §LEGAL-BASIS가 이미 "종축·정액등의 생산과
+  // 이용에 관한 법률"을 근거로 명시해둔 지점 — 실제로는 축산법 제12조
+  // (수정사의 면허)가 정확한 근거임을 웹검색으로 확인(법령명 자체가
+  // SP 작성 시점에 부정확했던 것으로 보임, 정정).
+  'jeju:livestock_inseminator_license': {
+    agency: 'jeju', agency_name: '제주특별자치도 축산생명연구원',
+    task_name: '가축인공수정사 면허 신청',
+    legal_basis: '축산법 제12조(수정사의 면허), 축산법 시행규칙(면허신청서 및 첨부서류 규정)',
+    documents: [
+      { id: 'application',     name: '가축인공수정사 면허신청서', required: true, acquisition: 'user_authored' },
+      { id: 'qualification',   name: '자격 증빙(시험 합격증 또는 관련 학과 졸업증명 등, 시행규칙 기준)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 법조문상 면허권자는 시·도지사이나, 이 연구원이 실무 검토·접수를 대행하는 위임전결 구조로 보인다(SP-AGY-FIRE 위험물허가와 동일 패턴) — 실제 위임 조례 원문 대조는 이번 조사에서 못함, TBD. 정확한 첨부서류 목록(시행규칙 별지 서식 기준)도 재확인 권장.',
+  },
+  // ★ 2026-08-21 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-
+  // ARTMUSEUM(도립미술관) 본관·제주현대미술관 실작업. SP-AGY-FOLKMUSEUM
+  // 대관 신청과 동일 근거(공유재산 및 물품 관리법) — 도립미술관은 본관·
+  // 현대미술관·김창열미술관 3개 사이트를 통합 운영하며 각 사이트가 자체
+  // 대관 접수를 하는 것으로 SP에 명시돼 있어(§2 "직접 수행") 사이트별
+  // 별도 task_key로 등록한다. 김창열미술관(SP-AGYDIV-ARTMUSEUM-
+  // KIMTSCHANGYEUL)은 이번 배치의 19건에 포함되지 않아 손대지 않음.
+  'jeju:artmuseum_main_facility_rental': {
+    agency: 'jeju', agency_name: '제주도립미술관 본관',
+    task_name: '전시실 대관 신청(본관)',
+    legal_basis: '공유재산 및 물품 관리법 제20조(사용허가), 같은 법 시행령 제12조·제13조, 제주특별자치도 공유재산 관리 조례',
+    documents: [
+      { id: 'application',  name: '시설대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'usage_plan',   name: '이용계획서(전시·행사 내용·일정 등)', required: true, acquisition: 'user_authored' },
+    ],
+    note: 'SP-AGYDIV-FOLKMUSEUM-ADMIN(민속자연사박물관 대관)과 동일 근거·구조 — 정확한 대관 규정(요금표·우선순위 기준)은 별도 확인 필요, TBD.',
+  },
+  'jeju:artmuseum_jhyun_facility_rental': {
+    agency: 'jeju', agency_name: '제주도립미술관 제주현대미술관',
+    task_name: '전시실 대관 신청(제주현대미술관)',
+    legal_basis: '공유재산 및 물품 관리법 제20조(사용허가), 같은 법 시행령 제12조·제13조, 제주특별자치도 공유재산 관리 조례',
+    documents: [
+      { id: 'application',  name: '시설대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'usage_plan',   name: '이용계획서(전시·행사 내용·일정 등)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '본관과 같은 법적 근거·구조 — 사이트가 달라 별도 task_key로 등록(대관 대상 시설이 물리적으로 다름). 정확한 대관 규정은 TBD.',
+  },
+  // ★ 2026-08-21 추가 — 03-do-agency GOV-TASK-904-GAP 배치, 마지막 항목.
+  // SP-AGYDIV-HERITAGE-MANAGEMENT(세계유산본부 유산관리과) 실작업. §CAPABILITIES가
+  // 이미 "개별 현상변경 허가 확정: 실제 심사를 통해서만 확정"이라고
+  // 밝혀둔 지점 — 한라산·성산일출봉·거문오름용암동굴계가 국가지정문화재
+  // (천연기념물)이기도 하므로 문화유산법의 현상변경허가 대상.
+  'jeju:heritage_alteration_permit': {
+    agency: 'jeju', agency_name: '제주특별자치도 세계유산본부 유산관리과',
+    task_name: '국가지정문화유산(천연기념물) 현상변경 등 허가 신청',
+    legal_basis: '문화유산의 보존 및 활용에 관한 법률 제35조, 같은 법 시행령 제21조, 같은 법 시행규칙 제14조',
+    documents: [
+      { id: 'application',  name: '현상변경허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'project_plan', name: '사업계획서(공사설계도서 등 행위 내용 증빙)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 법조문상 허가권자는 국가유산청장이나 위임 규정에 따라 시·도지사(제주는 도지사) 위임 사무인 경우가 많다 — 이 SP(세계유산본부)가 실무 창구로 위임전결하는 구조로 보이나, 정확한 위임 범위(전부 위임인지 경미한 사항만인지)는 이번 조사에서 확인 못함, TBD. SP-AGY-HERITAGE(자연공원법 특별출입허가)와는 근거법이 다른 별개 처분임에 유의 — 둘 다 이 본부 소관이지만 혼동하지 말 것.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19409,6 +19466,18 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-21 — SP-AGY-AGRITECH 실작업. 'do-agency:AGRITECH'는
   // 이미 등록된 도메인.
   'jeju:pest_diagnosis_request': { target_type: 'dept', target_id: 'do-agency:AGRITECH' },
+  // ★ 2026-08-21 — SP-AGY-CHUKSAN 실작업. 'do-agency:CHUKSAN'은 이미
+  // 등록된 도메인.
+  'jeju:livestock_inseminator_license': { target_type: 'dept', target_id: 'do-agency:CHUKSAN' },
+  // ★ 2026-08-21 — SP-AGY-ARTMUSEUM 실작업(본관·제주현대미술관).
+  // 'do-agency:ARTMUSEUM'은 이미 등록된 도메인 — 사이트가 달라도 같은
+  // 기관 코드 하나로 충분(공유재산 사용허가 심사 주체가 동일 기관이므로).
+  'jeju:artmuseum_main_facility_rental':  { target_type: 'dept', target_id: 'do-agency:ARTMUSEUM' },
+  'jeju:artmuseum_jhyun_facility_rental': { target_type: 'dept', target_id: 'do-agency:ARTMUSEUM' },
+  // ★ 2026-08-21 — SP-AGYDIV-HERITAGE-MANAGEMENT 실작업. 'do-agency:
+  // HERITAGE'는 이미 등록된 도메인(jeju:hallasan_special_entry_permit과
+  // 동일 기관, 다른 처분).
+  'jeju:heritage_alteration_permit': { target_type: 'dept', target_id: 'do-agency:HERITAGE' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.

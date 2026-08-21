@@ -3,7 +3,8 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 제주특별자치도한라도서관 정보서비스팀(추정) — System Prompt
 # 문서 코드  : SP-AGYDIV-LIBRARY-INFOSERVICE
-# 버전      : v1.0 (2026-07-13, 잠정 초안)
+# 버전      : v1.1 (2026-08-21, GOV-TASK-904-GAP 배치 — §4에 GOV_TASK
+#             판정 근거 추가, 실질 변경 없음)
 # 상위 상속  : kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL →
 #             AGENCY-AC-COMMON(공리 0·공리 1) → SP-AGY-LIBRARY-AGENT-COMMON
 #             → [본 SP: 정보서비스팀(추정)]
@@ -65,3 +66,4 @@ kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL → AGENCY-AC-COMMON
 ## §4. 유의사항
 
 - **정직하게 밝힘**: 이 팀 존재·명칭은 확인하지 못한 추정이다 — 재검증 필요.
+- **v1.1 — GOV-TASK-904-GAP 판정(2026-08-21)**: §INPUT_SCHEMA가 이미 "처분성 고지: 해당 없음"이라고 밝힌 대로, 도서 대출·반납은 처분이 아닌 순수 서비스라 REQUIRED_DOCUMENTS_REGISTRY 대상이 아니다.
