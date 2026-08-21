@@ -4205,17 +4205,45 @@ async function _loadCityDivisionMasterData() {
   return _cityDivisionMasterData;
 }
 
-// ── 과(division) 텍스트 fetch — 실사(제주)와 제네릭(비제주)을 함께 처리
-// (2026-08-21 신설, 2026-08-22 재복원 2회차, 2026-08-22 인스턴스 조회
-// 배선) ────────────────────────────────────────────────────────────
+// ── 원형-인스턴스 계보 레지스트리 로더 (2026-08-22 신설) — 클론/승격/
+// 전파 메커니즘의 조회 진입점. 상세 워크플로는 instance-registry.json의
+// _설명 필드 참고. 이 레지스트리에 없는 지역(절대다수)은 기존처럼 원형
+// 템플릿 + 마스터데이터 자리표시자로만 렌더링된다 — 아무 영향 없음.
+let _cityDivisionInstanceRegistry = null;
+async function _loadCityDivisionInstanceRegistry() {
+  if (_cityDivisionInstanceRegistry) return _cityDivisionInstanceRegistry;
+  const raw = await _fetchText('04-city/templates/divisions/instance-registry.json');
+  _cityDivisionInstanceRegistry = JSON.parse(raw).등록된_인스턴스;
+  return _cityDivisionInstanceRegistry;
+}
+
+// ── 과(division) 텍스트 fetch — 실사(제주)·인스턴스 클론(로컬 개선된
+// 지역)·제네릭(그 외 비제주)을 함께 처리 (2026-08-21 신설, 2026-08-22
+// 재복원 2회차, 2026-08-22 인스턴스 조회 배선, 2026-08-22 클론/승격/
+// 전파 계보 배선) ────────────────────────────────────────────────────
 // 두 번째 인자는 이제 시코드(문자열)다 — 이전에는 항상 null을 넘겨
 // 인스턴스 데이터가 전혀 반영되지 않았다(코드는 있었으나 실제 조회
 // 로직·데이터 파일이 없었음). 마스터데이터에 레코드가 없으면 기존과
 // 동일하게 기본 라벨로 폴백한다 — 실사 없어도 항상 작동해야 한다는
 // 원칙은 그대로 유지.
+//
+// 우선순위(제네릭 항목에 한함): ① instance-registry.json에 등록된
+// 로컬 클론 파일이 있으면 그걸 있는 그대로 fetch(자리표시자 렌더링
+// 없음 — 이미 실제 콘텐츠) ② 없으면 기존처럼 원형 템플릿 + 마스터
+// 데이터 자리표시자 렌더링.
 async function _fetchCityDivisionText(divEntry, 시코드) {
   if (!divEntry.generic) {
     return _fetchText(divEntry.file, _currentProvinceRepo());
+  }
+  if (시코드) {
+    try {
+      const instances = await _loadCityDivisionInstanceRegistry();
+      const inst = instances.find(i => i.시코드 === 시코드 && i.국코드 === divEntry.국코드
+        && i.과코드 === divEntry.subCode);
+      if (inst) {
+        return _fetchText(inst.instance_file);
+      }
+    } catch { /* 레지스트리 없거나 파싱 실패해도 원형 렌더링으로 계속 진행 */ }
   }
   const template = await _fetchText(divEntry.file);
   let rec = null;
