@@ -19089,6 +19089,38 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 02-do-dept divisions, SP-DIV-SAFETY-HEALTHPOLICY.
+  // 웹검색 확인(의료법 제33조 관련법령 원문) — 종합병원·병원·치과병원·
+  // 한방병원·요양병원·정신병원 개설은 시·도 의료기관개설위원회 심의를
+  // 거쳐 시·도지사(제주는 도지사)의 허가 사항. 의원급(의원·치과의원·
+  // 한의원·조산원)은 시장·군수·구청장(시청) 신고 대상이라 도청 소관
+  // 아님 — 이 GOV_TASK는 병원급 이상만 해당.
+  'jeju:hospital_establishment_permit': {
+    agency: 'jeju', agency_name: '제주도청 도민안전건강실 보건의료정책과',
+    task_name: '병원급 이상 의료기관(종합병원·병원·치과병원·한방병원·요양병원·정신병원) 개설허가',
+    legal_basis: '의료법 제33조제4항, 같은 조에 따른 시·도 의료기관개설위원회 사전심의·본심의',
+    documents: [
+      { id: 'application', name: '의료기관 개설허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'floor_plan', name: '시설 평면도 및 설비개요서', required: true, acquisition: 'user_authored' },
+      { id: 'staff_plan', name: '의료인력 확보계획서(전문의·간호인력 등)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  // ★ 2026-08-21 추가 — 02-do-dept divisions, SP-DIV-PLAN-POPULATION.
+  // 웹검색 확인(경향신문 2026-01-19, 제주경제일보) — '탐라청년출발패키지
+  // 청년 전입축하장려금' 2026년 사업. 제주도청이 직접 사업공고·심사하는
+  // 도 자체 지원사업(정부24는 접수창구일 뿐 사업주관은 도청 기획조정실
+  // 인구정책과) — 읍면동/타 기관 위임 없이 도청이 직접 처리하는 사무로
+  // 확인.
+  'jeju:youth_inflow_incentive_application': {
+    agency: 'jeju', agency_name: '제주도청 기획조정실 인구정책과',
+    task_name: '청년 전입축하장려금(탐라청년출발패키지) 신청',
+    legal_basis: '제주특별자치도 사업공고(2026년 탐라청년출발패키지 청년 전입축하장려금 사업) — 개별 법률이 아닌 도 자체 사업공고 근거, 매년 예산·공고 내용 변경 가능성 있음(TBD)',
+    documents: [
+      { id: 'application', name: '전입축하장려금 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'residency_proof', name: '주민등록표(전입일 확인용)', required: true, acquisition: 'government_issued' },
+      { id: 'tamnaevoucher_card', name: '탐나는전 카드 사전발급 또는 앱 설치 확인', required: true, acquisition: 'user_authored' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 02-do-dept divisions, SP-DIV-INNOV-ENERGYINDUSTRY.
   // 웹검색 확인(울산광역시 등 타 지자체 안내페이지, 전력거래소 발전사업
   // 허가절차) — 전기사업법 제7조에 따라 원칙은 3,000kW 이하만 시·도지사
@@ -19446,6 +19478,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:disaster_relief_grant':                 { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jeju:ev_purchase_subsidy_application':  { target_type: 'dept', target_id: 'do-dept:innov' },
+  'jeju:hospital_establishment_permit':    { target_type: 'dept', target_id: 'do-dept:safety' },
+  'jeju:youth_inflow_incentive_application': { target_type: 'dept', target_id: 'do-dept:plan' },
   'jeju:renewable_power_business_permit':  { target_type: 'dept', target_id: 'do-dept:innov' },
   'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },

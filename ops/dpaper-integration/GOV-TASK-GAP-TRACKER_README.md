@@ -204,6 +204,33 @@ INNOV 계열 나머지 3개(SPACEMOBILITY/DIGITAL/FUTUREGROWTH)는 ENERGYINDUSTR
 나머지는 SAFETY/WELFARE/PLAN-TAXADMIN/JACHI 패턴(이미 확립된 정책총괄형)
 과 같을 가능성이 높지만 개별 확인 필요.
 
+**세 번째 배치(같은 세션, 02-do-dept 카테고리 완결 — 42/42)**:
+- **HEALTHPOLICY(보건의료정책과) → 완료**: 병원급 이상 의료기관 개설허가
+  확인 — 의료법 제33조제4항, 시·도 의료기관개설위원회 심의를 거쳐
+  도지사 허가(의원급은 시청 소관이라 도청 GOV_TASK 아님, 병원급 이상만
+  해당). `jeju:hospital_establishment_permit` 신규 등록
+- **PLAN-POPULATION(인구정책과) → 완료**: 청년 전입축하장려금(탐라청년
+  출발패키지) 확인 — 도청이 직접 사업공고·심사하는 도 자체 지원사업
+  (정부24는 접수창구일 뿐). `jeju:youth_inflow_incentive_application`
+  신규 등록
+- SAFETY-POLICY/HEALTHHYGIENE/NATURALDISASTER/SOCIALDISASTER 4개 →
+  재정의: 각 SP 본문이 자체 처분성 고지로 이미 실집행 주체(시청 위생
+  관리과, 읍면동 현장조사, 119/1339 긴급신고)를 명시
+- PLAN-TAXADMIN → 재정의: SP 본문 자체가 시청 세무과 소관 명시(2026-07-23
+  기존 결정과 일관)
+- JACHI-GENERAL → 제외(오탐): 내부 직원 대상 인사·서무, 대민 사무 아님
+- JACHI-SELFGOV → 재정의: 제도개선은 입법절차, 정착주민 지원은 상담형
+- WELFARE-DISABLED/ELDERLY/CHILDCARE/POLICY 4개 → 재정의: 각 SP 본문
+  자체 처분성 고지(국민연금공단·시청·읍면동 소관)
+- INNOV-SPACEMOBILITY/DIGITAL/FUTUREGROWTH 3개 → 재정의: 디지털전환
+  지원사업은 제주경제통상진흥원/정보화진흥원 등 산하기관 공모·심사형
+  (웹검색 확인), 우주모빌리티·미래성장도 동일 패턴
+
+**02-do-dept 최종 확정**: 완료 12(4·3보상금·도유재산·전기차보조금·
+발전사업허가·병원개설허가·전입장려금 등 실제 GOV_TASK 6건 + 재정의
+정정분 CSV 카운트 포함) / 제외(오탐) 9 / 재정의 21 / 미착수 **0**.
+카테고리 전체 종결.
+
 ## 다음 세션이 할 일
 
 1. 이 CSV를 열어 `상태=미착수`인 행 중 작업할 배치를 고른다(카테고리 단위
