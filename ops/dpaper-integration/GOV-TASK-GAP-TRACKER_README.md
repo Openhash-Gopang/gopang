@@ -184,6 +184,26 @@ DIGITAL/FUTUREGROWTH) — §INPUT_SCHEMA 1차 스크리닝은 해뒀으나(PLAN-
 POPULATION/INNOV-* 4개가 "지원 신청" 명시로 유력 후보) 개별 법적근거
 확인은 다음 세션 몫.
 
+**두 번째 배치(같은 세션, PLAN·과 3건 추가 처리)**:
+- PLAN(기획조정실) → 재정의: 예산편성/정책기획은 내부행정, 인구·청년정책은
+  하위 과 소관, 세정은 이미 시청 위임 확정(2026-07-23)
+- PLAN-YOUTH(청년정책담당관) → 재정의: 청년월세지원 등 대표사업 접수는
+  주소지 관할 주민센터(읍면동)/복지로·정부24, 도청은 정책총괄(웹검색 확인)
+- **INNOV-ENERGYINDUSTRY(에너지산업과) → 완료**: 전기사업(태양광·풍력)
+  허가 확인 — 전기사업법 제7조 원칙은 3,000kW 이하만 시·도지사 권한이나,
+  **제주특별법에 따라 3,000kW 이상도 도지사 허가권한** 확장 사례(01-do
+  개발사업 시행승인과 같은 유형) — `jeju:renewable_power_business_permit`
+  신규 등록
+
+**02-do-dept 최종**: 완료44·제외(오탐)9·재정의15·미착수16(전부 division —
+JACHI-GENERAL/SELFGOV, SAFETY-POLICY/HEALTHPOLICY/HEALTHHYGIENE/
+NATURALDISASTER/SOCIALDISASTER, PLAN-TAXADMIN/POPULATION, WELFARE-DISABLED/
+CHILDCARE/POLICY/ELDERLY, INNOV-SPACEMOBILITY/DIGITAL/FUTUREGROWTH).
+INNOV 계열 나머지 3개(SPACEMOBILITY/DIGITAL/FUTUREGROWTH)는 ENERGYINDUSTRY
+처럼 도청 직접 인허가 사무가 있을 가능성이 있어 최우선 확인 대상 —
+나머지는 SAFETY/WELFARE/PLAN-TAXADMIN/JACHI 패턴(이미 확립된 정책총괄형)
+과 같을 가능성이 높지만 개별 확인 필요.
+
 ## 다음 세션이 할 일
 
 1. 이 CSV를 열어 `상태=미착수`인 행 중 작업할 배치를 고른다(카테고리 단위

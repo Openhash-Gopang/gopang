@@ -19089,6 +19089,23 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 02-do-dept divisions, SP-DIV-INNOV-ENERGYINDUSTRY.
+  // 웹검색 확인(울산광역시 등 타 지자체 안내페이지, 전력거래소 발전사업
+  // 허가절차) — 전기사업법 제7조에 따라 원칙은 3,000kW 이하만 시·도지사
+  // 권한이나, **제주특별자치도는 제주특별법에 따라 3,000kW 이상 발전
+  // 설비도 도지사 허가권한**이 있는 확장 사례(01-do 개발사업 시행승인과
+  // 같은 유형의 제주 고유 확장권한). 심사기준: 동법 시행규칙 제4·5·7조.
+  'jeju:renewable_power_business_permit': {
+    agency: 'jeju', agency_name: '제주도청 혁신산업국 에너지산업과',
+    task_name: '전기사업(태양광·풍력 등 신재생에너지 발전사업) 허가',
+    legal_basis: '전기사업법 제7조, 같은 법 시행령 제3~4조, 같은 법 시행규칙 제4·5·7조, 제주특별자치도 설치 및 국제자유도시 조성을 위한 특별법(3,000kW 이상 확장권한 근거조항 TBD)',
+    documents: [
+      { id: 'application',  name: '전기사업(발전사업) 허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'finance_plan', name: '재원조달계획서(자기자본 비율 10% 이상 증빙 포함)', required: true, acquisition: 'user_authored' },
+      { id: 'construction_plan', name: '발전설비 건설 및 운영계획서', required: true, acquisition: 'user_authored' },
+      { id: 'tech_workforce_plan', name: '기술인력 확보계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
   // ★ 2026-08-20 추가 — 도지사 전속 사무. 01-do(JEJU-DO-SP_v1.5.md)가
   // 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에
   // 완전히 대체된 죽은 파일이라는 걸 실사로 발견 — 이 task_key를 설명하는
@@ -19429,6 +19446,7 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:disaster_relief_grant':                 { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jeju:ev_purchase_subsidy_application':  { target_type: 'dept', target_id: 'do-dept:innov' },
+  'jeju:renewable_power_business_permit':  { target_type: 'dept', target_id: 'do-dept:innov' },
   'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:development_project_approval':     { target_type: 'dept', target_id: 'do-dept:housing' },
