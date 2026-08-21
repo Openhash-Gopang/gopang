@@ -851,13 +851,13 @@
 02-do-dept,02-do-dept/divisions/SP-DIV-WELFARE-DISABLED_v1.0.md,제주도청 복지가족국 장애인복지과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-YOUTH_v1.0.md,제주도청 기획조정실 청년정책담당관,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-SPACEMOBILITY_v1.0.md,제주도청 혁신산업국 우주모빌리티과,Y,N,미착수,,,
-02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-ACCOUNTING_v1.0.md,제주도청 특별자치행정국 회계재산관리과,Y,N,미착수,,,
+02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-ACCOUNTING_v1.0.md,제주도청 특별자치행정국 회계재산관리과,Y,N,완료,4·3보상금 신청(국가위원회 최종결정 특수구조)/도유재산 사용허가 — 02-do-dept 최초 배치,PR#492,2026-08-20
 02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-POPULATION_v1.0.md,제주도청 기획조정실 인구정책담당관,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-DIGITAL_v1.0.md,제주도청 혁신산업국 디지털혁신과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-WELFARE-CHILDCARE_v1.0.md,제주도청 복지가족국 아동보육청소년과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-FUTUREGROWTH_v1.0.md,제주도청 혁신산업국**(개칭 예정: 미래산업국) **미래성장과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-SAFETY-HEALTHPOLICY_v1.0.md,제주도청 도민안전건강실 보건정책과,Y,N,미착수,,,
-02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-43SUPPORT_v1.0.md,제주도청 특별자치행정국 4·3지원과,Y,N,미착수,,,
+02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-43SUPPORT_v1.0.md,제주도청 특별자치행정국 4·3지원과,Y,N,완료,4·3보상금 신청(국가위원회 최종결정 특수구조)/도유재산 사용허가 — 02-do-dept 최초 배치,PR#492,2026-08-20
 02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-SELFGOV_v1.0.md,제주도청 특별자치행정국 자치행정과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-SAFETY-HEALTHHYGIENE_v1.0.md,제주도청 도민안전건강실 건강위생과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-SAFETY-NATURALDISASTER_v1.0.md,제주도청 도민안전건강실 자연재난과,Y,N,미착수,,,
@@ -897,9 +897,9 @@ benefit-categories,benefit-categories/SP-BENEFIT-FARM-MATERIAL_v1.0.md,SP-BENEFI
 benefit-categories,benefit-categories/SP-BENEFIT-FOSTER-CASH_v1.0.md,SP-BENEFIT-FOSTER-CASH_v1.0,Y,N,미착수,,,
 benefit-categories,benefit-categories/SP-BENEFIT-GEN-INSURANCE_v1.0.md,SP-BENEFIT-GEN-INSURANCE_v1.0,Y,N,미착수,,,
 benefit-categories,benefit-categories/SP-BENEFIT-DIS-SERVICE_v1.0.md,SP-BENEFIT-DIS-SERVICE_v1.0,Y,N,미착수,,,
-01-do,01-do/JEJU-DO-SP_v1.5.md,제주특별자치도청,Y,N,재정의,"REQUIRED_DOCUMENTS_REGISTRY 패턴이 안 맞음 — 위임 안 되는 광역 인허가 처리 경로 명시로 재정의, 미착수",,
-01-do,01-do/JEJU-DO-SP_v1.4.md,제주특별자치도청,Y,N,재정의,"REQUIRED_DOCUMENTS_REGISTRY 패턴이 안 맞음 — 위임 안 되는 광역 인허가 처리 경로 명시로 재정의, 미착수",,
+01-do,01-do/JEJU-DO-SP_v1.5.md,제주특별자치도청,Y,N,완료,"실사 발견: 이 정적 파일 자체는 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에 완전히 대체된 죽은 파일. 도지사 전속 사무(개발사업 시행승인)는 템플릿의 신설 {고유사무_문구} 자리표시자로 반영 완료(제주 시범, 나머지 14개 도는 TBD)",PR#493/#494,2026-08-20
+01-do,01-do/JEJU-DO-SP_v1.4.md,제주특별자치도청,Y,N,완료,"실사 발견: 이 정적 파일 자체는 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에 완전히 대체된 죽은 파일. 도지사 전속 사무(개발사업 시행승인)는 템플릿의 신설 {고유사무_문구} 자리표시자로 반영 완료(제주 시범, 나머지 14개 도는 TBD)",PR#493/#494,2026-08-20
 01-do,01-do/JEJU-DO-AGENT-COMMON_v1.2.md,JEJU-DO-AGENT-COMMON_v1.2,Y,N,재정의,상동,,
-01-do,01-do/JEJU-DO-SP_v1.0.md,제주특별자치도청,Y,N,재정의,"REQUIRED_DOCUMENTS_REGISTRY 패턴이 안 맞음 — 위임 안 되는 광역 인허가 처리 경로 명시로 재정의, 미착수",,
+01-do,01-do/JEJU-DO-SP_v1.0.md,제주특별자치도청,Y,N,완료,"실사 발견: 이 정적 파일 자체는 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에 완전히 대체된 죽은 파일. 도지사 전속 사무(개발사업 시행승인)는 템플릿의 신설 {고유사무_문구} 자리표시자로 반영 완료(제주 시범, 나머지 14개 도는 TBD)",PR#493/#494,2026-08-20
 06-expert,06-expert/SP-EXP-EMERGENCY_v1.0.md,SP-EXP-EMERGENCY_v1.0,Y,N,제외(오탐),"응급신고 안내이지 인허가 아님 — Q1 키워드 오탐, GOV_TASK 배선 대상 아님",,
 06-expert,06-expert/SP-EXP-WATER_v1.1.md,SP-EXP-WATER_v1.1,Y,N,제외(오탐),시설고장 신고이지 인허가 아님 — 실제 공사승인은 city-division급에 이미 등록됨,,
