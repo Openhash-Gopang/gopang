@@ -843,13 +843,13 @@
 02-do-dept,02-do-dept/SP-DO-TRANSPORT_v1.1.md,SP-DO-TRANSPORT_v1.1,Y,N,재정의,"교통항공국 — 여객운송사업 등록 등 개별 인허가는 시청 소관(이미 완료분 jejusi:passenger_transport_registration 참조), 도청은 정책총괄(2026-08-21)",,
 02-do-dept,02-do-dept/SP-DO-TOURISM_v1.2.md,SP-DO-TOURISM_v1.2,Y,N,재정의,"관광교류국 — 숙박업·여행업 등록 등 개별 인허가는 시청 소관, 도청은 정책총괄·제주관광공사 연계(2026-08-21)",,
 02-do-dept,02-do-dept/SP-DO-CULTURE_v1.1.md,SP-DO-CULTURE_v1.1,Y,N,재정의,"문화체육교육국 — 개별 문화시설 이용·평생교육 신청은 시청/직속기관 소관, 도청은 정책총괄(2026-08-21)",,
-02-do-dept,02-do-dept/SP-DO-PLAN_v1.1.md,SP-DO-PLAN_v1.1,Y,N,미착수,,,
-02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-ENERGYINDUSTRY_v1.0.md,SP-DIV-INNOV-ENERGYINDUSTRY_v1.0,Y,N,미착수,,,
+02-do-dept,02-do-dept/SP-DO-PLAN_v1.1.md,SP-DO-PLAN_v1.1,Y,N,재정의,"기획조정실 — 예산편성/정책기획은 내부행정, 인구·청년정책 신청은 PLAN-YOUTH/PLAN-POPULATION(과) 소관, 세정은 이미 시청 세무과로 위임 확정(2026-07-23). 실·국 자체는 정책총괄(2026-08-21)",,
+02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-ENERGYINDUSTRY_v1.0.md,SP-DIV-INNOV-ENERGYINDUSTRY_v1.0,Y,N,완료,"전기사업(태양광·풍력 등) 허가(jeju:renewable_power_business_permit) 신규 등록 — 제주특별법상 3,000kW 이상도 도지사 허가권한 확장 사례(2026-08-21 웹검색 확인)",,2026-08-21
 02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-GENERAL_v1.0.md,제주도청 특별자치행정국 총무과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-SAFETY-POLICY_v1.0.md,제주도청 도민안전건강실 안전정책과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-TAXADMIN_v1.0.md,제주도청 기획조정실 세정담당관,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-WELFARE-DISABLED_v1.0.md,제주도청 복지가족국 장애인복지과,Y,N,미착수,,,
-02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-YOUTH_v1.0.md,제주도청 기획조정실 청년정책담당관,Y,N,미착수,,,
+02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-YOUTH_v1.0.md,제주도청 기획조정실 청년정책담당관,Y,N,재정의,"청년월세지원 등 대표사업 확인 결과 접수는 주소지 관할 주민센터(읍면동)/복지로·정부24, 도청 청년정책담당관은 정책총괄(웹검색 확인, 2026-08-21)",,
 02-do-dept,02-do-dept/divisions/SP-DIV-INNOV-SPACEMOBILITY_v1.0.md,제주도청 혁신산업국 우주모빌리티과,Y,N,미착수,,,
 02-do-dept,02-do-dept/divisions/SP-DIV-JACHI-ACCOUNTING_v1.0.md,제주도청 특별자치행정국 회계재산관리과,Y,N,완료,4·3보상금 신청(국가위원회 최종결정 특수구조)/도유재산 사용허가 — 02-do-dept 최초 배치,PR#492,2026-08-20
 02-do-dept,02-do-dept/divisions/SP-DIV-PLAN-POPULATION_v1.0.md,제주도청 기획조정실 인구정책담당관,Y,N,미착수,,,
