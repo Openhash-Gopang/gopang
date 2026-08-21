@@ -2412,6 +2412,14 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '지방세 이의신청', '과세전적부심사'],
       file: '04-city/templates/divisions/SP-CITYDIV-JACHI-TAX-TEMPLATE_v1.0.md',
     },
+    {
+      // ★ ECON-VILLAGE와 동일 업무(마을기업 지정) 재사용 — 제주시는
+      // 경제일자리국, 서귀포시는 자치행정국 소속으로 조직이 다르다는
+      // 게 확인돼(2026-08-22), 국코드별로 같은 파일을 양쪽에 등록한다.
+      subCode: 'VILLAGE', name: '마을활력과(마을기업 지정, 자치행정국 소속형)',
+      kw: ['마을기업 지정', '마을기업', '마을활력과', '마을기업 신청'],
+      file: '04-city/templates/divisions/SP-CITYDIV-ECON-VILLAGE-TEMPLATE_v1.0.md',
+    },
   ],
   welfare: [
     {
@@ -2419,6 +2427,33 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['기초생활보장', '생계급여', '의료급여', '주거급여', '교육급여',
         '기초생활수급', '부양의무자'],
       file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-BASICLIVELIHOOD-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'DISABLED', name: '장애인복지과(장애인 등록)',
+      kw: ['장애인 등록', '장애수당', '장애인연금', '장애인 활동지원',
+        '장애인복지과', '장애정도 심사'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-DISABLED-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'ELDERLY', name: '노인복지과(기초연금)',
+      kw: ['기초연금', '노인일자리', '노인돌봄', '노인복지과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-ELDERLY-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'HYGIENE', name: '위생과(식품·공중위생 영업신고)',
+      kw: ['식품영업신고', '공중위생영업신고', '위생과', '음식점 영업신고',
+        '이미용업 신고'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-HYGIENE-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'RESIDENT', name: '주민복지과(긴급복지지원)',
+      kw: ['긴급복지지원', '긴급지원 요청', '주민복지과', '긴급생계지원'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-RESIDENT-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'WOMENFAMILY', name: '여성가족과(한부모가족 복지급여)',
+      kw: ['한부모가족 복지급여', '한부모가족 지원', '여성가족과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-WOMENFAMILY-TEMPLATE_v1.0.md',
     },
   ],
   climate: [
@@ -2429,6 +2464,11 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '환경관리과', '배출시설 신고'],
       file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-ENVMGMT-TEMPLATE_v1.0.md',
     },
+    {
+      subCode: 'PARKS', name: '공원녹지과(도시공원 점용허가)',
+      kw: ['도시공원 점용허가', '공원 점용', '공원녹지과', '가로수 민원'],
+      file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-PARKS-TEMPLATE_v1.0.md',
+    },
   ],
   culture: [
     {
@@ -2436,6 +2476,11 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['도서관', '도서 대출', '도서 반납', '상호대차', '자료실',
         '도서관 회원가입', '도서 예약'],
       file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-LIBRARY-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'TOURISM', name: '관광진흥과(관광사업 등록)',
+      kw: ['관광사업 등록', '여행업 등록', '관광숙박업 등록', '관광진흥과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-TOURISM-TEMPLATE_v1.0.md',
     },
   ],
   housing: [
@@ -2446,6 +2491,32 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['건축허가', '건축신고', '사용승인', '준공검사', '건축과',
         '건축물 안전점검', '대수선'],
       file: '04-city/templates/divisions/SP-CITYDIV-URBANCONSTRUCTION-BUILDING-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'WATER', name: '상하수도과(상하수도 공사승인)',
+      kw: ['상하수도 신설', '상하수도 철거', '급수 민원', '배수 민원',
+        '상하수도과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-WATER-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'HOUSING', name: '주택과(주택사업계획승인)',
+      kw: ['주택사업계획승인', '공동주택 관리', '임대주택', '주택과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-HOUSING-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'ROAD', name: '건설과(도로점용허가)',
+      kw: ['도로점용허가', '도로 파손', '토목시설', '건설과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-ROAD-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'CITYPLAN', name: '도시계획과(도시관리계획 변경)',
+      kw: ['도시관리계획 변경', '용도지역 지정', '도시계획과', '지구단위계획'],
+      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-CITYPLAN-TEMPLATE_v1.0.md',
+    },
+    {
+      subCode: 'DEVACT', name: '도시과(개발행위허가)',
+      kw: ['개발행위허가', '개발행위계획서', '도시과'],
+      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-DEVACT-TEMPLATE_v1.0.md',
     },
   ],
   health: [
@@ -2508,7 +2579,29 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-FISHERY-TEMPLATE_v1.0.md',
     },
   ],
-  // 다른 도메인은 개별 검증 후 순차 추가 예정.
+  // ★★★ 2026-08-22 61개 잔여 division 전수조사 완료 ★★★
+  // 조사 결과 신규 12개 파일(+jachi.VILLAGE 재사용 1건) 외 나머지
+  // 46개는 전부 제외 확정:
+  // - 내부행정형(총무·기획예산·자치행정·기초자치단체설치준비지원단 등,
+  //   시민 대상 처분 없음) — jejusi/seogwipo JACHI-GENERAL/BUDGET/
+  //   SELFGOV/BASICGOVPREP, seogwipo JACHI-LIFELONGED
+  // - 지원사업형(공모·심사, GOV_TASK 파이프라인 없음 확인) —
+  //   ECON-SMB/INFOSUPPORT/JOBENERGY, CULTURE-ART(제주시+서귀포),
+  //   AGRIECONOMY-DIGITAL/JOBS
+  // - 제주 특화 산업/시설(전국 일반화 불가) — AGRIECONOMY-CITRUS(감귤,
+  //   원본이 "서귀포시에만 있는 특화 부서"로 명시), CLIMATE-JEOLMUL
+  //   (절물자연휴양림)
+  // - 시설운영형(GOV_TASK 파이프라인 미배선, count=0 확인) —
+  //   CULTURE-ARTCENTER/ARTSHALL/ARTMUSEUM/LIBRARYMGMT/
+  //   TOURISMFACILITY/SPORTS(제주시+서귀포), CLIMATE-FORESTRECREATION
+  // - 단속·부과형(시민 신청 대상 아님) — CLIMATE-ENVGUIDE(단속),
+  //   JACHI-PROPERTYTAX(정기 부과·고지형, 세무과 신고납부형과 다름)
+  // - 지역 분산 지소·안내형 — HEALTH-WESTCENTER/EASTCENTER/PROMOTION,
+  //   CLIMATE-LIVINGENV(제주시+서귀포, 생활폐기물 수거 정책 안내)
+  // - AGRIECONOMY-ECOFARM(친환경농정과): 전국 일반화 가능성 있으나
+  //   GOV_TASK 미배선(count=0) 확인 — 추가 조사 필요, 이번 배선 보류
+  // (jachi.VILLAGE·culture.LIBRARY의 jejusi-UDANGLIB 중복분은 기존
+  // 등록 항목 재사용으로 이미 커버 — 별도 항목 불필요)
 };
 
 function _makeGenericCityDivisionEntries() {
