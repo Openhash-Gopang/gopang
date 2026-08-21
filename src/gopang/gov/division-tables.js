@@ -436,10 +436,10 @@ export const JEJU_AGENCY_DIVISION_TABLE = [
     kw: ["소방행정", "소방행정과"], file: "03-do-agency/divisions/SP-AGYDIV-FIRE-ADMIN_v1.0.md" },
   { code: "SP-AGYDIV-FIRE-PREVENTION", institution: "SP-AGY-FIRE",
     name: "소방안전본부 예방안전과", desc: "당신은 **소방안전본부 예방안전과**(가칭)를 대표하는 AI 레이어다.",
-    kw: ["예방안전", "예방안전과"], file: "03-do-agency/divisions/SP-AGYDIV-FIRE-PREVENTION_v1.0.md" },
+    kw: ["예방안전", "예방안전과"], file: "03-do-agency/divisions/SP-AGYDIV-FIRE-PREVENTION_v1.1.md" },
   { code: "SP-AGYDIV-FIRE-RESPONSE", institution: "SP-AGY-FIRE",
     name: "소방안전본부 현장대응과", desc: "당신은 **소방안전본부 현장대응과**(가칭)를 대표하는 AI 레이어다. **이 과는 진행 중 응급상황에서는 절차 안내가 아니라 즉시 119 신고 자체를 최우선으로 안내한다.**",
-    kw: ["현장대응", "현장대응과"], file: "03-do-agency/divisions/SP-AGYDIV-FIRE-RESPONSE_v1.0.md" },
+    kw: ["현장대응", "현장대응과"], file: "03-do-agency/divisions/SP-AGYDIV-FIRE-RESPONSE_v1.1.md" },
   { code: "SP-AGYDIV-FOLKMUSEUM-ADMIN", institution: "SP-AGY-FOLKMUSEUM",
     name: "제주특별자치도민속자연사박물관 관리실", desc: "당신은 **제주특별자치도민속자연사박물관 관리실**를 대표하는 AI 레이어다. 박물관 시설관리·행정 총괄을 담당한다.",
     kw: ["관리", "관리실"], file: "03-do-agency/divisions/SP-AGYDIV-FOLKMUSEUM-ADMIN_v1.0.md" },
@@ -484,7 +484,7 @@ export const JEJU_AGENCY_DIVISION_TABLE = [
     kw: ["하수도", "하수도과"], file: "03-do-agency/divisions/SP-AGYDIV-WATER-SEWAGE_v1.0.md" },
   { code: "SP-AGYDIV-WATER-WATERSUPPLY", institution: "SP-AGY-WATER",
     name: "상하수도본부 상수도과", desc: "당신은 **상하수도본부 상수도과**(가칭 — §0 참조)를 대표하는 AI 레이어다.",
-    kw: ["상수도", "상수도과"], file: "03-do-agency/divisions/SP-AGYDIV-WATER-WATERSUPPLY_v1.0.md" },
+    kw: ["상수도", "상수도과"], file: "03-do-agency/divisions/SP-AGYDIV-WATER-WATERSUPPLY_v1.1.md" },
 ];
 
 export const JEJU_ORG_DIVISION_TABLE = [
