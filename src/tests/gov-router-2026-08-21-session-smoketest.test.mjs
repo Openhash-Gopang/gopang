@@ -160,6 +160,13 @@ function mockClassify(text) {
   if (/자치경찰/.test(text)) return null; // 비교·설명형 — NONE
   if (/종합병원.*개원/.test(text)) return 'SP-DO-SAFETY'; // 2026-08-21 신설 — 교차계층 중재 배선 검증
   if (/청년.*지원금/.test(text)) return 'SP-DO-PLAN'; // 2026-08-21 신설 — 교차계층 중재 배선 검증
+  if (/휠체어/.test(text)) return 'SP-ORG-TRANSWEAK'; // 2026-08-21 신설 — org topScore===0 전체후보 폴백 배선 검증
+  if (/시험분석/.test(text)) return 'SP-ORG-JTP';
+  if (/장학금/.test(text)) return 'SP-ORG-JILES';
+  if (/급식.*신고|어린이집.*급식/.test(text)) return 'SP-ORG-CHILDMEAL'; // 2026-08-21 신설 — 약한매칭(topScore===1) 재확인 배선 검증(진짜 버그 원인)
+  if (/보증/.test(text)) return 'SP-ORG-JCGF';
+  if (/보육료/.test(text)) return 'SP-DO-WELFARE';
+  if (/임대주택/.test(text)) return 'SP-ORG-JPDC';
   return null;
 }
 
@@ -181,7 +188,7 @@ const CASES = [
   { text: '지방세 취득세 납부 기한이 언제인가요', expectAgency: 'gov_do', expectContains: 'SP-DO-PLAN' },
   { text: '태풍 대비 재난 문자는 어디서 신청하나요', expectAgency: 'gov_do', expectContains: 'SP-DO-SAFETY' },
   { text: '소상공인 정책자금 대출 상담하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-DO-ECON' },
-  { text: '어린이집 보육료 지원 대상인지 궁금해요', expectAgency: 'gov_do', expectContains: 'SP-DO-WELFARE' },
+  { text: '어린이집 보육료 지원 대상인지 궁금해요', expectAgency: 'gov_do', expectContains: 'SP-DO-WELFARE', useClassify: true },
 
   // ── 시청 트리 ────────────────────────────────
   { text: '제주시청 주차 관련 문의드립니다', expectAgency: 'gov_do', expectContains: 'SP-CITY-JEJU' },
