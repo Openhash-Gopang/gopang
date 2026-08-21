@@ -19263,6 +19263,25 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — 시료 자체(물리적 검체)는 GOV_TASK 문서 제출 흐름으로 대신할 수 없다. 이 접수는 "의뢰서 작성·수수료 납부"까지만 대행하고, 실제 시료 채취·인계는 안내(채수 방법, 검사기관 방문 또는 우편 인계 등)로 마무리한다는 점을 사용자에게 명확히 전달할 것 — 다른 GOV_TASK 항목처럼 서류 제출만으로 완결되는 유형이 아니다. 검사항목별 정확한 수수료표는 이번 조사에서 확보 못함(TBD, 지자체마다 조례로 상이).',
   },
+  // ★ 2026-08-21 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGYDIV-
+  // FOLKMUSEUM-ADMIN(민속자연사박물관 관리실) 실작업. SP §2가 이미
+  // "대관 신청 접수"를 직접 수행 업무로 밝혀둔 지점 — 근거법 확인해 등록.
+  // 이미 등록된 'jeju:public_property_use_permit'(회계재산관리과 소관,
+  // 도유재산 일반 대부·매각·사용허가)과 같은 법(공유재산 및 물품 관리법)
+  // 이지만, 이 박물관 시설물은 박물관 자체가 위임전결로 직접 접수·심사
+  // 하는 것으로 보여(§2 "대관 신청 접수: 직접 수행") 별도 task_key로
+  // 등록한다 — 같은 법 근거를 공유하는 기관별 별도 접수창구 패턴은
+  // SP-AGY-WATER(도 직속)와 시청 상하수도과가 각자 등록된 것과 동일.
+  'jeju:folkmuseum_facility_rental': {
+    agency: 'jeju', agency_name: '제주특별자치도민속자연사박물관 관리실',
+    task_name: '박물관 시설 대관 신청',
+    legal_basis: '공유재산 및 물품 관리법 제20조(사용허가), 같은 법 시행령 제12조·제13조, 제주특별자치도 공유재산 관리 조례',
+    documents: [
+      { id: 'application',  name: '시설대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'usage_plan',   name: '이용계획서(행사 내용·일정·참가인원 등)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '공유재산법상 사용허가는 원칙적으로 일반입찰이나, 단기 시설 대관은 통상 수의 방법으로 처리되는 경우가 많다(법 제20조제2항, 시행령 제13조) — 이 박물관의 정확한 대관 규정(요금표·우선순위 기준 등)은 별도 확인 필요, TBD.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19363,6 +19382,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-20 — SP-AGY-BOHWAN 실작업. 'do-agency:BOHWAN'은 이미
   // 등록된 도메인.
   'jeju:groundwater_quality_test_request': { target_type: 'dept', target_id: 'do-agency:BOHWAN' },
+  // ★ 2026-08-21 — SP-AGYDIV-FOLKMUSEUM-ADMIN 실작업. 'do-agency:
+  // FOLKMUSEUM'은 이미 등록된 도메인.
+  'jeju:folkmuseum_facility_rental': { target_type: 'dept', target_id: 'do-agency:FOLKMUSEUM' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.

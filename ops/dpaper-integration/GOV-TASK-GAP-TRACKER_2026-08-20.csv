@@ -866,7 +866,7 @@
 02-do-dept,02-do-dept/divisions/SP-DIV-WELFARE-ELDERLY_v1.0.md,제주도청 복지가족국 노인복지과,Y,N,미착수,,,
 03-do-agency,03-do-agency/SP-AGY-FIRE_v1.0.md,SP-AGY-FIRE_v1.0,Y,N,완료,fire_facility_completion_inspection 등록 — 03-do-agency 최초 사례,PR#496,2026-08-20
 03-do-agency,03-do-agency/SP-AGY-BOHWAN_v1.1.md,SP-AGY-BOHWAN_v1.1,Y,N,완료,jeju:groundwater_quality_test_request(지하수법 제20조) 등록. 시료 채취는 서류로 대신 못함 — 의뢰서·수수료 접수까지만 대행함을 SP에 명시.,,
-03-do-agency,03-do-agency/SP-AGY-FOLKMUSEUM_v1.0.md,SP-AGY-FOLKMUSEUM_v1.0,Y,N,미착수,,,
+03-do-agency,03-do-agency/SP-AGY-FOLKMUSEUM_v1.1.md,SP-AGY-FOLKMUSEUM_v1.1,Y,N,재정의,"최상위 SP는 안내만, 대관 신청 처리는 하위 SP-AGYDIV-FOLKMUSEUM-ADMIN에서.",,
 03-do-agency,03-do-agency/SP-AGY-WATER_v1.3.md,SP-AGY-WATER_v1.3,Y,N,완료,"jeju:water_leak_fee_reduction(옥내누수, 조번호 TBD)·jeju:water_social_fee_reduction(사회적배려대상자, 제48조3항) 등록. §5 AI검토소견 시범규격 존치하되 §1-2로 표준경로 일원화.",,
 03-do-agency,03-do-agency/SP-AGY-AGRITECH_v1.0.md,SP-AGY-AGRITECH_v1.0,Y,N,미착수,,,
 03-do-agency,03-do-agency/SP-AGY-LIBRARY_v1.0.md,SP-AGY-LIBRARY_v1.0,Y,N,미착수,,,
@@ -874,7 +874,7 @@
 03-do-agency,03-do-agency/SP-AGY-POLICE_v1.0.md,SP-AGY-POLICE_v1.0,Y,N,재정의,최상위 SP는 SAFETY/TRAFFIC 두 과로 라우팅만 함 — 자체 GOV_TASK 없음. 실제 처리는 하위 두 과에서.,,
 03-do-agency,03-do-agency/SP-AGY-ARTMUSEUM_v1.0.md,SP-AGY-ARTMUSEUM_v1.0,Y,N,미착수,,,
 03-do-agency,03-do-agency/SP-AGY-HERITAGE_v1.1.md,SP-AGY-HERITAGE_v1.1,Y,N,완료,"jeju:hallasan_special_entry_permit(자연공원법 제28조, 헌재 2010헌바99로 조번호 재확인, 시행령 학술연구 예외조항 조번호 TBD) 등록. 관할 확인: 한라산은 유일하게 국립공원공단 아닌 제주도 직접관리.",,
-03-do-agency,03-do-agency/divisions/SP-AGYDIV-FOLKMUSEUM-ADMIN_v1.0.md,제주특별자치도민속자연사박물관 관리실,Y,N,미착수,,,
+03-do-agency,03-do-agency/divisions/SP-AGYDIV-FOLKMUSEUM-ADMIN_v1.1.md,SP-AGYDIV-FOLKMUSEUM-ADMIN_v1.1,Y,N,완료,jeju:folkmuseum_facility_rental(공유재산 및 물품 관리법 제20조) 등록. 단체관람 예약은 시설예약형이라 별도 미등록.,,
 03-do-agency,03-do-agency/divisions/SP-AGYDIV-WATER-WATERSUPPLY_v1.1.md,SP-AGYDIV-WATER-WATERSUPPLY_v1.1,Y,N,완료,"jeju:water_connection_application(급수공사신청) 등록. jeju.go.kr/jejuwater 공식페이지로 9종 민원 확인, 이번엔 1종만 등록(나머지 8종은 다음 배치).",,
 03-do-agency,03-do-agency/divisions/SP-AGYDIV-FIRE-RESPONSE_v1.1.md,SP-AGYDIV-FIRE-RESPONSE_v1.1,Y,N,재정의,"화재·구조·구급 출동 — 실시간 응급대응, 서류기반 신청 아니라 REQUIRED_DOCUMENTS_REGISTRY 부적합.",,
 03-do-agency,03-do-agency/divisions/SP-AGYDIV-POLICE-SAFETY_v1.1.md,SP-AGYDIV-POLICE-SAFETY_v1.1,Y,N,재정의,"분실물·소음 등 실시간 ""신고""형 — 서류기반 ""신청"" 아니라 REQUIRED_DOCUMENTS_REGISTRY 부적합 판단, §3에 근거 명시.",,
