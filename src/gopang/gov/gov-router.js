@@ -2387,17 +2387,63 @@ async function _classifyFallback(text, classifyFn) {
 }
 
 // ── 과/팀(division) 2단계 매칭 + LLM 폴백 (2026-08-02 재구현) ──────────
+// ── 시청 과(division) 전국 공용 원형 (2026-08-21 신설, GOV-TASK-904-GAP
+// 04-city 과 단위 원형화 1호 파일럿) ────────────────────────────────
+// CITY_DIVISION_TABLE은 아직 제주(jejusi/seogwipo) 전용 실사 테이블이다
+// (위 CITY_DIVISION_TABLE import 주석 참고). 비제주 시/군/구는 과 단위
+// 라우팅 자체가 없어 국(局) 단위 응답에서 멈췄다 — 이 테이블은 국코드별로
+// "전국 어디나 존재하는 과 단위 보편 업무"만 제네릭 원형으로 등록해,
+// 시코드에 상관없이 매칭되게 한다. 제주(jejusi/seogwipo)는 이미 실사
+// 데이터가 있으므로 _matchCityDivision에서 원천적으로 제외한다(실사 kw가
+// 항상 더 구체적이라 스코어링에서 이겨도, 혼선을 피하려 아예 안 섞는다).
+//
+// 도메인 추가 시 이 taxonomy에 항목만 늘리면 된다 — 검증 없이 대량으로
+// 채우지 말 것(주피터 지시 원칙: 하나씩 웹검색·실제 SP 원본 대조 후 추가).
+const GENERIC_CITY_DIVISION_TAXONOMY = {
+  jachi: [
+    {
+      subCode: 'TAX', name: '세무과(신고납부형 지방세)',
+      kw: ['취득세', '등록면허세', '지방소득세', '신고납부', '세무과',
+        '지방세 이의신청', '과세전적부심사'],
+      file: '04-city/templates/divisions/SP-CITYDIV-JACHI-TAX-TEMPLATE_v1.0.md',
+    },
+  ],
+  // 다른 도메인(welfare/climate/culture 등)은 개별 검증 후 순차 추가 예정.
+};
+
+function _makeGenericCityDivisionEntries() {
+  const out = [];
+  for (const [국코드, list] of Object.entries(GENERIC_CITY_DIVISION_TAXONOMY)) {
+    for (const item of list) {
+      out.push({
+        code: `SP-CITYDIV-GENERIC-${국코드.toUpperCase()}-${item.subCode}`,
+        국코드, 시코드: null, // 시코드 무관 — 전국 어디나 매칭 후보
+        name: item.name, desc: item.name,
+        kw: item.kw, file: item.file, generic: true,
+      });
+    }
+  }
+  return out;
+}
+const GENERIC_CITY_DIVISION_TABLE = _makeGenericCityDivisionEntries();
+
 // 국/부서(예: climate)까지 이미 확정된 상태에서, 그 산하 과/팀 중
 // 어디인지 키워드로 우선 판단한다. topScore===0(매칭 자체 없음)이면
 // "세부 과 없음"이지 애매함이 아니므로 null(국 단위 응답으로 충분).
 // tied.length>=2(동점)일 때만 진짜 애매함으로 보고 호출부가 LLM 폴백
 // 여부를 결정한다.
 function _matchCityDivision(text, 국코드, 시코드) {
-  const table = CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드 && e.시코드 === 시코드);
+  const realTable = CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드 && e.시코드 === 시코드);
+  // 제주(jejusi/seogwipo)는 실사 데이터가 이미 있으므로 제네릭 원형을
+  // 섞지 않는다 — 비제주 시/군/구에 한해서만 제네릭 후보를 추가한다.
+  const isJeju = 시코드 === 'jejusi' || 시코드 === 'seogwipo';
+  const genericTable = isJeju ? [] : GENERIC_CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드);
+  const table = [...realTable, ...genericTable];
   return _scoreMatchTies(text, table);
 }
 
 function _matchDoDeptDivision(text, domain) {
+
   const table = DO_DEPT_DIVISION_TABLE.filter(e => e.domain === domain);
   return _scoreMatchTies(text, table);
 }
@@ -3912,6 +3958,34 @@ async function _fetchCityDeptText(match, taskText = '') {
   return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
 
+// ── 과(division) 텍스트 fetch — 실사(제주)와 제네릭(비제주)을 함께 처리
+// (2026-08-21 신설) ──────────────────────────────────────────────
+// divisionMatch가 CITY_DIVISION_TABLE의 실사 항목이면 기존과 동일하게
+// 정적 파일을 그대로 fetch한다. GENERIC_CITY_DIVISION_TABLE에서 온
+// 항목(divEntry.generic===true)이면 원형 템플릿을 fetch해 최소 자리
+// 표시자만 채운다 — 마스터데이터가 없어도(비제주 대다수) 기본 라벨로
+// 즉시 작동해야 한다는 기존 원칙(2026-07-24, 국/시 단위와 동일)을 과
+// 단위에도 그대로 적용한다. §0 상속 체인 표기는 실제 동작에 영향을
+// 주지 않는 설명용 텍스트이므로(체인은 parts.push() 순서로 코드가
+// 이미 강제함), 값을 모를 땐 미해결 자리표시자를 노출하지 않고 일반
+// 서술로 대체한다.
+async function _fetchCityDivisionText(divEntry, cityDeptRec) {
+  if (!divEntry.generic) {
+    return _fetchText(divEntry.file, _currentProvinceRepo());
+  }
+  const template = await _fetchText(divEntry.file);
+  return template
+    .replaceAll('{GOV_COMMON}', '도청 공통')
+    .replaceAll('{DO_ROOT_SP}', '도청 실국')
+    .replaceAll('{CITY_ROOT_SP}', '시청')
+    .replaceAll('{CITY_DEPT_ROOT_SP}', '시청 국')
+    .replaceAll('{시이름}', cityDeptRec?.시이름 || '')
+    .replaceAll('{국이름}', cityDeptRec?.국이름 || CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] || '담당부서')
+    .replaceAll('{콜센터명}', cityDeptRec?.콜센터명 || '')
+    .replaceAll('{콜센터번호}', cityDeptRec?.콜센터번호 || '')
+    .replaceAll('{콜센터운영시간}', cityDeptRec?.콜센터운영시간 || '');
+}
+
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
 // 분류 LLM 호출조차 기다리게 하면 안 되는 영역이라 순수 정규식으로만 판단하고,
 // 애매하면 응급 쪽으로 분류한다(오탐 비용 < 누락 비용, SP-EXP-EMERGENCY §6).
@@ -4620,7 +4694,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
           const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
           if (divisionMatch) {
-            parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
+            parts.push(await _fetchCityDivisionText(divisionMatch, null));
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
@@ -4693,7 +4767,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
         const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
         if (divisionMatch) {
-          parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
+          parts.push(await _fetchCityDivisionText(divisionMatch, null));
           trace.push(`${divisionMatch.code}(과/팀 특정)`);
         }
       }
