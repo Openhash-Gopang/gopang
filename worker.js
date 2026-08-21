@@ -19247,6 +19247,22 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '법조문상 허가권자는 시·도지사(제주는 도지사)이나, 정부24 민원안내는 실제 접수·처리를 소방서장이 담당한다고 안내 — 위임전결 규정에 따라 소방안전본부(예방안전과)가 실무 창구로 보인다(별도 위임 조례 원문 대조는 이번 조사에서 못함, TBD).',
   },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-BOHWAN
+  // (보건환경연구원) 실작업. §2가 이미 "검사·분석 의뢰"를 실제 업무로
+  // 밝혀둔 지점 — 지하수 수질검사가 법정 의무(허가·신고 조건부 정기검사)
+  // 라는 걸 확인해 가장 먼저 등록. 타 지자체 보건환경연구원(전남·인천 등)
+  // 공식 안내로 "시험의뢰서 작성→수수료납부→시료접수→검사→성적서발급"
+  // 절차가 공통 패턴임을 교차확인.
+  'jeju:groundwater_quality_test_request': {
+    agency: 'jeju', agency_name: '제주특별자치도 보건환경연구원',
+    task_name: '지하수 수질검사 의뢰(정기검사)',
+    legal_basis: '지하수법 제20조(수질검사 등), 지하수법 시행령 제29조, 지하수의 수질보전 등에 관한 규칙 제10조(수질검사대상)',
+    documents: [
+      { id: 'application', name: '수질검사(시험)의뢰서', required: true, acquisition: 'user_authored' },
+      { id: 'fee_receipt', name: '검사수수료 납부확인', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 시료 자체(물리적 검체)는 GOV_TASK 문서 제출 흐름으로 대신할 수 없다. 이 접수는 "의뢰서 작성·수수료 납부"까지만 대행하고, 실제 시료 채취·인계는 안내(채수 방법, 검사기관 방문 또는 우편 인계 등)로 마무리한다는 점을 사용자에게 명확히 전달할 것 — 다른 GOV_TASK 항목처럼 서류 제출만으로 완결되는 유형이 아니다. 검사항목별 정확한 수수료표는 이번 조사에서 확보 못함(TBD, 지자체마다 조례로 상이).',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19344,6 +19360,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // do-dept:safety와 do-agency:FIRE 중 어느 쪽이 맞는지 한 번 정리할
   // 필요는 있음(이번 세션에서 결론 내지 않음, TBD로 남김).
   'jejufire:hazardous_material_facility_permit': { target_type: 'dept', target_id: 'do-agency:FIRE' },
+  // ★ 2026-08-20 — SP-AGY-BOHWAN 실작업. 'do-agency:BOHWAN'은 이미
+  // 등록된 도메인.
+  'jeju:groundwater_quality_test_request': { target_type: 'dept', target_id: 'do-agency:BOHWAN' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
