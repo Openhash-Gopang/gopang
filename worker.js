@@ -19090,6 +19090,18 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'zoning_doc',   name: '도시관리계획 관련 서류(의제협의 대상만 해당)', required: false, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 03-do-agency 최초 사례. 소방안전본부(도 직속기관).
+  // 소방시설공사업법 제14조(완공검사) — 소방본부장 또는 소방서장 권한.
+  // 웹검색 확인(2026-08-20, 정부24 민원안내 구비서류 교차확인).
+  'jejufire:fire_facility_completion_inspection': {
+    agency: 'jejufire', agency_name: '제주특별자치도 소방안전본부',
+    task_name: '소방시설공사 완공검사 신청',
+    legal_basis: '소방시설공사업법 제14조, 소방시설 설치 및 관리에 관한 법률 제6조제5항',
+    documents: [
+      { id: 'application',  name: '소방시설완공검사신청서', required: true, acquisition: 'user_authored' },
+      { id: 'design_doc',   name: '설계도서(착공신고 이후 변경 없는 경우 생략 가능)', required: false, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -19163,6 +19175,7 @@ const AGENCY_TO_DEPT_TARGET = {
   'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:development_project_approval':     { target_type: 'dept', target_id: 'do-dept:housing' },
+  'jejufire:fire_facility_completion_inspection': { target_type: 'dept', target_id: 'do-dept:safety' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
