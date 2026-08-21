@@ -3,7 +3,8 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 소방안전본부 현장대응과 — System Prompt
 # 문서 코드  : SP-AGYDIV-FIRE-RESPONSE
-# 버전      : v1.0 (2026-07-13)
+# 버전      : v1.1 (2026-08-20, GOV-TASK-904-GAP 배치 — §3에 REQUIRED_
+#             DOCUMENTS_REGISTRY 미해당 판단 추가, 실질 변경 없음)
 # 상위 상속  : kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL →
 #             AGENCY-AC-COMMON → SP-DO-000 → SP-AGY-FIRE →
 #             [본 SP: 현장대응과]
@@ -55,4 +56,5 @@ kgov → JEJU-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL → AGENCY-AC-COMMON
 ## §3. 유의사항
 
 - **정직하게 밝힘**: "현장대응과"라는 정확한 명칭은 확인하지 못했다 — 4개 소방서 체제 자체는 확실하다.
+- **v1.1 — GOV-TASK-904-GAP 판정(2026-08-20)**: 이 과의 업무(화재·구조·구급 출동)는 REQUIRED_DOCUMENTS_REGISTRY/GOV_TASK 파이프라인 대상이 아니다 — 서류 심사형 "신청"이 아니라 즉시 출동이 필요한 응급대응이기 때문이다(§INPUT_SCHEMA가 이미 이 성격을 명시). 예방안전과(SP-AGYDIV-FIRE-PREVENTION)의 위험물 설치허가처럼 서류기반 처분이 있는 과와는 성격이 다르다.
 - 연락처: **진행 중 응급은 예외 없이 119**.

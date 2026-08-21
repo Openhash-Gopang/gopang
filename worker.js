@@ -19211,6 +19211,42 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — 제20조 이의제기가 정식 접수되면 과태료 부과처분은 그 즉시 효력을 상실하고 관할 법원에 통보돼 별도 과태료 재판 절차로 넘어간다(자치경찰단이 아니라 법원이 최종 판단). 이 SP·`/gov/task/officer-decision`이 실제로 처리·확정할 수 있는 범위는 그 이전 단계(제16조 사전통지에 대한 의견제출 — 자치경찰단이 검토해 감경·취소 여부를 자체 결정할 수 있는 구간)까지다. 제20조 단계까지 간 건은 접수·법원 통보 여부 확인 정도만 안내하고, "자치경찰단이 최종 결정한다"고 말하지 않는다.',
   },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGYDIV-
+  // WATER-WATERSUPPLY(상하수도본부 상수도과) 실작업. 공식 jeju.go.kr/
+  // jejuwater 민원안내 페이지에서 이 과가 실제 처리하는 민원 목록(급수
+  // 공사신청·급수설비신고·전용상수도인가 등 9종)을 확인 — 그중 가장
+  // 전형적이고 표준화된 급수공사신청부터 등록. 나머지(전용상수도인가,
+  // 저수조청소업신고 등)는 이번엔 손 안 댐 — 다음 배치 후보로 남긴다.
+  'jeju:water_connection_application': {
+    agency: 'jeju', agency_name: '제주특별자치도 상하수도본부 상수도과',
+    task_name: '급수공사 신청(신설·확장)',
+    // 조례 원문에서 "도지사는 다음 각 호의 경우 급수공사 승인을 하지
+    // 아니한다"(거부 사유 열거)까지는 확인했으나, 정확한 조번호는
+    // 스크랩 결과가 안 보여줘 특정 못함 — 법제처 접근 차단으로 이번에도
+    // 원문 직접 대조 불가. TBD.
+    legal_basis: '제주특별자치도 수도급수 조례(급수공사 승인 조항 — 정확한 조번호 TBD, 원문 대조 필요), 수도법 제3조(용어 정의 중 급수설비)',
+    documents: [
+      { id: 'application',       name: '급수공사신청서', required: true, acquisition: 'user_authored' },
+      { id: 'building_permit',   name: '건축허가증 사본(신축 건물만 해당)', required: false, acquisition: 'user_authored' },
+      { id: 'land_use_consent',  name: '토지사용승낙서(타인 토지를 통과해 급수관을 부설하는 경우만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+    note: '조례상 도지사가 급수공사 승인을 거부할 수 있는 사유(고지대·특수가압시설, 송수관·배수본관 직접 분기 등)가 열거돼 있음 — REG_CROSS_CHECK 단계에서 이 사유 해당 여부를 반드시 확인할 것. 급수공사비·시설분담금은 인입 구경별 정액제로 별도 산정(정확한 금액표는 이번 조사에서 확보 못함, TBD).',
+  },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGYDIV-
+  // FIRE-PREVENTION(소방안전본부 예방안전과) 실작업. SP §2가 이미 실제
+  // 업무로 확인해둔 "위험물 제조소 설치허가"를 등록 — 정부24 민원안내로
+  // 구비서류·처리기관(소방서장, 시·도지사 권한 위임) 교차확인.
+  'jejufire:hazardous_material_facility_permit': {
+    agency: 'jejufire', agency_name: '제주특별자치도 소방안전본부 예방안전과',
+    task_name: '위험물 제조소등 설치(변경)허가',
+    legal_basis: '위험물안전관리법 제6조(위험물시설의 설치 및 변경 등), 위험물안전관리법 시행령 제6조(제조소등의 설치 및 변경의 허가)',
+    documents: [
+      { id: 'application',      name: '위험물(제조소·저장소·취급소) 설치허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'layout_diagram',   name: '제조소등의 위치·구조 및 설비에 관한 도면', required: true, acquisition: 'user_authored' },
+      { id: 'fire_equipment',   name: '소화설비 명세(소화기구 제외)', required: false, acquisition: 'user_authored' },
+    ],
+    note: '법조문상 허가권자는 시·도지사(제주는 도지사)이나, 정부24 민원안내는 실제 접수·처리를 소방서장이 담당한다고 안내 — 위임전결 규정에 따라 소방안전본부(예방안전과)가 실무 창구로 보인다(별도 위임 조례 원문 대조는 이번 조사에서 못함, TBD).',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19296,6 +19332,18 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGY-POLICE 실작업.
   // 'do-agency:POLICE'는 DEPT_TASK_TAXONOMY.dept에 이미 등록된 도메인.
   'jeju:parking_violation_fine_objection': { target_type: 'dept', target_id: 'do-agency:POLICE' },
+  // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGYDIV-WATER-
+  // WATERSUPPLY 실작업. 'do-agency:WATER'는 이미 등록된 도메인.
+  'jeju:water_connection_application': { target_type: 'dept', target_id: 'do-agency:WATER' },
+  // ★ 2026-08-20 — SP-AGYDIV-FIRE-PREVENTION 실작업. 기존 jejufire 항목
+  // (위 fire_facility_completion_inspection)은 'do-dept:safety'로
+  // 매핑돼 있었는데 이번엔 'do-agency:FIRE'를 쓴다 — 이 업무가 도청 안전
+  // 부서가 아니라 소방안전본부 자체 고유 허가권한이라 더 정확한 타깃으로
+  // 판단했다. 두 매핑이 서로 다른 target_id를 쓰는 게 불일치로 보일 수
+  // 있으나 의도적 — 다음에 jejufire 관련 항목을 추가로 등록할 때
+  // do-dept:safety와 do-agency:FIRE 중 어느 쪽이 맞는지 한 번 정리할
+  // 필요는 있음(이번 세션에서 결론 내지 않음, TBD로 남김).
+  'jejufire:hazardous_material_facility_permit': { target_type: 'dept', target_id: 'do-agency:FIRE' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
