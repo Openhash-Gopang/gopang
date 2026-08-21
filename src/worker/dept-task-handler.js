@@ -92,6 +92,17 @@ const DEPT_TASK_TAXONOMY = {
     'org:JPSPO', 'org:URBANREGEN', 'org:JEA', 'org:JSPO', 'org:JILES', 'org:JTA',
     'org:JERI', 'org:JCCEI', 'org:JEJU43', 'org:JWFRI', 'org:CHILDMEAL', 'org:JPDC',
     'org:TRANSWEAK', 'org:CHILDCARE',
+    // ★ 2026-08-21 추가 — 전국 신용보증재단(CGF)·테크노파크(TP) 32개.
+    // 제주 원형(JCGF: 지역신용보증재단법 제17조, JTP: 산업기술단지 지원에
+    // 관한 특례법)을 그대로 복제 — 두 법 모두 전국 공통 모법이라 도별로
+    // 근거가 달라지지 않는다(사용자 지시: 제주를 모델로 전국 원형 클래스
+    // 도출 후 복제, 세부 customization은 추후).
+    'org:BSCGF', 'org:SEOULCGF', 'org:GGCGF', 'org:DGCGF', 'org:ICCGF', 'org:GJCGF',
+    'org:JNCGF', 'org:DJCGF', 'org:SJCGF', 'org:GWCGF', 'org:GBCGF', 'org:GNCGF',
+    'org:USCGF', 'org:CBCGF', 'org:CNCGF', 'org:JBCGF',
+    'org:BTP', 'org:GGTP', 'org:GGDJTP', 'org:DGTP', 'org:ICTP', 'org:GJTP',
+    'org:JNTP', 'org:DJTP', 'org:SJTP', 'org:GWTP', 'org:GBTP', 'org:GNTP',
+    'org:USTP', 'org:CBTP', 'org:CNTP', 'org:JBTP',
   ]),
   national: new Set([
     // 09-national/agencies 28개 domain (national-agency-master-data.json 실사)

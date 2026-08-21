@@ -441,7 +441,7 @@
 07-org,07-org/SP-ORG-JNMED_v1.0.md,SP-ORG-JNMED_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-KOCEF_v1.0.md,SP-ORG-KOCEF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JTO_v1.0.md,제주관광공사(JTO),Y,N,제외(오탐),"SP 본문상 이벤트 참가·채용뿐 — 행정신청 GOV_TASK 없음(2026-08-21). 카지노 감독 등 다른 실제 업무가 있는지는 미확인, 필요시 SP 자체 보강 검토 대상(별개 이슈)",,
-07-org,07-org/SP-ORG-ICCGF_v1.0.md,SP-ORG-ICCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-ICCGF_v1.0.md,SP-ORG-ICCGF_v1.0,Y,N,완료,"신용보증 신청(iccgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-JFAC_v1.0.md,제주문화예술재단,Y,N,재정의,SP 본문 자체: 문화예술 지원사업은 심사위원회 심사를 통해서만 확정되는 공모형 — 대표 GOV_TASK로 특정 불가(2026-08-21),,
 07-org,07-org/SP-ORG-BTIP_v1.0.md,SP-ORG-BTIP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGEEA_v1.0.md,SP-ORG-GGEEA_v1.0,Y,N,미착수,,,
@@ -451,14 +451,14 @@
 07-org,07-org/SP-ORG-GBMEDX2_v1.0.md,SP-ORG-GBMEDX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMEMORIAL_v1.0.md,SP-ORG-GWMEMORIAL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DJRI_v1.0.md,SP-ORG-DJRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CNTP_v1.0.md,SP-ORG-CNTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CNTP_v1.0.md,SP-ORG-CNTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(cntp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-CBRIX2_v1.0.md,SP-ORG-CBRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGMED_v1.0.md,SP-ORG-GGMED_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGCULTURE_v1.0.md,SP-ORG-GGCULTURE_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-DJTP_v1.0.md,SP-ORG-DJTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-DJTP_v1.0.md,SP-ORG-DJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(djtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GWSSO_v1.0.md,SP-ORG-GWSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBMISC1_v1.0.md,SP-ORG-CBMISC1_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-SEOULCGF_v1.0.md,SP-ORG-SEOULCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-SEOULCGF_v1.0.md,SP-ORG-SEOULCGF_v1.0,Y,N,완료,"신용보증 신청(seoulcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-ICCF_v1.0.md,SP-ORG-ICCF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGSSO_v1.0.md,SP-ORG-DGSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWRIX4_v1.0.md,SP-ORG-GWRIX4_v1.0,Y,N,미착수,,,
@@ -471,7 +471,7 @@
 07-org,07-org/SP-ORG-CBDORM_v1.0.md,SP-ORG-CBDORM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JTP_v1.0.md,제주테크노파크(JTP),Y,N,완료,"시험분석(장비 사용) 의뢰(jtp:equipment_testing_request) 신규 등록 — 산업기술단지 지원에 관한 특례법, 제주테크노파크 설립 및 운영 조례(웹검색 확인, 2026-08-21). 기업기술지원·창업지원 프로그램은 공모형이라 대표사무 1건만 등록",,2026-08-21
 07-org,07-org/SP-ORG-JNBIZ_v1.0.md,SP-ORG-JNBIZ_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CNCGF_v1.0.md,SP-ORG-CNCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CNCGF_v1.0.md,SP-ORG-CNCGF_v1.0,Y,N,완료,"신용보증 신청(cncgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-USJOB_v1.0.md,SP-ORG-USJOB_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBLIFE_v1.0.md,SP-ORG-CBLIFE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBSAEMAUL_v1.0.md,SP-ORG-GBSAEMAUL_v1.0,Y,N,미착수,,,
@@ -491,7 +491,7 @@
 07-org,07-org/SP-ORG-GJMOBILITY_v1.0.md,SP-ORG-GJMOBILITY_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GJENV_v1.0.md,SP-ORG-GJENV_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGMED_v1.0.md,SP-ORG-DGMED_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GGDJTP_v1.0.md,SP-ORG-GGDJTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GGDJTP_v1.0.md,SP-ORG-GGDJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(ggdjtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-BSCULTUREHALL_v1.0.md,SP-ORG-BSCULTUREHALL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SWFF_v1.0.md,SP-ORG-SWFF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BUSANTRANSIT_v1.0.md,"부산교통공사(BTC, 애칭 ""휴메트로"")",Y,N,미착수,,,
@@ -499,19 +499,19 @@
 07-org,07-org/SP-ORG-DJINVEST_v1.0.md,SP-ORG-DJINVEST_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JBMEDX2_v1.0.md,SP-ORG-JBMEDX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-ICWOMEN_v1.0.md,SP-ORG-ICWOMEN_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GJCGF_v1.0.md,SP-ORG-GJCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GJCGF_v1.0.md,SP-ORG-GJCGF_v1.0,Y,N,완료,"신용보증 신청(gjcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GWRI_v1.0.md,SP-ORG-GWRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BSSTEP_v1.0.md,SP-ORG-BSSTEP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DGMISC1_v1.0.md,SP-ORG-DGMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-ICMISC1_v1.0.md,SP-ORG-ICMISC1_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-USCGF_v1.0.md,SP-ORG-USCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-USCGF_v1.0.md,SP-ORG-USCGF_v1.0,Y,N,완료,"신용보증 신청(uscgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGSTEP_v1.0.md,SP-ORG-GGSTEP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNSCHOL_v1.0.md,SP-ORG-GNSCHOL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGACE_v1.0.md,SP-ORG-GGACE_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-BTP_v1.0.md,SP-ORG-BTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-BTP_v1.0.md,SP-ORG-BTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(btp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GBKOREANOLOGY_v1.0.md,SP-ORG-GBKOREANOLOGY_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DASAN120_v1.0.md,SP-ORG-DASAN120_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GNCGF_v1.0.md,SP-ORG-GNCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GNCGF_v1.0.md,SP-ORG-GNCGF_v1.0,Y,N,완료,"신용보증 신청(gncgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGLIFE_v1.0.md,SP-ORG-GGLIFE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBMISC1_v1.0.md,SP-ORG-GBMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNMISC1_v1.0.md,SP-ORG-GNMISC1_v1.0,Y,N,미착수,,,
@@ -526,8 +526,8 @@
 07-org,07-org/SP-ORG-CNTOURISM_v1.0.md,SP-ORG-CNTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBBIO_v1.0.md,SP-ORG-CBBIO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SEOULMED_v1.0.md,SP-ORG-SEOULMED_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GWTP_v1.0.md,SP-ORG-GWTP_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GWCGF_v1.0.md,SP-ORG-GWCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GWTP_v1.0.md,SP-ORG-GWTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(gwtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
+07-org,07-org/SP-ORG-GWCGF_v1.0.md,SP-ORG-GWCGF_v1.0,Y,N,완료,"신용보증 신청(gwcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GJIPA_v1.0.md,SP-ORG-GJIPA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GJDESIGN_v1.0.md,SP-ORG-GJDESIGN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWWIND_v1.0.md,SP-ORG-GWWIND_v1.0,Y,N,미착수,,,
@@ -544,7 +544,7 @@
 07-org,07-org/SP-ORG-BEXCO_v1.0.md,SP-ORG-BEXCO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBBIZ_v1.0.md,SP-ORG-CBBIZ_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GJSSO_v1.0.md,SP-ORG-GJSSO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JNTP_v1.0.md,SP-ORG-JNTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JNTP_v1.0.md,SP-ORG-JNTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(jntp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNMISC2_v1.0.md,SP-ORG-GNMISC2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GNTOURISM_v1.0.md,SP-ORG-GNTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGJOB_v1.0.md,SP-ORG-GGJOB_v1.0,Y,N,미착수,,,
@@ -562,10 +562,10 @@
 07-org,07-org/SP-ORG-JNIPA_v1.0.md,SP-ORG-JNIPA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNMARKET2_v1.0.md,SP-ORG-JNMARKET2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBRI_v1.0.md,SP-ORG-CBRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GGTP_v1.0.md,SP-ORG-GGTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GGTP_v1.0.md,SP-ORG-GGTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(ggtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GWDESIGN_v1.0.md,SP-ORG-GWDESIGN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JOMRI_v1.0.md,SP-ORG-JOMRI_v1.0,Y,N,제외(오탐),"SP 본문에 구체적 서비스 미특정(""상담·신청 문의""뿐) — 한의약 연구기관, 등록형 GOV_TASK 근거 불충분(2026-08-21)",,
-07-org,07-org/SP-ORG-ICTP_v1.0.md,SP-ORG-ICTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-ICTP_v1.0.md,SP-ORG-ICTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(ictp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNFUTURE_v1.0.md,SP-ORG-GNFUTURE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BDI_v1.0.md,SP-ORG-BDI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SEOULINVEST_v1.0.md,SP-ORG-SEOULINVEST_v1.0,Y,N,미착수,,,
@@ -577,7 +577,7 @@
 07-org,07-org/SP-ORG-DJLIFE_v1.0.md,SP-ORG-DJLIFE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBAGRI_v1.0.md,SP-ORG-GBAGRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BEPA_v1.0.md,SP-ORG-BEPA_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GNTP_v1.0.md,SP-ORG-GNTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GNTP_v1.0.md,SP-ORG-GNTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(gntp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GWMEDX5_v1.0.md,SP-ORG-GWMEDX5_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBDOKDO_v1.0.md,SP-ORG-GBDOKDO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JCGF_v1.0.md,제주신용보증재단,Y,N,완료,"jcgf:credit_guarantee_application 등록 — 07-org 최초 사례, target_type:org 패턴 검증",PR#475,2026-08-20
@@ -585,31 +585,31 @@
 07-org,07-org/SP-ORG-GNRIX2_v1.0.md,SP-ORG-GNRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGSE_v1.0.md,SP-ORG-GGSE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBCF_v1.0.md,SP-ORG-CBCF_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GJTP_v1.0.md,SP-ORG-GJTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GJTP_v1.0.md,SP-ORG-GJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(gjtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-JBMED_v1.0.md,SP-ORG-JBMED_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DJSSO_v1.0.md,SP-ORG-DJSSO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JNCGF_v1.0.md,SP-ORG-JNCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JNCGF_v1.0.md,SP-ORG-JNCGF_v1.0,Y,N,완료,"신용보증 신청(jncgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-DJBEA_v1.0.md,SP-ORG-DJBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNIPAX3_v1.0.md,SP-ORG-JNIPAX3_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-USTP_v1.0.md,SP-ORG-USTP_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-DJCGF_v1.0.md,SP-ORG-DJCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-USTP_v1.0.md,SP-ORG-USTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(ustp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
+07-org,07-org/SP-ORG-DJCGF_v1.0.md,SP-ORG-DJCGF_v1.0,Y,N,완료,"신용보증 신청(djcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-SEJONGPAC_v1.0.md,SP-ORG-SEJONGPAC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JEDA_v1.0.md,제주경제통상진흥원,Y,N,완료,"소상공인 디지털전환패키지 지원사업(jeda:digital_transformation_package_support) 신규 등록 — 02-do-dept ECON 조사에서 확인된 실제 집행기관(웹검색 확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNROBOT_v1.0.md,SP-ORG-GNROBOT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SJBEA_v1.0.md,SP-ORG-SJBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JPSPO_v1.0.md,제주특별자치도장애인체육회,Y,N,미착수,"생활체육 프로그램 참가신청 — 정형화된 등록/모집 절차인지 단순 수강신청인지 판단 근거 불충분, 추가 확인 필요(2026-08-21)",,
 07-org,07-org/SP-ORG-ICSSO_v1.0.md,SP-ORG-ICSSO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CBTP_v1.0.md,SP-ORG-CBTP_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-SJTP_v1.0.md,SP-ORG-SJTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CBTP_v1.0.md,SP-ORG-CBTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(cbtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
+07-org,07-org/SP-ORG-SJTP_v1.0.md,SP-ORG-SJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(sjtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-SILE_v1.0.md,SP-ORG-SILE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNTOURISM_v1.0.md,SP-ORG-JNTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBVETERAN_v1.0.md,SP-ORG-GBVETERAN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWMEDX3_v1.0.md,SP-ORG-GWMEDX3_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-CBCGF_v1.0.md,SP-ORG-CBCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-CBCGF_v1.0.md,SP-ORG-CBCGF_v1.0,Y,N,완료,"신용보증 신청(cbcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGAGRI_v1.0.md,SP-ORG-GGAGRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-DGTP_v1.0.md,SP-ORG-DGTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-DGTP_v1.0.md,SP-ORG-DGTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(dgtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-CBSSO_v1.0.md,SP-ORG-CBSSO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-BSCGF_v1.0.md,SP-ORG-BSCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-BSCGF_v1.0.md,SP-ORG-BSCGF_v1.0,Y,N,완료,"신용보증 신청(bscgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GJGLOBAL_v1.0.md,SP-ORG-GJGLOBAL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JBINTL_v1.0.md,SP-ORG-JBINTL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BSMED_v1.0.md,SP-ORG-BSMED_v1.0,Y,N,미착수,,,
@@ -621,7 +621,7 @@
 07-org,07-org/SP-ORG-GWTALENT_v1.0.md,SP-ORG-GWTALENT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SBA_v1.0.md,SP-ORG-SBA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JSPO_v1.0.md,제주특별자치도체육회,Y,N,재정의,"SP 본문 자체: ""세부 종목별 운영은 가맹 경기단체 소관"" — 체육회 자체는 조정기관(2026-08-21)",,
-07-org,07-org/SP-ORG-JBCGF_v1.0.md,SP-ORG-JBCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JBCGF_v1.0.md,SP-ORG-JBCGF_v1.0,Y,N,완료,"신용보증 신청(jbcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-CNMEDX4_v1.0.md,SP-ORG-CNMEDX4_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNRI_v1.0.md,SP-ORG-JNRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGWOMEN_v1.0.md,SP-ORG-GGWOMEN_v1.0,Y,N,미착수,,,
@@ -634,7 +634,7 @@
 07-org,07-org/SP-ORG-DJIPAX2_v1.0.md,SP-ORG-DJIPAX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-USTOURISM_v1.0.md,SP-ORG-USTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SPO_v1.0.md,SP-ORG-SPO_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GGCGF_v1.0.md,SP-ORG-GGCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GGCGF_v1.0.md,SP-ORG-GGCGF_v1.0,Y,N,완료,"신용보증 신청(ggcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGARTCENTER_v1.0.md,SP-ORG-GGARTCENTER_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNSSO_v1.0.md,SP-ORG-CNSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWRIX2_v1.0.md,SP-ORG-GWRIX2_v1.0,Y,N,미착수,,,
@@ -646,10 +646,10 @@
 07-org,07-org/SP-ORG-ASIADCC_v1.0.md,SP-ORG-ASIADCC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GGCONTENT_v1.0.md,SP-ORG-GGCONTENT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JCCEI_v1.0.md,제주창조경제혁신센터,Y,N,재정의,SP 본문 자체: 창업보육·공모전은 실제 심사를 통해서만 확정되는 공모형 지원사업 — 대표 GOV_TASK로 특정 불가(2026-08-21),,
-07-org,07-org/SP-ORG-GBCGF_v1.0.md,SP-ORG-GBCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GBCGF_v1.0.md,SP-ORG-GBCGF_v1.0,Y,N,완료,"신용보증 신청(gbcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNBEA_v1.0.md,SP-ORG-GNBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GJRI_v1.0.md,SP-ORG-GJRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-GBTP_v1.0.md,SP-ORG-GBTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-GBTP_v1.0.md,SP-ORG-GBTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(gbtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GWMISC1_v1.0.md,SP-ORG-GWMISC1_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JEJU43_v1.0.md,제주4·3평화재단,Y,N,재정의,SP 본문 자체: 희생자·유족 지위 인정은 이 재단이 아니라 별도 국가위원회(4·3중앙위원회) 소관 — 재단은 안내·자료지원만(2026-08-21). 4·3보상금 자체는 이미 JACHI(도청)에 등록됨,,
 07-org,07-org/SP-ORG-ICSMARTCITY_v1.0.md,SP-ORG-ICSMARTCITY_v1.0,Y,N,미착수,,,
@@ -687,7 +687,7 @@
 07-org,07-org/SP-ORG-SEOUL50PLUS_v1.0.md,SP-ORG-SEOUL50PLUS_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JBBEA_v1.0.md,SP-ORG-JBBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-BSDESIGN_v1.0.md,SP-ORG-BSDESIGN_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-DGCGF_v1.0.md,SP-ORG-DGCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-DGCGF_v1.0.md,SP-ORG-DGCGF_v1.0,Y,N,완료,"신용보증 신청(dgcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GGFUTURE_v1.0.md,SP-ORG-GGFUTURE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNLIFE_v1.0.md,SP-ORG-CNLIFE_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JBSSO_v1.0.md,SP-ORG-JBSSO_v1.0,Y,N,미착수,,,
@@ -696,14 +696,14 @@
 07-org,07-org/SP-ORG-CNCONFUCIAN_v1.0.md,SP-ORG-CNCONFUCIAN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-TRANSWEAK_v1.0.md,제주특별자치도 교통약자이동지원센터,Y,N,완료,"특별교통수단(교통약자 콜택시) 이용자 등록(transweak:special_transport_registration) 신규 등록 — 교통약자의 이동편의 증진법, 제주특별자치도교통약자의 이동편의 증진 조례 제13조(웹검색 확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-JNFOODFEST_v1.0.md,SP-ORG-JNFOODFEST_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JBTP_v1.0.md,SP-ORG-JBTP_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JBTP_v1.0.md,SP-ORG-JBTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(jbtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-JNSSO_v1.0.md,SP-ORG-JNSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JNWOMEN_v1.0.md,SP-ORG-JNWOMEN_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SEOULTOURISM_v1.0.md,SP-ORG-SEOULTOURISM_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWINNOCITY_v1.0.md,SP-ORG-GWINNOCITY_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SEOULAI_v1.0.md,SP-ORG-SEOULAI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JBRI_v1.0.md,SP-ORG-JBRI_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-SJCGF_v1.0.md,SP-ORG-SJCGF_v1.0,Y,N,미착수,,,
+07-org,07-org/SP-ORG-SJCGF_v1.0.md,SP-ORG-SJCGF_v1.0,Y,N,완료,"신용보증 신청(sjcgf:credit_guarantee_application) 등록 — 제주 원형(JCGF) 복제, 지역신용보증재단법 제17조(전국 공통 모법, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-USRI_v1.0.md,SP-ORG-USRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CHILDCARE_v1.0.md,제주특별자치도 아이돌봄광역지원센터,Y,N,재정의,"아이돌봄서비스 지원신청서의 법적 제출처는 도지사·시장·군수·구청장(아이돌봄 지원법 시행규칙 제15조제1항) — 광역지원센터는 아이돌보미 관리·매칭·교육 운영기관(웹검색 확인, 2026-08-21)",,
 07-org,07-org/divisions/SP-ORGDIV-JILES-SCHOLARSHIP_v1.0.md,제주평생교육장학진흥원 장학팀,Y,N,미착수,,,
