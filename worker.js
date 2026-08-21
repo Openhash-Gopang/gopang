@@ -19118,9 +19118,53 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'design_doc',   name: '설계도서(착공신고 이후 변경 없는 경우 생략 가능)', required: false, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-WATER
+  // (상하수도본부) 실작업. §5-1(v1.1, 2026-07-11)이 TBD로 남겨둔 두 처분을
+  // 정식 REQUIRED_DOCUMENTS_REGISTRY 항목으로 승격 — §5의 별도 "AI 검토소견"
+  // 포맷은 axiom 2(공리 2)가 생기기 전(2026-07-11)의 시범 설계였고, 지금은
+  // 표준 GOV_TASK_SUBMIT_REQUEST + 공리 2 파이프라인이 있으므로 그걸
+  // 그대로 쓴다(중복 메커니즘 유지 안 함 — SP-AGY-WATER §5 본문에도 이
+  // 승격을 반영해야 함, 별도 SP 편집 커밋 참조).
+  //
+  // ★★ 접수 창구 관련 정직한 고지(웹검색 확인, 2026-08-20): 두 처분 다
+  // 실제로는 읍면동 행정복지센터·상수도사업소(=이 본부)·정부24 3개 창구
+  // 중 택1이 일반적 패턴이다(제주 조례 원문에서 이 본부 창구 자체를
+  // 배제하는 근거는 못 찾음 — 오히려 옥내누수 감면은 "규칙으로 정하는
+  // 바에 따라 도지사에게 신청"이라 본부가 원 창구다). benefit-categories
+  // 카테고리 전반에 있는 "읍면동 전용, REQUIRED_DOCUMENTS_REGISTRY 패턴
+  // 자체가 안 맞음" 우려(HANDOFF §5)와 달리, 이 두 항목은 본부가 직접
+  // 창구가 될 수 있는 근거가 있어 그대로 등록한다 — 다만 읍면동·정부24로도
+  // 낼 수 있다는 사실은 note에 명시해 Hondi가 창구 선택을 사용자에게
+  // 안내하도록 한다.
+  'jeju:water_leak_fee_reduction': {
+    agency: 'jeju', agency_name: '제주특별자치도 상하수도본부',
+    task_name: '옥내누수 요금감면 신청',
+    // ★ 정직하게 밝힘 — 옥내누수 조정 근거 조항(수도급수 조례) 자체는
+    // 웹검색으로 "수용가의 옥내누수가 발생하였을 때에는 사용수량을
+    // 조정할 수 있으며... 도지사에게 신청" 조문을 확인했으나, 여러 조항이
+    // 뒤섞인 스크랩 결과라 정확한 조번호(제○조제○항)를 이번 조사에서
+    // 특정하지 못했다 — 법제처 국가법령정보센터가 자동화 접근을 막아
+    // (robots.txt) 원문 직접 대조가 안 됨. 조번호는 TBD로 유지, 반드시
+    // 원문(제주자치법규정보시스템 elis.go.kr) 수동 대조 후 채울 것.
+    legal_basis: '제주특별자치도 수도급수 조례(옥내누수 사용수량 조정·감면 조항 — 정확한 조번호 TBD, 원문 대조 필요)',
+    documents: [
+      { id: 'application',    name: '옥내누수 감면신청서', required: true, acquisition: 'user_authored' },
+      { id: 'repair_photos',  name: '누수 수리 전·중·후 사진', required: true, acquisition: 'user_authored' },
+      { id: 'repair_invoice', name: '수리 영수증(또는 자가수선 확인서)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '감면액 계산식(직전 3개월 평균 초과분의 50%, 3개월 한도)은 타 지자체 공통값 참고 — 제주 조례 원문 확정 전까지 안내 시 "추정치"임을 명시할 것(SP-AGY-WATER §5-1과 동일 TBD). 접수는 이 본부·읍면동 행정복지센터·정부24 중 택1 가능 — Hondi는 세 창구를 안내하고 온라인(이 GOV_TASK 경로 또는 정부24) 희망 여부를 먼저 확인한다.',
+  },
+  'jeju:water_social_fee_reduction': {
+    agency: 'jeju', agency_name: '제주특별자치도 상하수도본부',
+    task_name: '사회적배려대상자 수도요금 감면 신청',
+    legal_basis: '제주특별자치도 수도급수 조례 제48조제3항', // 웹검색 확인(2026-08-20, 제주도민일보·제주사회복지신문 보도로 조번호 교차확인)
+    documents: [
+      { id: 'application',       name: '수도요금 감면신청서', required: true, acquisition: 'user_authored' },
+      { id: 'eligibility_proof', name: '자격증빙(수급자증명서/장애인증명서/국가유공자확인서/가족관계증명서 등 유형별 1종)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '감면액은 가정용 1단계 요율 10톤 이하 사용요금(최대 약 5,400원, 2026-08-20 기준 보도자료 참고치 — 조례 별표 원문 재확인 권장). 동일 세대 중복 감면 불가, 세대별 1건만 적용. 접수는 이 본부·읍면동 행정복지센터·정부24 "요금감면일괄신청" 중 택1 — 정부24 통합신청은 전기·가스·난방과 함께 낼 수 있어 그쪽을 우선 안내하는 것도 고려.',
+  },
 };
-
-// ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
 // 뜻이므로 dept_task 생성을 건너뛴다(누락이 GOV_TASK 접수 자체를 막지
@@ -19193,6 +19237,12 @@ const AGENCY_TO_DEPT_TARGET = {
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:development_project_approval':     { target_type: 'dept', target_id: 'do-dept:housing' },
   'jejufire:fire_facility_completion_inspection': { target_type: 'dept', target_id: 'do-dept:safety' },
+  // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGY-WATER 실작업.
+  // 'do-agency:WATER'는 dept-task-handler.js DEPT_TASK_TAXONOMY.dept에
+  // 이미 등록된 도메인(03-do-agency 11개 중 하나) — 새 org 코드를 만들지
+  // 않고 그대로 재사용.
+  'jeju:water_leak_fee_reduction':   { target_type: 'dept', target_id: 'do-agency:WATER' },
+  'jeju:water_social_fee_reduction': { target_type: 'dept', target_id: 'do-agency:WATER' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
