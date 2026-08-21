@@ -19073,6 +19073,23 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'usage_plan',   name: '사용계획서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 도지사 전속 사무. 01-do(JEJU-DO-SP_v1.5.md)가
+  // 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에
+  // 완전히 대체된 죽은 파일이라는 걸 실사로 발견 — 이 task_key를 설명하는
+  // LLM 프롬프트 텍스트는 정적 파일이 아니라 SP-PROVINCE-TEMPLATE v1.2의
+  // {고유사무_문구} 자리표시자(제주 레코드에 실제 내용 채움, 별도 PR)에
+  // 있다. 여기 레지스트리 등록 자체는 SP 텍스트와 무관하게 독립 동작.
+  'jeju:development_project_approval': {
+    agency: 'jeju', agency_name: '제주도청 (개발사업 시행승인 소관 실·국)',
+    task_name: '개발사업 시행승인',
+    legal_basis: '제주특별자치도 설치 및 국제자유도시 조성을 위한 특별법 제147조·제148조, 제주특별자치도 개발사업시행 승인 등에 관한 조례 및 시행규칙',
+    documents: [
+      { id: 'application',  name: '개발사업시행승인 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'project_plan', name: '개발사업계획서(위치도·설계도서 포함)', required: true, acquisition: 'user_authored' },
+      { id: 'eia_doc',      name: '환경영향평가서(대상 사업만 해당)', required: false, acquisition: 'user_authored' },
+      { id: 'zoning_doc',   name: '도시관리계획 관련 서류(의제협의 대상만 해당)', required: false, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -19145,6 +19162,7 @@ const AGENCY_TO_DEPT_TARGET = {
   'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
+  'jeju:development_project_approval':     { target_type: 'dept', target_id: 'do-dept:housing' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
