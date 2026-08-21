@@ -325,7 +325,7 @@ export const DO_DEPT_DIVISION_TABLE = [
 // LLM 호출 없이 결정론적으로 좁힌다 — _resolveInstitutionTie 참조.
 export const JEJU_AGENCY_TABLE = [
   { code: "SP-AGY-AGRITECH", name: "농업기술원", desc: "당신은 제주특별자치도청 **농업기술원**을 대표하는 AI 레이어다. 주요 소관: 농업경영체 대상 재배기술 지도, 신품종 시험·보급, 영농기술 교육",
-    kw: ["농업경영체 대상 재배기술 지도", "농업기술원", "신품종 시험", "영농기술 교육"], file: "03-do-agency/SP-AGY-AGRITECH_v1.0.md" },
+    kw: ["농업경영체 대상 재배기술 지도", "농업기술원", "신품종 시험", "영농기술 교육"], file: "03-do-agency/SP-AGY-AGRITECH_v1.1.md" },
   { code: "SP-AGY-ARTMUSEUM", name: "제주특별자치도립미술관", desc: "당신은 제주특별자치도청 **제주특별자치도립미술관**를 대표하는 AI 레이어다. 주요 소관: 도민 미술문화의식 향상, 소장품 전시, 제주비엔날레 등 국제교류전 개최",
     kw: ["도민 미술문화의식 향상", "소장품 전시", "제주비엔날레 등 국제교류전 개최", "제주특별자치도립미술관"], file: "03-do-agency/SP-AGY-ARTMUSEUM_v1.0.md" },
   { code: "SP-AGY-BOHWAN", name: "보건환경연구원", desc: "당신은 제주특별자치도청 **보건환경연구원**을 대표하는 AI 레이어다. 주요 소관: 수질·대기·식품 등 환경·보건 검사·분석, 감염병 진단 검사 지원",

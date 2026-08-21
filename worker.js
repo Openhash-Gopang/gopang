@@ -19282,6 +19282,27 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '공유재산법상 사용허가는 원칙적으로 일반입찰이나, 단기 시설 대관은 통상 수의 방법으로 처리되는 경우가 많다(법 제20조제2항, 시행령 제13조) — 이 박물관의 정확한 대관 규정(요금표·우선순위 기준 등)은 별도 확인 필요, TBD.',
   },
+  // ★ 2026-08-21 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-
+  // AGRITECH(농업기술원) 실작업. §INPUT_SCHEMA가 이미 "병해충 진단 의뢰"를
+  // 실제 업무로 밝혀둔 지점 — 식물방역법 근거 확인, 경기도농업기술원
+  // 등 타 지자체 사례로 "시험·분석 의뢰 조례" 패턴 교차확인(SP-AGY-BOHWAN
+  // 지하수검사와 동일 구조 — 조직 성격이 유사한 "연구원류" 기관 공통 패턴
+  // 으로 보인다, 앞으로 이 계열 기관은 이 패턴부터 확인할 것).
+  'jeju:pest_diagnosis_request': {
+    agency: 'jeju', agency_name: '제주특별자치도 농업기술원',
+    task_name: '병해충 진단 의뢰',
+    // ★ 정직하게 밝힘 — 식물방역법·농촌진흥청고시(농작물 병해충 예찰·
+    // 방제에 관한 규정)는 국가 차원의 병해충 관리 체계 근거일 뿐, 개별
+    // 농업인의 "진단 의뢰" 접수 자체의 제주 자체 조례(경기도의 "시험 및
+    // 분석 의뢰에 관한 조례"에 해당하는 제주판)는 이번 조사에서 확인
+    // 못함 — TBD.
+    legal_basis: '식물방역법(병해충 예찰·방제 근거), 농작물 병해충 예찰·방제에 관한 규정(농촌진흥청고시) — 제주 자체 시험·분석 의뢰 조례명 TBD, 확인 필요',
+    documents: [
+      { id: 'application',  name: '병해충 진단의뢰서', required: true, acquisition: 'user_authored' },
+      { id: 'damage_photos',name: '피해 증상 사진', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — BOHWAN(보건환경연구원) 수질검사와 동일한 한계: 심각한 병해충 의심 시 실제 시료(병든 잎·가지 등)를 검사기관에 인계해야 하는 경우가 있다 — 사진 진단으로 충분한 경증은 서류(사진)만으로 완결 가능하나, 정밀분석이 필요하면 물리적 시료 제출이 추가로 필요할 수 있음을 사용자에게 안내할 것.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19385,6 +19406,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-21 — SP-AGYDIV-FOLKMUSEUM-ADMIN 실작업. 'do-agency:
   // FOLKMUSEUM'은 이미 등록된 도메인.
   'jeju:folkmuseum_facility_rental': { target_type: 'dept', target_id: 'do-agency:FOLKMUSEUM' },
+  // ★ 2026-08-21 — SP-AGY-AGRITECH 실작업. 'do-agency:AGRITECH'는
+  // 이미 등록된 도메인.
+  'jeju:pest_diagnosis_request': { target_type: 'dept', target_id: 'do-agency:AGRITECH' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
