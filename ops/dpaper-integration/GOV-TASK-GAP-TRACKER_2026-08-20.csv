@@ -477,7 +477,7 @@
 07-org,07-org/SP-ORG-GBSAEMAUL_v1.0.md,SP-ORG-GBSAEMAUL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SFAC_v1.0.md,SP-ORG-SFAC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWCF_v1.0.md,SP-ORG-GWCF_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JCPA_v1.0.md,제주영상문화산업진흥원,Y,N,미착수,"기관명 불일치 의심(2026-08-21) — SP는 ""제주영상문화산업진흥원""이나 웹검색 결과 현재 실제 운영 기관명은 ""제주콘텐츠진흥원""(ofjeju.kr)으로 보임. 조례명(""제주영상·문화산업진흥원 설립 및 지원 조례"")은 살아있어 법인격 자체는 유효하나 통용 명칭이 바뀌었을 가능성 — 등록 전 기관명 재확인 필요, 다음 배치로 이월",,
+07-org,07-org/SP-ORG-JCPA_v1.0.md,제주영상문화산업진흥원,Y,N,완료,"기관명 정정 확정(제주콘텐츠진흥원, 2024-09-06 법인등기) + 촬영지원장비 대여 신청 등록(jcpa:filming_equipment_rental) — 지원사업 4개팀은 공모·심사형이라 등록대상 아님",(patch 대기),2026-08-21
 07-org,07-org/SP-ORG-ICRI_v1.0.md,SP-ORG-ICRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBRIX2_v1.0.md,SP-ORG-GBRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SGPMED_v1.0.md,서귀포의료원,Y,N,제외(오탐),"JEJUMED와 동일 사유 — 진료는 의료행위, 문서기반 행정신청 GOV_TASK 패턴과 안 맞음(2026-08-21)",,
@@ -597,7 +597,7 @@
 07-org,07-org/SP-ORG-JEDA_v1.0.md,제주경제통상진흥원,Y,N,완료,"소상공인 디지털전환패키지 지원사업(jeda:digital_transformation_package_support) 신규 등록 — 02-do-dept ECON 조사에서 확인된 실제 집행기관(웹검색 확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNROBOT_v1.0.md,SP-ORG-GNROBOT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SJBEA_v1.0.md,SP-ORG-SJBEA_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JPSPO_v1.0.md,제주특별자치도장애인체육회,Y,N,미착수,"생활체육 프로그램 참가신청 — 정형화된 등록/모집 절차인지 단순 수강신청인지 판단 근거 불충분, 추가 확인 필요(2026-08-21)",,
+07-org,07-org/SP-ORG-JPSPO_v1.0.md,제주특별자치도장애인체육회,Y,N,재정의,생활체육교실 참가는 선착순 수강신청 성격이라 REQUIRED_DOCUMENTS_REGISTRY 등록 대상 아님으로 확정(2026-08-21). 대표전화·소재지 TBD는 해소.,(patch 대기),2026-08-21
 07-org,07-org/SP-ORG-ICSSO_v1.0.md,SP-ORG-ICSSO_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBTP_v1.0.md,SP-ORG-CBTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(cbtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-SJTP_v1.0.md,SP-ORG-SJTP_v1.0,Y,N,완료,"시험분석(장비 사용) 의뢰(sjtp:equipment_testing_request) 등록 — 제주 원형(JTP) 복제, 산업기술단지 지원에 관한 특례법(전국 공통 모법, 설립조례는 도별 상이해 추후 개별확인, 2026-08-21)",,2026-08-21
@@ -709,12 +709,12 @@
 07-org,07-org/divisions/SP-ORGDIV-JILES-SCHOLARSHIP_v1.0.md,제주평생교육장학진흥원 장학팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JEDA-STARTUP_v1.0.md,제주특별자치도경제통상진흥원 창업지원팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-CHILDMEAL-HYGIENE_v1.0.md,어린이급식관리지원센터 위생팀,Y,N,미착수,,,
-07-org,07-org/divisions/SP-ORGDIV-JPSPO-LIFESPORT_v1.0.md,제주특별자치도장애인체육회 생활체육부,Y,N,미착수,,,
+07-org,07-org/divisions/SP-ORGDIV-JPSPO-LIFESPORT_v1.0.md,제주특별자치도장애인체육회 생활체육부,Y,N,재정의,"상위 SP-ORG-JPSPO v1.1과 동일 사유(선착순 수강신청, 등록대상 아님)",,2026-08-21
 07-org,07-org/divisions/SP-ORGDIV-JTO-INDUSTRY_v1.0.md,제주관광공사 관광산업실,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JEJU43-ADMIN_v1.0.md,제주4·3평화재단 사무처,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-SGPMED-NURSING_v1.0.md,서귀포의료원 간호부,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JILES-EDU_v1.0.md,제주평생교육장학진흥원 평생교육팀,Y,N,미착수,,,
-07-org,07-org/divisions/SP-ORGDIV-JCPA-CONTENTS_v1.0.md,제주콘텐츠진흥원**(구 제주영상문화산업진흥원) **콘텐츠산업팀,Y,N,미착수,,,
+07-org,07-org/divisions/SP-ORGDIV-JCPA-CONTENTS_v1.0.md,제주콘텐츠진흥원**(구 제주영상문화산업진흥원) **콘텐츠산업팀,Y,N,재정의,공모·심사위원회 선정형 지원사업 — 상위 SP-ORG-JCPA v1.1과 동일 사유,,2026-08-21
 07-org,07-org/divisions/SP-ORGDIV-CHILDMEAL-NUTRITION_v1.0.md,어린이급식관리지원센터 영양팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JPDC-PRODUCTION_v1.0.md,제주특별자치도개발공사 생산팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JEJU43-RESEARCH_v1.0.md,제주4·3평화재단 조사연구실,Y,N,미착수,,,
@@ -729,7 +729,7 @@
 07-org,07-org/divisions/SP-ORGDIV-JPDC-SALES_v1.0.md,제주특별자치도개발공사 영업팀(국내영업팀),Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JFAC-PROGRAM_v1.0.md,제주문화예술재단 문화사업팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JPASS-SERVICESUPPORT_v1.0.md,제주특별자치도 사회서비스원 서비스지원부,Y,N,미착수,,,
-07-org,07-org/divisions/SP-ORGDIV-JCPA-FOSTER_v1.0.md,제주콘텐츠진흥원 콘텐츠육성팀,Y,N,미착수,,,
+07-org,07-org/divisions/SP-ORGDIV-JCPA-FOSTER_v1.0.md,제주콘텐츠진흥원 콘텐츠육성팀,Y,N,재정의,공모·심사위원회 선정형 지원사업 — 상위 SP-ORG-JCPA v1.1과 동일 사유,,2026-08-21
 07-org,07-org/divisions/SP-ORGDIV-ICCJEJU-OPS_v1.0.md,제주국제컨벤션센터 운영팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JEDA-BUSINESS_v1.0.md,제주경제통상진흥원 사업지원팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JILES-LIFELONG_v1.0.md,제주평생교육장학진흥원 평생교육팀,Y,N,미착수,,,
@@ -739,8 +739,8 @@
 07-org,07-org/divisions/SP-ORGDIV-JEJUMED-ADMIN_v1.0.md,제주의료원 행정지원부,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-SGPMED-CLINICAL_v1.0.md,서귀포의료원 진료부,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JFAC-SUPPORT_v1.0.md,제주문화예술재단 문화지원팀,Y,N,미착수,,,
-07-org,07-org/divisions/SP-ORGDIV-JCPA-TALENT_v1.0.md,제주콘텐츠진흥원 콘텐츠인재팀,Y,N,미착수,,,
-07-org,07-org/divisions/SP-ORGDIV-JPSPO-ELITESPORT_v1.0.md,제주특별자치도장애인체육회 전문체육부,Y,N,미착수,,,
+07-org,07-org/divisions/SP-ORGDIV-JCPA-TALENT_v1.0.md,제주콘텐츠진흥원 콘텐츠인재팀,Y,N,재정의,공모·심사위원회 선정형 지원사업 — 상위 SP-ORG-JCPA v1.1과 동일 사유,,2026-08-21
+07-org,07-org/divisions/SP-ORGDIV-JPSPO-ELITESPORT_v1.0.md,제주특별자치도장애인체육회 전문체육부,Y,N,재정의,전문체육(선수 육성)은 대한장애인체육회·가맹경기단체 소관 — 상위 SP-ORG-JPSPO v1.1과 동일 사유,,2026-08-21
 07-org,07-org/divisions/SP-ORGDIV-JEJU43-PEACE_v1.0.md,제주4·3평화재단 평화사업팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-MAEUL-SUPPORT_v1.0.md,마을만들기종합지원센터 마을지원팀,Y,N,미착수,,,
 07-org,07-org/divisions/SP-ORGDIV-JTO-MARKETING_v1.0.md,제주관광공사 마케팅사업본부,Y,N,미착수,,,
