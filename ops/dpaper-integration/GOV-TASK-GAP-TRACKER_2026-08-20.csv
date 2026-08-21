@@ -469,7 +469,7 @@
 07-org,07-org/SP-ORG-JBAUTOTECH_v1.0.md,SP-ORG-JBAUTOTECH_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-IPF_v1.0.md,국제평화재단,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CBDORM_v1.0.md,SP-ORG-CBDORM_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JTP_v1.0.md,제주테크노파크(JTP),Y,N,미착수,,,
+07-org,07-org/SP-ORG-JTP_v1.0.md,제주테크노파크(JTP),Y,N,완료,"시험분석(장비 사용) 의뢰(jtp:equipment_testing_request) 신규 등록 — 산업기술단지 지원에 관한 특례법, 제주테크노파크 설립 및 운영 조례(웹검색 확인, 2026-08-21). 기업기술지원·창업지원 프로그램은 공모형이라 대표사무 1건만 등록",,2026-08-21
 07-org,07-org/SP-ORG-JNBIZ_v1.0.md,SP-ORG-JNBIZ_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-CNCGF_v1.0.md,SP-ORG-CNCGF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-USJOB_v1.0.md,SP-ORG-USJOB_v1.0,Y,N,미착수,,,
@@ -477,7 +477,7 @@
 07-org,07-org/SP-ORG-GBSAEMAUL_v1.0.md,SP-ORG-GBSAEMAUL_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SFAC_v1.0.md,SP-ORG-SFAC_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GWCF_v1.0.md,SP-ORG-GWCF_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JCPA_v1.0.md,제주영상문화산업진흥원,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JCPA_v1.0.md,제주영상문화산업진흥원,Y,N,미착수,"기관명 불일치 의심(2026-08-21) — SP는 ""제주영상문화산업진흥원""이나 웹검색 결과 현재 실제 운영 기관명은 ""제주콘텐츠진흥원""(ofjeju.kr)으로 보임. 조례명(""제주영상·문화산업진흥원 설립 및 지원 조례"")은 살아있어 법인격 자체는 유효하나 통용 명칭이 바뀌었을 가능성 — 등록 전 기관명 재확인 필요, 다음 배치로 이월",,
 07-org,07-org/SP-ORG-ICRI_v1.0.md,SP-ORG-ICRI_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-GBRIX2_v1.0.md,SP-ORG-GBRIX2_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SGPMED_v1.0.md,서귀포의료원,Y,N,미착수,,,
@@ -594,7 +594,7 @@
 07-org,07-org/SP-ORG-USTP_v1.0.md,SP-ORG-USTP_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-DJCGF_v1.0.md,SP-ORG-DJCGF_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SEJONGPAC_v1.0.md,SP-ORG-SEJONGPAC_v1.0,Y,N,미착수,,,
-07-org,07-org/SP-ORG-JEDA_v1.0.md,제주경제통상진흥원,Y,N,미착수,,,
+07-org,07-org/SP-ORG-JEDA_v1.0.md,제주경제통상진흥원,Y,N,완료,"소상공인 디지털전환패키지 지원사업(jeda:digital_transformation_package_support) 신규 등록 — 02-do-dept ECON 조사에서 확인된 실제 집행기관(웹검색 확인, 2026-08-21)",,2026-08-21
 07-org,07-org/SP-ORG-GNROBOT_v1.0.md,SP-ORG-GNROBOT_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-SJBEA_v1.0.md,SP-ORG-SJBEA_v1.0,Y,N,미착수,,,
 07-org,07-org/SP-ORG-JPSPO_v1.0.md,제주특별자치도장애인체육회,Y,N,미착수,,,
