@@ -750,13 +750,13 @@
 07-org,07-org/divisions/SP-ORGDIV-JEJUMED-NURSING_v1.0.md,제주의료원 간호부,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-ENVGUIDE_v1.0.md,제주시청 청정환경국 환경지도과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-GENERAL_v1.0.md,서귀포시청 안전도시건설국 안전총괄과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-FISHERY_v1.0.md,서귀포시청 농수축산경제국 해양수산과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-FISHERY_v1.0.md,서귀포시청 농수축산경제국 해양수산과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-TOURISM_v1.0.md,제주시청 문화관광체육국 관광진흥과,Y,N,완료,"tourism_business_registration 등록 — 문화관광체육국 최초 사례, 관광진흥법 제4조 시장 권한 명문",PR#486,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-HYGIENE_v1.0.md,제주시청 복지위생국 위생관리과,Y,N,완료,"jejusi:food_business_report, jejusi:public_sanitation_business_report 등록",PR#474,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-BASICLIVELIHOOD_v1.0.md,제주시청 복지위생국 기초생활보장과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-JEOLMUL_v1.0.md,제주시청 청정환경국 절물생태관리소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-BASICGOVPREP_v1.0.md,서귀포시청 자치행정국 기초자치단체설치준비지원단,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-VEHICLE_v1.0.md,제주시청 안전교통국 차량관리과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-VEHICLE_v1.0.md,제주시청 안전교통국 차량관리과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-ELDERLY_v1.0.md,제주시청 복지위생국 노인복지과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-DISABLED_v1.0.md,서귀포시청 복지위생국 장애인복지과,Y,N,완료,"jejusi:disability_registration, seogwipo:disability_registration 등록 — 읍면동 1차접수/시청 최종심사 2단계 구조를 복지로형 온라인접수 disclaimer로 반영한 최초 사례(복지 계열 재사용 템플릿)",PR#477,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-CITRUS_v1.0.md,서귀포시청 농수축산경제국 감귤유통과,Y,N,미착수,,,
@@ -773,7 +773,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-PROMOTION_v1.0.md,서귀포시청 서귀포보건소 건강증진과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-CITY_v1.0.md,서귀포시청 안전도시건설국 도시과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-RESIDENT_v1.0.md,서귀포시청 복지위생국 주민복지과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-GENERAL_v1.0.md,제주시청 안전교통국 안전총괄과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-GENERAL_v1.0.md,제주시청 안전교통국 안전총괄과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-SPORTS_v1.0.md,제주시청 문화관광체육국 체육진흥과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-BUDGET_v1.2.md,제주시청 자치행정국 기획예산과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-SELFGOV_v1.0.md,서귀포시청 자치행정국 자치행정과,Y,N,미착수,,,
@@ -785,7 +785,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-CONSTRUCT_v1.0.md,서귀포시청 안전도시건설국 건설과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-PARKS_v1.0.md,제주시청 청정환경국 공원녹지과,Y,N,완료,"park_occupancy_permit 등록 — 도시공원법 제24조 시장 권한 명문, 위임 이슈 없음",PR#484,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-WELFARE-RESIDENT_v1.0.md,제주시청 복지위생국 주민복지과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-ADMIN_v1.0.md,서귀포시청 서귀포보건소 보건행정과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-HEALTH-ADMIN_v1.0.md,서귀포시청 서귀포보건소 보건행정과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-ARTSHALL_v1.0.md,서귀포시청 문화관광체육국 서귀포예술의전당,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-PARKS_v1.0.md,서귀포시청 청정환경국 공원녹지과,Y,N,완료,"park_occupancy_permit 등록 — 도시공원법 제24조 시장 권한 명문, 위임 이슈 없음",PR#484,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING_v1.0.md,서귀포시청 안전도시건설국 건축과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
@@ -799,13 +799,13 @@
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-PROPERTYTAX_v1.2.md,제주시청 자치행정국 재산세과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-TOURISM_v1.0.md,서귀포시청 문화관광체육국 관광진흥과,Y,N,완료,"tourism_business_registration 등록 — 문화관광체육국 최초 사례, 관광진흥법 제4조 시장 권한 명문",PR#486,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-GENERAL_v1.2.md,제주시청 자치행정국 총무과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-TRAFFIC_v1.0.md,제주시청 안전교통국 교통행정과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-SAFETY-TRAFFIC_v1.0.md,제주시청 안전교통국 교통행정과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CLIMATE-FACILITY_v1.0.md,제주시청 청정환경국 환경시설관리소,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-CULTURE-TAMNALIB_v1.0.md,제주시청 문화관광체육국 탐라도서관,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-SELFGOV_v1.2.md,제주시청 자치행정국 자치행정과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-SPORTS_v1.0.md,서귀포시청 문화관광체육국 체육진흥과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-TAX_v1.0.md,서귀포시청 자치행정국 세무과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-LIVESTOCK_v1.0.md,서귀포시청 농수축산경제국 청정축산과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-TAX_v1.0.md,서귀포시청 자치행정국 세무과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
+04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-AGRIECONOMY-LIVESTOCK_v1.0.md,서귀포시청 농수축산경제국 청정축산과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-JACHI-GENERAL_v1.0.md,서귀포시청 자치행정국 총무과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CONSTRUCTION-WATER_v1.0.md,서귀포시청 안전도시건설국 상하수도과,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-JEJUSI-ECON-SMB_v1.0.md,제주시청 경제일자리국 경제소상공인과,Y,N,미착수,,,
@@ -818,7 +818,7 @@
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-WELFARE-WOMENFAMILY_v1.0.md,서귀포시청 복지위생국 여성가족과,Y,N,완료,"기초연금·기초생활보장·한부모가족·긴급복지지원 등록 — 읍면동 disclaimer 패턴 재사용, 서귀포 주민복지과는 2개 task_key 겸함",PR#479,2026-08-20
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CULTURE-ART_v1.0.md,서귀포시청 문화관광체육국 문화예술과,Y,N,미착수,,,
 04-city,04-city/divisions/SP-CITYDIV-SEOGWIPO-CLIMATE-LIVINGENV_v1.0.md,서귀포시청 청정환경국 생활환경과,Y,N,미착수,,,
-04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-TAX_v1.2.md,제주시청 자치행정국 세무과,Y,N,미착수,,,
+04-city,04-city/divisions/SP-CITYDIV-JEJUSI-JACHI-TAX_v1.2.md,제주시청 자치행정국 세무과,Y,N,완료,04-city 나머지 배치 — 어업허가/자동차등록/차고지증명/의료기관신고/지방세이의신청/축산업허가/재난지원금/여객운송등록,PR#490,2026-08-20
 04-city,04-city/seogwipo/SP-CITY-SEOGWIPO_v1.0.md,SP-CITY-SEOGWIPO_v1.0,Y,N,완료,감사 원본의 구버전(v1.0) 중복 행 — 실제 정본은 상위 버전으로 이미 완료됨(archive 이동 또는 router가 상위버전만 로드). 작업 대상 아님,PR#466/#467(v1.1~v1.3으로 대체) / archive: PR#473,2026-08-20
 04-city,04-city/seogwipo/SP-CITY-SEOGWIPO_v1.1.md,SP-CITY-SEOGWIPO_v1.1,Y,N,미착수,,,
 04-city,04-city/jeju/SP-CITY-JEJU_v1.1.md,SP-CITY-JEJU_v1.1,Y,N,미착수,,,
