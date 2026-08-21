@@ -19164,6 +19164,33 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '감면액은 가정용 1단계 요율 10톤 이하 사용요금(최대 약 5,400원, 2026-08-20 기준 보도자료 참고치 — 조례 별표 원문 재확인 권장). 동일 세대 중복 감면 불가, 세대별 1건만 적용. 접수는 이 본부·읍면동 행정복지센터·정부24 "요금감면일괄신청" 중 택1 — 정부24 통합신청은 전기·가스·난방과 함께 낼 수 있어 그쪽을 우선 안내하는 것도 고려.',
   },
+  // ★ 2026-08-20 추가 — 03-do-agency GOV-TASK-904-GAP 배치, SP-AGY-HERITAGE
+  // (세계유산본부) 실작업. HANDOFF §5가 "관련 조례가 여러 개 걸려 근거
+  // 조항 특정 못함"으로 남겨둔 항목 — 이번에 웹검색으로 해소.
+  //
+  // ★★ 관할 확인(가장 먼저 검증한 것, HANDOFF §4-⑥ 교훈): 한라산국립공원은
+  // 전국 23개 국립공원 중 유일하게 국립공원공단이 아니라 제주특별자치도가
+  // 직접(위탁)관리한다(위키백과·한국민족문화대백과사전·나무위키 교차확인,
+  // 2026-08-20) — 이 SP(세계유산본부)가 실제 관할기관이 맞다는 게 확인됐다.
+  // 다른 국립공원(설악산 등)과 달리 "국가기관 소관이라 이 지자체 SP가
+  // 처리할 수 없다"는 오탐 우려가 없는 사례.
+  'jeju:hallasan_special_entry_permit': {
+    agency: 'jeju', agency_name: '제주특별자치도 세계유산본부 한라산국립공원관리소',
+    task_name: '한라산국립공원 특별보호구역·통제구역 출입허가(학술조사 등)',
+    // 자연공원법 제28조(출입금지 등) — 헌재 2010헌바99(2012.2.23.)가 이
+    // 조항의 "공원관리청 허가" 예외 구조를 그대로 원용해 합헌 판단한
+    // 판례로 조번호 재확인(2026-08-20). 시행령상 학술연구 목적 조사행위
+    // 허용 예외(학술진흥법 제2조 대학·연구기관 등)는 조문 자체는
+    // 확인했으나 정확한 시행령 조번호(추정 제3조 부근)는 스크랩 결과가
+    // 조번호를 안 보여줘 특정 못함 — TBD.
+    legal_basis: '자연공원법 제28조(출입금지 등), 자연공원법 시행령(학술연구 목적 조사행위 허용 예외 조항 — 정확한 조번호 TBD, 시행령 원문 대조 필요)',
+    documents: [
+      { id: 'application',     name: '특별출입(통제구역 출입)허가신청서', required: true, acquisition: 'user_authored' },
+      { id: 'purpose_proof',   name: '목적 증빙(학술연구는 소속 대학·연구기관 확인서, 그 외는 사유서)', required: true, acquisition: 'user_authored' },
+      { id: 'insurance_proof', name: '산행·조사 관련 보험 가입 증빙', required: false, acquisition: 'user_authored' },
+    ],
+    note: '탐방로 정기예약(성판악·관음사 등 일반 탐방)은 이 항목이 아니다 — 그건 국립공원 탐방예약시스템(별도 온라인, SP §3 참조)이 처리하며 Hondi가 대행하지 않는다. 이 항목은 특별보호구역·통제탐방로처럼 자연공원법 제28조가 원칙적으로 막아둔 구역에 학술조사 등 예외 사유로 들어가려는 경우만 해당.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -19243,6 +19270,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // 않고 그대로 재사용.
   'jeju:water_leak_fee_reduction':   { target_type: 'dept', target_id: 'do-agency:WATER' },
   'jeju:water_social_fee_reduction': { target_type: 'dept', target_id: 'do-agency:WATER' },
+  // ★ 2026-08-20 — 03-do-agency GOV-TASK-904-GAP, SP-AGY-HERITAGE 실작업.
+  // 'do-agency:HERITAGE'는 DEPT_TASK_TAXONOMY.dept에 이미 등록된 도메인.
+  'jeju:hallasan_special_entry_permit': { target_type: 'dept', target_id: 'do-agency:HERITAGE' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
