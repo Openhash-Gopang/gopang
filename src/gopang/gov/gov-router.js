@@ -595,23 +595,36 @@ const JEJU_L2_TABLE = [
   { code: 'SP-DO-OCEAN',    file: '02-do-dept/SP-DO-OCEAN_v1.1.md',
     domain: 'ocean', 도코드: 'jeju',
     kw: ['해양수산국', '어업면허', '마을어장', '수산업', '양식업', '어업', '수산'] },
-  // ★ 2026-08-02 신설 — SP-DO-COMM/GENDER/GENERAL/SPOKES 4개는 JEJU-DO-SP
-  // §3-1이 2026-07-10에 "상시 조직인데 라우팅 누락"이라고 이미 자체
-  // 발견·기록해뒀으나, 그 이후 실제 이 테이블 반영이 빠져 있었다(1차
-  // SP-Tree 감사로 발견). domain/도코드 필드가 없으므로 원형 템플릿
-  // 렌더링 경로 대신 entry.file을 직접 fetch하는 static 경로를 탄다
-  // (do-dept 13개 템플릿 이전 이전에 쓰던 방식과 동일 — 이 4개는 아직
-  // 템플릿 데이터가 없으므로 그대로 static file 방식 유지).
+  // ★ 2026-08-02 신설, 2026-08-21 정정 — SP-DO-COMM/GENDER/GENERAL/SPOKES
+  // 4개는 JEJU-DO-SP §3-1이 2026-07-10에 "상시 조직인데 라우팅 누락"이라고
+  // 이미 자체 발견·기록해뒀으나, 그 이후 실제 이 테이블 반영이 빠져
+  // 있었다(1차 SP-Tree 감사로 발견). 당시엔 domain/도코드가 없어 static
+  // 경로였는데, **2026-08-04에 do-dept-master-data.json에 comm/general/
+  // liaison/spokes 4개 도메인 템플릿 레코드가 이미 신설됐음에도 이 테이블이
+  // 갱신 안 돼 계속 static file만 쓰고 있던 버그**를 02-do-dept 공백 채우기
+  // 감사(2026-08-21) 중 발견 — SP-DEPT-{COMM,GENERAL,LIAISON,SPOKES}-
+  // TEMPLATE_v1.0.md가 이미 디스크에 있는데 한 번도 렌더링된 적이 없었다.
+  // 이 4개만 domain/도코드를 채워 템플릿 경로로 전환한다. GENDER는
+  // do-dept-master-data.json에 아직 레코드가 없어(도메인 자체 미신설)
+  // static 방식을 그대로 유지 — 잘못 domain을 채우면 존재하지 않는
+  // 템플릿 fetch가 실패해 조용히 static으로 폴백되긴 하지만(코드상
+  // try/catch), 혼란을 막기 위해 있는 그대로 static으로 둔다.
   { code: 'SP-DO-COMM',     file: '02-do-dept/SP-DO-COMM_v1.0.md',
+    domain: 'comm', 도코드: 'jeju',
     kw: ['소통청렴담당관', '대민소통', '청렴', '감사'] },
   { code: 'SP-DO-GENDER',   file: '02-do-dept/SP-DO-GENDER_v1.0.md',
     kw: ['성평등여성정책관', '성평등', '성평등정책', '성평등 정책'] },
   { code: 'SP-DO-GENERAL',  file: '02-do-dept/SP-DO-GENERAL_v1.0.md',
+    domain: 'general', 도코드: 'jeju',
     kw: ['총무과', '일반서무', '문서관리', '인사지원'] },
   { code: 'SP-DO-SPOKES',   file: '02-do-dept/SP-DO-SPOKES_v1.0.md',
+    domain: 'spokes', 도코드: 'jeju',
     kw: ['대변인', '도정 홍보', '도정홍보', '언론대응', '보도자료'] },
   // ★ 2026-08-03 신설 — 전수 감사로 발견된 나머지 5개 누락(한시조직/
-  // 특수조직, static file 방식은 위 COMM/GENDER/GENERAL/SPOKES와 동일).
+  // 특수조직). AIRPORTSUP/AUTONOMY/BALANCE/GANGJEONG은 do-dept-master-
+  // data.json에 대응 도메인 레코드가 없어(2026-08-21 확인) static 방식이
+  // 맞다 — LIAISON만 위 COMM/GENERAL/SPOKES와 동일 사유로 템플릿 경로로
+  // 전환.
   { code: 'SP-DO-AIRPORTSUP', file: '02-do-dept/SP-DO-AIRPORTSUP_v1.0.md',
     kw: ['공항확충지원단', '제2공항', '공항확충', '공항 확충 사업'] },
   { code: 'SP-DO-AUTONOMY',   file: '02-do-dept/SP-DO-AUTONOMY_v1.0.md',
@@ -621,6 +634,7 @@ const JEJU_L2_TABLE = [
   { code: 'SP-DO-GANGJEONG',  file: '02-do-dept/SP-DO-GANGJEONG_v1.0.md',
     kw: ['강정공동체사업추진단', '강정마을', '강정 공동체'] },
   { code: 'SP-DO-LIAISON',    file: '02-do-dept/SP-DO-LIAISON_v1.0.md',
+    domain: 'liaison', 도코드: 'jeju',
     kw: ['중앙협력본부', '국비 확보', '중앙정부 협력', '국비확보'] },
 ];
 

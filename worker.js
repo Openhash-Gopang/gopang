@@ -19073,6 +19073,22 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'usage_plan',   name: '사용계획서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 02-do-dept SP-DO-INNOV. 웹검색 확인(경향신문
+  // 2026년 하반기 전기차 민간보급 공고, 무공해차 통합누리집 ev.or.kr
+  // 절차안내) — 구매자→제조·수입사→지방자치단체(도청) 순으로 신청서가
+  // 전달되는 대리접수 구조이나, 최종 접수·심사·지급 주체는 도청(혁신
+  // 산업국)이 맞음. 정확한 법조항(대기환경보전법 vs 환경친화적 자동차의
+  // 개발 및 보급 촉진에 관한 법률 중 어느 쪽이 보조금 근거인지)은 추가
+  // 확인 필요해 TBD로 병기.
+  'jeju:ev_purchase_subsidy_application': {
+    agency: 'jeju', agency_name: '제주도청 혁신산업국',
+    task_name: '전기자동차 구매보조금 신청',
+    legal_basis: '환경친화적 자동차의 개발 및 보급 촉진에 관한 법률, 전기자동차 보급대상 평가에 관한 규정 — 정확한 보조금 지급 근거조항 TBD(2026-08-21, 추가 확인 필요)',
+    documents: [
+      { id: 'application',  name: '전기자동차 구매 지원신청서(제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
+      { id: 'subsidy_claim', name: '전기자동차 구매보조금 신청서(출고·등록 후 10일 이내, 제조·수입사 대리제출)', required: true, acquisition: 'user_authored' },
+    ],
+  },
   // ★ 2026-08-20 추가 — 도지사 전속 사무. 01-do(JEJU-DO-SP_v1.5.md)가
   // 2026-07-21부로 SP-PROVINCE-TEMPLATE+province-master-data.json 렌더링에
   // 완전히 대체된 죽은 파일이라는 걸 실사로 발견 — 이 task_key를 설명하는
@@ -19172,6 +19188,7 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:livestock_business_permit':           { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
   'jejusi:disaster_relief_grant':                 { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
+  'jeju:ev_purchase_subsidy_application':  { target_type: 'dept', target_id: 'do-dept:innov' },
   'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
   'jeju:development_project_approval':     { target_type: 'dept', target_id: 'do-dept:housing' },
