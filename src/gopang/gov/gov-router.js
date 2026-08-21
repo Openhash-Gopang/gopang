@@ -2615,7 +2615,7 @@ function _makeGenericCityDivisionEntries() {
     for (const item of list) {
       out.push({
         code: `SP-CITYDIV-GENERIC-${국코드.toUpperCase()}-${item.subCode}`,
-        국코드, 시코드: null, // 시코드 무관 — 전국 어디나 매칭 후보
+        국코드, 시코드: null, subCode: item.subCode, // 시코드 무관 — 전국 어디나 매칭 후보
         name: item.name, desc: item.name,
         kw: item.kw, file: item.file, generic: true,
       });
@@ -4177,23 +4177,47 @@ async function _fetchCityDeptText(match, taskText = '') {
   return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
 
+// ── 과(division) 마스터데이터 로더 (2026-08-22 신설, 1호 파일럿:
+// 부산 해운대구) — city-dept 로더(_loadCityDeptMasterData)와 동일 패턴.
+let _cityDivisionMasterData = null;
+async function _loadCityDivisionMasterData() {
+  if (_cityDivisionMasterData) return _cityDivisionMasterData;
+  const raw = await _fetchText('04-city/templates/city-division-master-data.json');
+  _cityDivisionMasterData = JSON.parse(raw).과목록;
+  return _cityDivisionMasterData;
+}
+
 // ── 과(division) 텍스트 fetch — 실사(제주)와 제네릭(비제주)을 함께 처리
-// (2026-08-21 신설, 2026-08-22 재복원 2회차) ─────────────────────────
-async function _fetchCityDivisionText(divEntry, cityDeptRec) {
+// (2026-08-21 신설, 2026-08-22 재복원 2회차, 2026-08-22 인스턴스 조회
+// 배선) ────────────────────────────────────────────────────────────
+// 두 번째 인자는 이제 시코드(문자열)다 — 이전에는 항상 null을 넘겨
+// 인스턴스 데이터가 전혀 반영되지 않았다(코드는 있었으나 실제 조회
+// 로직·데이터 파일이 없었음). 마스터데이터에 레코드가 없으면 기존과
+// 동일하게 기본 라벨로 폴백한다 — 실사 없어도 항상 작동해야 한다는
+// 원칙은 그대로 유지.
+async function _fetchCityDivisionText(divEntry, 시코드) {
   if (!divEntry.generic) {
     return _fetchText(divEntry.file, _currentProvinceRepo());
   }
   const template = await _fetchText(divEntry.file);
+  let rec = null;
+  if (시코드) {
+    try {
+      const records = await _loadCityDivisionMasterData();
+      rec = records.find(r => r.시코드 === 시코드 && r.국코드 === divEntry.국코드
+        && r.과코드 === divEntry.subCode) || null;
+    } catch { /* 마스터데이터 파일 없거나 파싱 실패해도 기본 라벨로 계속 진행 */ }
+  }
   return template
     .replaceAll('{GOV_COMMON}', '도청 공통')
     .replaceAll('{DO_ROOT_SP}', '도청 실국')
     .replaceAll('{CITY_ROOT_SP}', '시청')
     .replaceAll('{CITY_DEPT_ROOT_SP}', '시청 국')
-    .replaceAll('{시이름}', cityDeptRec?.시이름 || '')
-    .replaceAll('{국이름}', cityDeptRec?.국이름 || CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] || '담당부서')
-    .replaceAll('{콜센터명}', cityDeptRec?.콜센터명 || '')
-    .replaceAll('{콜센터번호}', cityDeptRec?.콜센터번호 || '')
-    .replaceAll('{콜센터운영시간}', cityDeptRec?.콜센터운영시간 || '');
+    .replaceAll('{시이름}', rec?.시이름 || '')
+    .replaceAll('{국이름}', rec?.국이름 ?? CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] ?? '담당부서')
+    .replaceAll('{콜센터명}', rec?.콜센터명 || '')
+    .replaceAll('{콜센터번호}', rec?.콜센터번호 || '')
+    .replaceAll('{콜센터운영시간}', rec?.콜센터운영시간 || '');
 }
 
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
@@ -4904,7 +4928,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
           const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
           if (divisionMatch) {
-            parts.push(await _fetchCityDivisionText(divisionMatch, null));
+            parts.push(await _fetchCityDivisionText(divisionMatch, cityCode.시코드));
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
@@ -4977,7 +5001,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
         const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
         if (divisionMatch) {
-          parts.push(await _fetchCityDivisionText(divisionMatch, null));
+          parts.push(await _fetchCityDivisionText(divisionMatch, cityOnly.시코드));
           trace.push(`${divisionMatch.code}(과/팀 특정)`);
         }
       }
