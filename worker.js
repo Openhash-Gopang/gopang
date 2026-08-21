@@ -19639,6 +19639,27 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'tech_docs', name: '기술·광고·작업 관련 서류(최종본, 행사 7일 전 제출)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 07-org 잔여분(JCPA), GOV-TASK-GAP-TRACKER
+  // "제주 관련 07-org 27/28, JCPA만 보류" 항목 처리. 웹검색 확인 —
+  // 舊 제주영상·문화산업진흥원은 2024-09-06 법인등기 완료로 기관명이
+  // '제주콘텐츠진흥원'으로 정식 변경(제주특별자치도조례 제3767호,
+  // 2024-07-15 개정 "제주콘텐츠진흥원 설립 및 지원 조례"). SP 파일명·
+  // 코드(JCPA)는 舊 명칭 그대로 두되(라우팅 코드 변경은 별도 작업 필요
+  // — 이번엔 표시 명칭만 갱신), 최신 명칭·주소·전화 반영. 지원사업
+  // (콘텐츠기반·육성·확산·인재 4개 팀)은 전부 공모·심사위원회 선정형
+  // (JFAC과 동일 패턴)이라 GOV_TASK 등록 대상 아님 — 그러나 촬영지원
+  // 장비 대여는 온라인 시스템(jejustudio.or.kr)을 통한 정형화된 선착순
+  // 신청·승인 절차(공모·심사 없음)로 확인돼 등록 대상으로 판단.
+  'jcpa:filming_equipment_rental': {
+    agency: 'jcpa', agency_name: '제주콘텐츠진흥원(舊 제주영상·문화산업진흥원)',
+    task_name: '촬영지원장비 대여 신청',
+    legal_basis: '제주콘텐츠진흥원 설립 및 지원 조례(제주특별자치도조례 제3767호, 2024-07-15 일부개정) — 문화산업진흥기본법 제3조·민법 제32조 근거',
+    documents: [
+      { id: 'application',  name: '장비대여 신청서(온라인, 대여 희망일 최소 3영업일 전 제출)', required: true, acquisition: 'user_authored' },
+      { id: 'agreement',    name: '장비 이용서약서(약관 동의)', required: true, acquisition: 'user_authored' },
+      { id: 'shoot_info',   name: '촬영 정보(일정·촬영 내용) 기입', required: true, acquisition: 'user_authored' },
+    ],
+  },
   // ★ 2026-08-21 추가 — 전국 평생교육·장학진흥원류 15곳 일괄 등록. 제주
   // 원형(jiles:scholarship_application, 재단이 자체 공고·심사위원회
   // 심사로 직접 선발하는 운영 패턴, 2026-08-21 검증)을 복제 — 단 개별
@@ -20255,6 +20276,7 @@ const AGENCY_TO_DEPT_TARGET = {
   'cntp:equipment_testing_request': { target_type: 'org', target_id: 'org:CNTP' },
   'jbtp:equipment_testing_request': { target_type: 'org', target_id: 'org:JBTP' },
   'iccjeju:venue_rental_application': { target_type: 'org', target_id: 'org:ICCJEJU' },
+  'jcpa:filming_equipment_rental': { target_type: 'org', target_id: 'org:JCPA' },
   'seoulschol:scholarship_application': { target_type: 'org', target_id: 'org:SEOULSCHOL' },
   'sile:scholarship_application': { target_type: 'org', target_id: 'org:SILE' },
   'gglife:scholarship_application': { target_type: 'org', target_id: 'org:GGLIFE' },
