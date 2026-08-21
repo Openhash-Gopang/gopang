@@ -433,7 +433,13 @@ function _renderProvinceTemplate(template, rec) {
     .replaceAll('{광역출력_문구}', rec.광역출력_문구 || '')
     .replaceAll('{위임사무_문구}', rec.위임사무_문구 || '')
     .replaceAll('{하위SP_접두어}', rec.하위SP_접두어 || '')
-    .replaceAll('{유의사항_추가}', rec.유의사항_추가 || '');
+    .replaceAll('{유의사항_추가}', rec.유의사항_추가 || '')
+    // ★ 2026-08-20 추가 — SP-PROVINCE-TEMPLATE v1.2에서 신설된
+    // 자리표시자. 여기 안 넣으면 렌더링 결과에 '{고유사무_문구}'
+    // 리터럴 문자열이 그대로 남는다(실제로 이 버그로 한 번 걸릴 뻔함 —
+    // 템플릿·데이터만 고치고 이 함수를 빠뜨리는 실수, 반드시 셋 다
+    // 같이 갱신할 것).
+    .replaceAll('{고유사무_문구}', rec.고유사무_문구 || '(아직 실사되지 않음 — 이 도청 고유 사무 목록은 조사 중)');
 }
 async function _loadDoSp() {
   const provinceCode = _resolveProvinceCode();
