@@ -2477,6 +2477,16 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-ECON-VILLAGE-TEMPLATE_v1.0.md',
     },
   ],
+  agrieconomy: [
+    {
+      // ★ 같은 국의 감귤(CITRUS)·수산(FISHERY)·친환경농업(ECOFARM)은
+      // 제주 특화 산업이라 제외 — 축산업만 전국 보편이라 등록.
+      subCode: 'LIVESTOCK', name: '축산과(축산업 허가·가축분뇨 신고)',
+      kw: ['가축사육업 허가', '축산업 등록', '가축분뇨 배출시설', '축산과',
+        '가축사육업 등록'],
+      file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-LIVESTOCK-TEMPLATE_v1.0.md',
+    },
+  ],
   // 다른 도메인은 개별 검증 후 순차 추가 예정.
 };
 
