@@ -19048,6 +19048,31 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'biz_plan',     name: '사업계획서', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-20 추가 — 02-do-dept(도청 본청, 최초 등록). 04-city와
+  // 달리 agency 코드는 'jeju'(도청)로, 기존 'jejusi'(제주시)와 다르다 —
+  // 제주특별법 제17조제5항("행정시장은 도지사의 지휘·감독을 받아 소관
+  // 국가사무 및 지자체사무를 맡아 처리")을 근거로, 시청은 실집행/도청은
+  // 정책총괄이 원칙이나 아래 2건은 도 고유 재산·특별법 사무라 예외.
+  'jeju:jeju43_victim_compensation_claim': {
+    agency: 'jeju', agency_name: '제주도청 특별자치행정국 4·3지원과',
+    task_name: '제주4·3사건 희생자·유족 보상금 지급 신청',
+    legal_basis: '제주4·3사건 진상규명 및 희생자 명예회복에 관한 특별법, 같은 법 시행령',
+    documents: [
+      { id: 'application',  name: '보상금 지급결정 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'family_cert',  name: '가족관계증명서·제적등본', required: true, acquisition: 'gov24',
+        idv_type: 'idv.cert.family_relation', max_age_days: 30 },
+      { id: 'victim_decision', name: '희생자 결정통지서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jeju:public_property_use_permit': {
+    agency: 'jeju', agency_name: '제주도청 특별자치행정국 회계재산관리과',
+    task_name: '도유재산(공유재산) 대부·매각·사용허가 신청',
+    legal_basis: '공유재산 및 물품 관리법 제20조, 같은 법 시행령 제13조',
+    documents: [
+      { id: 'application',  name: '공유재산 사용허가(대부·매각) 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'usage_plan',   name: '사용계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
 };
 
 // ── GOV_TASK → dept_tasks 매핑 (2026-08-13 신설, Pathfinder 계측 연결) ──
@@ -19118,6 +19143,8 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:livestock_business_permit':           { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
   'jejusi:disaster_relief_grant':                 { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
   'jejusi:passenger_transport_registration':      { target_type: 'dept', target_id: 'city-dept:jeju:safety' },
+  'jeju:jeju43_victim_compensation_claim': { target_type: 'dept', target_id: 'do-dept:jachi' },
+  'jeju:public_property_use_permit':       { target_type: 'dept', target_id: 'do-dept:jachi' },
 };
 
 // agency:task_key 세분 항목을 먼저 찾고 없으면 agency 단위로 폴백한다.
