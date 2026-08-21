@@ -2408,7 +2408,15 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-JACHI-TAX-TEMPLATE_v1.0.md',
     },
   ],
-  // 다른 도메인(welfare/climate/culture 등)은 개별 검증 후 순차 추가 예정.
+  welfare: [
+    {
+      subCode: 'BASICLIVELIHOOD', name: '기초생활보장과',
+      kw: ['기초생활보장', '생계급여', '의료급여', '주거급여', '교육급여',
+        '기초생활수급', '부양의무자'],
+      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-BASICLIVELIHOOD-TEMPLATE_v1.0.md',
+    },
+  ],
+  // 다른 도메인(climate/culture 등)은 개별 검증 후 순차 추가 예정.
 };
 
 function _makeGenericCityDivisionEntries() {
