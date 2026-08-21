@@ -2426,7 +2426,15 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-ENVMGMT-TEMPLATE_v1.0.md',
     },
   ],
-  // 다른 도메인(culture 등)은 개별 검증 후 순차 추가 예정.
+  culture: [
+    {
+      subCode: 'LIBRARY', name: '공공도서관',
+      kw: ['도서관', '도서 대출', '도서 반납', '상호대차', '자료실',
+        '도서관 회원가입', '도서 예약'],
+      file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-LIBRARY-TEMPLATE_v1.0.md',
+    },
+  ],
+  // 다른 도메인(urbanconstruction 등)은 개별 검증 후 순차 추가 예정.
 };
 
 function _makeGenericCityDivisionEntries() {
