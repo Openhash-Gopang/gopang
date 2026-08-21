@@ -18910,6 +18910,165 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'biz_plan',     name: '사업계획서(위치도·평면도 포함)', required: true, acquisition: 'user_authored' },
     ],
   },
+  // ★ 2026-08-21 추가 — 04-city 공백 채우기 배치. 도서관법·체육시설법·
+  // 산림문화휴양법·감염병예방법·폐기물관리법·지방세기본법 등 이미 확립된
+  // 법률에 근거한 정형화된 시청 서비스 16건 일괄 등록(2026-08-21).
+  'jejusi:library_membership_registration': {
+    agency:      'jejusi',
+    agency_name: '제주시청 문화체육국 (우당/탐라도서관)',
+    task_name:   '공공도서관 회원가입·도서 대출',
+    legal_basis: '도서관법 제18조·제23조',
+    documents: [
+      { id: 'application', name: '도서관 회원가입 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '신분증(본인 확인용)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:library_membership_registration': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 문화체육국 도서관',
+    task_name:   '공공도서관 회원가입·도서 대출',
+    legal_basis: '도서관법 제18조·제23조',
+    documents: [
+      { id: 'application', name: '도서관 회원가입 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '신분증(본인 확인용)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:sports_facility_rental': {
+    agency:      'jejusi',
+    agency_name: '제주시청 문화체육국 체육시설관리 부서',
+    task_name:   '공공체육시설 이용·대관 신청',
+    legal_basis: '체육시설의 설치·이용에 관한 법률 제5조',
+    documents: [
+      { id: 'application', name: '시설 대관(이용) 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '신분증 또는 단체 등록증', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:sports_facility_rental': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 문화체육국 체육시설관리 부서',
+    task_name:   '공공체육시설 이용·대관 신청',
+    legal_basis: '체육시설의 설치·이용에 관한 법률 제5조',
+    documents: [
+      { id: 'application', name: '시설 대관(이용) 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '신분증 또는 단체 등록증', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:performance_hall_rental': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 문화체육국 예술의전당',
+    task_name:   '공연장 대관 신청',
+    legal_basis: '공연법 및 시설 자체 대관운영 규정(정확한 조례명 TBD)',
+    documents: [
+      { id: 'application', name: '공연장 대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'event_plan', name: '공연·행사계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:performance_hall_rental': {
+    agency:      'jejusi',
+    agency_name: '제주시청 문화체육국 문화예술회관',
+    task_name:   '공연장 대관 신청',
+    legal_basis: '공연법 및 시설 자체 대관운영 규정(정확한 조례명 TBD)',
+    documents: [
+      { id: 'application', name: '공연장 대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'event_plan', name: '공연·행사계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:art_museum_exhibition_rental': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 문화체육국 예술관',
+    task_name:   '전시장 대관 신청',
+    legal_basis: '박물관 및 미술관 진흥법 및 시설 자체 대관운영 규정(정확한 조례명 TBD)',
+    documents: [
+      { id: 'application', name: '전시장 대관 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'event_plan', name: '전시계획서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:forest_recreation_facility_reservation': {
+    agency:      'jejusi',
+    agency_name: '제주시청 소관 자연휴양림',
+    task_name:   '산림휴양시설 이용·숙박 예약',
+    legal_basis: '산림문화·휴양에 관한 법률 제19조',
+    documents: [
+      { id: 'application', name: '이용·숙박 예약 신청서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:forest_recreation_facility_reservation': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 소관 산림휴양시설',
+    task_name:   '산림휴양시설 이용·숙박 예약',
+    legal_basis: '산림문화·휴양에 관한 법률 제19조',
+    documents: [
+      { id: 'application', name: '이용·숙박 예약 신청서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:vaccination_reservation': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시 보건소',
+    task_name:   '예방접종 신청·건강검진 예약',
+    legal_basis: '감염병의 예방 및 관리에 관한 법률 제24조·제25조',
+    documents: [
+      { id: 'application', name: '예방접종 신청서(문진표 포함)', required: true, acquisition: 'user_authored' },
+      { id: 'id_proof', name: '신분증 또는 주민등록등본', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:citrus_shipment_report': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 농정경제국',
+    task_name:   '감귤 출하 신고',
+    legal_basis: '농수산물 유통 및 가격안정에 관한 법률 제10조, 제주특별자치도 감귤 생산 및 유통에 관한 조례',
+    documents: [
+      { id: 'application', name: '감귤 출하신고서', required: true, acquisition: 'user_authored' },
+      { id: 'farmland_cert', name: '농지원부 또는 과수원 현황', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:eco_friendly_farming_certification': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 농정경제국',
+    task_name:   '친환경농업 인증 신청',
+    legal_basis: '친환경농어업 육성 및 유기식품 등의 관리·지원에 관한 법률 제19조',
+    documents: [
+      { id: 'application', name: '친환경농산물 인증신청서', required: true, acquisition: 'user_authored' },
+      { id: 'farmland_cert', name: '농지 현황 자료', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:waste_disposal_facility_intake': {
+    agency:      'jejusi',
+    agency_name: '제주시청 기후환경국',
+    task_name:   '사업장 폐기물 반입 신청',
+    legal_basis: '폐기물관리법 제25조',
+    documents: [
+      { id: 'application', name: '폐기물 반입 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'waste_manifest', name: '폐기물 처리계획서(종류·양)', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:bulky_waste_disposal_sticker': {
+    agency:      'jejusi',
+    agency_name: '제주시청 기후환경국',
+    task_name:   '대형폐기물 배출 스티커 발급',
+    legal_basis: '폐기물관리법 제14조, 제주시 생활폐기물 관리 조례',
+    documents: [
+      { id: 'application', name: '대형폐기물 배출 신청서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'seogwipo:bulky_waste_disposal_sticker': {
+    agency:      'seogwipo',
+    agency_name: '서귀포시청 기후환경국',
+    task_name:   '대형폐기물 배출 스티커 발급',
+    legal_basis: '폐기물관리법 제14조, 서귀포시 생활폐기물 관리 조례',
+    documents: [
+      { id: 'application', name: '대형폐기물 배출 신청서', required: true, acquisition: 'user_authored' },
+    ],
+  },
+  'jejusi:property_tax_correction_request': {
+    agency:      'jejusi',
+    agency_name: '제주시청 기획조정실 세무과',
+    task_name:   '재산세·자동차세 부과 정정신청',
+    legal_basis: '지방세기본법 제50조(경정청구), 지방세법(재산세·자동차세)',
+    documents: [
+      { id: 'application', name: '지방세 정정(경정) 청구서', required: true, acquisition: 'user_authored' },
+      { id: 'proof_docs', name: '부과오류 입증서류', required: true, acquisition: 'user_authored' },
+    ],
+  },
   // ★ 2026-08-20 추가 — 문화관광체육국 관광진흥과(제주시청/서귀포시청).
   // 관광진흥법 제4조상 등록 권한자가 "시장·군수·구청장"(제주는 행정시장
   // 포함)으로 명문 규정 — 위임 이슈 없음(웹검색 확인, 2026-08-20).
@@ -20128,6 +20287,22 @@ const AGENCY_TO_DEPT_TARGET = {
   'seogwipo:emergency_welfare_support_request':              { target_type: 'dept', target_id: 'city-dept:seogwipo:welfare' },
   'jejusi:air_emission_facility_report':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
   'seogwipo:air_emission_facility_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
+  'jejusi:library_membership_registration': { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
+  'seogwipo:library_membership_registration': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
+  'jejusi:sports_facility_rental': { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
+  'seogwipo:sports_facility_rental': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
+  'seogwipo:performance_hall_rental': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
+  'jejusi:performance_hall_rental': { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
+  'seogwipo:art_museum_exhibition_rental': { target_type: 'dept', target_id: 'city-dept:seogwipo:culture' },
+  'jejusi:forest_recreation_facility_reservation': { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
+  'seogwipo:forest_recreation_facility_reservation': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
+  'seogwipo:vaccination_reservation': { target_type: 'dept', target_id: 'city-dept:seogwipo:health' },
+  'seogwipo:citrus_shipment_report': { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
+  'seogwipo:eco_friendly_farming_certification': { target_type: 'dept', target_id: 'city-dept:seogwipo:agrieconomy' },
+  'jejusi:waste_disposal_facility_intake': { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
+  'jejusi:bulky_waste_disposal_sticker': { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
+  'seogwipo:bulky_waste_disposal_sticker': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
+  'jejusi:property_tax_correction_request': { target_type: 'dept', target_id: 'city-dept:jeju:jachi' },
   'jejusi:park_occupancy_permit':   { target_type: 'dept', target_id: 'city-dept:jeju:climate' },
   'seogwipo:park_occupancy_permit': { target_type: 'dept', target_id: 'city-dept:seogwipo:climate' },
   'jejusi:tourism_business_registration':   { target_type: 'dept', target_id: 'city-dept:jeju:culture' },
