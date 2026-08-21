@@ -158,6 +158,8 @@ const { assembleGovSystemPrompt, resolveGovAgency } = await import('../gopang/go
 function mockClassify(text) {
   if (/청년\s*월세/.test(text)) return 'SP-DO-WELFARE';
   if (/자치경찰/.test(text)) return null; // 비교·설명형 — NONE
+  if (/종합병원.*개원/.test(text)) return 'SP-DO-SAFETY'; // 2026-08-21 신설 — 교차계층 중재 배선 검증
+  if (/청년.*지원금/.test(text)) return 'SP-DO-PLAN'; // 2026-08-21 신설 — 교차계층 중재 배선 검증
   return null;
 }
 
@@ -262,10 +264,10 @@ const CASES = [
   // A) 도청 실·국 — kw 직격
   { text: '태양광 발전소를 지으려고 하는데 허가는 어떻게 받나요', expectAgency: 'gov_do', expectContains: 'SP-DO-INNOV',
     note: 'INNOV kw에 "태양광" 포함 — jeju:renewable_power_business_permit 등록 부서. 키워드 직격 기대.' },
-  { text: '종합병원을 새로 개원하려고 하는데 어디서 허가를 받아야 하나요', expectAgency: 'gov_do', expectContains: 'SP-DO-SAFETY',
-    note: 'SAFETY kw는 "감염병/예방접종" 등뿐이라 "병원 개원"은 미스 가능성 — 실제로 매칭 안 되면 LLM폴백 필요성을 보여주는 참고 케이스(정답 강제 아님).' },
-  { text: '다른 지역에서 제주로 막 이사왔는데 청년한테 주는 지원금이 있다고 들었어요', expectAgency: 'gov_do', expectContains: 'SP-DO-PLAN',
-    note: 'PLAN kw에 "청년정책" 포함 — jeju:youth_inflow_incentive_application 등록 부서.' },
+  { text: '종합병원을 새로 개원하려고 하는데 어디서 허가를 받아야 하나요', expectAgency: 'gov_do', expectContains: 'SP-DO-SAFETY', useClassify: true,
+    note: 'INNOV/SAFETY kw 미스 — jeju:hospital_establishment_permit 등록 부서. 2026-08-21 라우팅 버그 수정 후 교차계층(agency vs L2) 중재 배선 검증용.' },
+  { text: '다른 지역에서 제주로 막 이사왔는데 청년한테 주는 지원금이 있다고 들었어요', expectAgency: 'gov_do', expectContains: 'SP-DO-PLAN', useClassify: true,
+    note: '청년 전입축하장려금(jeju:youth_inflow_incentive_application). 2026-08-21 라우팅 버그 수정 후 교차계층(WELFARE vs PLAN) 중재 배선 검증용.' },
 
   // B) 07-org — kw 미스 유도(정식명칭을 안 쓰는 자연스러운 구어체)
   { text: '휠체어를 타는데 이동할 때 쓸 수 있는 콜택시 같은 서비스가 있나요', useClassify: true,

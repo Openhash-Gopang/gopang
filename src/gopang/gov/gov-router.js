@@ -2387,89 +2387,17 @@ async function _classifyFallback(text, classifyFn) {
 }
 
 // ── 과/팀(division) 2단계 매칭 + LLM 폴백 (2026-08-02 재구현) ──────────
-// ── 시청 과(division) 전국 공용 원형 (2026-08-21 신설, GOV-TASK-904-GAP
-// 04-city 과 단위 원형화 1호 파일럿) ────────────────────────────────
-// CITY_DIVISION_TABLE은 아직 제주(jejusi/seogwipo) 전용 실사 테이블이다
-// (위 CITY_DIVISION_TABLE import 주석 참고). 비제주 시/군/구는 과 단위
-// 라우팅 자체가 없어 국(局) 단위 응답에서 멈췄다 — 이 테이블은 국코드별로
-// "전국 어디나 존재하는 과 단위 보편 업무"만 제네릭 원형으로 등록해,
-// 시코드에 상관없이 매칭되게 한다. 제주(jejusi/seogwipo)는 이미 실사
-// 데이터가 있으므로 _matchCityDivision에서 원천적으로 제외한다(실사 kw가
-// 항상 더 구체적이라 스코어링에서 이겨도, 혼선을 피하려 아예 안 섞는다).
-//
-// 도메인 추가 시 이 taxonomy에 항목만 늘리면 된다 — 검증 없이 대량으로
-// 채우지 말 것(주피터 지시 원칙: 하나씩 웹검색·실제 SP 원본 대조 후 추가).
-const GENERIC_CITY_DIVISION_TAXONOMY = {
-  jachi: [
-    {
-      subCode: 'TAX', name: '세무과(신고납부형 지방세)',
-      kw: ['취득세', '등록면허세', '지방소득세', '신고납부', '세무과',
-        '지방세 이의신청', '과세전적부심사'],
-      file: '04-city/templates/divisions/SP-CITYDIV-JACHI-TAX-TEMPLATE_v1.0.md',
-    },
-  ],
-  welfare: [
-    {
-      subCode: 'BASICLIVELIHOOD', name: '기초생활보장과',
-      kw: ['기초생활보장', '생계급여', '의료급여', '주거급여', '교육급여',
-        '기초생활수급', '부양의무자'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-BASICLIVELIHOOD-TEMPLATE_v1.0.md',
-    },
-  ],
-  climate: [
-    {
-      // ★ 위임 여부 TBD — 템플릿 파일 §LEGAL-BASIS 참고. 원권한자는
-      // 법문상 시·도지사이며, 시/군/구 집행은 인스턴스별 재확인 필요.
-      subCode: 'ENVMGMT', name: '환경관리과(대기·수질 배출시설 신고)',
-      kw: ['대기배출시설', '배출시설 설치신고', '대기오염', '수질오염',
-        '환경관리과', '배출시설 신고'],
-      file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-ENVMGMT-TEMPLATE_v1.0.md',
-    },
-  ],
-  culture: [
-    {
-      subCode: 'LIBRARY', name: '공공도서관',
-      kw: ['도서관', '도서 대출', '도서 반납', '상호대차', '자료실',
-        '도서관 회원가입', '도서 예약'],
-      file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-LIBRARY-TEMPLATE_v1.0.md',
-    },
-  ],
-  // 다른 도메인(urbanconstruction 등)은 개별 검증 후 순차 추가 예정.
-};
-
-function _makeGenericCityDivisionEntries() {
-  const out = [];
-  for (const [국코드, list] of Object.entries(GENERIC_CITY_DIVISION_TAXONOMY)) {
-    for (const item of list) {
-      out.push({
-        code: `SP-CITYDIV-GENERIC-${국코드.toUpperCase()}-${item.subCode}`,
-        국코드, 시코드: null, // 시코드 무관 — 전국 어디나 매칭 후보
-        name: item.name, desc: item.name,
-        kw: item.kw, file: item.file, generic: true,
-      });
-    }
-  }
-  return out;
-}
-const GENERIC_CITY_DIVISION_TABLE = _makeGenericCityDivisionEntries();
-
 // 국/부서(예: climate)까지 이미 확정된 상태에서, 그 산하 과/팀 중
 // 어디인지 키워드로 우선 판단한다. topScore===0(매칭 자체 없음)이면
 // "세부 과 없음"이지 애매함이 아니므로 null(국 단위 응답으로 충분).
 // tied.length>=2(동점)일 때만 진짜 애매함으로 보고 호출부가 LLM 폴백
 // 여부를 결정한다.
 function _matchCityDivision(text, 국코드, 시코드) {
-  const realTable = CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드 && e.시코드 === 시코드);
-  // 제주(jejusi/seogwipo)는 실사 데이터가 이미 있으므로 제네릭 원형을
-  // 섞지 않는다 — 비제주 시/군/구에 한해서만 제네릭 후보를 추가한다.
-  const isJeju = 시코드 === 'jejusi' || 시코드 === 'seogwipo';
-  const genericTable = isJeju ? [] : GENERIC_CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드);
-  const table = [...realTable, ...genericTable];
+  const table = CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드 && e.시코드 === 시코드);
   return _scoreMatchTies(text, table);
 }
 
 function _matchDoDeptDivision(text, domain) {
-
   const table = DO_DEPT_DIVISION_TABLE.filter(e => e.domain === domain);
   return _scoreMatchTies(text, table);
 }
@@ -3984,34 +3912,6 @@ async function _fetchCityDeptText(match, taskText = '') {
   return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
 
-// ── 과(division) 텍스트 fetch — 실사(제주)와 제네릭(비제주)을 함께 처리
-// (2026-08-21 신설) ──────────────────────────────────────────────
-// divisionMatch가 CITY_DIVISION_TABLE의 실사 항목이면 기존과 동일하게
-// 정적 파일을 그대로 fetch한다. GENERIC_CITY_DIVISION_TABLE에서 온
-// 항목(divEntry.generic===true)이면 원형 템플릿을 fetch해 최소 자리
-// 표시자만 채운다 — 마스터데이터가 없어도(비제주 대다수) 기본 라벨로
-// 즉시 작동해야 한다는 기존 원칙(2026-07-24, 국/시 단위와 동일)을 과
-// 단위에도 그대로 적용한다. §0 상속 체인 표기는 실제 동작에 영향을
-// 주지 않는 설명용 텍스트이므로(체인은 parts.push() 순서로 코드가
-// 이미 강제함), 값을 모를 땐 미해결 자리표시자를 노출하지 않고 일반
-// 서술로 대체한다.
-async function _fetchCityDivisionText(divEntry, cityDeptRec) {
-  if (!divEntry.generic) {
-    return _fetchText(divEntry.file, _currentProvinceRepo());
-  }
-  const template = await _fetchText(divEntry.file);
-  return template
-    .replaceAll('{GOV_COMMON}', '도청 공통')
-    .replaceAll('{DO_ROOT_SP}', '도청 실국')
-    .replaceAll('{CITY_ROOT_SP}', '시청')
-    .replaceAll('{CITY_DEPT_ROOT_SP}', '시청 국')
-    .replaceAll('{시이름}', cityDeptRec?.시이름 || '')
-    .replaceAll('{국이름}', cityDeptRec?.국이름 || CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] || '담당부서')
-    .replaceAll('{콜센터명}', cityDeptRec?.콜센터명 || '')
-    .replaceAll('{콜센터번호}', cityDeptRec?.콜센터번호 || '')
-    .replaceAll('{콜센터운영시간}', cityDeptRec?.콜센터운영시간 || '');
-}
-
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
 // 분류 LLM 호출조차 기다리게 하면 안 되는 영역이라 순수 정규식으로만 판단하고,
 // 애매하면 응급 쪽으로 분류한다(오탐 비용 < 누락 비용, SP-EXP-EMERGENCY §6).
@@ -4662,8 +4562,63 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 정리했다 — 실사 안 된 도는 accessor가 자동으로 빈 배열을 반환해
   // 아래 매칭이 전부 조용히 스킵된다(l2/national과 동일한 안전망).
   {
-    const agyMatch = await _resolveInstitutionMatch(text, _agencyTable(), pdvLocationHint, classifyFn);
-    if (agyMatch) {
+    // ★ 2026-08-21 재설계(스모크테스트 실측 결함 대응, 사용자 지시) —
+    // 기존엔 agency 테이블에서 score===1(키워드 1개만 걸린 약한 매칭)이어도
+    // 즉시 확정하고 반환해버려서, 실제로는 org/L2(도청 실·국)가 더 적합한
+    // 발화(예: "종합병원 개원 허가"가 SP-DO-SAFETY 대신 SP-AGY-BOHWAN(보건환경
+    // 연구원)으로 확정, "제품 시험분석"이 SP-ORG-JTP 대신 SP-AGY-BOHWAN으로
+    // 확정)도 다른 계층과 비교 한 번 없이 조용히 잘못 채감았다. 세 계층
+    // (agency/org/L2) 후보를 먼저 다 모아서, 1등이 약한 매칭이고 다른 계층에도
+    // 후보가 있으면 그때만 LLM에게 계층을 넘나드는 중재를 맡긴다 — 강한 매칭
+    // (topScore>=2, 즉 키워드 2개 이상 겹침)은 기존처럼 즉시 확정해 비용·지연
+    // 없이 그대로 통과시킨다(기존 통과 테스트 회귀 방지).
+    const agyScored = _scoreMatchTies(text, _agencyTable());
+    const orgScored = _scoreMatchTies(text, _orgTable());
+    const l2Scored = _scoreMatchTies(text, _l2Table());
+
+    // 세 계층의 topScore를 직접 비교해 "진짜 1등"을 정한다(계층 우선순위로
+    // 정하지 않는다 — 예전 버그가 정확히 이거였다: agency가 항상 먼저
+    // 확정되고 L2가 더 강한 매칭이어도 비교 기회조차 없었다). 동점이면
+    // agency>org>l2 순으로 기존 우선순위를 유지(하위호환).
+    const tierScores = [
+      { tier: 'agency', scored: agyScored },
+      { tier: 'org', scored: orgScored },
+      { tier: 'l2', scored: l2Scored },
+    ].filter(t => t.scored.best);
+    let winnerTier = null;
+    let winnerEntry = null;
+    if (tierScores.length > 0) {
+      const maxScore = Math.max(...tierScores.map(t => t.scored.topScore));
+      const topTier = tierScores.find(t => t.scored.topScore === maxScore); // 우선순위 배열 순서상 첫 동점자(agency>org>l2 하위호환)
+      const strongEnough = maxScore >= 2; // 키워드 2개 이상 겹치면 신뢰
+
+      if (strongEnough || tierScores.length === 1) {
+        winnerTier = topTier.tier; winnerEntry = topTier.scored.best;
+      } else if (classifyFn) {
+        // 진짜 애매한 경합(1등도 약함, 경쟁 계층도 있음) — LLM 중재.
+        const candidates = tierScores.map(t => {
+          if (t.tier === 'l2') {
+            const desc = ROUTE_DESCRIPTIONS[t.scored.best.code] || t.scored.best.domain || '';
+            return { tier: t.tier, entry: { ...t.scored.best, name: t.scored.best.code, desc } };
+          }
+          return { tier: t.tier, entry: t.scored.best };
+        });
+        const picked = await _classifyDivisionFallback(text, candidates.map(c => c.entry), classifyFn).catch(() => null);
+        if (picked) {
+          const found = candidates.find(c => c.entry.code === picked.code);
+          if (found) { winnerTier = found.tier; winnerEntry = found.entry; }
+        }
+        // NONE이면 winnerTier=null 유지 — 아래 정상 폴백 경로로 정직하게 흘려보냄.
+      } else {
+        // classifyFn 없는 구 하위호환 호출부 — 계층 우선순위(agency>org>l2)
+        // 대신 실제 점수가 가장 높은 후보를 선택(맹목적 agency 우선 금지 —
+        // 이게 바로 이번에 고친 회귀 원인).
+        winnerTier = topTier.tier; winnerEntry = topTier.scored.best;
+      }
+    }
+
+    if (winnerTier === 'agency' && winnerEntry) {
+      const agyMatch = winnerEntry;
       const agencyText = await _fetchAgencyText(agyMatch);
       parts.push(agencyText);
       trace.push(agyMatch.code);
@@ -4675,8 +4630,8 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
-    const orgMatch = await _resolveInstitutionMatch(text, _orgTable(), pdvLocationHint, classifyFn);
-    if (orgMatch) {
+    if (winnerTier === 'org' && winnerEntry) {
+      const orgMatch = winnerEntry;
       const orgText = await _fetchOrgText(orgMatch);
       parts.push(orgText);
       trace.push(orgMatch.code);
@@ -4688,6 +4643,10 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
+    // winnerTier==='l2' 이거나 null이면 이 블록에서 확정하지 않고 아래
+    // 3)L2 매칭 단계로 그대로 넘어간다(L2 후보가 이겼다면 그 단계가
+    // 어차피 같은 후보를 다시 찾아 정상 처리한다 — 중복 계산이지만
+    // _scoreMatchTies는 순수 함수라 부작용 없음).
   }
 
   // 1) 읍면동/리 이름이 직접 언급되면 규칙 B/C/F: 행정시 → 읍면동 체인
@@ -4720,7 +4679,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
           const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
           if (divisionMatch) {
-            parts.push(await _fetchCityDivisionText(divisionMatch, null));
+            parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
@@ -4793,7 +4752,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
         const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
         if (divisionMatch) {
-          parts.push(await _fetchCityDivisionText(divisionMatch, null));
+          parts.push(await _fetchText(divisionMatch.file, _currentProvinceRepo()));
           trace.push(`${divisionMatch.code}(과/팀 특정)`);
         }
       }
