@@ -719,6 +719,55 @@ function _matchCityDept(text, 시코드) {
   return null;
 }
 
+// ── 국가기관(정책기관/집행기관) ↔ 시청 국(局, jachi 등) 계층 충돌 감지
+// (2026-08-23 신설, "근본적 라우팅 정상화" 재설계 1단계) ───────────────
+// 배경: BUG-016류(여권) — "여권 재발급"이 한때 MOFA(외교부, 국가기관)
+// 키워드에 걸려 즉시 확정됐는데, 실제로는 시/군/구 여권과 소관이었다.
+// 그 개별 사례는 데이터(키워드 사전) 수정으로 이미 막았지만(MOFA에서
+// '여권' 제거 + jachi kw에 '여권' 추가), 구조적 원인 — 국가기관 계층이
+// 시/군/구 계층의 존재를 전혀 모른 채 매칭 즉시 return하는 것 — 은
+// 그대로 남아 있었다. 앞으로 또 다른 키워드가 두 사전에 동시에 오르면
+// (사전 관리 실수로) 같은 클래스의 버그가 재발한다. 이 함수는 그 재발을
+// 막는 구조적 안전망이다: 국가기관 후보가 서기 전에, 같은 발화가 시청
+// 국(局) 도메인에도 매칭되는지 반드시 함께 확인하게 강제한다.
+function _cityDeptCollisionCandidate(text, pdvLocationHint) {
+  const cityMatch = _matchCity(text, pdvLocationHint);
+  if (!cityMatch) return null;
+  const deptMatch = _matchCityDept(text, cityMatch.시코드);
+  if (!deptMatch) return null;
+  const code = `SP-CITYDEPT-${cityMatch.시코드}-${deptMatch.국코드}`;
+  const matchedKw = deptMatch.kw.filter(k => text.includes(k));
+  return {
+    code,
+    name: code,
+    desc: ROUTE_DESCRIPTIONS[code] ||
+      `${cityMatch.시코드} 시청 ${deptMatch.국코드} 국(局) 소관 사무 (매칭 키워드: ${matchedKw.join(', ')})`,
+    _cityMatch: cityMatch,
+    _deptMatch: deptMatch,
+  };
+}
+
+// ── 국가기관 ↔ "지방행정 전체"(시청 국 + 도청 실·국/L2) 계층 충돌 감지 ──
+// 위 함수(시청 국)만으로는 못 잡는 사례가 실측으로 확인됐다: "소상공인
+// 정책자금 대출 상담하고 싶어요" → MSS(중소벤처기업부, 국가기관)
+// 정책기관 키워드('소상공인 정책자금')에 걸려 즉시 확정되는데, 실제로는
+// 지역 소상공인 지원은 도청 SP-DO-ECON(L2, kw에 '소상공인' 포함) 소관인
+// 경우가 실무상 더 흔하다 — 시청 국 계층과 완전히 같은 클래스의 충돌이
+// 도청 L2 계층에서도 발생한다. 시청 국(더 구체적)을 먼저 확인하고,
+// 없으면 도청 L2까지 확인한다.
+function _localGovCollisionCandidate(text, pdvLocationHint) {
+  const cityDept = _cityDeptCollisionCandidate(text, pdvLocationHint);
+  if (cityDept) return cityDept;
+  const { best: l2Best, topScore: l2Score } = _scoreMatchTies(text, _l2Table());
+  if (!l2Best || l2Score === 0) return null;
+  return {
+    code: l2Best.code,
+    name: l2Best.name || l2Best.code,
+    desc: ROUTE_DESCRIPTIONS[l2Best.code] || l2Best.desc || `${l2Best.code}(도청 실·국) 소관 사무`,
+    _l2Match: l2Best,
+  };
+}
+
 // ── 경남 시/군 파일럿 인스턴스 (2026-07-24 신설) ──────────────────────
 // 주피터 지시: "진주·창원·산청군을 샘플로, 관련 법규를 기반으로 시 도메인을
 // 작성" — 단, 시청 국코드 도메인 클래스(SP-CITYDEPT-*-TEMPLATE 16개)는
@@ -4709,7 +4758,14 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   const _natAgencyHit = _guessNatAgencyDomainFromText(text);
   const _nameCollisionExempt = policyBodyGuess && _natAgencyHit &&
     (_POLICY_BODY_NAME_COLLISION_EXEMPT[policyBodyGuess] || []).some(kw => text.includes(kw));
-  if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt)) {
+  // ★ 2026-08-23 신설(재설계 1단계) — 국가기관(정책기관) 즉시확정 전
+  // 시청 국(jachi 등) 계층 충돌 여부를 먼저 확인한다. classifyFn이
+  // 없으면(하위호환) 검사 자체를 생략하고 기존처럼 즉시 확정 — 회귀 없음.
+  // 시청 계층 후보가 없으면(대다수 발화) 검사 비용만 들고 결과는
+  // 기존과 동일 — 기존 통과 테스트 28건에 영향 없음.
+  const _policyCityCollision = (policyBodyGuess && classifyFn)
+    ? _localGovCollisionCandidate(text, pdvLocationHint) : null;
+  if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt) && !_policyCityCollision) {
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
     trace.push('JEJU-NATIONAL-SP');
@@ -4726,6 +4782,45 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       trace.push(`SP-POLICYDIV-LAZY(${policyBodyGuess}/${divMatch.부서코드}/${divMatch.source})`);
     }
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+  }
+  if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt) && _policyCityCollision) {
+    // 국가기관과 시청 국 계층이 동시에 걸렸다 — 둘 다 후보로 얹어
+    // classifyFn 한 번으로 통합 판단(2단계). CLARIFY 신호는 그대로
+    // 위로 던져 사용자에게 되묻는다(기존 관례와 동일).
+    const natCandidate = {
+      code: `SP-POLICY-${policyBodyGuess}`,
+      name: _POLICY_BODY_NAME_KO[policyBodyGuess] || policyBodyGuess,
+      desc: ROUTE_DESCRIPTIONS[`SP-POLICY-${policyBodyGuess}`] ||
+        `${_POLICY_BODY_NAME_KO[policyBodyGuess] || policyBodyGuess}(전국 단일 정책기관) 소관 사무`,
+    };
+    let picked = null;
+    try {
+      picked = await _classifyDivisionFallback(text, [natCandidate, _policyCityCollision], classifyFn);
+    } catch (e) {
+      if (e instanceof NeedsClarificationSignal) throw e;
+      picked = null;
+    }
+    if (!picked || picked.code === natCandidate.code) {
+      // classifyFn이 국가기관을 고르거나 확정 못 하면(안전 기본값)
+      // 기존과 동일하게 국가기관으로 확정.
+      const nationalSp = await _loadNationalSp();
+      parts.push(nationalSp);
+      trace.push('JEJU-NATIONAL-SP');
+      const resolved = await resolvePolicyBodyLazy(policyBodyGuess, onProgress);
+      parts.push(resolved.text);
+      trace.push(`SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`, '(계층충돌 통합판단 — 국가기관 확정)');
+      const divMatch = await _tryDivisionMatch(policyBodyGuess, text, onProgress);
+      if (divMatch) {
+        parts.push(divMatch.text);
+        trace.push(`SP-POLICYDIV-LAZY(${policyBodyGuess}/${divMatch.부서코드}/${divMatch.source})`);
+      }
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    // classifyFn이 시청 국(局)을 골랐다 — 여기서 직접 확정하지 않고
+    // 아래의 일반 city/jachi 라우팅 경로(1)~2) 단계)로 자연스럽게
+    // 통과시킨다. 그 경로가 PERMIT-CRITERIA-PROTOCOL·division 매칭 등
+    // 기존 배선을 이미 다 갖추고 있어 여기서 중복 구현하지 않는다.
+    trace.push(`(계층충돌 통합판단 — 지방행정(${picked.code}) 소관으로 판정, 아래 라우팅 경로로 위임)`);
   }
 
   // -0.5) 도 판별 실패(발화·PDV 위치 힌트 둘 다 실패) — 2026-07-21 신설.
@@ -4754,7 +4849,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 0) 국가기관 매칭 — JEJU-DO-SP(도청 트리)와 배타적인 형제 노드.
   //    매칭되면 도청 트리는 아예 로드하지 않는다(JEJU-NATIONAL-SP §0).
   const natMatch = _matchNational(text);
-  if (natMatch) {
+  // ★ 2026-08-23 신설(재설계 1단계) — policyBodyGuess와 동일한 계층충돌
+  // 안전망. natMatch(지사형 집행기관)도 즉시확정 전에 시청 국 계층과
+  // 충돌하는지 확인한다. classifyFn 없거나 시청 후보 없으면 기존과
+  // 완전히 동일(회귀 없음).
+  const _natCityCollision = (natMatch && classifyFn)
+    ? _localGovCollisionCandidate(text, pdvLocationHint) : null;
+  if (natMatch && !_natCityCollision) {
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
     trace.push('JEJU-NATIONAL-SP');
@@ -4767,6 +4868,32 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     trace.push(natMatch.code);
     if (agencyPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+  }
+  if (natMatch && _natCityCollision) {
+    const natCandidate = {
+      code: natMatch.code,
+      name: natMatch.name || natMatch.code,
+      desc: ROUTE_DESCRIPTIONS[natMatch.code] || natMatch.domain || `${natMatch.code}(국가기관 지사) 소관 사무`,
+    };
+    let picked = null;
+    try {
+      picked = await _classifyDivisionFallback(text, [natCandidate, _natCityCollision], classifyFn);
+    } catch (e) {
+      if (e instanceof NeedsClarificationSignal) throw e;
+      picked = null;
+    }
+    if (!picked || picked.code === natCandidate.code) {
+      const nationalSp = await _loadNationalSp();
+      parts.push(nationalSp);
+      trace.push('JEJU-NATIONAL-SP');
+      const natCityHint = _matchCity(text, pdvLocationHint);
+      const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(natMatch, natCityHint?.시코드 || null);
+      parts.push(agencyText);
+      trace.push(natMatch.code, '(계층충돌 통합판단 — 국가기관 확정)');
+      if (agencyPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    trace.push(`(계층충돌 통합판단 — 지방행정(${picked.code}) 소관으로 판정, 아래 라우팅 경로로 위임)`);
   }
   const catalogOnly = _matchCatalogOnly(text);
   if (catalogOnly) {
