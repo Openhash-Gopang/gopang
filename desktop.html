@@ -1460,6 +1460,7 @@ section.section[data-tab].tab-active { display: block; }
     <a href="#" onclick="loadPage('ai-engine');return false;">AI 엔진</a>
     <a href="#" onclick="loadPage('openhash');return false;">오픈해시</a>
     <a href="#" onclick="loadPage('hondi-market');return false;">혼디마켓</a>
+    <a href="#" onclick="loadPage('rule-of-law');return false;">법치국가</a>
   </nav>
   <div class="site-nav-status">
     <span class="dot-status"><span class="dot"></span>AI 분석 가동 중</span>
@@ -3617,7 +3618,7 @@ function toggleSubmenu(id, btnEl) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant','ai-engine'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant','ai-engine','rule-of-law'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -3631,6 +3632,7 @@ const PAGES = {
   'usage-guide':     '/pages/usage-guide.html',
   'ai-assistant':    '/pages/ai-assistant.html',
   'ai-engine':       '/pages/ai-engine.html',
+  'rule-of-law':     '/pages/rule-of-law.html',
 };
 
 // 로드 상태 추적
