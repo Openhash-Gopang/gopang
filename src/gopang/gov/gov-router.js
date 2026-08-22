@@ -2312,6 +2312,17 @@ const ROUTE_DESCRIPTIONS = {
   'SP-CITY-SEOGWIPO': '서귀포시청',
   'SP-SIGUNGU-LAZY': '시군구(기초자치단체) 관할 업무 — 텍스트에 정적 테이블에 없는 특정 시/군/구 이름이 언급되고 그 지자체 소관 업무(복지·안전·민원·환경 등) 문의로 보이는 경우 [2026-07-20 신설 — 지연 초기화]',
   'SP-NATIONAL-LAZY': '국가기관 지사(세무서·법원·검찰청·경찰청·건강보험공단 등 19개 핵심 기관) 관할 업무 — 정적 국가기관 테이블이 비어 있는 도(제주 외)에서 국가기관성 키워드가 언급된 경우 [2026-07-20 신설 — 지연 초기화]',
+  // ★ 2026-08-22 신설(사용자 지시 — 두 번째 근본결함 수정) — 주민등록
+  // 등초본·인감증명·가족관계증명서·전입신고 등은 읍면동 민원팀이 직접
+  // 처리하는 사무인데(05-emd/templates/SP-TEAM-CIVIL-TEMPLATE_v2.1.md
+  // §3), EMD는 발화·pdvLocationHint에 구체적 읍면동 이름이 리터럴로
+  // 있을 때만 결정론적으로 매칭된다(_matchEmd) — 그 외엔 이 코드 자체가
+  // 여태 후보로 존재한 적이 없어 classifyFn이 "정답이 후보에 없다"고
+  // 정직하게 NONE을 내는 게 실측 확인됐다(2026-08-22). 위치 확보(Fix
+  // 1)가 실패한 극소수 경우를 위한 안전망 — 선택되면 부서 후보 선택이
+  // 아니라 "거주 읍면동을 되묻는" 질문으로 처리된다(assembleGovSystemPrompt
+  // 참조).
+  'SP-EMD-LAZY': '읍면동(주민센터) 민원팀 직접 처리 사무 — 주민등록등초본·인감증명서·가족관계증명서·전입신고 등 즉시발급형 제증명 발급으로 보이는데, 어느 읍면동인지 아직 모르는 경우',
   'SP-POLICY-LAZY': '중앙부처·청·위원회 본청(법무부·교육부·감사원·공정거래위원회 등 70개, 도별 지사가 없는 전국 단일 정책기관) 관할 업무 — 개별 신청·민원이 아니라 부처 본청 차원의 정책·제도·인허가·신고 업무로 보이는 경우 [2026-08-02 신설 — 지연 초기화]',
 };
 
@@ -2367,6 +2378,11 @@ function _buildCandidatesText() {
   // SP-NATIONAL-LAZY와 달리 도 구분 없이 항상 후보에 얹는다(제주 포함).
   codes.add('SP-POLICY-LAZY');
 
+  // ★ 2026-08-22 신설 — EMD(읍면동) 민원팀 소관 사무를 위치 미확보
+  // 상태에서도 후보로 보여준다(근본결함 수정 — 상세 근거는 ROUTE_
+  // DESCRIPTIONS['SP-EMD-LAZY'] 주석 참조).
+  codes.add('SP-EMD-LAZY');
+
   return [...codes]
     .filter(code => ROUTE_DESCRIPTIONS[code])
     .map(code => `${code}: ${ROUTE_DESCRIPTIONS[code]}`)
@@ -2388,6 +2404,15 @@ class NeedsClarificationSignal extends Error {
   constructor(options) {
     super('NEEDS_CLARIFICATION');
     this.options = options; // [{code, name}, ...] — 최소 2개
+  }
+}
+// ★ 2026-08-22 신설 — 부서 A/B 중 선택이 아니라 "위치를 몰라서 못
+// 고른다"는 다른 종류의 불확실성. 자유형 질문(예: "어느 읍면동에
+// 사시나요?")이라 옵션 목록이 없다 — NeedsClarificationSignal과 구분.
+class NeedsLocationSignal extends Error {
+  constructor(question) {
+    super('NEEDS_LOCATION');
+    this.question = question;
   }
 }
 function _parseClarifySignal(code) {
@@ -5110,6 +5135,16 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     }
     // AI는 시군구 문제라고 봤는데 정규식이 이름·도메인을 못 뽑으면 —
     // 억지로 추측하지 않고 6)의 공통 레이어 응답으로 흘려보낸다.
+  } else if (classified === 'SP-EMD-LAZY') {
+    // ★ 2026-08-22 신설(사용자 지시 — 두 번째 근본결함 수정) — AI가
+    // "이건 읍면동 민원팀 사무(등본·인감증명·가족관계증명·전입신고 등)"
+    // 라고 판단했지만, 이 지점에 도달했다는 것 자체가 이미 앞선 1)
+    // 단계(_matchEmd, 발화+pdvLocationHint 양쪽 다 검사)가 구체적
+    // 읍면동 이름을 못 찾았다는 뜻이다 — 즉 위치 확보(Fix 1)가 실패한
+    // 극소수 경우. 여기서 부서를 추측하는 대신 정직하게 위치를 되묻는다.
+    throw new NeedsLocationSignal(
+      '주민등록·인감증명 등은 거주하시는 읍면동(주민센터)에서 처리합니다. 어느 읍면동에 거주하시나요?'
+    );
   } else if (classified) {
     if (_isNationalCode(classified)) {
       // 이미 parts에 SP-DO-000이 들어가 있으므로, 도청 트리를 걷어내고
@@ -5321,6 +5356,21 @@ export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, 
         needsClarification: {
           question: '어느 쪽에 가까운 용건인지 알려주시면 더 정확히 안내해드릴 수 있어요.',
           options: e.options,
+        },
+      };
+    }
+    // ★ 2026-08-22 신설(사용자 지시 — 두 번째 근본결함 수정) — 부서
+    // 선택형 되묻기와 달리 위치를 몰라서 못 고르는 경우. options가
+    // 비어있는 게 정상(자유형 질문) — 호출부는 이 필드를 보면 선택지
+    // 목록 대신 question 텍스트만 그대로 보여줘야 한다.
+    if (e instanceof NeedsLocationSignal) {
+      return {
+        systemPrompt: null,
+        trace: ['JEJU-GOV-COMMON', '(위치 불명 — 사용자 재질문 필요)'],
+        needsClarification: {
+          question: e.question,
+          options: [],
+          isLocationQuestion: true,
         },
       };
     }

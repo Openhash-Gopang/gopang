@@ -111,6 +111,30 @@ async function _reverseGeocodeViaKakao(lat, lng) {
   }
 }
 
+// ── 첫 턴 레이스컨디션 해소 (2026-08-22 신설, 사용자 지시) ──────────
+// _scheduleLocation()은 setTimeout(1000ms) + 비동기 프로필/GPS 조회라
+// 최소 1초 이상 걸린다. 지금까지는 "매 턴 재확인"만 해뒀지 첫 턴이
+// 그 사이에 도착하면 pdvLocationHint가 null인 채로 라우팅이 진행되는
+// 문제가 실측(2026-08-22 스모크테스트: 09-national/05-emd 계층 시나리오
+// 대부분이 위치정보 없이 라우팅됨)으로 확인됐다. 사용자 지적 —
+// "사용자의 AI 비서는 항상 사용자의 현재 위치와 주소를 알고 있어야
+// 한다"는 원칙을 지키려면 라우팅 직전에 위치 확보를 기다려야 한다.
+// 무한정 기다리면 위치 권한을 거부한 사용자가 영원히 응답을 못 받으니
+// 상한(기본 4초)을 둔다 — 그 안에 준비 안 되면 그냥 진행(기존 동작과
+// 동일, 회귀 없음)한다.
+export function _waitForLocationReady(timeoutMs = 4000) {
+  if (_locationReady) return Promise.resolve();
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const iv = setInterval(() => {
+      if (_locationReady || Date.now() - start > timeoutMs) {
+        clearInterval(iv);
+        resolve();
+      }
+    }, 150);
+  });
+}
+
 export function _updateLocationInPrompt() {
   if (!_userLocation) return;
   CFG.locationStr = _userLocation.address || (_userLocation.lat ? _userLocation.lat.toFixed(4) + ',' + _userLocation.lng.toFixed(4) : '위치없음');

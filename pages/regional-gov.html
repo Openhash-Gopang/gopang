@@ -113,7 +113,7 @@ import { _handleGovTaskTags } from '/src/gopang/ai/call-ai.js';
 // GPS로 자연스럽게 폴백한다(location.js 자체 catch 처리, 별도 대응 불필요) —
 // 지갑까지 여기서 초기화하는 건 더 큰 범위(로그인 온보딩 흐름)라 이번에도
 // 분리해 후속 과제로 남긴다.
-import { _scheduleLocation, _buildRoutingFacts } from '/src/gopang/services/location.js';
+import { _scheduleLocation, _buildRoutingFacts, _waitForLocationReady } from '/src/gopang/services/location.js';
 
 const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
@@ -419,6 +419,12 @@ let _govDirectCodeUsed = false;
 async function _callAI(latestUserText, typingEl) {
   let sp = '이 지역 정부기관 안내를 도와드립니다.', trace = [], agency = 'gov_do', provinceCode = null;
   try {
+    // ★ 2026-08-22 신설(사용자 지시) — URL facts로 이미 위치를 받았으면
+    // (가장 신뢰도 높은 값이라 그대로 씀) 대기 생략. 없으면 이 페이지
+    // 자체 위치 확보(GPS·프로필주소)가 끝날 때까지 최대 4초 기다린 뒤
+    // 라우팅한다 — "AI 비서는 항상 사용자 위치를 알고 있어야 한다"는
+    // 원칙을 지키려면 라우팅이 그 확보를 안 기다리고 앞서가면 안 된다.
+    if (!_urlFactsLocation) await _waitForLocationReady();
     const directCode = (_govDirectCode && !_govDirectCodeUsed) ? _govDirectCode : null;
     _govDirectCodeUsed = true;
     const r = await assembleGovSystemPrompt(latestUserText, _resolveLocationHint(), _govClassifyFn, (msg) => {
@@ -430,9 +436,13 @@ async function _callAI(latestUserText, typingEl) {
     // 전부 건너뛰고 되묻는 질문을 그대로 사용자에게 보여준다 — 예전엔
     // 이 신호 자체가 없어서 확신 없이 고른 부서 SP가 조용히 로드됐다.
     if (r.needsClarification) {
-      const { question, options } = r.needsClarification;
-      const optionLines = options.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
-      const clarifyText = `${question}\n\n${optionLines}`;
+      const { question, options, isLocationQuestion } = r.needsClarification;
+      // ★ 2026-08-22 추가 — isLocationQuestion(자유형 위치질문, 사용자
+      // 지시로 신설)은 선택지가 없으니 번호목록을 붙이지 않는다. 부서
+      // 선택형 되묻기(CLARIFY)만 기존처럼 번호목록을 붙인다.
+      const clarifyText = isLocationQuestion
+        ? question
+        : `${question}\n\n${options.map((o, i) => `${i + 1}. ${o.name}`).join('\n')}`;
       messages.push({ role: 'assistant', content: clarifyText });
       return clarifyText;
     }

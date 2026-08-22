@@ -257,7 +257,12 @@ async function main() {
     // 확인용). 되묻기가 뜨면 systemPrompt가 null이라 체크3은 자동으로
     // 건너뛴다(아래 기존 로직 그대로).
     if (r?.needsClarification) {
-      console.log(`  🔔 되묻기 발동: "${r.needsClarification.question}" 옵션: ${r.needsClarification.options.map((o) => o.name).join(' / ')}`);
+      const nc = r.needsClarification;
+      if (nc.isLocationQuestion) {
+        console.log(`  🔔 위치 되묻기 발동: "${nc.question}"`);
+      } else {
+        console.log(`  🔔 되묻기 발동: "${nc.question}" 옵션: ${nc.options.map((o) => o.name).join(' / ')}`);
+      }
     }
     console.log(`  체크1(라우팅 도달): ${routedOk ? '✅' : '❌'} (기대: ${s.expectContains})`);
 
