@@ -167,6 +167,9 @@ function mockClassify(text) {
   if (/보증/.test(text)) return 'SP-ORG-JCGF';
   if (/보육료/.test(text)) return 'SP-DO-WELFARE';
   if (/임대주택/.test(text)) return 'SP-ORG-JPDC';
+  // ★ 2026-08-23 신설 — 국가기관(MSS) vs 도청 L2(SP-DO-ECON) 계층충돌
+  // 통합판단 검증. 지역 소상공인 정책자금 상담은 실무상 도청 소관.
+  if (/소상공인.*정책자금|정책자금.*소상공인/.test(text)) return 'SP-DO-ECON';
   return null;
 }
 
@@ -187,7 +190,8 @@ const CASES = [
   // ── 도청 트리(지방행정) — 실국 매칭 ────────────
   { text: '지방세 취득세 납부 기한이 언제인가요', expectAgency: 'gov_do', expectContains: 'SP-DO-PLAN' },
   { text: '태풍 대비 재난 문자는 어디서 신청하나요', expectAgency: 'gov_do', expectContains: 'SP-DO-SAFETY' },
-  { text: '소상공인 정책자금 대출 상담하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-DO-ECON' },
+  { text: '소상공인 정책자금 대출 상담하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-DO-ECON', useClassify: true,
+    note: '2026-08-23 재설계 — MSS(국가기관 정책기관) kw와 SP-DO-ECON(도청 L2) kw가 동시 매칭되는 계층충돌 사례. 예전엔 국가기관으로 즉시 확정되던 기존 실패 사례(BUG-016류의 도청 버전) — 통합판단 신설로 수정 검증.' },
   { text: '어린이집 보육료 지원 대상인지 궁금해요', expectAgency: 'gov_do', expectContains: 'SP-DO-WELFARE', useClassify: true },
 
   // ── 시청 트리 ────────────────────────────────
