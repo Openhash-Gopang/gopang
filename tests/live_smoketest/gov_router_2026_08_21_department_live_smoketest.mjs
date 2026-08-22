@@ -171,35 +171,49 @@ const SCENARIOS = [
   //     없으므로 jejusi/seogwipo 시청(jachi 계열)이 실제 창구.
   //     외교부(MOFA, 국가기관 테이블에도 '여권' kw 있음)로 새면 오답.
   // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  // ★ 2026-08-22 신설(사용자 지시) — 가상의 주소·현재위치를 AC(라우팅
+  // 모듈)에 실어 보낸다. "AI 비서는 항상 사용자 위치를 안다"는 원칙에
+  // 따라 실제로는 location.js가 GPS/프로필주소를 resolveLocationHint로
+  // 채워주지만, 이 Node 스모크테스트엔 브라우저 GPS/프로필 API가 없어
+  // 직접 목 주소를 locationHint 필드로 얹는다 — Fix 1(위치 레이스컨디션
+  // 수정)이 실제로 _matchEmd(pdvLocationHint,...)를 살려 EMD 라우팅을
+  // 정상화하는지, 여권이 jachi(시청 여권과)로 정확히 가는지 검증한다.
+  // ══════════════════════════════════════════════════════════════
   {
     id: 'emd-resident-cert',
     utterance: '등본을 좀 떼야 하는데 어디로 가면 되나요',
+    locationHint: '제주특별자치도 제주시 애월읍 애월리 123-4',
     expectContains: 'SP-EMD-',
-    note: '주민등록표 등본 발급 — EMD 민원팀 직접 수행 사무',
+    note: '주민등록표 등본 발급 — EMD 민원팀 직접 수행 사무. 가상 주소(애월읍) 실어서 _matchEmd(pdvLocationHint) 경로 검증.',
   },
   {
     id: 'emd-seal-cert',
     utterance: '인감증명서가 필요한데 어디서 받을 수 있나요',
+    locationHint: '제주특별자치도 제주시 애월읍 애월리 123-4',
     expectContains: 'SP-EMD-',
-    note: '인감증명서 발급 — EMD 민원팀 직접 수행 사무(인감증명법)',
+    note: '인감증명서 발급 — EMD 민원팀 직접 수행 사무(인감증명법). 가상 주소 실음.',
   },
   {
     id: 'passport-not-emd',
     utterance: '여권을 잃어버려서 다시 만들어야 하는데 어디로 가야 하나요',
+    locationHint: '제주특별자치도 제주시 애월읍 애월리 123-4',
     expectContains: 'jachi',
-    note: '여권 재발급 — EMD "수행 불가" 명시 사무, 시/군/구청 여권과가 정답. 외교부(MOFA)나 EMD로 새면 오답. expectContains는 trace 문자열에 jachi가 포함되는지(시청 jachi 국 라우팅) 느슨하게 확인.',
+    note: '여권 재발급 — EMD "수행 불가" 명시 사무, 시/군/구청 여권과가 정답. 2026-08-22 근본원인 수정(JEJU_CITY_DEPT_TABLE jachi kw에 "여권" 누락) 검증용. 가상 주소 실음.',
   },
   {
     id: 'emd-transfer-report',
     utterance: '다른 지역으로 이사를 왔는데 신고해야 하나요',
+    locationHint: '제주특별자치도 제주시 애월읍 애월리 123-4',
     expectContains: 'SP-EMD-',
-    note: '전입신고 — EMD 민원팀 직접 수행 사무',
+    note: '전입신고 — EMD 민원팀 직접 수행 사무. 가상 주소 실음.',
   },
   {
     id: 'emd-family-relation-cert',
     utterance: '가족관계증명서를 떼려고 하는데요',
+    locationHint: '제주특별자치도 제주시 애월읍 애월리 123-4',
     expectContains: 'SP-EMD-',
-    note: '가족관계증명서 발급 — EMD 민원팀 직접 수행 사무',
+    note: '가족관계증명서 발급 — EMD 민원팀 직접 수행 사무. 가상 주소 실음.',
   },
   {
     id: 'building-register',
@@ -235,11 +249,12 @@ async function main() {
   const results = [];
   for (const s of SCENARIOS) {
     console.log(`\n=== ${s.id}: "${s.utterance}" ===`);
+    if (s.locationHint) console.log(`  📍 가상 위치 힌트: "${s.locationHint}"`);
     classifyCallCount = 0;
     let r;
     let error = null;
     try {
-      r = await assembleGovSystemPrompt(s.utterance, null, realClassifyFn);
+      r = await assembleGovSystemPrompt(s.utterance, s.locationHint || null, realClassifyFn);
     } catch (e) {
       error = e.message;
     }
