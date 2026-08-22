@@ -1457,7 +1457,7 @@ section.section[data-tab].tab-active { display: block; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="10" height="4" rx="1"/></svg>
       대시보드
     </a>
-    <a href="#" data-tab-target="feature-summary">AI 엔진</a>
+    <a href="#" onclick="loadPage('ai-engine');return false;">AI 엔진</a>
     <a href="#" onclick="loadPage('openhash');return false;">오픈해시</a>
     <a href="#" onclick="loadPage('hondi-market');return false;">혼디마켓</a>
   </nav>
@@ -3617,7 +3617,7 @@ function toggleSubmenu(id, btnEl) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant','ai-engine'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -3630,6 +3630,7 @@ const PAGES = {
   'scenario-test':   '/pages/scenario-test.html',
   'usage-guide':     '/pages/usage-guide.html',
   'ai-assistant':    '/pages/ai-assistant.html',
+  'ai-engine':       '/pages/ai-engine.html',
 };
 
 // 로드 상태 추적
