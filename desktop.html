@@ -114,7 +114,7 @@ body {
   position: absolute; top: 40px; right: 40px; background: #fff; border-radius: 10px;
   padding: 8px 16px; display: flex; align-items: center; gap: 8px; text-decoration: none;
 }
-.site-hero-corner-logo img { height: 30px; width: auto; display: block; }
+.site-hero-corner-logo img { height: 60px; width: auto; display: block; }
 .site-hero h1 {
   font-size: 30px; font-weight: 500; line-height: 1.4; margin: 0 0 16px;
   max-width: 560px; font-family: 'Pretendard', sans-serif;
@@ -366,30 +366,6 @@ body {
   display: flex; align-items: center; gap: 8px;
   text-decoration: none; font-family: 'Pretendard', sans-serif;
   font-size: 18px; font-weight: 600; color: var(--text);
-}
-
-/* ── 글자 크기 조절 ── */
-.fontsize-ctrl {
-  position: fixed; top: 16px; right: 24px; z-index: 2000;
-  display: flex; align-items: center; gap: 2px;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 99px; padding: 4px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-}
-.fontsize-ctrl button {
-  display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border: none; background: transparent;
-  border-radius: 50%; cursor: pointer; padding: 0;
-  font-family: 'Pretendard', sans-serif; font-weight: 600;
-  color: var(--text2); line-height: 1;
-  transition: background 0.15s, color 0.15s;
-}
-.fontsize-ctrl button:hover { background: var(--brand-bg); color: var(--brand-dk); }
-.fontsize-ctrl button.fs-small { font-size: 11px; }
-.fontsize-ctrl button.fs-large { font-size: 18px; }
-.fontsize-ctrl-divider { width: 1px; height: 16px; background: var(--border2); }
-@media (max-width: 680px) {
-  .fontsize-ctrl { top: 64px; right: 12px; }
 }
 
 /* 기존 nav 스타일 호환 유지 */
@@ -703,13 +679,6 @@ section.section[data-tab].tab-active { display: block; }
 <script>mermaid.initialize({startOnLoad:false, theme:"neutral", fontFamily:"inherit"});</script>
 </head>
 <body>
-
-<!-- ── 글자 크기 조절 ── -->
-<div class="fontsize-ctrl" role="group" aria-label="글자 크기 조절">
-  <button type="button" class="fs-btn fs-small" onclick="changeFontSize(-10)" aria-label="글자 작게">가</button>
-  <span class="fontsize-ctrl-divider"></span>
-  <button type="button" class="fs-btn fs-large" onclick="changeFontSize(10)" aria-label="글자 크게">가</button>
-</div>
 
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
@@ -1478,7 +1447,7 @@ section.section[data-tab].tab-active { display: block; }
     <span>혼디</span>
   </a>
   <nav class="site-nav-links" id="site-nav-links">
-    <a href="#" class="active" data-tab-target="usage-guide">이용방법</a>
+    <a href="#" onclick="loadPage('usage-guide');return false;">이용방법</a>
     <a href="#" data-tab-target="feature-summary">AI 비서</a>
     <a href="/feedback.html">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -3648,7 +3617,7 @@ function toggleSubmenu(id, btnEl) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -3659,6 +3628,7 @@ const PAGES = {
   scenarios:      '/pages/scenarios.html',
   'professional-ai': '/pages/professional-ai.html',
   'scenario-test':   '/pages/scenario-test.html',
+  'usage-guide':     '/pages/usage-guide.html',
 };
 
 // 로드 상태 추적

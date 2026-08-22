@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이용 방법 — 혼디</title>
+</head>
+<body>
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS (혼디 정부 청색 문서 스타일 — notice_20260901 참고) ── */
+:root {
+  --bg:        #f4f6f9;
+  --surface:   #ffffff;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+
+  --navy:      #0e1c3f;   /* 헤더/타이틀 진네이비 */
+  --navy2:     #12234f;
+  --brand:     #0c6cc3;   /* 포인트 블루 */
+  --brand-dk:  #094a86;
+  --accent:    #185fa5;   /* 섹션 번호 바 */
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #475569;
+  --text4:     #64748b;
+
+  --callout-bg:     #eff6ff;
+  --callout-border: #93c5fd;
+  --callout-text:   #1e3a5f;
+
+  --important-bg:     #fff7ed;
+  --important-border: #fbbf24;
+
+  --radius:    8px;
+  --radius-lg: 12px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ug-doc {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ── 헤더 ── */
+.ug-header {
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+}
+.ug-header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+}
+.ug-brand { display: flex; align-items: center; gap: 8px; }
+.ug-brand-dot {
+  width: 22px; height: 22px; border-radius: 6px; background: var(--brand);
+  display: inline-block;
+}
+.ug-brand span { font-size: 15px; font-weight: 600; color: #fff; }
+.ug-tagline { font-size: 12px; color: #9fb0d1; text-align: right; }
+.ug-header h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+.ug-header .ug-sub { font-size: 13.5px; color: #b3bfd1; }
+
+/* ── 상단 CTA (스마트폰 즉시 가입 안내) ── */
+.ug-cta {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--surface); border: 1px solid var(--callout-border);
+  border-left: 5px solid var(--brand);
+  border-radius: var(--radius); padding: 18px 20px; margin-bottom: 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.ug-cta-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.ug-cta strong { display: block; font-size: 15px; color: var(--navy); margin-bottom: 4px; }
+.ug-cta p { font-size: 14px; color: var(--text2); }
+.ug-cta p b { color: var(--brand-dk); }
+
+/* ── 섹션 ── */
+.ug-section { margin-bottom: 36px; }
+.ug-section h2 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 17px; font-weight: 600; color: var(--navy);
+  padding-bottom: 10px; margin-bottom: 14px;
+  border-bottom: 2px solid var(--border);
+}
+.ug-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 4px; height: 20px; background: var(--accent); border-radius: 2px;
+}
+.ug-section p { color: var(--text2); margin-bottom: 10px; }
+.ug-section ul { margin: 10px 0 10px 20px; color: var(--text2); }
+.ug-section ul li { margin-bottom: 6px; }
+.ug-section h3 {
+  font-size: 14.5px; font-weight: 600; color: var(--text); margin: 18px 0 8px;
+}
+
+/* ── 표 ── */
+.ug-table-wrap { overflow-x: auto; margin: 12px 0; }
+table.ug-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+table.ug-table th, table.ug-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top;
+}
+table.ug-table thead th {
+  background: #f1f5f9; color: var(--navy); font-weight: 600; white-space: nowrap;
+}
+table.ug-table tbody tr:last-child td { border-bottom: none; }
+table.ug-table td.ug-hondi { color: var(--brand-dk); font-weight: 500; }
+
+/* ── 콜아웃 (안내/공지) ── */
+.ug-callout {
+  background: var(--callout-bg); border: 1px solid var(--callout-border);
+  border-left: 4px solid var(--brand); border-radius: var(--radius);
+  padding: 12px 16px; margin: 14px 0; font-size: 13px; color: var(--callout-text);
+}
+.ug-callout.important {
+  background: var(--important-bg); border-color: var(--important-border);
+  border-left-color: #d97706; color: #7c4a03;
+}
+.ug-callout strong { color: inherit; }
+
+/* ── 비교 카드 (K-서비스 vs 전문가 페르소나) ── */
+.ug-compare {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0;
+}
+.ug-compare-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.ug-compare-card h4 {
+  font-size: 13.5px; font-weight: 700; margin-bottom: 8px;
+}
+.ug-compare-card.pub h4 { color: var(--brand-dk); }
+.ug-compare-card.priv h4 { color: #b45309; }
+.ug-compare-card p { font-size: 12.5px; color: var(--text3); margin: 0; }
+@media (max-width: 620px) { .ug-compare { grid-template-columns: 1fr; } }
+
+/* ── 푸터 ── */
+.ug-footer {
+  text-align: center; font-size: 12px; color: var(--text4);
+  border-top: 1px solid var(--border); padding-top: 18px; margin-top: 40px;
+}
+</style>
+
+<div class="ug-doc">
+
+  <header class="ug-header">
+    <div class="ug-header-top">
+      <div class="ug-brand">
+        <span class="ug-brand-dot"></span>
+        <span>혼디</span>
+      </div>
+      <div class="ug-tagline">카톡보다 혼디, 제주 출신 혼디</div>
+    </div>
+    <h1>이용 방법</h1>
+    <p class="ug-sub">2027년 상용화 목표 · hondi.net · 이용료 · K-서비스 · 전문가 AI 페르소나 안내</p>
+  </header>
+
+  <div class="ug-cta">
+    <span class="ug-cta-icon">📱</span>
+    <div>
+      <strong>지금 바로 시작하기</strong>
+      <p>스마트폰으로 <b>hondi.net</b>에 접속한 다음, 휴대폰 번호의 <b>010을 제외한 8자리</b>만 입력하면 <b>즉시 가입</b>됩니다.</p>
+    </div>
+  </div>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>01. 이용료</h2>
+    <p>혼디는 <b>월 기본료 1,000원</b>으로 이용을 시작합니다. 첫 GDC(혼디 이용료) 충전은 <b>최초 1만 원 이상</b>부터 가능하며, 이후에는 실제 사용량에 따라 잔액에서 차감됩니다.</p>
+
+    <div class="ug-table-wrap">
+      <table class="ug-table">
+        <thead><tr><th>구분</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>월 기본료</td><td class="ug-hondi">1,000원</td></tr>
+          <tr><td>최초 충전</td><td>1만 원 이상</td></tr>
+          <tr><td>사람 ↔ 사람 대화</td><td class="ug-hondi">무제한 무료</td></tr>
+          <tr><td>사람 ↔ AI 비서 대화</td><td>하루 10분 기준 <span class="ug-hondi">월 1,000~2,000원</span> 수준</td></tr>
+          <tr><td>K-서비스 개별 이용</td><td>K-Law · K-School 등 서비스별 <b>별도 과금 예정</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul>
+      <li>사람과 사람 사이의 대화(카카오톡 대체 용도)는 지금처럼 계속 무료입니다. 요금이 발생하는 부분은 AI 비서를 실제로 호출해 업무를 처리시킬 때입니다.</li>
+      <li>월 1,000원 수준의 낮은 요금은 혼디의 핵심 기술인 <b>MoTE(Mixture of Tiny Experts)</b> 구조 덕분입니다. 질문마다 거대 모델 전체를 켜는 대신, 필요한 전문 소형 모델만 정확히 호출해 전력·비용을 절감합니다.</li>
+      <li>K-Law, K-School처럼 전문성이 높은 개별 K-서비스는 향후 기본료와 별도로 과금될 예정입니다.</li>
+    </ul>
+
+    <div class="ug-callout">
+      위 금액은 현재 검토 중인 기준이며, 서비스 확대·실증 테스트 결과에 따라 조정될 수 있습니다.
+    </div>
+  </section>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>02. 이용 방법 — K-서비스 16종</h2>
+    <p>혼디에게 말 한마디를 건네면, AI 비서가 의도를 파악해 아래 16개 K-서비스 중 필요한 것을 자동으로 연결합니다. 사용자는 서비스를 직접 선택할 필요 없이, 하고 싶은 말을 하면 됩니다.</p>
+
+    <div class="ug-table-wrap">
+      <table class="ug-table">
+        <thead><tr><th>분야</th><th>서비스</th></tr></thead>
+        <tbody>
+          <tr><td>응급·안전</td><td>K-119(응급), K-Police(치안), K-Security</td></tr>
+          <tr><td>사법·행정</td><td>K-Law(사법), K-Gov(행정), K-Democracy(입법)</td></tr>
+          <tr><td>의료·교육</td><td>K-Health(의료), K-Edu(교육)</td></tr>
+          <tr><td>금융·상거래</td><td>GDC(디지털 통화), K-Finance, K-Insurance, K-Tax, K-Commerce, K-Market</td></tr>
+          <tr><td>교통·물류</td><td>K-Traffic(교통), K-Logistics(물류)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>K-서비스는 <b>공익을 위한 인프라</b>입니다. 예를 들어 K-Law는 특정 개인의 편이 아니라, 법원의 판결을 사실관계·헌법·법률·판례에 근거해 <b>사전에 시뮬레이션</b>하는 공적 기능을 수행합니다.</p>
+
+    <div class="ug-callout">
+      사용 예시 — "우리 집 등본이랑 소득금액증명원 좀 발급받아줘" → 혼디가 관련 K-서비스를 자동 호출해 처리합니다.
+    </div>
+  </section>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>03. 전문가 AI 페르소나 — 사적 이익을 위한 500여 명의 전문가</h2>
+    <p>K-서비스가 공익을 위한 인프라라면, <b>전문가 AI 페르소나</b>는 오직 <b>사용자 본인의 사적 이익</b>을 위해 복무하는 별도의 존재입니다. 혼디에는 의사, 변호사, 회계사, 교수 등 <b>500여 명의 전문가 AI 페르소나</b>가 있으며, 이들은 각 K-서비스와 연동되지만 목적이 다릅니다.</p>
+
+    <div class="ug-compare">
+      <div class="ug-compare-card pub">
+        <h4>K-서비스 — 공익</h4>
+        <p>중립적 공공 인프라. 예: K-Law는 법원의 판결을 사전에 시뮬레이션합니다.</p>
+      </div>
+      <div class="ug-compare-card priv">
+        <h4>전문가 AI 페르소나 — 사적 이익</h4>
+        <p>사용자 편에 선 조력자. 예: 변호사 AI 페르소나는 사용자 본인에게 유리한 법률 자문을 제공합니다.</p>
+      </div>
+    </div>
+
+    <p>같은 "법률"이라는 주제를 다루더라도, K-Law는 재판부의 판단을 미리 가늠해보는 공적·중립적 시뮬레이션이고, 변호사 AI 페르소나는 그 결과를 바탕으로 사용자에게 가장 유리한 전략을 조언하는 사적 조력자입니다. 두 기능은 서로 대체하지 않고 함께 작동합니다 — 사용자는 K-Law로 예상 판결을 확인한 뒤, 변호사 페르소나에게 자신의 입장에서 어떻게 대응할지 물어볼 수 있습니다.</p>
+
+    <div class="ug-callout">
+      전문가 AI 페르소나는 인간 전문가(의사·변호사·판사 등)를 대체하지 않으며, 최종 판단과 법적 책임은 언제나 해당 분야의 사람 전문가에게 있습니다.
+    </div>
+  </section>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>04. 공공 기관 서비스 — 중앙정부·지자체 행정 업무 대행</h2>
+    <p>혼디는 개인의 AI 비서와, 대한민국의 각 행정 기관 — 중앙부처·청·위원회, 17개 광역시도, 226개 시군구, 3,556개 읍면동 행정복지센터, 공기업·공공기관 — 에 배정된 AI 비서가 <b>서로 직접 소통</b>하여 서류 준비·제출·확인 업무를 대행하는 것을 목표로 합니다. 사람이 담당 부서를 직접 만나거나 전화·방문하던 방식에서, <b>AI 비서 대 AI 비서</b> 방식으로 전환합니다.</p>
+
+    <h3>예시 — 건축 인허가</h3>
+    <div class="ug-table-wrap">
+      <table class="ug-table">
+        <thead><tr><th>구분</th><th>기존 방식</th><th>혼디 방식</th></tr></thead>
+        <tbody>
+          <tr><td>처리 기간</td><td>접수~허가 평균 20일 내외</td><td class="ug-hondi">최단 10초 내외 접수 완료</td></tr>
+          <tr><td>서류 준비</td><td>발급기관마다 직접 방문·신청</td><td class="ug-hondi">PDV(프라이빗 데이터 금고)·정부24에서 자동 인출</td></tr>
+          <tr><td>보완 대응</td><td>우편·전화 통지, 재방문·재제출</td><td class="ug-hondi">혼디 간 소통으로 인간 개입 없이 보완·재제출</td></tr>
+          <tr><td>수수료</td><td>약 9,000원(지자체 조례별 상이)</td><td class="ug-hondi">혼디가 전자결제로 납부 대행</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>현장 실사와 최종 승인은 <b>항상 담당 공무원(사람)</b>이 수행합니다.</p>
+
+    <h3>연동 인프라 현황 (2026-08-22 기준, 실증 테스트 진행 중)</h3>
+    <div class="ug-table-wrap">
+      <table class="ug-table">
+        <thead><tr><th>인프라</th><th>역할</th><th>현재 상태</th></tr></thead>
+        <tbody>
+          <tr><td>data.go.kr (공공데이터 API)</td><td>등본·소득증명 등 서류 발급 요청</td><td>부분 구현 — API 개방 기관은 자동 처리</td></tr>
+          <tr><td>dpaper.kr (정부 전자문서지갑)</td><td>제출 서류 진본 확인·위변조 방지</td><td>부분 구현 — 정식 이용 신청 접수, 승인 미정</td></tr>
+          <tr><td>정부24</td><td>서류 발급·제출 창구</td><td>부분 구현 — 상시 제출·수신(gdoc.go.kr)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>기관마다 API 개방 수준이 달라, 아직 대문을 열지 않은 기관은 절차 안내에 그치며, 전국 확대에 맞춰 순차적으로 연동을 넓혀갑니다.</p>
+
+    <div class="ug-callout important">
+      혼디는 민간(AI City Inc.)이 진행하는 프로젝트로, 대한민국 정부와 공식적인 위탁·승인·후원·협력 관계가 없습니다. 정부 기관·정책의 인용은 정책 방향성 설명 목적입니다.
+    </div>
+  </section>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>05. 사법 서비스 — K-Law</h2>
+    <p>K-Law는 사실관계와 헌법·법률·판례를 근거로 <b>가상의 대법원 판결문을 3~5분 만에 작성</b>하는 혼디의 사법 분야 AI 비서입니다.</p>
+    <ul>
+      <li>대법원 공개 판례 300건을 대상으로 한 자체 측정 기준, K-Law 가상 판결문의 대법원 실제 판결 <b>일치도는 약 75~90%</b>로, 같은 기준 1·2심 법원의 대법원 판결 일치도(43~48%)보다 높게 나타났습니다.</li>
+      <li>이 일치도는 결론 하나만 비교한 값이 아니라, 결론 도출 과정·근거 법리·사회 정의·원칙과 상식 등 총 10개 항목을 평가한 결과입니다.</li>
+      <li>개인파산·면책처럼 여러 기관을 오가는 절차에도 동일한 방식을 적용해, K-Law가 초안을 작성하고 사람 판사가 검증·최종 결정합니다.</li>
+    </ul>
+    <div class="ug-callout">
+      위 수치는 혼디 개발사의 자체 측정 결과이며, 공인된 평가나 법적 효력을 보장하지 않습니다. K-Law는 인간 법조인을 대체하지 않으며, 최종 판단과 책임은 언제나 사람에게 있습니다.
+      <br>klaw.hondi.net에서 테스트 과정·결과를 상세히 확인하고 직접 체험해볼 수 있습니다.
+    </div>
+  </section>
+
+  <section class="ug-section">
+    <h2><span class="ug-num"></span>06. 입법 서비스 — K-Democracy와 DAWN</h2>
+    <p>입법 영역은 <b>K-Democracy</b>(democracy.hondi.net)가 담당하며, 시스템·정책 변경을 <b>DAWN(Democracy is All We Need)</b> 투표로 결정하는 민주적 거버넌스 구조를 따릅니다.</p>
+    <ul>
+      <li><b>국민동의청원 확산 허브</b> 역할로, 국민동의청원 등 입법 관련 시민 참여를 돕고 확산시킵니다.</li>
+      <li>고팡 생태계 자체의 규칙 변경도 DAWN 투표로 결정됩니다: GDC 1단위 이상 보유자는 1인 1표, OpenHash L1 노드 운영자는 1노드 1표를 행사하며, 비영리 단체 DAWN이 반민주적 변경에 대한 거부권을 가집니다. 2/3 이상 찬성 시 자동 적용되고, 변경 사항은 OpenHash에 영구 기록됩니다.</li>
+      <li>고팡에는 주주·임직원·이사회가 없으며, <b>사용자 = 운영자 = 수혜자</b> 구조로 운영됩니다. 운영 비용은 수익자 부담 원칙에 따라 사용자가 분담합니다.</li>
+    </ul>
+    <div class="ug-callout">
+      DAWN은 국회의 입법 절차 자체를 대체하는 것이 아니라, 혼디/고팡 생태계 내부의 의사결정과 국민동의청원 확산을 지원하는 시민 참여 메커니즘입니다.
+    </div>
+  </section>
+
+  <footer class="ug-footer">
+    혼디 개발자 대표 도영민 · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com · hondi.net
+  </footer>
+
+</div>
+</body>
+</html>
