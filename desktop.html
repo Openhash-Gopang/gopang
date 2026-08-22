@@ -101,22 +101,6 @@ body {
   border-radius: 20px; white-space: nowrap; font-family: 'Pretendard', sans-serif;
   display: flex; align-items: center; gap: 5px;
 }
-/* ── 강조 탭(K-서비스·전문가 페르소나·K-정부) — 일반 nav-links와 구분되는 골드 톤 필 ── */
-.site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.site-nav-highlight a {
-  display: flex; align-items: center; gap: 5px;
-  background: linear-gradient(135deg, #3a2c0f, #2c2410);
-  border: 1px solid #d4a537; color: #f3d488; font-size: 12.5px; font-weight: 600;
-  padding: 6px 13px; border-radius: 20px; white-space: nowrap;
-  text-decoration: none; font-family: 'Pretendard', sans-serif;
-  transition: background 0.15s, transform 0.1s;
-}
-.site-nav-highlight a:hover { background: linear-gradient(135deg, #4a3814, #3a2f14); transform: translateY(-1px); }
-.site-nav-highlight a .dot { width: 5px; height: 5px; border-radius: 50%; background: #f3d488; flex-shrink: 0; }
-@media (max-width: 900px) {
-  .site-nav-highlight a span.label-text { display: none; }
-  .site-nav-highlight a { padding: 6px 9px; }
-}
 .site-hero {
   background: #0e1c3f; padding: 48px 40px 40px; position: relative;
 }
@@ -1473,15 +1457,17 @@ section.section[data-tab].tab-active { display: block; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="10" height="4" rx="1"/></svg>
       대시보드
     </a>
-    <a href="#" onclick="loadPage('ai-engine');return false;">AI 엔진</a>
+    <a href="#" data-tab-target="feature-summary">AI 엔진</a>
     <a href="#" onclick="loadPage('openhash');return false;">오픈해시</a>
     <a href="#" onclick="loadPage('hondi-market');return false;">혼디마켓</a>
-    <a href="#" onclick="loadPage('rule-of-law');return false;">법치국가</a>
   </nav>
-  <div class="site-nav-highlight">
-    <a href="#" onclick="loadPage('k-services');return false;"><span class="dot"></span><span class="label-text">K-서비스</span></a>
-    <a href="#" onclick="loadPage('expert-personas');return false;"><span class="dot"></span><span class="label-text">전문가 페르소나</span></a>
-    <a href="#" onclick="loadPage('k-government');return false;"><span class="dot"></span><span class="label-text">K-정부</span></a>
+  <div class="site-nav-status">
+    <span class="dot-status"><span class="dot"></span>AI 분석 가동 중</span>
+    <span class="badge">Hondi v1.0</span>
+    <span class="badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+      연결 중...
+    </span>
   </div>
 </div>
 
@@ -3631,7 +3617,7 @@ function toggleSubmenu(id, btnEl) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant','ai-engine','rule-of-law','k-services','expert-personas','k-government'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -3644,11 +3630,6 @@ const PAGES = {
   'scenario-test':   '/pages/scenario-test.html',
   'usage-guide':     '/pages/usage-guide.html',
   'ai-assistant':    '/pages/ai-assistant.html',
-  'ai-engine':       '/pages/ai-engine.html',
-  'rule-of-law':     '/pages/rule-of-law.html',
-  'k-services':      '/pages/k-services.html',
-  'expert-personas': '/pages/expert-personas.html',
-  'k-government':    '/pages/k-government.html',
 };
 
 // 로드 상태 추적
