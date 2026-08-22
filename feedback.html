@@ -68,6 +68,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .stat-label { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
 
 /* ── Filter ── */
+.filter-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.write-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: var(--text); color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--font); white-space: nowrap;
+}
+.write-btn:hover { opacity: .88; }
 .filter-bar {
   display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
 }
@@ -84,7 +92,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .table-header {
   display: grid;
-  grid-template-columns: 80px 1fr 90px 100px 90px;
+  grid-template-columns: 56px 80px 1fr 90px 100px 90px;
   gap: 0; padding: 12px 20px;
   border-bottom: 1px solid var(--border);
   font-size: 11px; font-weight: 600; color: var(--text-mute);
@@ -92,7 +100,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 }
 .feedback-row {
   display: grid;
-  grid-template-columns: 80px 1fr 90px 100px 90px;
+  grid-template-columns: 56px 80px 1fr 90px 100px 90px;
   gap: 0; padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   align-items: start;
@@ -146,6 +154,61 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .empty { text-align: center; padding: 60px 20px; color: var(--text-mute); }
 .empty svg { margin-bottom: 12px; opacity: .3; }
 
+/* ── Upvote ── */
+.cell-vote { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vote-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-sub); cursor: pointer; transition: all .15s;
+}
+.vote-btn:hover:not(:disabled) { border-color: var(--brand-dk); color: var(--brand-dk); }
+.vote-btn.voted { background: var(--brand); border-color: var(--brand); color: #fff; cursor: default; }
+.vote-btn:disabled { cursor: default; opacity: .6; }
+.vote-count { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+
+/* ── 비공개 배지 ── */
+.vis-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10.5px; padding: 2px 6px; border-radius: 4px;
+  background: #f3f4f6; color: #6b7280; font-weight: 500; margin-left: 6px;
+}
+
+/* ── 글쓰기 모달 ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  display: none; align-items: center; justify-content: center;
+  z-index: 2000; padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal-box {
+  background: var(--surface); border-radius: 14px; padding: 24px;
+  width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.modal-box textarea {
+  width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-family: var(--font); font-size: 13px; resize: vertical;
+  box-sizing: border-box;
+}
+.vis-choice { display: flex; gap: 10px; margin: 14px 0; }
+.vis-choice label {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.vis-choice input { accent-color: var(--brand-dk); }
+.vis-choice label:has(input:checked) { border-color: var(--brand-dk); background: #f0fdf8; font-weight: 600; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.modal-btn {
+  padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--font); border: 1px solid var(--border);
+}
+.modal-btn.cancel { background: var(--surface); color: var(--text-sub); }
+.modal-btn.submit { background: var(--text); color: #fff; border-color: var(--text); }
+.modal-btn.submit:disabled { opacity: .5; cursor: default; }
+.modal-error { font-size: 12px; color: #dc2626; margin-top: 8px; display: none; }
+
 /* ── Loading ── */
 .loading { text-align: center; padding: 40px; color: var(--text-mute); font-size: 13px; }
 
@@ -156,6 +219,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   .table-header { display: none; }
   .feedback-row { gap: 6px; }
   .cell-handle::before { content: '@'; }
+  .cell-vote { flex-direction: row; justify-content: flex-start; gap: 8px; }
+  .filter-row { flex-direction: column; align-items: stretch; }
+  .write-btn { justify-content: center; }
   .stats { gap: 8px; }
   .stat-card { min-width: 80px; padding: 12px; }
 }
@@ -189,18 +255,42 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
     <div class="stat-card"><div class="stat-num" id="stat-reviewing">—</div><div class="stat-label">검토중</div></div>
   </div>
 
-  <!-- Filter -->
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter('')" data-filter="">전체</button>
-    <button class="filter-btn" onclick="setFilter('pending')" data-filter="pending">검토 대기</button>
-    <button class="filter-btn" onclick="setFilter('reviewing')" data-filter="reviewing">검토중</button>
-    <button class="filter-btn" onclick="setFilter('accepted')" data-filter="accepted">반영 확정</button>
-    <button class="filter-btn" onclick="setFilter('rejected')" data-filter="rejected">보류</button>
+  <!-- Filter + 글쓰기 -->
+  <div class="filter-row">
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="setFilter('')" data-filter="">전체</button>
+      <button class="filter-btn" onclick="setFilter('pending')" data-filter="pending">검토 대기</button>
+      <button class="filter-btn" onclick="setFilter('reviewing')" data-filter="reviewing">검토중</button>
+      <button class="filter-btn" onclick="setFilter('accepted')" data-filter="accepted">반영 확정</button>
+      <button class="filter-btn" onclick="setFilter('rejected')" data-filter="rejected">보류</button>
+    </div>
+    <button class="write-btn" onclick="openWriteModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      글쓰기
+    </button>
+  </div>
+
+  <!-- 글쓰기 모달 -->
+  <div class="modal-backdrop" id="write-modal">
+    <div class="modal-box">
+      <div class="modal-title">새 제안 작성</div>
+      <textarea id="write-content" placeholder="개선했으면 하는 점, 버그, 아이디어를 자유롭게 적어주세요."></textarea>
+      <div class="vis-choice">
+        <label><input type="radio" name="visibility" value="public" checked> 공개 (다른 사용자가 보고 투표 가능)</label>
+        <label><input type="radio" name="visibility" value="private"> 비공개 (본인과 관리자만)</label>
+      </div>
+      <div class="modal-error" id="write-error"></div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeWriteModal()">취소</button>
+        <button class="modal-btn submit" id="write-submit" onclick="submitFeedback()">등록</button>
+      </div>
+    </div>
   </div>
 
   <!-- Table -->
   <div class="table-wrap">
     <div class="table-header">
+      <div>투표</div>
       <div>제안자</div>
       <div>내용</div>
       <div>카테고리</div>
@@ -236,11 +326,16 @@ let allItems   = [];
 let curFilter  = '';
 let isAdmin    = false;
 let adminGuid  = null;
+let myGuid     = null;
+let myHandle   = null;
+const votedIds = new Set(); // 이번 세션에서 투표한 항목(중복 클릭 방지용 — 서버가 최종 판정)
 
-// ── 관리자 확인 ──────────────────────────────────────────
+// ── 로그인 사용자 확인 (관리자 여부 + 본인 guid/handle) ──────
 function checkAdmin() {
   try {
     const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (user?.ipv6)  myGuid   = user.ipv6;
+    if (user?.handle) myHandle = user.handle;
     if (user?.handle === ADMIN_HANDLE) {
       isAdmin   = true;
       adminGuid = user.ipv6;
@@ -251,7 +346,10 @@ function checkAdmin() {
 // ── 데이터 로드 ──────────────────────────────────────────
 async function loadFeedback() {
   try {
-    const res  = await fetch(`${PROXY}/feedback?limit=100`);
+    const qs = new URLSearchParams({ limit: '100' });
+    if (isAdmin) qs.set('is_admin', '1');
+    else if (myGuid) qs.set('requester_guid', myGuid);
+    const res  = await fetch(`${PROXY}/feedback?${qs.toString()}`);
     const data = await res.json();
     allItems = data.items || [];
     updateStats();
@@ -307,10 +405,25 @@ function render() {
         ).join('')}
       </div>` : '';
 
+    const isPublic   = item.visibility !== 'private';
+    const isOwn      = myGuid && item.guid === myGuid;
+    const hasVoted   = votedIds.has(item.id);
+    const voteCell   = isPublic
+      ? `<div class="cell-vote">
+          <button class="vote-btn${hasVoted ? ' voted' : ''}" ${(hasVoted || isOwn) ? 'disabled' : ''}
+                  onclick="voteFeedback('${item.id}')" title="${isOwn ? '본인 제안에는 투표할 수 없습니다' : '찬성'}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <span class="vote-count" id="vote-count-${item.id}">${item.vote_count || 0}</span>
+        </div>`
+      : `<div class="cell-vote"><span class="vote-count">—</span></div>`;
+    const visBadge   = !isPublic ? `<span class="vis-badge">🔒 비공개</span>` : '';
+
     return `<div class="feedback-row" id="row-${item.id}">
+      ${voteCell}
       <div class="cell-handle">${item.handle || '—'}</div>
       <div class="cell-content">
-        ${escHtml(item.content)}
+        ${escHtml(item.content)}${visBadge}
         ${item.admin_note ? `<div class="admin-note">💬 ${escHtml(item.admin_note)}</div>` : ''}
         ${adminCtrl}
       </div>
@@ -323,6 +436,81 @@ function render() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── 글쓰기 모달 ────────────────────────────────────────
+function openWriteModal() {
+  if (!myGuid || !myHandle) {
+    alert('로그인 후 이용해 주세요.');
+    return;
+  }
+  document.getElementById('write-content').value = '';
+  document.getElementById('write-error').style.display = 'none';
+  document.querySelector('input[name="visibility"][value="public"]').checked = true;
+  document.getElementById('write-modal').classList.add('open');
+}
+function closeWriteModal() {
+  document.getElementById('write-modal').classList.remove('open');
+}
+async function submitFeedback() {
+  const content = document.getElementById('write-content').value.trim();
+  const errEl   = document.getElementById('write-error');
+  const btn     = document.getElementById('write-submit');
+  if (!content) {
+    errEl.textContent = '내용을 입력해 주세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const visibility = document.querySelector('input[name="visibility"]:checked').value;
+
+  btn.disabled = true;
+  btn.textContent = '등록 중…';
+  try {
+    const res  = await fetch(`${PROXY}/feedback`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid: myGuid, handle: myHandle, content, visibility }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.detail || data.error || '등록 실패');
+    closeWriteModal();
+    await loadFeedback();
+  } catch(e) {
+    errEl.textContent = '등록 실패: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '등록';
+  }
+}
+
+// ── 투표(Up) ─────────────────────────────────────────────
+async function voteFeedback(id) {
+  if (!myGuid) { alert('로그인 후 이용해 주세요.'); return; }
+  if (votedIds.has(id)) return;
+
+  const btn = document.querySelector(`#row-${id} .vote-btn`);
+  if (btn) btn.disabled = true;
+
+  try {
+    const res  = await fetch(`${PROXY}/feedback/${id}/vote`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voter_guid: myGuid }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.detail || data.error || '투표 실패');
+
+    votedIds.add(id);
+    const idx = allItems.findIndex(i => i.id === id);
+    if (idx !== -1) allItems[idx].vote_count = data.vote_count;
+    const countEl = document.getElementById(`vote-count-${id}`);
+    if (countEl) countEl.textContent = data.vote_count;
+    if (btn) btn.classList.add('voted');
+  } catch(e) {
+    if (btn) btn.disabled = false;
+    alert('투표 실패: ' + e.message);
+  }
 }
 
 // ── 상태 변경 (관리자) ──────────────────────────────────

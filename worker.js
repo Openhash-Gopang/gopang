@@ -11971,6 +11971,8 @@ export default {
       return handleFeedbackPost(request, env, corsHeaders);
     if (pathname === '/feedback' && request.method === 'GET')
       return handleFeedbackGet(request, env, corsHeaders);
+    if (pathname.startsWith('/feedback/') && pathname.endsWith('/vote') && request.method === 'POST')
+      return handleFeedbackVote(request, env, corsHeaders);
     if (pathname.startsWith('/feedback/') && request.method === 'PATCH')
       return handleFeedbackPatch(request, env, corsHeaders);
 
@@ -26736,6 +26738,9 @@ async function handleFeedbackPost(request, env, corsHeaders) {
   if (!handle)  return _err(400, 'MISSING_FIELD', 'handle 필수', corsHeaders);
   if (!content) return _err(400, 'MISSING_FIELD', 'content 필수', corsHeaders);
 
+  // 2026-08-22 신설 — 공개/비공개 제안 구분. 미지정 시 공개(기존 동작과 호환).
+  const visibility = body.visibility === 'private' ? 'private' : 'public';
+
   // DeepSeek v4 flash — 카테고리 자동 분류
   let category = 'etc';
   try {
@@ -26766,29 +26771,142 @@ async function handleFeedbackPost(request, env, corsHeaders) {
   const insRes = await fetch(`${L1_DEFAULT}/api/collections/feedback/records`, {
     method:  'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ guid, handle, content, category, status: 'pending' }),
+    body: JSON.stringify({ guid, handle, content, category, status: 'pending', visibility, vote_count: 0 }),
   });
   if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
   const row = await insRes.json().catch(() => null);
 
-  return new Response(JSON.stringify({ ok: true, id: row?.id, category }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, id: row?.id, category, visibility }), { status: 200, headers: corsHeaders });
 }
 
 // GET /feedback — 목록 조회
+// 2026-08-22 갱신 — 비공개(visibility='private') 제안은 작성자 본인과
+// 관리자만 조회 가능. 프론트가 requester_guid(본인 guid) 또는
+// is_admin=1(관리자 확인 후)을 함께 보내야 비공개 글이 섞여 나온다.
+// 파라미터를 안 보내면 기존처럼 공개 글만 노출(하위호환).
 async function handleFeedbackGet(request, env, corsHeaders) {
   const url    = new URL(request.url);
   const status = url.searchParams.get('status');
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+  const requesterGuid = url.searchParams.get('requester_guid') || null;
+  const isAdminReq    = url.searchParams.get('is_admin') === '1';
 
   const token = await _l1AdminToken(env);
-  const filter = status ? `?filter=${encodeURIComponent(`status='${status}'`)}&sort=-created&perPage=${limit}` : `?sort=-created&perPage=${limit}`;
-  const res  = await fetch(`${L1_DEFAULT}/api/collections/feedback/records${filter}`, { headers: { 'Authorization': 'Bearer ' + token } });
+
+  const clauses = [];
+  if (status) clauses.push(`status='${status}'`);
+  if (!isAdminReq) {
+    // 공개 글 전체 + (요청자가 있으면) 본인이 쓴 비공개 글
+    clauses.push(requesterGuid
+      ? `(visibility='public' || guid='${requesterGuid}')`
+      : `visibility='public'`);
+  }
+  const filterQs = clauses.length ? `&filter=${encodeURIComponent(clauses.join(' && '))}` : '';
+  const res  = await fetch(`${L1_DEFAULT}/api/collections/feedback/records?sort=-created&perPage=${limit}${filterQs}`, { headers: { 'Authorization': 'Bearer ' + token } });
   const data = await res.json().catch(() => ({ items: [] }));
   const rows = data.items || [];
   return new Response(JSON.stringify({ ok: true, items: rows, count: rows.length }), { status: 200, headers: corsHeaders });
 }
 
-// PATCH /feedback/{id} — 상태 변경 (관리자 전용) + Push 알림
+// POST /feedback/{id}/vote — 공개 제안에 찬성(Up) 표시
+// 2026-08-22 신설. 규칙:
+//   - visibility='public'인 제안에만 투표 가능(비공개는 거부)
+//   - 1인 1표 — feedback_votes 컬렉션에 (feedback_id, voter_guid) 유니크
+//     레코드로 중복 투표를 막는다(TOCTOU 관점: 유니크 인덱스가 최종 방어선이고,
+//     아래 사전 조회는 사용자에게 빠른 에러 메시지를 주기 위한 것일 뿐이다 —
+//     실제 이중 지급 차단은 PocketBase 유니크 인덱스가 반드시 걸려 있어야 한다.
+//     마이그레이션 시 feedback_votes(feedback_id, voter_guid) UNIQUE 제약 필수).
+//   - 투표 1회당 작성자에게 GDC 100 지급(베타 기간 EXCHANGE_RATE_KRW_PER_GDC=1
+//     기준 krw_amount=100원 상당 — 정식 환율 복귀 시 자동으로 그 환율을 따름).
+//   - 작성자 본인 투표는 금지(자기 글에 자기가 눌러 셀프 지급하는 것을 차단).
+async function handleFeedbackVote(request, env, corsHeaders) {
+  const id   = new URL(request.url).pathname.replace('/feedback/', '').replace('/vote', '');
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { voter_guid } = body;
+  if (!voter_guid) return _err(400, 'MISSING_FIELD', 'voter_guid 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+
+  // 1) 대상 제안 조회 — 공개 여부·작성자 확인
+  const itemRes = await fetch(`${L1_DEFAULT}/api/collections/feedback/records/${encodeURIComponent(id)}`, {
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  if (!itemRes.ok) return _err(404, 'NOT_FOUND', '해당 제안을 찾을 수 없습니다', corsHeaders);
+  const item = await itemRes.json();
+
+  if (item.visibility !== 'public')
+    return _err(403, 'PRIVATE_FEEDBACK', '비공개 제안에는 투표할 수 없습니다', corsHeaders);
+  if (item.guid === voter_guid)
+    return _err(403, 'SELF_VOTE_FORBIDDEN', '본인 제안에는 투표할 수 없습니다', corsHeaders);
+
+  // 2) 중복 투표 사전 확인(최종 방어는 feedback_votes의 유니크 인덱스)
+  const dupFilter = encodeURIComponent(`feedback_id='${id}' && voter_guid='${voter_guid}'`);
+  const dupRes = await fetch(`${L1_DEFAULT}/api/collections/feedback_votes/records?filter=${dupFilter}&perPage=1`, {
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  const dupData = await dupRes.json().catch(() => ({ items: [] }));
+  if ((dupData.items || []).length > 0)
+    return _err(409, 'ALREADY_VOTED', '이미 투표한 제안입니다', corsHeaders);
+
+  // 3) 투표 기록 삽입 — 유니크 인덱스 위반 시 여기서 실패해야 정상(동시 요청 방어)
+  const voteInsRes = await fetch(`${L1_DEFAULT}/api/collections/feedback_votes/records`, {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feedback_id: id, voter_guid }),
+  });
+  if (!voteInsRes.ok) {
+    // 유니크 제약 위반이면 사실상 "이미 투표함"과 동일하게 처리
+    const errText = await voteInsRes.text();
+    if (/unique|duplicate/i.test(errText)) return _err(409, 'ALREADY_VOTED', '이미 투표한 제안입니다', corsHeaders);
+    return _err(500, 'DB_ERROR', errText, corsHeaders);
+  }
+
+  // 4) vote_count 증가(read-then-write — 동시 투표 경합 시 소폭 오차 가능,
+  //    표시용 카운터이므로 정합성보다 단순성 우선. 정확한 카운트가 필요하면
+  //    feedback_votes 레코드 수를 별도로 집계해 표시할 것)
+  const newVoteCount = (item.vote_count || 0) + 1;
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/feedback/records/${encodeURIComponent(id)}`, {
+    method:  'PATCH',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vote_count: newVoteCount }),
+  });
+  if (!patchRes.ok) console.warn('[FeedbackVote] vote_count 갱신 실패:', await patchRes.text());
+
+  // 5) 작성자에게 GDC 100 지급(베타 환율 EXCHANGE_RATE_KRW_PER_GDC 적용)
+  const FEEDBACK_VOTE_REWARD_GDC = 100;
+  let mintResult = { ok: false };
+  try {
+    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: item.guid,
+        krw_amount: FEEDBACK_VOTE_REWARD_GDC * EXCHANGE_RATE_KRW_PER_GDC,
+        secret: _mintSecret(env),
+        memo: `feedback_vote_reward:${id}:${voter_guid}`,
+      }),
+    });
+    mintResult = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!mintResult.ok) {
+      console.warn(JSON.stringify({
+        tag: 'FEEDBACK_VOTE_MINT_FAILED', feedback_id: id, author_guid: item.guid,
+        error: mintResult.error, detail: mintResult.detail, ts: new Date().toISOString(),
+      }));
+    }
+  } catch(e) {
+    console.warn('[FeedbackVote] mint 호출 실패:', e.message);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    vote_count: newVoteCount,
+    reward_granted: !!mintResult.ok,
+    reward_gdc: FEEDBACK_VOTE_REWARD_GDC,
+  }), { status: 200, headers: corsHeaders });
+}
+
+
 async function handleFeedbackPatch(request, env, corsHeaders) {
   const id   = new URL(request.url).pathname.replace('/feedback/', '');
   const body = await request.json().catch(() => null);
