@@ -181,6 +181,13 @@ async function main() {
     console.log(`  trace: [${trace.join(' > ')}]`);
     console.log(`  agency: ${agency}`);
     console.log(`  K-Intent(classifyFn) 호출 횟수: ${classifyCallCount}`);
+    // ★ 2026-08-21 신설 — CLARIFY 신호로 되묻기가 발동하면 라우팅 성공/
+    // 실패와 별개로 명시적으로 표시한다(사용자 지시 — 설계 공백 해소분
+    // 확인용). 되묻기가 뜨면 systemPrompt가 null이라 체크3은 자동으로
+    // 건너뛴다(아래 기존 로직 그대로).
+    if (r?.needsClarification) {
+      console.log(`  🔔 되묻기 발동: "${r.needsClarification.question}" 옵션: ${r.needsClarification.options.map((o) => o.name).join(' / ')}`);
+    }
     console.log(`  체크1(라우팅 도달): ${routedOk ? '✅' : '❌'} (기대: ${s.expectContains})`);
 
     let spResponseSnippet = null;
@@ -217,6 +224,7 @@ async function main() {
       agency,
       classifyInvoked,
       classifyCallCount,
+      needsClarification: r?.needsClarification ?? null,
       routedOk,
       spResponseSnippet,
       spQualityNote,

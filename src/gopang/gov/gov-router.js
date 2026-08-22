@@ -2373,14 +2373,45 @@ function _buildCandidatesText() {
     .join('\n');
 }
 
+// ── 사용자 재질문(K-Intent 되묻기) 신호 (2026-08-21 신설, 사용자 지시) ──
+// 배경: classifyFn이 항상 코드 하나 또는 NONE만 강제로 골라야 했다 —
+// "애매하니 사용자에게 되물어라"는 제3의 선택지가 프로토콜에 아예
+// 없었다(스모크테스트로 실측: SAFETY/JTP/CHILDMEAL이 확신 없이
+// SP-AGY-BOHWAN을 찍었는데도 사용자에게는 아무 표시 없이 그 부서
+// SP가 그대로 로드됨). classifyFn이 'CLARIFY:codeA,codeB' 형식으로
+// 답하면(호출부 프롬프트에 이 형식을 안내해야 함 — pages/regional-
+// gov.html의 _govClassifyFn 참조) 아래에서 이 예외를 던지고,
+// assembleGovSystemPrompt 최상위에서 캐치해 needsClarification 필드로
+// 반환한다 — 호출부(채팅 UI)가 이걸 보면 SP를 조립하는 대신 사용자에게
+// 직접 되묻는 질문을 보여줘야 한다.
+class NeedsClarificationSignal extends Error {
+  constructor(options) {
+    super('NEEDS_CLARIFICATION');
+    this.options = options; // [{code, name}, ...] — 최소 2개
+  }
+}
+function _parseClarifySignal(code) {
+  if (typeof code !== 'string' || !code.startsWith('CLARIFY:')) return null;
+  const codes = code.slice(8).split(',').map(c => c.trim()).filter(Boolean);
+  return codes.length >= 2 ? codes : null;
+}
+
 async function _classifyFallback(text, classifyFn) {
   if (!classifyFn) return null;
   const candidatesText = _buildCandidatesText();
   try {
     const code = await classifyFn(text, candidatesText);
+    const clarifyCodes = _parseClarifySignal(code);
+    if (clarifyCodes) {
+      const options = clarifyCodes
+        .filter(c => ROUTE_DESCRIPTIONS[c])
+        .map(c => ({ code: c, name: ROUTE_DESCRIPTIONS[c].split(' — ')[0] || c }));
+      if (options.length >= 2) throw new NeedsClarificationSignal(options);
+    }
     if (!code || code === 'NONE' || !ROUTE_DESCRIPTIONS[code]) return null;
     return code;
   } catch (e) {
+    if (e instanceof NeedsClarificationSignal) throw e;
     console.warn('[Jeju] LLM 분류 폴백 실패:', e.message);
     return null;
   }
@@ -2404,24 +2435,6 @@ async function _classifyFallback(text, classifyFn) {
 //
 // 도메인 추가 시 이 taxonomy에 항목만 늘리면 된다 — 검증 없이 대량으로
 // 채우지 말 것(주피터 지시 원칙: 하나씩 웹검색·실제 SP 원본 대조 후 추가).
-//
-// ★★★ 근본 원칙(주피터 명시, 2026-08-22) — 왜 "원형은 공용, 인스턴스는
-// 지역별 분리"인가 ★★★
-// 전국 시/군/구·읍면동사무소·광역시·도청이 이 GENERIC_CITY_DIVISION_
-// TAXONOMY(원형 콘텐츠·법적 근거·GOV_TASK 파이프라인)는 전부 공유하지만,
-// city-division-master-data.json 같은 인스턴스 레코드를 지역별로 별도
-// 작성하는 이유는 딱 하나 — **혼디 사용자 데이터를 6하원칙(누가·언제·
-// 어디서·무엇을·어떻게·왜)에 따라 기록하기 위해서다.** 즉 어느 지역에서
-// 어떤 민원이 얼마나 발생하는지, 어떤 민원의 처리 시간이 얼마나
-// 걸리는지에 대한 통계 데이터 수집이 목적이다. 원형(콘텐츠) 자체는
-// 완전히 재사용 가능하지만, "이 민원이 정확히 어느 시/군/구·어느
-// 과에서 발생·접수·처리됐는가"라는 소재지 식별 정보는 인스턴스별로
-// 고유해야만 이 통계가 의미를 갖는다 — 그래서 시코드·국코드·과코드
-// 조합마다 별도 레코드가 필요하고, 실사(진짜 기관명·연락처)가 없어도
-// 최소한 "이 지역의 이 업무"라는 식별 단위 자체는 항상 존재해야 한다
-// (레코드가 아예 없어도 라우팅은 되지만, 그 경우 통계 귀속 단위로서는
-// 여전히 국코드+시코드 조합으로 식별 가능 — GOV_TASK_SUBMIT_REQUEST의
-// agency 필드가 이 식별자 역할을 한다).
 const GENERIC_CITY_DIVISION_TAXONOMY = {
   jachi: [
     {
@@ -2430,14 +2443,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '지방세 이의신청', '과세전적부심사'],
       file: '04-city/templates/divisions/SP-CITYDIV-JACHI-TAX-TEMPLATE_v1.0.md',
     },
-    {
-      // ★ ECON-VILLAGE와 동일 업무(마을기업 지정) 재사용 — 제주시는
-      // 경제일자리국, 서귀포시는 자치행정국 소속으로 조직이 다르다는
-      // 게 확인돼(2026-08-22), 국코드별로 같은 파일을 양쪽에 등록한다.
-      subCode: 'VILLAGE', name: '마을활력과(마을기업 지정, 자치행정국 소속형)',
-      kw: ['마을기업 지정', '마을기업', '마을활력과', '마을기업 신청'],
-      file: '04-city/templates/divisions/SP-CITYDIV-ECON-VILLAGE-TEMPLATE_v1.0.md',
-    },
   ],
   welfare: [
     {
@@ -2445,33 +2450,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['기초생활보장', '생계급여', '의료급여', '주거급여', '교육급여',
         '기초생활수급', '부양의무자'],
       file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-BASICLIVELIHOOD-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'DISABLED', name: '장애인복지과(장애인 등록)',
-      kw: ['장애인 등록', '장애수당', '장애인연금', '장애인 활동지원',
-        '장애인복지과', '장애정도 심사'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-DISABLED-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'ELDERLY', name: '노인복지과(기초연금)',
-      kw: ['기초연금', '노인일자리', '노인돌봄', '노인복지과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-ELDERLY-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'HYGIENE', name: '위생과(식품·공중위생 영업신고)',
-      kw: ['식품영업신고', '공중위생영업신고', '위생과', '음식점 영업신고',
-        '이미용업 신고'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-HYGIENE-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'RESIDENT', name: '주민복지과(긴급복지지원)',
-      kw: ['긴급복지지원', '긴급지원 요청', '주민복지과', '긴급생계지원'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-RESIDENT-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'WOMENFAMILY', name: '여성가족과(한부모가족 복지급여)',
-      kw: ['한부모가족 복지급여', '한부모가족 지원', '여성가족과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-WELFARE-WOMENFAMILY-TEMPLATE_v1.0.md',
     },
   ],
   climate: [
@@ -2482,11 +2460,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '환경관리과', '배출시설 신고'],
       file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-ENVMGMT-TEMPLATE_v1.0.md',
     },
-    {
-      subCode: 'PARKS', name: '공원녹지과(도시공원 점용허가)',
-      kw: ['도시공원 점용허가', '공원 점용', '공원녹지과', '가로수 민원'],
-      file: '04-city/templates/divisions/SP-CITYDIV-CLIMATE-PARKS-TEMPLATE_v1.0.md',
-    },
   ],
   culture: [
     {
@@ -2494,11 +2467,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['도서관', '도서 대출', '도서 반납', '상호대차', '자료실',
         '도서관 회원가입', '도서 예약'],
       file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-LIBRARY-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'TOURISM', name: '관광진흥과(관광사업 등록)',
-      kw: ['관광사업 등록', '여행업 등록', '관광숙박업 등록', '관광진흥과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-CULTURE-TOURISM-TEMPLATE_v1.0.md',
     },
   ],
   housing: [
@@ -2509,32 +2477,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
       kw: ['건축허가', '건축신고', '사용승인', '준공검사', '건축과',
         '건축물 안전점검', '대수선'],
       file: '04-city/templates/divisions/SP-CITYDIV-URBANCONSTRUCTION-BUILDING-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'WATER', name: '상하수도과(상하수도 공사승인)',
-      kw: ['상하수도 신설', '상하수도 철거', '급수 민원', '배수 민원',
-        '상하수도과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-WATER-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'HOUSING', name: '주택과(주택사업계획승인)',
-      kw: ['주택사업계획승인', '공동주택 관리', '임대주택', '주택과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-HOUSING-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'ROAD', name: '건설과(도로점용허가)',
-      kw: ['도로점용허가', '도로 파손', '토목시설', '건설과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-ROAD-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'CITYPLAN', name: '도시계획과(도시관리계획 변경)',
-      kw: ['도시관리계획 변경', '용도지역 지정', '도시계획과', '지구단위계획'],
-      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-CITYPLAN-TEMPLATE_v1.0.md',
-    },
-    {
-      subCode: 'DEVACT', name: '도시과(개발행위허가)',
-      kw: ['개발행위허가', '개발행위계획서', '도시과'],
-      file: '04-city/templates/divisions/SP-CITYDIV-HOUSING-DEVACT-TEMPLATE_v1.0.md',
     },
   ],
   health: [
@@ -2562,12 +2504,6 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '전세버스 등록', '교통안전시설물'],
       file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-TRAFFIC-TEMPLATE_v1.0.md',
     },
-    {
-      subCode: 'GENERAL', name: '안전총괄과(재난지원금 신청)',
-      kw: ['재난지원금', '재난안전대책본부', '안전총괄과', '민방위 훈련',
-        '재난 신고', '피해사실확인서'],
-      file: '04-city/templates/divisions/SP-CITYDIV-SAFETY-GENERAL-TEMPLATE_v1.0.md',
-    },
   ],
   econ: [
     {
@@ -2589,42 +2525,8 @@ const GENERIC_CITY_DIVISION_TAXONOMY = {
         '가축사육업 등록'],
       file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-LIVESTOCK-TEMPLATE_v1.0.md',
     },
-    {
-      // ★ 같은 국의 감귤(CITRUS)·친환경농업(ECOFARM)은 제주 특화 작물
-      // 이라 제외 — 수산업은 전국 연안 지자체에 보편적이라 등록.
-      subCode: 'FISHERY', name: '해양수산과(어업면허·허가)',
-      kw: ['어업면허', '어업허가', '해양수산과', '어선등록', '수산업 신고'],
-      file: '04-city/templates/divisions/SP-CITYDIV-AGRIECONOMY-FISHERY-TEMPLATE_v1.0.md',
-    },
   ],
-  // ★★★ 2026-08-22 61개 잔여 division 전수조사 완료 ★★★
-  // 조사 결과 신규 12개 파일(+jachi.VILLAGE 재사용 1건) 외 나머지
-  // 46개는 전부 제외 확정:
-  // - 내부행정형(총무·기획예산·자치행정·기초자치단체설치준비지원단 등,
-  //   시민 대상 처분 없음) — jejusi/seogwipo JACHI-GENERAL/BUDGET/
-  //   SELFGOV/BASICGOVPREP, seogwipo JACHI-LIFELONGED
-  // - 지원사업형(공모·심사, GOV_TASK 파이프라인 없음 확인) —
-  //   ECON-SMB/INFOSUPPORT/JOBENERGY, CULTURE-ART(제주시+서귀포),
-  //   AGRIECONOMY-DIGITAL/JOBS
-  // - 제주 특화 산업/시설(전국 일반화 불가) — AGRIECONOMY-CITRUS(감귤,
-  //   원본이 "서귀포시에만 있는 특화 부서"로 명시), CLIMATE-JEOLMUL
-  //   (절물자연휴양림)
-  // - 시설운영형(GOV_TASK 파이프라인 미배선, count=0 확인) —
-  //   CULTURE-ARTCENTER/ARTSHALL/ARTMUSEUM/LIBRARYMGMT/
-  //   TOURISMFACILITY/SPORTS(제주시+서귀포), CLIMATE-FORESTRECREATION
-  // - 단속·부과형(시민 신청 대상 아님) — CLIMATE-ENVGUIDE(단속),
-  //   JACHI-PROPERTYTAX(정기 부과·고지형, 세무과 신고납부형과 다름)
-  // - 지역 분산 지소·안내형 — HEALTH-WESTCENTER/EASTCENTER/PROMOTION,
-  //   CLIMATE-LIVINGENV(제주시+서귀포, 생활폐기물 수거 정책 안내)
-  // - AGRIECONOMY-ECOFARM(친환경농정과): 2026-08-22 웹검색으로 추가
-  //   확인 완료 — 제외 확정(더 이상 보류 아님). 친환경농어업법 제35조
-  //   제1항상 인증 권한은 국립농산물품질관리원 또는 지정 민간인증기관
-  //   소관이지 시장·군수·구청장 권한이 아니다(easylaw.go.kr 원문 확인).
-  //   "친환경농업직접지불" 지원사업은 시·군·구가 관여하나 매년 농림
-  //   축산식품부 지침에 따른 예산 기반 직불금 사업이라, 고정 법적
-  //   처분이 아닌 다른 지원사업(ECON-SMB 등)과 동일 패턴으로 제외한다.
-  // (jachi.VILLAGE·culture.LIBRARY의 jejusi-UDANGLIB 중복분은 기존
-  // 등록 항목 재사용으로 이미 커버 — 별도 항목 불필요)
+  // 다른 도메인은 개별 검증 후 순차 추가 예정.
 };
 
 function _makeGenericCityDivisionEntries() {
@@ -2633,7 +2535,7 @@ function _makeGenericCityDivisionEntries() {
     for (const item of list) {
       out.push({
         code: `SP-CITYDIV-GENERIC-${국코드.toUpperCase()}-${item.subCode}`,
-        국코드, 시코드: null, subCode: item.subCode, // 시코드 무관 — 전국 어디나 매칭 후보
+        국코드, 시코드: null, // 시코드 무관 — 전국 어디나 매칭 후보
         name: item.name, desc: item.name,
         kw: item.kw, file: item.file, generic: true,
       });
@@ -2679,9 +2581,18 @@ async function _classifyDivisionFallback(text, candidates, classifyFn) {
   const candidatesText = _buildDivisionCandidatesText(candidates);
   try {
     const code = await classifyFn(text, candidatesText);
+    const clarifyCodes = _parseClarifySignal(code);
+    if (clarifyCodes) {
+      const options = clarifyCodes
+        .map(c => candidates.find(cand => cand.code === c))
+        .filter(Boolean)
+        .map(cand => ({ code: cand.code, name: cand.name || cand.code }));
+      if (options.length >= 2) throw new NeedsClarificationSignal(options);
+    }
     if (!code || code === 'NONE') return null;
     return candidates.find(c => c.code === code) || null;
   } catch (e) {
+    if (e instanceof NeedsClarificationSignal) throw e;
     console.warn('[gov-router] division LLM 분류 폴백 실패:', e.message);
     return null;
   }
@@ -2847,7 +2758,23 @@ async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn
     // table 전체(desc 포함)를 후보로 LLM 분류를 한 번 더 시도한다 —
     // _classifyDivisionFallback은 candidates가 {code,name,desc}만 있으면
     // 되므로 agency/org table을 그대로 재사용할 수 있다.
-    return _classifyDivisionFallback(text, table, classifyFn);
+    //
+    // ★ 2026-08-21 추가(스모크테스트 실측 결함 대응, 사용자 지시) — 위
+    // table(agency 또는 org 하나)만 후보로 주면, 진짜 정답이 L2(도청
+    // 실·국)에 있어도 classifyFn은 "이 중에 골라라"는 질문만 받아 없는
+    // 정답 대신 가장 비슷한 오답을 고른다(실측: SAFETY/JTP/CHILDMEAL이
+    // 전부 SP-AGY-BOHWAN으로 오확정 — classifyFn이 진짜로 호출됐는데도
+    // 후보 목록 자체에 정답이 없었음). L2 1등 후보(있으면)를 같은
+    // candidates 목록에 얹어 classifyFn이 계층을 넘나들어 고를 수 있게
+    // 한다 — 이제 classifyFn이 둘 다 그럴듯하다고 보면(CLARIFY 신호)
+    // 아래에서 NeedsClarificationSignal이 그대로 위로 던져진다(여기서
+    // 삼키지 않음 — 이게 핵심: 예전엔 애매하면 조용히 오답을 골랐지만,
+    // 이제 애매하면 사용자에게 되묻는다).
+    const l2BestForZero = _scoreMatchTies(text, _l2Table()).best;
+    const zeroTable = l2BestForZero && !table.includes(l2BestForZero)
+      ? [...table, { ...l2BestForZero, name: l2BestForZero.code, desc: ROUTE_DESCRIPTIONS[l2BestForZero.code] || l2BestForZero.domain || '' }]
+      : table;
+    return _classifyDivisionFallback(text, zeroTable, classifyFn);
   }
   if (tied.length === 1 && topScore >= 2) return best;
   if (tied.length === 1 && topScore === 1) {
@@ -2858,17 +2785,23 @@ async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn
     // SP-DO-WELFARE(L2) 대신 도서관으로 샌 사례 — classifyFn 호출 0회로
     // K-Intent 개입 기회조차 없었음). 같은 계층(agency/org) 후보뿐 아니라
     // L2(도청 실·국) 1등 후보도 함께 넣어 진짜 정답이 계층을 넘나드는
-    // 경우까지 구제한다 — 단 L2는 "1등 후보 하나"만 참고로 얹을 뿐, L2
-    // 자체가 강한 매칭이라고 이 자리에서 확정하진 않는다(그건 org의
-    // topScore===0 전체의미검색 경로를 가로채던 예전 회귀의 원인이었다 —
-    // 그 경로는 건드리지 않는다). classifyFn이 없으면(하위호환) 기존처럼
-    // 즉시 확정.
+    // 경우까지 구제한다. classifyFn이 없으면(하위호환) 기존처럼 즉시 확정.
     if (!classifyFn) return best;
     const l2Best = _scoreMatchTies(text, _l2Table()).best;
     const extendedTable = l2Best && !table.includes(l2Best)
       ? [...table, { ...l2Best, name: l2Best.code, desc: ROUTE_DESCRIPTIONS[l2Best.code] || l2Best.domain || '' }]
       : table;
-    const picked = await _classifyDivisionFallback(text, extendedTable, classifyFn).catch(() => null);
+    // ★ 2026-08-21 수정 — 예전엔 .catch(() => null)로 실패를 전부
+    // 삼켜서 NeedsClarificationSignal(되묻기 신호)까지 조용히 사라지고
+    // best(약한 매칭)로 폴백해버렸다. 되묻기 신호는 그대로 위로
+    // 던지고, 그 밖의 진짜 실패(네트워크 오류 등)만 삼킨다.
+    let picked;
+    try {
+      picked = await _classifyDivisionFallback(text, extendedTable, classifyFn);
+    } catch (e) {
+      if (e instanceof NeedsClarificationSignal) throw e;
+      picked = null;
+    }
     return picked || best;
   }
   if (tied.every(e => e.시코드)) {
@@ -4195,75 +4128,23 @@ async function _fetchCityDeptText(match, taskText = '') {
   return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
 
-// ── 과(division) 마스터데이터 로더 (2026-08-22 신설, 1호 파일럿:
-// 부산 해운대구) — city-dept 로더(_loadCityDeptMasterData)와 동일 패턴.
-let _cityDivisionMasterData = null;
-async function _loadCityDivisionMasterData() {
-  if (_cityDivisionMasterData) return _cityDivisionMasterData;
-  const raw = await _fetchText('04-city/templates/city-division-master-data.json');
-  _cityDivisionMasterData = JSON.parse(raw).과목록;
-  return _cityDivisionMasterData;
-}
-
-// ── 원형-인스턴스 계보 레지스트리 로더 (2026-08-22 신설) — 클론/승격/
-// 전파 메커니즘의 조회 진입점. 상세 워크플로는 instance-registry.json의
-// _설명 필드 참고. 이 레지스트리에 없는 지역(절대다수)은 기존처럼 원형
-// 템플릿 + 마스터데이터 자리표시자로만 렌더링된다 — 아무 영향 없음.
-let _cityDivisionInstanceRegistry = null;
-async function _loadCityDivisionInstanceRegistry() {
-  if (_cityDivisionInstanceRegistry) return _cityDivisionInstanceRegistry;
-  const raw = await _fetchText('04-city/templates/divisions/instance-registry.json');
-  _cityDivisionInstanceRegistry = JSON.parse(raw).등록된_인스턴스;
-  return _cityDivisionInstanceRegistry;
-}
-
-// ── 과(division) 텍스트 fetch — 실사(제주)·인스턴스 클론(로컬 개선된
-// 지역)·제네릭(그 외 비제주)을 함께 처리 (2026-08-21 신설, 2026-08-22
-// 재복원 2회차, 2026-08-22 인스턴스 조회 배선, 2026-08-22 클론/승격/
-// 전파 계보 배선) ────────────────────────────────────────────────────
-// 두 번째 인자는 이제 시코드(문자열)다 — 이전에는 항상 null을 넘겨
-// 인스턴스 데이터가 전혀 반영되지 않았다(코드는 있었으나 실제 조회
-// 로직·데이터 파일이 없었음). 마스터데이터에 레코드가 없으면 기존과
-// 동일하게 기본 라벨로 폴백한다 — 실사 없어도 항상 작동해야 한다는
-// 원칙은 그대로 유지.
-//
-// 우선순위(제네릭 항목에 한함): ① instance-registry.json에 등록된
-// 로컬 클론 파일이 있으면 그걸 있는 그대로 fetch(자리표시자 렌더링
-// 없음 — 이미 실제 콘텐츠) ② 없으면 기존처럼 원형 템플릿 + 마스터
-// 데이터 자리표시자 렌더링.
-async function _fetchCityDivisionText(divEntry, 시코드) {
+// ── 과(division) 텍스트 fetch — 실사(제주)와 제네릭(비제주)을 함께 처리
+// (2026-08-21 신설, 2026-08-22 재복원 2회차) ─────────────────────────
+async function _fetchCityDivisionText(divEntry, cityDeptRec) {
   if (!divEntry.generic) {
     return _fetchText(divEntry.file, _currentProvinceRepo());
   }
-  if (시코드) {
-    try {
-      const instances = await _loadCityDivisionInstanceRegistry();
-      const inst = instances.find(i => i.시코드 === 시코드 && i.국코드 === divEntry.국코드
-        && i.과코드 === divEntry.subCode);
-      if (inst) {
-        return _fetchText(inst.instance_file);
-      }
-    } catch { /* 레지스트리 없거나 파싱 실패해도 원형 렌더링으로 계속 진행 */ }
-  }
   const template = await _fetchText(divEntry.file);
-  let rec = null;
-  if (시코드) {
-    try {
-      const records = await _loadCityDivisionMasterData();
-      rec = records.find(r => r.시코드 === 시코드 && r.국코드 === divEntry.국코드
-        && r.과코드 === divEntry.subCode) || null;
-    } catch { /* 마스터데이터 파일 없거나 파싱 실패해도 기본 라벨로 계속 진행 */ }
-  }
   return template
     .replaceAll('{GOV_COMMON}', '도청 공통')
     .replaceAll('{DO_ROOT_SP}', '도청 실국')
     .replaceAll('{CITY_ROOT_SP}', '시청')
     .replaceAll('{CITY_DEPT_ROOT_SP}', '시청 국')
-    .replaceAll('{시이름}', rec?.시이름 || '')
-    .replaceAll('{국이름}', rec?.국이름 ?? CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] ?? '담당부서')
-    .replaceAll('{콜센터명}', rec?.콜센터명 || '')
-    .replaceAll('{콜센터번호}', rec?.콜센터번호 || '')
-    .replaceAll('{콜센터운영시간}', rec?.콜센터운영시간 || '');
+    .replaceAll('{시이름}', cityDeptRec?.시이름 || '')
+    .replaceAll('{국이름}', cityDeptRec?.국이름 || CITY_DEPT_DEFAULT_LABEL[divEntry.국코드] || '담당부서')
+    .replaceAll('{콜센터명}', cityDeptRec?.콜센터명 || '')
+    .replaceAll('{콜센터번호}', cityDeptRec?.콜센터번호 || '')
+    .replaceAll('{콜센터운영시간}', cityDeptRec?.콜센터운영시간 || '');
 }
 
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
@@ -4974,7 +4855,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
           const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
           if (divisionMatch) {
-            parts.push(await _fetchCityDivisionText(divisionMatch, cityCode.시코드));
+            parts.push(await _fetchCityDivisionText(divisionMatch, null));
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
@@ -5047,7 +4928,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
         const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
         if (divisionMatch) {
-          parts.push(await _fetchCityDivisionText(divisionMatch, cityOnly.시코드));
+          parts.push(await _fetchCityDivisionText(divisionMatch, null));
           trace.push(`${divisionMatch.code}(과/팀 특정)`);
         }
       }
@@ -5414,7 +5295,28 @@ if (typeof window !== 'undefined') window.resolveHandlerCodeFromTrace = resolveH
 // 후속 패치로 넘긴다 — 지금 단계에서 그 티어들의 directCode는 조용히
 // 무시되고 기존 텍스트 추측 경로로 정상 폴백된다(회귀 없음).
 export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, onProgress = null, directCode = null) {
-  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, onProgress, directCode);
+  let result;
+  try {
+    result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, onProgress, directCode);
+  } catch (e) {
+    // ★ 2026-08-21 신설(사용자 지시 — 설계 공백 해소) — classifyFn이
+    // 후보 중 2개 이상이 똑같이 그럴듯하다고 판단하면(CLARIFY 신호)
+    // 여기서 잡아 needsClarification으로 반환한다. 호출부(pages/
+    // regional-gov.html의 _callAI 등)는 이 필드가 있으면 SP를 조립해
+    // AI를 부르는 대신, question/options로 사용자에게 직접 되묻는
+    // 말풍선을 보여줘야 한다 — 잘못된 부서로 조용히 확정하지 않는다.
+    if (e instanceof NeedsClarificationSignal) {
+      return {
+        systemPrompt: null,
+        trace: ['JEJU-GOV-COMMON', '(의도 불명확 — 사용자 재질문 필요)'],
+        needsClarification: {
+          question: '어느 쪽에 가까운 용건인지 알려주시면 더 정확히 안내해드릴 수 있어요.',
+          options: e.options,
+        },
+      };
+    }
+    throw e;
+  }
   if (!_PDV_HISTORY_SCOPE_PLACEHOLDER_RE.test(result.systemPrompt)) return result;
   const scope = _resolvePdvScopeFromTrace(result.trace);
   return {

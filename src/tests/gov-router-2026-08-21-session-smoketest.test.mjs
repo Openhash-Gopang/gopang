@@ -463,6 +463,35 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
     console.log('❌ [신설] "행정복지센터"가 여전히 시청 국으로 잘못 흡수됨, trace:', r9.trace.join(' > '));
     process.exitCode = 1;
   }
+
+  // ── ★ 2026-08-21 신설 — "되묻기"(CLARIFY 신호) 메커니즘 종단 검증 ──
+  // classifyFn이 CLARIFY:code1,code2 형식으로 답하면 needsClarification이
+  // 채워져 반환돼야 하고, systemPrompt는 조립되지 않아야 한다(잘못된
+  // 부서로 조용히 확정 금지).
+  const clarifyMock = async () => 'CLARIFY:SP-DO-SAFETY,SP-DO-WELFARE';
+  const rClarify = await assembleGovSystemPrompt('아무도 안 겹치는 발화 자체', null, clarifyMock);
+  const clarifyOk = rClarify.needsClarification
+    && Array.isArray(rClarify.needsClarification.options)
+    && rClarify.needsClarification.options.length === 2
+    && rClarify.needsClarification.options.some(o => o.code === 'SP-DO-SAFETY')
+    && rClarify.needsClarification.options.some(o => o.code === 'SP-DO-WELFARE')
+    && rClarify.systemPrompt === null;
+  if (clarifyOk) {
+    console.log('✅ [신설] CLARIFY 신호 → needsClarification 반환 확인:', JSON.stringify(rClarify.needsClarification));
+  } else {
+    console.log('❌ [신설] CLARIFY 신호 처리 실패:', JSON.stringify(rClarify));
+    process.exitCode = 1;
+  }
+
+  // 후보 1개뿐인 CLARIFY(형식 오류)는 무시하고 정상 폴백돼야 한다.
+  const badClarifyMock = async () => 'CLARIFY:SP-DO-SAFETY';
+  const rBadClarify = await assembleGovSystemPrompt('아무 발화', null, badClarifyMock);
+  if (!rBadClarify.needsClarification) {
+    console.log('✅ [신설] 후보 1개짜리 잘못된 CLARIFY는 무시하고 정상 폴백 확인');
+  } else {
+    console.log('❌ [신설] 후보 1개짜리 CLARIFY를 잘못 되묻기로 처리함:', JSON.stringify(rBadClarify));
+    process.exitCode = 1;
+  }
 }
 
 process.exit((fail > 0 || process.exitCode === 1) ? 1 : 0);
