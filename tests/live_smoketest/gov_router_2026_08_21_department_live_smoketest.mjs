@@ -74,12 +74,14 @@ async function realClassifyFn(text, candidatesText) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'deepseek-v4-flash', max_tokens: 20, temperature: 0,
+        model: 'deepseek-v4-flash', max_tokens: 30, temperature: 0,
         messages: [
           { role: 'system', content:
             '아래는 제주 지방행정 라우팅 코드 후보 목록이다. 사용자 발화를 읽고 ' +
             '가장 알맞은 코드 하나만 답하라. 확신이 없거나 해당하는 코드가 없으면 ' +
-            'NONE이라고만 답하라. 다른 설명·문장부호 없이 코드 또는 NONE만 출력한다.\n\n' +
+            'NONE이라고만 답하라. 후보 중 2개가 똑같이 그럴듯해서 하나로 못 고르겠으면 ' +
+            '"CLARIFY:코드1,코드2" 형식으로만 답하라(콤마로 구분, 공백 없이, 정확히 2개만). ' +
+            '다른 설명·문장부호 없이 코드, NONE, 또는 CLARIFY:... 중 하나만 출력한다.\n\n' +
             candidatesText },
           { role: 'user', content: text },
         ],
@@ -91,6 +93,13 @@ async function realClassifyFn(text, candidatesText) {
     }
     const d = await r.json();
     const raw = (d.choices?.[0]?.message?.content || '').trim();
+    // ★ 2026-08-21 재동기화 — pages/regional-gov.html의 _govClassifyFn과
+    // 완전히 동일한 CLARIFY 파싱 로직(먼저 시도했다가 여기 반영을 놓쳐서
+    // 첫 재검증 라운드에서 되묻기가 한 번도 안 뜬 원인이었음).
+    if (raw.startsWith('CLARIFY:')) {
+      const codes = raw.slice(8).match(/[A-Z0-9][A-Z0-9-]*/g) || [];
+      return codes.length >= 2 ? `CLARIFY:${codes[0]},${codes[1]}` : null;
+    }
     const m = raw.match(/[A-Z0-9][A-Z0-9-]*/);
     return m ? m[0] : (raw === 'NONE' ? 'NONE' : null);
   } catch (e) {
