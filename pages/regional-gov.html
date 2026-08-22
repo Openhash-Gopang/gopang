@@ -134,12 +134,14 @@ async function _govClassifyFn(text, candidatesText) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'deepseek-v4-flash', max_tokens: 20, temperature: 0,
+        model: 'deepseek-v4-flash', max_tokens: 30, temperature: 0,
         messages: [
           { role: 'system', content:
             '아래는 제주 지방행정 라우팅 코드 후보 목록이다. 사용자 발화를 읽고 ' +
             '가장 알맞은 코드 하나만 답하라. 확신이 없거나 해당하는 코드가 없으면 ' +
-            'NONE이라고만 답하라. 다른 설명·문장부호 없이 코드 또는 NONE만 출력한다.\n\n' +
+            'NONE이라고만 답하라. 후보 중 2개가 똑같이 그럴듯해서 하나로 못 고르겠으면 ' +
+            '"CLARIFY:코드1,코드2" 형식으로만 답하라(콤마로 구분, 공백 없이, 정확히 2개만). ' +
+            '다른 설명·문장부호 없이 코드, NONE, 또는 CLARIFY:... 중 하나만 출력한다.\n\n' +
             candidatesText },
           { role: 'user', content: text },
         ],
@@ -148,6 +150,14 @@ async function _govClassifyFn(text, candidatesText) {
     if (!r.ok) return null;
     const d = await r.json();
     const raw = (d.choices?.[0]?.message?.content || '').trim();
+    // ★ 2026-08-21 수정(사용자 지시 — 설계 공백 해소: "애매하면 되묻기") —
+    // CLARIFY:코드1,코드2 형식은 접두어까지 그대로 보존해서 반환해야
+    // gov-router.js의 _parseClarifySignal()이 인식한다. 기존 정규식은
+    // 코드 형식(SP-XXX-YYY)만 뽑아서 CLARIFY: 접두어가 잘려나갔었다.
+    if (raw.startsWith('CLARIFY:')) {
+      const codes = raw.slice(8).match(/[A-Z0-9][A-Z0-9-]*/g) || [];
+      return codes.length >= 2 ? `CLARIFY:${codes[0]},${codes[1]}` : null;
+    }
     // 코드 형식(SP-XXX-YYY 등)만 추출 — 모델이 마침표/따옴표를 덧붙이는
     // 경우가 있어 그대로 비교하면 놓친다.
     const m = raw.match(/[A-Z0-9][A-Z0-9-]*/);
@@ -414,6 +424,18 @@ async function _callAI(latestUserText, typingEl) {
     const r = await assembleGovSystemPrompt(latestUserText, _resolveLocationHint(), _govClassifyFn, (msg) => {
       if (typingEl) typingEl.querySelector('span').textContent = msg;
     }, directCode);
+    // ★ 2026-08-21 신설(사용자 지시 — 설계 공백 해소) — classifyFn이
+    // 후보 2개를 놓고 확신을 못 내리면(CLARIFY 신호) assembleGovSystemPrompt가
+    // needsClarification을 채워 돌려준다. 이 경우 SP 조립·AI 실호출을
+    // 전부 건너뛰고 되묻는 질문을 그대로 사용자에게 보여준다 — 예전엔
+    // 이 신호 자체가 없어서 확신 없이 고른 부서 SP가 조용히 로드됐다.
+    if (r.needsClarification) {
+      const { question, options } = r.needsClarification;
+      const optionLines = options.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
+      const clarifyText = `${question}\n\n${optionLines}`;
+      messages.push({ role: 'assistant', content: clarifyText });
+      return clarifyText;
+    }
     sp = r.systemPrompt;
     trace = r.trace || [];
     agency = resolveGovAgency(trace) || 'gov_do';
