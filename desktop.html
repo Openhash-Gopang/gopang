@@ -1617,6 +1617,9 @@ section.section[data-tab].tab-active { display: block; }
 <script>
 function toggleStatCard(card) {
   var wasOpen = card.classList.contains('open');
+  document.querySelectorAll('.stat-card.open').forEach(function (c) {
+    if (c !== card) c.classList.remove('open');
+  });
   card.classList.toggle('open', !wasOpen);
 }
 document.addEventListener('click', function (e) {
