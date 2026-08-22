@@ -101,6 +101,22 @@ body {
   border-radius: 20px; white-space: nowrap; font-family: 'Pretendard', sans-serif;
   display: flex; align-items: center; gap: 5px;
 }
+/* ── 강조 탭(K-서비스·전문가 페르소나·K-정부) — 일반 nav-links와 구분되는 골드 톤 필 ── */
+.site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.site-nav-highlight a {
+  display: flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, #3a2c0f, #2c2410);
+  border: 1px solid #d4a537; color: #f3d488; font-size: 12.5px; font-weight: 600;
+  padding: 6px 13px; border-radius: 20px; white-space: nowrap;
+  text-decoration: none; font-family: 'Pretendard', sans-serif;
+  transition: background 0.15s, transform 0.1s;
+}
+.site-nav-highlight a:hover { background: linear-gradient(135deg, #4a3814, #3a2f14); transform: translateY(-1px); }
+.site-nav-highlight a .dot { width: 5px; height: 5px; border-radius: 50%; background: #f3d488; flex-shrink: 0; }
+@media (max-width: 900px) {
+  .site-nav-highlight a span.label-text { display: none; }
+  .site-nav-highlight a { padding: 6px 9px; }
+}
 .site-hero {
   background: #0e1c3f; padding: 48px 40px 40px; position: relative;
 }
@@ -135,17 +151,62 @@ body {
 .site-hero-actions a.outline { background: #14356c; color: #dce1ea; border: 1px solid #435e8b; }
 .site-stats {
   background: #fff; padding: 28px 20px; display: grid;
-  grid-template-columns: repeat(5, 1fr); gap: 0;
+  grid-template-columns: repeat(5, 1fr); gap: 16px;
 }
-.site-stats > div { padding: 0 16px; border-left: 1px solid var(--border); }
-.site-stats > div:first-child { padding-left: 0; border-left: none; }
+.stat-card {
+  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px 18px; cursor: pointer; position: relative;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+}
+.stat-card:hover {
+  box-shadow: 0 10px 24px rgba(15,23,42,0.12), 0 3px 8px rgba(15,23,42,0.06);
+  transform: translateY(-4px);
+  border-color: #d5deee;
+}
+.stat-card:active { transform: translateY(-2px); transition-duration: 0.08s; }
 .site-stats .num { font-size: 26px; font-weight: 500; margin-bottom: 6px; }
 .site-stats .title { color: var(--text); font-size: 14px; font-weight: 500; margin-bottom: 6px; }
-.site-stats .desc { color: var(--text4); font-size: 12px; line-height: 1.6; margin: 0 0 8px; }
+.site-stats .desc {
+  color: var(--text4); font-size: 12px; line-height: 1.6; margin: 0 0 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .site-stats .cap { font-size: 12px; font-weight: 500; }
+.stat-card-chevron {
+  display: flex; justify-content: center; margin-top: 12px; color: var(--text4);
+  transition: transform 0.25s ease;
+}
+.stat-card.open .stat-card-chevron { transform: rotate(180deg); }
+.stat-panel {
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, margin-top 0.32s ease;
+}
+.stat-card.open .stat-panel {
+  max-height: 480px; opacity: 1; margin-top: 14px;
+  border-top: 1px solid var(--border); padding-top: 14px;
+  overflow-y: auto;
+}
+.stat-panel-inner { font-size: 12.5px; color: var(--text3); line-height: 1.7; min-height: 40px; }
+.pw-compare-item { margin-bottom: 10px; }
+.pw-compare-item:last-child { margin-bottom: 0; }
+.pw-compare-item b { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin-bottom: 2px; }
+.pw-compare-item span { display: block; color: var(--text4); font-size: 11.5px; line-height: 1.5; }
+.pw-compare-item span .before { color: #94a3b8; }
+.pw-compare-item span .arrow { color: #cbd5e1; margin: 0 3px; }
+.pw-compare-item span .after { color: #0c6cc3; font-weight: 500; }
+.pw-svc-note { font-size: 12px; color: var(--text3); line-height: 1.6; margin-bottom: 12px; }
+.pw-svc-list { padding-right: 4px; }
+.pw-svc-item {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid #f1f5f9;
+}
+.pw-svc-item:last-child { border-bottom: none; }
+.pw-svc-name { font-size: 12.5px; font-weight: 600; color: var(--text); flex-shrink: 0; width: 72px; }
+.pw-svc-desc { font-size: 11.5px; color: var(--text4); flex: 1; line-height: 1.4; }
+.pw-svc-link { font-size: 11px; color: #0c6cc3; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+.pw-svc-link:hover { text-decoration: underline; }
 @media (max-width: 900px) {
-  .site-stats { grid-template-columns: repeat(2, 1fr); gap: 20px 0; }
-  .site-stats > div { border-left: none; padding-left: 0; }
+  .site-stats { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 }
 @media (max-width: 680px) {
   .site-nav { padding: 0 12px; }
@@ -1457,17 +1518,15 @@ section.section[data-tab].tab-active { display: block; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="10" height="4" rx="1"/></svg>
       대시보드
     </a>
-    <a href="#" data-tab-target="feature-summary">AI 엔진</a>
+    <a href="#" onclick="loadPage('ai-engine');return false;">AI 엔진</a>
     <a href="#" onclick="loadPage('openhash');return false;">오픈해시</a>
     <a href="#" onclick="loadPage('hondi-market');return false;">혼디마켓</a>
+    <a href="#" onclick="loadPage('rule-of-law');return false;">법치국가</a>
   </nav>
-  <div class="site-nav-status">
-    <span class="dot-status"><span class="dot"></span>AI 분석 가동 중</span>
-    <span class="badge">Hondi v1.0</span>
-    <span class="badge">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
-      연결 중...
-    </span>
+  <div class="site-nav-highlight">
+    <a href="#" onclick="loadPage('k-services');return false;"><span class="dot"></span><span class="label-text">K-서비스</span></a>
+    <a href="#" onclick="loadPage('expert-personas');return false;"><span class="dot"></span><span class="label-text">전문가 페르소나</span></a>
+    <a href="#" onclick="loadPage('k-government');return false;"><span class="dot"></span><span class="label-text">K-정부</span></a>
   </div>
 </div>
 
@@ -1479,7 +1538,7 @@ section.section[data-tab].tab-active { display: block; }
   </a>
 
   <h1><span class="l1">사람 간의 업무를</span><br><span class="l2">혼디 간의 소통으로 대체합니다.</span></h1>
-  <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 공공 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
+  <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
   <div class="site-hero-actions">
     <a href="./integrated-system.html" class="primary">입법 + 사법 + 행정 통합 시스템이란?</a>
@@ -1487,37 +1546,83 @@ section.section[data-tab].tab-active { display: block; }
 </section>
 
 <div class="site-stats">
-  <div>
+  <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#BA7517">99%</div>
     <div class="title">처리 시간 절감 목표</div>
-    <p class="desc">공공 업무 처리 시간과 행정 비용을 기존 대비 최대 99%까지 단축</p>
+    <p class="desc">업무 처리 시간과 행정 비용을 기존 대비 최대 99%까지 단축</p>
     <span class="cap" style="color:#0C447C">2027년 목표 기준</span>
+    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="stat-panel"><div class="stat-panel-inner">
+      <div class="pw-compare-item"><b>등본 발급</b><span><span class="before">방문·대기 며칠</span><span class="arrow">→</span><span class="after">혼디로 수 초</span></span></div>
+      <div class="pw-compare-item"><b>자영업 개업 준비</b><span><span class="before">인허가별 개별 방문·서류 준비 수 주</span><span class="arrow">→</span><span class="after">혼디가 요건 확인·서류 자동 준비</span></span></div>
+      <div class="pw-compare-item"><b>소비자 상품 선택</b><span><span class="before">후기 검색·비교에 수 시간</span><span class="arrow">→</span><span class="after">혼디가 내 상황 맞춰 즉시 추천</span></span></div>
+      <div class="pw-compare-item"><b>기업 거래처 선택</b><span><span class="before">신용조사·미팅에 수 주</span><span class="arrow">→</span><span class="after">혼디가 재무 데이터로 즉시 진단</span></span></div>
+      <div class="pw-compare-item"><b>재무제표·세금 신고</b><span><span class="before">회계사·세무사 의뢰, 수일~수주</span><span class="arrow">→</span><span class="after">혼디가 자동 생성·신고 대행</span></span></div>
+    </div></div>
   </div>
-  <div>
+  <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#185FA5">16개</div>
     <div class="title">K-서비스</div>
-    <p class="desc">법률·세무·의료·교육 등 16개 공공 영역 전문 AI 비서를 한 플랫폼에서</p>
+    <p class="desc">법률·세무·의료·교육 등 16개 공공 서비스를 한 곳에서</p>
     <span class="cap" style="color:#0C447C">klaw·tax·school 등</span>
+    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="stat-panel"><div class="stat-panel-inner">
+      <p class="pw-svc-note"><b>K-서비스는 공익을 위한 인프라입니다.</b> 사용자 개인의 사적 이익을 위해 복무하는 전문가 페르소나와 달리, K-서비스는 특정 개인의 편이 아니라 사회 전체를 향한 공적 기능을 수행합니다.</p>
+      <div class="pw-svc-list">
+        <div class="pw-svc-item"><span class="pw-svc-name">K-119</span><span class="pw-svc-desc">응급 신고·구조 자동화</span><a class="pw-svc-link" href="https://911.hondi.net" target="_blank" rel="noopener">911.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Law</span><span class="pw-svc-desc">사법, 가상 판결 시뮬레이션</span><a class="pw-svc-link" href="https://klaw.hondi.net" target="_blank" rel="noopener">klaw.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Police</span><span class="pw-svc-desc">치안 신고·접수 자동화</span><a class="pw-svc-link" href="https://police.hondi.net" target="_blank" rel="noopener">police.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Security</span><span class="pw-svc-desc">보안 위협 대응</span><a class="pw-svc-link" href="https://security.hondi.net" target="_blank" rel="noopener">security.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Health</span><span class="pw-svc-desc">의료 분야 전문 진단 보조</span><a class="pw-svc-link" href="https://health.hondi.net" target="_blank" rel="noopener">health.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-School</span><span class="pw-svc-desc">초중고·대학 교육 자동화</span><a class="pw-svc-link" href="https://school.hondi.net" target="_blank" rel="noopener">school.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">GDC</span><span class="pw-svc-desc">혼디 결제·디지털 통화</span><a class="pw-svc-link" href="https://gdc.hondi.net" target="_blank" rel="noopener">gdc.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Stock</span><span class="pw-svc-desc">투자·자산관리 지원</span><a class="pw-svc-link" href="https://stock.hondi.net" target="_blank" rel="noopener">stock.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Insurance</span><span class="pw-svc-desc">보험 심사·보상 처리</span><a class="pw-svc-link" href="https://insurance.hondi.net" target="_blank" rel="noopener">insurance.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Tax</span><span class="pw-svc-desc">세무 신고·납부 지원</span><a class="pw-svc-link" href="https://tax.hondi.net" target="_blank" rel="noopener">tax.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Market</span><span class="pw-svc-desc">AI 기반 상거래 마켓</span><a class="pw-svc-link" href="https://market.hondi.net" target="_blank" rel="noopener">market.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Traffic</span><span class="pw-svc-desc">교통 관제·사고 처리</span><a class="pw-svc-link" href="https://traffic.hondi.net" target="_blank" rel="noopener">traffic.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Logistics</span><span class="pw-svc-desc">물류·배송 경로 최적화</span><a class="pw-svc-link" href="https://logistics.hondi.net" target="_blank" rel="noopener">logistics.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Cleaner</span><span class="pw-svc-desc">환경 신고·현장 사진 분석</span><a class="pw-svc-link" href="https://fiil.kr" target="_blank" rel="noopener">fiil.kr</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Public</span><span class="pw-svc-desc">행정 민원 처리</span><a class="pw-svc-link" href="https://public.hondi.net" target="_blank" rel="noopener">public.hondi.net</a></div>
+        <div class="pw-svc-item"><span class="pw-svc-name">K-Democracy</span><span class="pw-svc-desc">국민동의청원 확산 허브</span><a class="pw-svc-link" href="https://democracy.hondi.net" target="_blank" rel="noopener">democracy.hondi.net</a></div>
+      </div>
+    </div></div>
   </div>
-  <div>
+  <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#0C447C">1,000원</div>
     <div class="title">월 기본료</div>
-    <p class="desc">사람 간 소통은 무제한 무료. AI 비서를 매일 10분 이용 시, 월 1,000원 수준</p>
+    <p class="desc">사람 간 소통은 무제한 무료. AI 비서는 월 1,000원 수준</p>
     <span class="cap" style="color:#0C447C">혼디 요금 기준</span>
+    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
   </div>
-  <div>
+  <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#185FA5">100%</div>
     <div class="title">내 데이터 소유권</div>
     <p class="desc">내 데이터와 이용 흔적은 내 기기에만 저장</p>
     <span class="cap" style="color:#0C447C">OpenHash 원칙</span>
+    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
   </div>
-  <div>
+  <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#1d4ed8">500여</div>
     <div class="title">전문가 페르소나</div>
     <p class="desc">의사, 변호사, 회계사, 교수 등 500여 분야별 전문가 AI</p>
     <span class="cap" style="color:#1d4ed8">전문 분야 AI 기준</span>
+    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
   </div>
 </div>
+
+<script>
+function toggleStatCard(card) {
+  var wasOpen = card.classList.contains('open');
+  card.classList.toggle('open', !wasOpen);
+}
+document.addEventListener('click', function (e) {
+  if (e.target.closest('.pw-svc-link')) e.stopPropagation();
+}, true);
+</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -3617,7 +3722,7 @@ function toggleSubmenu(id, btnEl) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test','usage-guide','ai-assistant','ai-engine','rule-of-law','k-services','expert-personas','k-government'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -3630,6 +3735,11 @@ const PAGES = {
   'scenario-test':   '/pages/scenario-test.html',
   'usage-guide':     '/pages/usage-guide.html',
   'ai-assistant':    '/pages/ai-assistant.html',
+  'ai-engine':       '/pages/ai-engine.html',
+  'rule-of-law':     '/pages/rule-of-law.html',
+  'k-services':      '/pages/k-services.html',
+  'expert-personas': '/pages/expert-personas.html',
+  'k-government':    '/pages/k-government.html',
 };
 
 // 로드 상태 추적
