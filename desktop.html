@@ -105,13 +105,13 @@ body {
 .site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .site-nav-highlight a {
   display: flex; align-items: center; gap: 5px;
-  background: linear-gradient(135deg, #3a2c0f, #2c2410);
+  background: linear-gradient(135deg, #24428c, #17285e);
   border: 1px solid #d4a537; color: #f3d488; font-size: 12.5px; font-weight: 600;
   padding: 6px 13px; border-radius: 20px; white-space: nowrap;
   text-decoration: none; font-family: 'Pretendard', sans-serif;
   transition: background 0.15s, transform 0.1s;
 }
-.site-nav-highlight a:hover { background: linear-gradient(135deg, #4a3814, #3a2f14); transform: translateY(-1px); }
+.site-nav-highlight a:hover { background: linear-gradient(135deg, #2d51a6, #1d3170); transform: translateY(-1px); }
 .site-nav-highlight a .dot { width: 5px; height: 5px; border-radius: 50%; background: #f3d488; flex-shrink: 0; }
 @media (max-width: 900px) {
   .site-nav-highlight a span.label-text { display: none; }
@@ -150,19 +150,18 @@ body {
 .site-hero-actions a.primary { background: #006cc3; color: #fff; font-weight: 500; }
 .site-hero-actions a.outline { background: #14356c; color: #dce1ea; border: 1px solid #435e8b; }
 .site-stats {
-  background: #fff; padding: 28px 20px; display: grid;
-  grid-template-columns: repeat(5, 1fr); gap: 16px;
+  background: #eef1f6; padding: 28px 20px; display: grid;
+  grid-template-columns: repeat(5, 1fr); gap: 18px;
 }
 .stat-card {
-  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  background: #fff; border: none; border-radius: 14px;
   padding: 20px 18px; cursor: pointer; position: relative;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.05);
-  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.08);
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 .stat-card:hover {
-  box-shadow: 0 10px 24px rgba(15,23,42,0.12), 0 3px 8px rgba(15,23,42,0.06);
+  box-shadow: 0 12px 28px rgba(15,23,42,0.16), 0 4px 10px rgba(15,23,42,0.08);
   transform: translateY(-4px);
-  border-color: #d5deee;
 }
 .stat-card:active { transform: translateY(-2px); transition-duration: 0.08s; }
 .site-stats .num { font-size: 26px; font-weight: 500; margin-bottom: 6px; }
@@ -1594,7 +1593,16 @@ section.section[data-tab].tab-active { display: block; }
     <p class="desc">사람 간 소통은 무제한 무료. AI 비서는 월 1,000원 수준</p>
     <span class="cap" style="color:#0C447C">혼디 요금 기준</span>
     <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
+    <div class="stat-panel"><div class="stat-panel-inner">
+      <p class="pw-svc-note"><b>GDC(Global Digital Currency)</b>는 혼디 이용료의 결제 수단입니다. 하나의 화폐 안에 은행·보험·증권·거래소·금융감독 기능을 통합하는 것을 목표로 하며, 현재는 그 기능을 검증하기 위해 법적 테두리 안에서 제한된 형태로 제공됩니다.</p>
+      <div class="pw-compare-item"><b>환율</b><span>테스트 기간 동안 GDC 1T = KRW 1원(1:1)</span></div>
+      <div class="pw-compare-item"><b>과금 방식</b><span>종량제 — 기본료 1,000원 소진 시 추가 충전 필요</span></div>
+      <div class="pw-compare-item"><b>사람 간 대화</b><span class="after">무제한 무료</span></div>
+      <div class="pw-compare-item"><b>AI 비서 이용</b><span>유료 — 하루 10분 기준 월 1,000원 안팎</span></div>
+      <div class="pw-compare-item"><b>최소 충전 금액</b><span>1만 원</span></div>
+      <div class="pw-compare-item"><b>결제 대상</b><span>혼디 이용료 + K-Law·K-School·K-Tax 등 유료 서비스</span></div>
+      <div class="pw-compare-item"><b>혼디마켓 결제</b><span>2026년 하반기부터 시험 운용 예정 — <a class="pw-svc-link" href="#" onclick="loadPage('hondi-market');return false;">혼디마켓 바로가기</a></span></div>
+    </div></div>
   </div>
   <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#185FA5">100%</div>
@@ -1602,7 +1610,12 @@ section.section[data-tab].tab-active { display: block; }
     <p class="desc">내 데이터와 이용 흔적은 내 기기에만 저장</p>
     <span class="cap" style="color:#0C447C">OpenHash 원칙</span>
     <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
+    <div class="stat-panel"><div class="stat-panel-inner">
+      <p class="pw-svc-note">Openhash Network는 오직 사용자 데이터의 <b>해시(Hash) 값</b>만 보존합니다. 실제 데이터는 전부 사용자 각자의 <b>PDV(Private Data Vault, 프라이빗 데이터 금고)</b>에 저장되며, 오직 데이터 소유자 본인만 접근할 수 있습니다.</p>
+      <div class="pw-compare-item"><b>진위 증명</b><span>Openhash에 기록된 해시로 증명 가능 — 증명 여부는 본인 선택</span></div>
+      <div class="pw-compare-item"><b>암호화</b><span>타인의 PDV를 우연히·의도적으로 얻어도 본인 외엔 열람 불가</span></div>
+      <div class="pw-compare-item"><b>서버 저장 여부</b><span class="after">서버엔 데이터 없음 — 해킹·대규모 유출 위험 자체가 없음</span></div>
+    </div></div>
   </div>
   <div class="stat-card" onclick="toggleStatCard(this)">
     <div class="num" style="color:#1d4ed8">500여</div>
@@ -1610,7 +1623,17 @@ section.section[data-tab].tab-active { display: block; }
     <p class="desc">의사, 변호사, 회계사, 교수 등 500여 분야별 전문가 AI</p>
     <span class="cap" style="color:#1d4ed8">전문 분야 AI 기준</span>
     <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner"></div></div>
+    <div class="stat-panel"><div class="stat-panel-inner">
+      <p class="pw-svc-note"><b>페르소나란</b> 전문직 종사자 개인의 지적 역량과 경험 격차를 상향 평준화하려는 의도로 설계된 전문가 AI입니다. 변호사마다 실제 지식·경험은 천차만별이지만, 변호사 페르소나의 도움을 받으면 어떤 변호사든 세상의 모든 법률 지식에 통달한 것과 다름없는 조력을 받을 수 있습니다.</p>
+      <p class="pw-svc-note">K-서비스가 공익을 우선하는 것과 달리, 전문가 페르소나는 <b>사용자의 사익</b>을 우선합니다. K-서비스와 변호사 페르소나의 관계는 <b>법원과 변호사의 관계</b>와 같습니다 — K-Law가 중립적으로 판단을 시뮬레이션한다면, 변호사 페르소나는 의뢰인 편에서 유리한 논리를 만듭니다.</p>
+      <div class="pw-compare-item"><b>교육 — 366명</b><span>교수(반도체공학·법학·수학물리·화학생명과학·인문학·사회과학 등 전공별), 1:1 맞춤교육 등</span></div>
+      <div class="pw-compare-item"><b>법률 — 63명</b><span>변호사(형사·민사·기업법무·가사·상속·부동산·교통사고 등 세부분야별), 법무사</span></div>
+      <div class="pw-compare-item"><b>의료 — 43명</b><span>의사(내과·외과·신경과·소아청소년과·산부인과·정신건강의학과·응급의학과 등 전문과목별)</span></div>
+      <div class="pw-compare-item"><b>금융·세무 — 13명</b><span>세무사, 공인회계사(외부감사·기업가치평가·IFRS·M&A실사·포렌식회계 등)</span></div>
+      <div class="pw-compare-item"><b>공학·기술 — 13명</b><span>건축사, 기술사, 도선사, 조선사, 항해사, 기관사 등</span></div>
+      <div class="pw-compare-item"><b>기타 전문직 — 6명</b><span>정보보안전문가, 통역사·번역사, 관광통역안내사, 생활스포츠지도사, 미용사, 조리사</span></div>
+      <div class="pw-compare-item"><b>합계</b><span class="after">약 504명 (2026-08 기준, 계속 확장 중)</span></div>
+    </div></div>
   </div>
 </div>
 
