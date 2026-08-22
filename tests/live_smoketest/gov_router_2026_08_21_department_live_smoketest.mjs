@@ -157,6 +157,68 @@ const SCENARIOS = [
     expectContains: 'SP-ORG-JPDC',
     note: '공공임대주택 청약(jpdc:public_housing_application) — 로컬 테스트에서 SP-DO-HOUSING(도청)으로 오탐됨',
   },
+
+  // ══════════════════════════════════════════════════════════════
+  // ★ 2026-08-22 신설 — 사용자가 첨부한 정부24 국가 민원서비스 목록
+  // 기반 시나리오. 09-national/05-emd 계층은 이번 세션에 한 번도
+  // 실측 검증 안 됨("이전에 모두 통과했다는 사실이 놀랍다"는 사용자
+  // 지적으로 착수). 기대값은 SP-EMD-TEMPLATE §3(05-emd/templates/
+  // SP-TEAM-CIVIL-TEMPLATE_v2.1.md)의 명시적 업무분장 근거:
+  //   - 주민등록등본·인감증명·가족관계증명·전입신고 → 읍면동(EMD)이
+  //     직접 수행("즉시발급 증명서")
+  //   - 여권 발급·갱신 → EMD "수행 불가" 명시, 시/군/구청 여권과로
+  //     외부 안내(전국 예외 세종 조치원읍 제외) — 제주는 시군구가
+  //     없으므로 jejusi/seogwipo 시청(jachi 계열)이 실제 창구.
+  //     외교부(MOFA, 국가기관 테이블에도 '여권' kw 있음)로 새면 오답.
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: 'emd-resident-cert',
+    utterance: '등본을 좀 떼야 하는데 어디로 가면 되나요',
+    expectContains: 'SP-EMD-',
+    note: '주민등록표 등본 발급 — EMD 민원팀 직접 수행 사무',
+  },
+  {
+    id: 'emd-seal-cert',
+    utterance: '인감증명서가 필요한데 어디서 받을 수 있나요',
+    expectContains: 'SP-EMD-',
+    note: '인감증명서 발급 — EMD 민원팀 직접 수행 사무(인감증명법)',
+  },
+  {
+    id: 'passport-not-emd',
+    utterance: '여권을 잃어버려서 다시 만들어야 하는데 어디로 가야 하나요',
+    expectContains: 'jachi',
+    note: '여권 재발급 — EMD "수행 불가" 명시 사무, 시/군/구청 여권과가 정답. 외교부(MOFA)나 EMD로 새면 오답. expectContains는 trace 문자열에 jachi가 포함되는지(시청 jachi 국 라우팅) 느슨하게 확인.',
+  },
+  {
+    id: 'emd-transfer-report',
+    utterance: '다른 지역으로 이사를 왔는데 신고해야 하나요',
+    expectContains: 'SP-EMD-',
+    note: '전입신고 — EMD 민원팀 직접 수행 사무',
+  },
+  {
+    id: 'emd-family-relation-cert',
+    utterance: '가족관계증명서를 떼려고 하는데요',
+    expectContains: 'SP-EMD-',
+    note: '가족관계증명서 발급 — EMD 민원팀 직접 수행 사무',
+  },
+  {
+    id: 'building-register',
+    utterance: '건축물대장을 발급받고 싶어요',
+    expectContains: 'housing',
+    note: '건축물대장 발급/열람 — 국토교통부 소관이나 실무는 지자체 건축과. expectContains는 도청/시청 HOUSING 계열 도메인 문자열로 느슨하게 확인.',
+  },
+  {
+    id: 'income-cert-nts',
+    utterance: '소득금액증명이 필요한데 어디서 받나요',
+    expectContains: 'NTS',
+    note: '소득금액증명 발급 — 국세청(NTS) 소관, 국가기관 테이블에 이미 등재된 코드로 확인.',
+  },
+  {
+    id: 'health-cert',
+    utterance: '보건증 발급받고 싶은데요',
+    expectContains: 'health',
+    note: '건강진단결과서(보건증) 발급 — 보건복지부 소관이나 실무는 보건소. expectContains는 도청/시청 HEALTH 계열 도메인 문자열로 느슨하게 확인.',
+  },
 ];
 
 async function main() {
