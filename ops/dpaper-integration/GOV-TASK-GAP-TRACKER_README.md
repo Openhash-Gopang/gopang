@@ -581,3 +581,54 @@ GOV_TASK 섹션 추가. **주의**: policy-bodies와 마찬가지로 이 지연 
    패턴 자체가 안 맞을 가능성이 크다는 이전 세션 판단 유지, 별도 재정의
    필요.
 
+## 2026-08-23 세션 (계속) — enterprises 충돌가드 보강 + qgov(58) 라우팅 배선
+
+**enterprises 충돌가드 사후 보강**: HUG PR 병합 후 재검토하다가 KAC
+('한국공항공사')·IIAC('인천국제공항공사')가 09-national/agencies의
+airport 도메인 키워드('공항공사')와 부분 문자열로 충돌함을 발견 —
+당초 "키워드가 전부 고유명사라 안 겹친다"는 판단이 틀렸다. `_natAgencyHit`
+(정책기관 블록에서 이미 계산돼 있던 변수)를 enterprises 매칭에도 가드로
+적용해 agencies(지사) 우선순위를 지키도록 수정. `_NAT_AGENCY_DOMAIN_
+KEYWORDS`·`_POLICY_BODY_DOMAIN_KEYWORDS` 전체와 enterprises 29개
+키워드를 파이썬으로 전수 대조해 이 건 외 추가 충돌 없음을 확인.
+
+**qgov(58건) 라우팅 인프라 신설**: enterprises와 동일 패턴
+(`_QGOV_DOMAIN_KEYWORDS`·`resolveQgovLazy`, -0.77단계) 복제. 사전 전수
+대조 중 두 가지를 발견·처리:
+- **NHIS(국민건강보험공단)·NPS(국민연금공단)·KCOMWEL(근로복지공단)**은
+  09-national/agencies에도 동일 기관의 "지사" SP가 이미 있음(도메인
+  nhis/nps/labor) — 이건 오류가 아니라 police·court·prosecution 등에서
+  이미 쓰이던 policy-bodies(본청) vs agencies(지사) 공존 패턴과 동일하다.
+  같은 `_natAgencyHit` 가드로 지사 쪽이 우선하도록 자연스럽게 처리(제외
+  하지 않고 등록은 함 — 정책·본청 수준 발화에서만 qgov SP에 도달).
+- **KEIT2(한국산업기술기획평가원)·KEITI(한국환경산업기술원)·KIAT2(한국
+  산업기술진흥원)**가 NIS(국가정보원) policy-body의 bare 키워드
+  `'산업기술'`과 실제로 충돌함을 발견(정책기관 매칭은 plain
+  `text.includes()`라 부분 문자열도 걸림, 내 새 코드가 실행되기도 전에
+  policy-body 블록에서 먼저 가로챔) — 이건 qgov 추가 전부터 잠재해있던
+  버그다(예: "산업기술진흥원 지원사업 문의"도 국정원으로 오탐됐을
+  것). NIS 키워드에서 bare '산업기술'을 제거하고 구체적 행위형('산업기술
+  유출 제보'·'기술 유출')만 남겨 수정.
+
+격리 테스트로 KEIT2/KIAT2 정상 매칭, NHIS 계층우선순위 정상 작동, NIS
+본래 기능(제보 신고) 유지, KOTRA·장학재단 등 신규 매칭 확인.
+
+**CSV 반영**: qgov 58건은 라우팅만 됐고 GOV_TASK 접수(REQUIRED_DOCUMENTS_
+REGISTRY 등록)는 아직이므로 "완료"로 표시하지 않음(enterprises에서
+HUG만 완료 처리한 것과 동일 기준) — 상태는 미착수 유지, 비고에 라우팅
+준비 완료 사실만 기록.
+
+**09-national 최종 진행률(이 세션 종료 시점)**: 완료 1(HUG)·미착수 435.
+enterprises(29)·qgov(58) 총 87건은 라우팅 도달 가능 상태 확보, GOV_TASK
+개별 등록은 앞으로 필요. other(250)는 아직 라우팅 배선도 안 됨.
+
+**다음 세션 우선순위**:
+1. `other`(250) 라우팅 배선 — 규모가 커서 배치를 나눠 진행하고, 매 배치
+   마다 기존 4개 사전(L2_CANONICAL/POLICY_BODY/NAT_AGENCY/ENTERPRISE/
+   QGOV)과의 충돌을 전수 대조할 것 — 이번 세션에서 실제로 2건(KAC·
+   KEIT2류) 놓쳤다가 사후 발견한 전례가 있으니 "고유명사라 안전할 것"
+   이라는 가정만으로 넘기지 말고 반드시 코드로 대조.
+2. enterprises 나머지 28건 + qgov 58건의 GOV_TASK 접수(§1-2) 개별 검증 —
+   기관마다 "실제 서류기반 시민 접수가 있는지" 확인 필요(LH 검토 중
+   확인: 자체 시스템 안내형이라 재정의 후보 가능성).
+

@@ -3670,7 +3670,7 @@ const _POLICY_BODY_DOMAIN_KEYWORDS = {
   KASA: ['우주항공청', '우주기술 연구개발 지원사업', '우주기술'],
   ASSEMBLY: ['국민동의청원'],
   SUPREMECOURT: ['대법원', '판결문 등본 발급', '사법제도 개선 의견 제출'],
-  NIS: ['국가정보원', '국정원', '산업기술 유출 제보', '기술 유출', '산업기술'],
+  NIS: ['국가정보원', '국정원', '산업기술 유출 제보', '기술 유출'],  // ★ 2026-08-23 수정 — bare '산업기술'을 제거했다(09-national/qgov 배선 작업 중 발견). 한국산업기술기획평가원(KEIT2)·한국환경산업기술원(KEITI)·한국산업기술진흥원(KIAT2) 등 실제 기관명에 '산업기술'이 포함돼 있어, 이 발화들이 전부 국가정보원으로 오탐되고 있었다(policy-body 매칭은 plain text.includes()라 부분 문자열도 걸림). 기존 '산업기술 유출 제보'·'기술 유출'은 이미 구체적 행위형이라 안전 — 그대로 유지.
   NEC: ['중앙선거관리위원회', '선거관리위원회', '정당 후원회 등록'],
   NSSC: ['원자력안전위원회', '방사선 발생장치 사용 허가'],
   NABO: ['국회예산정책처', '예산 소요 추계'],
@@ -3905,6 +3905,122 @@ async function resolveEnterpriseLazy(code, onProgress) {
   } catch (e) {
     console.warn('[gov-router] resolveEnterpriseLazy 실패, 기본 문구로 대체:', e?.message);
     const label = _ENTERPRISE_NAME_KO[code] || code;
+    return {
+      text: `[정보 없음] ${label} 관련 SP를 지금 불러오지 못했습니다 — 정부24(gov.kr) 또는 해당 기관 공식 홈페이지를 확인해 주세요.`,
+      source: 'fallback',
+    };
+  }
+}
+
+// ── 준정부기관(qgov) 매칭 (2026-08-23 신설) ──────────────────────────
+// enterprises와 동일한 구조적 결함(09-national/qgov 58개가 gov-router.js
+// 어디에도 배선돼 있지 않던 것)을 같은 세션에서 이어서 수정한다. 패턴은
+// enterprises와 동일(전국 단일 SP → 키워드 매칭 + 지연 fetch).
+//
+// ★ 계층 중복 주의 — NHIS(국민건강보험공단)·NPS(국민연금공단)·
+// KCOMWEL(근로복지공단)은 09-national/agencies에도 동일 기관의 "지사"
+// SP가 이미 존재한다(도메인 nhis/nps/labor). 이건 오류가 아니라
+// police·court·prosecution 등에서 이미 쓰이던 policy-bodies(본청) vs
+// agencies(지사) 공존 패턴과 동일하다 — 아래 enterpriseGuess와 같은
+// _natAgencyHit 가드를 그대로 적용해 지사 쪽이 우선하도록 둔다(이
+// 기관들의 qgov 파일은 실행형 발화에서는 사실상 안 쓰이고, 정책·본청
+// 수준 발화에서만 도달하게 됨 — 의도된 동작).
+const _QGOV_DOMAIN_KEYWORDS = {
+  AT: ['한국농수산식품유통공사'],
+  GEPS: ['공무원연금공단'],
+  HF: ['한국주택금융공사'],
+  HIRA: ['건강보험심사평가원'],
+  HRDKOREA: ['한국산업인력공단'],
+  KALIS: ['국토안전관리원'],
+  KAMCO: ['한국자산관리공사'],
+  KCA2: ['한국소비자원'],
+  KCA3: ['한국방송통신전파진흥원'],
+  KCOMWEL: ['근로복지공단'],
+  KDIC: ['예금보험공사'],
+  KEA3: ['한국에너지공단'],
+  KEAD: ['한국장애인고용공단'],
+  KECO: ['한국환경공단'],
+  KEIS: ['한국고용정보원'],
+  KEIT2: ['한국산업기술기획평가원'],
+  KEITI: ['한국환경산업기술원'],
+  KESCO: ['한국전기안전공사'],
+  KGS: ['한국가스안전공사'],
+  KIAT2: ['한국산업기술진흥원'],
+  KICOX: ['한국산업단지공단'],
+  KISA: ['한국인터넷진흥원'],
+  KNPS: ['국립공원공단'],
+  KOAGI: ['한국수목원정원관리원'],
+  KODIT3: ['신용보증기금'],
+  KODIT4: ['기술보증기금'],
+  KOELSA: ['한국승강기안전공단'],
+  KOFIA2: ['한국재정정보원'],
+  KOFOWI: ['한국산림복지진흥원'],
+  KOICA2: ['한국국제협력단'],
+  KOMSA2: ['한국해양교통안전공단'],
+  KORAD: ['한국원자력환경공단'],
+  KOSAF: ['한국장학재단'],
+  KOSHA2: ['한국산업안전보건공단'],
+  KOSMES: ['중소벤처기업진흥공단'],
+  KOSSA: ['한국사회보장정보원'],
+  KOTRA2: ['대한무역투자진흥공사', 'KOTRA'],
+  KOTSA2: ['한국교통안전공단'],
+  KPETRO: ['한국석유관리원'],
+  KPX2: ['한국전력거래소'],
+  KRAJ: ['한국법무보호복지공단'],
+  KRC2: ['한국농어촌공사'],
+  KR: ['국가철도공단'],
+  KSPO: ['국민체육진흥공단'],
+  KSURE: ['한국무역보험공사'],
+  KTO: ['한국관광공사'],
+  KVMC2: ['한국보훈복지의료공단'],
+  LX2: ['한국국토정보공사'],
+  NHIS: ['국민건강보험공단'],
+  NIA2: ['한국지능정보사회진흥원'],
+  NIE: ['국립생태원'],
+  NPS: ['국민연금공단'],
+  NRF: ['한국연구재단'],
+  POSTFIN2: ['우체국금융개발원'],
+  POSTLOG2: ['우체국물류지원단'],
+  QIA3: ['축산물품질평가원'],
+  SEMAS: ['소상공인시장진흥공단'],
+  TS: ['한국도로교통공단'],
+};
+const _QGOV_NAME_KO = {
+  AT: '한국농수산식품유통공사', GEPS: '공무원연금공단', HF: '한국주택금융공사', HIRA: '건강보험심사평가원',
+  HRDKOREA: '한국산업인력공단', KALIS: '국토안전관리원', KAMCO: '한국자산관리공사', KCA2: '한국소비자원',
+  KCA3: '한국방송통신전파진흥원', KCOMWEL: '근로복지공단', KDIC: '예금보험공사', KEA3: '한국에너지공단',
+  KEAD: '한국장애인고용공단', KECO: '한국환경공단', KEIS: '한국고용정보원', KEIT2: '한국산업기술기획평가원',
+  KEITI: '한국환경산업기술원', KESCO: '한국전기안전공사', KGS: '한국가스안전공사', KIAT2: '한국산업기술진흥원',
+  KICOX: '한국산업단지공단', KISA: '한국인터넷진흥원', KNPS: '국립공원공단', KOAGI: '한국수목원정원관리원',
+  KODIT3: '신용보증기금', KODIT4: '기술보증기금', KOELSA: '한국승강기안전공단', KOFIA2: '한국재정정보원',
+  KOFOWI: '한국산림복지진흥원', KOICA2: '한국국제협력단', KOMSA2: '한국해양교통안전공단', KORAD: '한국원자력환경공단',
+  KOSAF: '한국장학재단', KOSHA2: '한국산업안전보건공단', KOSMES: '중소벤처기업진흥공단', KOSSA: '한국사회보장정보원',
+  KOTRA2: '대한무역투자진흥공사', KOTSA2: '한국교통안전공단', KPETRO: '한국석유관리원', KPX2: '한국전력거래소',
+  KRAJ: '한국법무보호복지공단', KRC2: '한국농어촌공사', KR: '국가철도공단', KSPO: '국민체육진흥공단',
+  KSURE: '한국무역보험공사', KTO: '한국관광공사', KVMC2: '한국보훈복지의료공단', LX2: '한국국토정보공사',
+  NHIS: '국민건강보험공단', NIA2: '한국지능정보사회진흥원', NIE: '국립생태원', NPS: '국민연금공단',
+  NRF: '한국연구재단', POSTFIN2: '(재)우체국금융개발원', POSTLOG2: '(재)우체국물류지원단',
+  QIA3: '축산물품질평가원', SEMAS: '소상공인시장진흥공단', TS: '한국도로교통공단',
+};
+function _guessQgovFromText(text) {
+  for (const [code, kws] of Object.entries(_QGOV_DOMAIN_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return code;
+  }
+  return null;
+}
+const _qgovSpCache = new Map();
+async function resolveQgovLazy(code, onProgress) {
+  if (_qgovSpCache.has(code)) {
+    return { text: _qgovSpCache.get(code), source: 'cache' };
+  }
+  try {
+    onProgress?.({ stage: 'qgov-fetch', code });
+    const text = await _fetchText(`09-national/qgov/SP-NAT-QGOV-${code}_v1.2.md`);
+    _qgovSpCache.set(code, text);
+    return { text, source: 'fetched' };
+  } catch (e) {
+    console.warn('[gov-router] resolveQgovLazy 실패, 기본 문구로 대체:', e?.message);
+    const label = _QGOV_NAME_KO[code] || code;
     return {
       text: `[정보 없음] ${label} 관련 SP를 지금 불러오지 못했습니다 — 정부24(gov.kr) 또는 해당 기관 공식 홈페이지를 확인해 주세요.`,
       source: 'fallback',
@@ -5038,14 +5154,20 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     trace.push(`(계층충돌 통합판단 — 지방행정(${picked.code}) 소관으로 판정, 아래 라우팅 경로로 위임)`);
   }
 
-  // -0.78) 국가 공기업(enterprises) 매칭 (2026-08-23 신설) — policy-body
-  // 블록과 완전히 분리된 별도 키워드 사전이라 위 -0.8) 블록의 충돌가드와
-  // 무관하게 독립 실행한다. enterprises도 policy-bodies와 마찬가지로 도별
-  // 지사가 없는 전국 단일 SP라(§0 "이 기관은 도지사 지휘·감독을 받지
-  // 않으며 전국 단일 공기업이다") 위치 판별 게이트(-0.5)보다 먼저 와야
-  // 한다. 키워드는 전부 기관 고유명사라 policy-bodies/agencies 사전과
-  // 겹치지 않음을 확인했다(§ 위 주석 참조) — 별도 충돌가드 불필요.
-  const enterpriseGuess = _guessEnterpriseFromText(text);
+  // -0.78) 국가 공기업(enterprises) 매칭 (2026-08-23 신설) — enterprises도
+  // policy-bodies와 마찬가지로 도별 지사가 없는 전국 단일 SP라(§0 "이
+  // 기관은 도지사 지휘·감독을 받지 않으며 전국 단일 공기업이다") 위치
+  // 판별 게이트(-0.5)보다 먼저 와야 한다.
+  // ★ 2026-08-23 충돌가드 추가 — 최초 구현 때 "키워드가 전부 고유명사라
+  // 안 겹친다"고 판단했으나 실제로는 KAC('한국공항공사')·IIAC('인천국제
+  // 공항공사')가 09-national/agencies의 airport 도메인 키워드
+  // ('공항공사', _NAT_AGENCY_DOMAIN_KEYWORDS)와 부분 문자열로 충돌한다
+  // (도로/의료원 등 다른 기업명도 향후 같은 위험이 있을 수 있어, 개별
+  // 화이트리스트 대신 위 -0.8) 정책기관 블록과 동일한 범용 가드를 쓴다).
+  // _natAgencyHit는 이미 위(정책기관 블록, line ~4973)에서 계산돼 있다
+  // — agencies(지사) 쪽이 이미 이 발화를 인식했다면 그쪽이 우선한다
+  // (기존 정책기관 vs 지사 우선순위 원칙과 동일).
+  const enterpriseGuess = _natAgencyHit ? null : _guessEnterpriseFromText(text);
   if (enterpriseGuess) {
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
@@ -5053,6 +5175,20 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const resolvedEnt = await resolveEnterpriseLazy(enterpriseGuess, onProgress);
     parts.push(resolvedEnt.text);
     trace.push(`SP-ENT-LAZY(${enterpriseGuess}/${resolvedEnt.source})`);
+    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+  }
+
+  // -0.77) 준정부기관(qgov) 매칭 (2026-08-23 신설) — enterprises 바로 다음
+  // 단계. 동일한 _natAgencyHit 가드를 적용한다(NHIS/NPS/KCOMWEL처럼
+  // agencies에도 동일 기관 지사가 있는 경우, 지사가 우선하도록).
+  const qgovGuess = _natAgencyHit ? null : _guessQgovFromText(text);
+  if (qgovGuess) {
+    const nationalSp = await _loadNationalSp();
+    parts.push(nationalSp);
+    trace.push('JEJU-NATIONAL-SP');
+    const resolvedQgov = await resolveQgovLazy(qgovGuess, onProgress);
+    parts.push(resolvedQgov.text);
+    trace.push(`SP-QGOV-LAZY(${qgovGuess}/${resolvedQgov.source})`);
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
