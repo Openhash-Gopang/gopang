@@ -750,6 +750,10 @@ section.section[data-tab].tab-active { display: block; }
 .pf-footline .pf-url { font-size: 22px; font-weight: 700; color: var(--brand-dk); text-decoration: none; }
 .pf-note { font-size: 12.5px; color: #94a3b8; margin-top: 6px; line-height: 1.6; }
 
+/* 2026-08-23 — 로드되는 각 페이지가 이제 자체 돌아가기 화살표(.page-back-arrow)를
+   내장하므로, 오버레이 공용 화살표는 중복 표시되지 않도록 숨긴다. */
+#standalone-overlay:has(.page-back-arrow) #standalone-close { display: none !important; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:false, theme:"neutral", fontFamily:"inherit"});</script>
@@ -977,12 +981,6 @@ section.section[data-tab].tab-active { display: block; }
       </svg>
     </button>
     <div class="sb-submenu" id="submenu-dev-docs">
-    <!-- 2026-08-23 신설 — 혼디 라우팅 "근본적 정상화" 세션 요약(BUG-023~035,
-         DECISION-01). 새 항목은 이 섹션 맨 위(최신)에 넣을 것(기존 관례 유지). -->
-    <a class="sb-item sb-subitem" href="./docs/SESSION_SUMMARY_GOV_ROUTER_STRUCTURAL_NORMALIZATION_20260823_v1_0.html" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-      <span class="sb-item-label">혼디 라우팅 근본적 정상화 — BUG-023~035(계층충돌 통합판단·시청 국 LLM 구제망·키워드 매칭 어절경계·EMD 비대칭 제거) + 정부24 350건 라이브 검증 ↗</span>
-    </a>
     <!-- 2026-08-20 신설 — 제주대학교 구상: 시나리오 추적으로 school 저장소
          실결함(죽은 Supabase 등) 발견 + 1단계 PocketBase 마이그레이션.
          새 항목은 이 섹션 맨 위(최신)에 넣을 것(기존 관례 유지). -->
