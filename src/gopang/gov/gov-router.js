@@ -6260,6 +6260,24 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // 단계(_matchEmd, 발화+pdvLocationHint 양쪽 다 검사)가 구체적
     // 읍면동 이름을 못 찾았다는 뜻이다 — 즉 위치 확보(Fix 1)가 실패한
     // 극소수 경우. 여기서 부서를 추측하는 대신 정직하게 위치를 되묻는다.
+    //
+    // ★ 2026-08-23 수정(BUG-034 배포 직후 라이브 스모크테스트 실측
+    // 발견) — 위 주석의 전제("이 지점 도달 = 1)단계가 이미 실패")가
+    // BUG-034 이후로는 더 이상 항상 참이 아니다. BUG-034가 emdMatch를
+    // "위치 힌트로만" 확보한 경우 즉시 확정 대신 emdFallback에 보류하고
+    // 뒤 단계에 기회를 주기 시작했는데, 그중 하나가 바로 이 5)단계라서
+    // — 1)단계가 실제로는 "제주시 애월읍 애월리 123-4" 같은 완전한
+    // 주소에서 '애월읍'을 정확히 찾아 emdFallback에 담아뒀는데도, 이
+    // 5)단계에서 AI가 SP-EMD-LAZY를 고르면 그 사실을 모른 채 "어느
+    // 읍면동에 거주하시나요"를 되물어버렸다(실사용에서는 이미 아는
+    // 정보를 다시 묻는 모순) — BUG-034가 고친 문제와 정확히 대칭인
+    // 새 회귀. emdFallback이 있으면(=1)단계가 실제로는 성공했었다는
+    // 뜻) 위치를 되묻지 않고 그 결과를 그대로 확정한다.
+    if (emdFallback) {
+      await _appendExpertIfMatched();
+      emdFallback.trace.push('(5단계 LLM 분류도 SP-EMD-LAZY로 합의 — 1단계에서 이미 확보해둔 위치 힌트로 확정, 재질문 생략)');
+      return { systemPrompt: emdFallback.parts.join('\n\n---\n\n'), trace: emdFallback.trace };
+    }
     throw new NeedsLocationSignal(
       '주민등록·인감증명 등은 거주하시는 읍면동(주민센터)에서 처리합니다. 어느 읍면동에 거주하시나요?'
     );
