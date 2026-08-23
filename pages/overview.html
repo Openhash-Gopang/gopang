@@ -10,104 +10,19 @@
 <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
 </head>
 <body>
-<style>
-/* ══════════════════════════════════════════════════════════════════
-   공용 사이트 헤더 (2026-08-23 전 페이지 일괄 적용) — site-strip(안내 띠)
-   + site-nav(현재 메인 페이지와 동일한 상단 메뉴) + page-back-arrow(원형
-   돌아가기 버튼, rule-of-law 페이지 스타일과 통일). desktop.html의
-   SPA 오버레이로 열리든 새 탭으로 직접 열리든 양쪽에서 동작한다.
-   ══════════════════════════════════════════════════════════════════ */
-.site-strip {
-  background: #0a1730; padding: 6px 20px; text-align: center;
-  text-decoration: none; display: block;
-}
-.site-strip span { color: #c9d6ee; font-size: 12px; font-family: 'Pretendard', sans-serif; }
-.site-strip:hover span { color: #fff; }
-.site-nav {
-  background: #12234f; padding: 0 20px; display: flex; align-items: center;
-  height: 54px; gap: 16px; border-bottom: 1px solid #1f3568; position: relative;
-}
-.site-nav-logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; text-decoration: none; }
-.site-nav-logo img { width: 26px; height: 26px; border-radius: 6px; }
-.site-nav-logo span { color: #fff; font-size: 16px; font-weight: 500; font-family: 'Pretendard', sans-serif; }
-.site-nav-links { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
-.site-nav-links::-webkit-scrollbar { display: none; }
-.site-nav-links a {
-  color: #9fb0d1; font-size: 13.5px; padding: 17px 10px; text-decoration: none;
-  white-space: nowrap; border-bottom: 2px solid transparent; display: flex;
-  align-items: center; gap: 5px; font-family: 'Pretendard', sans-serif;
-  transition: color 0.15s;
-}
-.site-nav-links a:hover { color: #fff; }
-.site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.site-nav-highlight a {
-  display: flex; align-items: center; gap: 6px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
-  font-size: 12.5px; font-weight: 700; padding: 7px 14px; border-radius: 20px;
-  text-decoration: none; border: 1px solid rgba(255,255,255,0.45);
-  font-family: 'Pretendard', sans-serif; white-space: nowrap;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.site-nav-highlight a:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(37,99,235,0.35); }
-.site-nav-highlight .dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
-@media (max-width: 900px) { .site-nav-highlight .label-text { display: none; } }
-@media (max-width: 640px) { .site-nav { padding: 0 12px; } }
-
-.page-back-arrow {
-  position: fixed; top: 96px; left: 16px; z-index: 1700;
-  display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; border-radius: 50%;
-  background: #fff; border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 10px rgba(15,23,42,0.14);
-  color: #374151; cursor: pointer; text-decoration: none;
-}
-
-</style>
-<a class="site-strip" href="https://github.com/Openhash-Gopang/gopang" target="_blank">
-  <span>2026년 9월 1일 테스트 시작 · 2027년 완전한 AI 정부 구현 목표 · 오픈소스 코드 공개</span>
-</a>
-
-<div class="site-nav">
-  <a class="site-nav-logo" href="/desktop.html" onclick="return __hondiBack(event);">
-    <img src="/icons/icon-192.png" alt="혼디">
-    <span>혼디</span>
-  </a>
-  <nav class="site-nav-links">
-    <a href="/pages/usage-guide.html">이용방법</a>
-    <a href="/pages/ai-assistant.html">AI 비서</a>
-    <a href="/feedback.html">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      게시판
-    </a>
-    <a href="/desktop.html">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="10" height="4" rx="1"/></svg>
-      대시보드
-    </a>
-    <a href="/pages/ai-engine.html">AI 엔진</a>
-    <a href="/pages/openhash.html">오픈해시</a>
-    <a href="/pages/hondi-market.html">혼디마켓</a>
-  </nav>
-  <div class="site-nav-highlight">
-    <a href="/pages/k-services.html"><span class="dot"></span><span class="label-text">K-서비스</span></a>
-    <a href="/pages/expert-personas.html"><span class="dot"></span><span class="label-text">전문가 페르소나</span></a>
-    <a href="/pages/k-government.html"><span class="dot"></span><span class="label-text">K-정부</span></a>
-  </div>
-</div>
-
-<a class="page-back-arrow" href="/desktop.html" onclick="return __hondiBack(event);" aria-label="돌아가기">
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-</a>
-
 <script>
-function __hondiBack(e) {
-  if (typeof closeStandalone === 'function') {
-    closeStandalone();
-    if (e && e.preventDefault) e.preventDefault();
-    return false;
-  }
-  return true;
-}
+window.PAGE_HERO = {
+  badge: '시스템 개요',
+  l1: '혼디 아키텍처',
+  l2: '한눈에 보기',
+  sub: '혼디를 구성하는 계층과 데이터 흐름을 다이어그램으로 정리했습니다.',
+  actions: []
+};
 </script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+
 
 
 <style>
@@ -359,25 +274,7 @@ body {
 </style>
 
 <!-- ── HERO ── -->
-<section class="hero dot-bg" id="top">
-  <div class="hero-inner">
-    <a class="hero-eyebrow" href="https://github.com/Openhash-Gopang/gopang" target="_blank">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-      오픈소스 프로젝트 · GitHub
-    </a>
-    <h1><strong>혼디</strong></h1>
-    <p class="hero-sub">AI 평행세계 플랫폼 · v3.4</p>
-
-    <p class="hero-tagline">AI 평행 세계는 현실 세계의 비용을 <strong>99.9%</strong>, 시간을 <strong>99.99999%</strong> 줄입니다.</p>
-
-    <div class="hero-actions">
-      <button onclick="openWebApp()" class="btn-lg btn-green">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3a1 1 0 000 2h2.586L3.293 10.293a1 1 0 101.414 1.414L10 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1H6z"/></svg>
-        혼디 웹앱 열기
-      </button>
-    </div>
-  </div>
-</section>
+<div id="site-hero-mount"></div>
 
 <hr class="sep">
 
