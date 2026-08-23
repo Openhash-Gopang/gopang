@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-23 혼디 라우팅 근본적 정상화 세션에서
+  확인된 설계 원리와, 작업자(AI 비서 포함) 본인이 실제로 저지른 실수를
+  복기해 정리한 지침서. 개별 기능 사용법이 아니라 gov-router.js 라우팅을
+  다시 건드릴 때 반복하지 말아야 할 시행착오를 다룸.
+  SESSION_LESSONS_ROUTING_ARCHITECTURE_20260806·_FIXES_20260807의 후속편.
+  관련 문서: SESSION_SUMMARY_GOV_ROUTER_STRUCTURAL_NORMALIZATION_20260823_v1_0.html
+  (같은 세션의 사실관계 요약, 이 문서의 짝)
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-23): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 라우팅 지침서 — Gopang 개발자 문서</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── 그레이스케일 우선 팔레트 — 강조색은 링크·활성 상태 한 곳에만 ── */
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;   /* 슬레이트 — 링크·활성 탭·다이어그램 강조선 전용 */
+  --accent-lt:#eef1f4;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+/* ── 헤더 ── */
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+/* ── 레이아웃 ── */
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+/* ── 섹션 ── */
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 500; letter-spacing: .1px;
+  padding: 3px 8px; border-radius: 99px;
+  font-family: var(--mono);
+  border: 1px solid var(--line-2); color: var(--ink-2); background: var(--bg-2);
+}
+.badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.badge-gate { border-style: dashed; color: var(--ink-3); }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+/* 하이라이트 / 체크포인트 / 인시던트 — 색 대신 좌측 굵기·라벨로 구분 */
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink);
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+/* 표 */
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--line); padding: 9px 13px;
+  text-align: left; line-height: 1.6;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+/* 코드 블록 */
+.gs-code {
+  font-family: var(--mono);
+  font-size: 12px; color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 17px; margin: 14px 0;
+  line-height: 1.7; overflow-x: auto;
+  white-space: pre;
+}
+.gs-code .c { color: var(--ink-4); } /* comment */
+
+/* 히어로 */
+.doc-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 24px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  line-height: 1.4; margin-bottom: 13px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-4); font-family: var(--mono);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <!-- ── 목차 ── -->
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#symmetry">① 모든 계층은 대칭이어야 한다</a>
+    <a href="#kwmatch">② 매칭 원시함수 자체를 의심하라</a>
+    <a href="#exception">③ "예외 지점"이라는 착각</a>
+    <a href="#ripple">④ 구조적 수정은 파급효과를 남긴다</a>
+    <a href="#generalize">⑤ 일반화 vs 화이트리스트(DECISION-01)</a>
+    <a href="#verification">⑥ 사고실험과 라이브 테스트</a>
+    <a href="#mistakes">⑦ 작업자 본인 실수 목록</a>
+    <a href="#checklist">⑧ 다음 세션 체크리스트</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <!-- ── 본문 ── -->
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SITE MANUAL — 2026-08-23 세션 발견 정리</div>
+      <h1 class="doc-hero-title">고친 줄 알았던 곳에서, 내가 만든 <em>새 버그</em>를 또 찾아야 했다</h1>
+      <p class="doc-hero-desc">
+        이번 세션에서 gov-router.js를 열세 번 고쳤다(BUG-023~035,
+        DECISION-01). 그중 최소 넷은 직전 작업의 부산물이었다 — 잘못된
+        자매 테이블에 키워드를 넣거나, 위험한 일반화 규칙을 제안했다가
+        스트레스 테스트로 기각당하거나(DECISION-01), 구조적 수정 하나가
+        다른 코드의 암묵적 전제를 깨뜨려 새 회귀를 낳거나(BUG-034→035),
+        라이브 테스트 워크플로 자체를 경쟁 상태로 설계해 결과를 유실시켰다.
+        다음 세션이 같은 함정을 안 밟도록, 무엇을 몰라서 실수했는지와
+        그걸 어떻게 알아챘는지를 정직하게 남긴다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>관련 이슈</strong> BUG-023~035, DECISION-01</span>
+        <span><strong>작성</strong> 2026-08-23</span>
+      </div>
+    </div>
+
+    <!-- ── 개요 ── -->
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          개별 기능 사용법이 아니라, gov-router.js 매칭 함수를 다시
+          건드릴 때 / 키워드 사전에 항목을 추가할 때 / 안전 게이트를
+          고칠 때 / 라이브 스모크테스트 인프라를 만들 때 밟게 될 함정
+          모음이다. 전부 이번 세션에서 실제로 밟았고, 상당수는 사용자가
+          재차 지적한 뒤에야 제대로 고쳐졌다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            이 문서를 읽어야 하는 상황
+          </div>
+          라우팅에 새 계층을 추가할 때 / 키워드를 추가하다가 "이거 다른
+          단어랑 겹치지 않을까" 싶을 때 / 자꾸 제네릭 폴백으로 떨어질
+          때 / 안전 코드에서 화이트리스트를 일반화하고 싶을 때 / 라이브
+          테스트가 로컬과 다른 결과를 낼 때.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ① 모든 계층은 대칭이어야 한다 ── -->
+    <section class="gs reveal" id="symmetry">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">① Core Principle</div>
+          <div class="gs-title">핵심 원리 — 모든 계층은 대칭이어야 한다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>_matchCity()</code>는 "발화 자체 매칭 vs 위치 힌트만
+          매칭"을 <code>_matchedViaTextItself</code>로 구분해서, 힌트로만
+          매칭되면 즉시 확정 대신 뒤 단계에 기회를 주는 패턴
+          (<code>cityOnlyFallback</code>)이 2026-07-24부터 있었다. 그런데
+          <code>_matchCityDept</code> 계층엔 이 패턴이 아예 없었고
+          (2026-08-23 BUG-028에서야 <code>_resolveCityDeptMatch</code>로
+          신설), <code>_matchEmd</code> 계층에도 없었다(2026-08-23
+          BUG-034에서야 <code>emdMatchedViaTextItself</code>·
+          <code>emdFallback</code>으로 신설).
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>계층</th><th>구분 유무(도입 전)</th><th>보류 그릇</th><th>신설 시점</th></tr></thead>
+            <tbody>
+              <tr><td>시청(City)</td><td>있음</td><td><code>cityOnlyFallback</code></td><td>2026-07-24</td></tr>
+              <tr><td>시청국(CityDept)</td><td>없었음</td><td><code>_resolveCityDeptMatch</code></td><td>2026-08-23(BUG-028)</td></tr>
+              <tr><td>읍면동(Emd)</td><td>없었음</td><td><code>emdFallback</code></td><td>2026-08-23(BUG-034)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          실제 AC는 GPS·프로필로 항상 정확한 위치를 알기 때문에, 이
+          빠진 패턴이 예외가 아니라 주 경로였다는 게 라이브 테스트로
+          드러났다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            실전 규칙
+          </div>
+          새 계층을 만들 때 "이미 있는 다른 계층의 안전장치가 여기 없는
+          이유가 뭐지"를 항상 먼저 물어라.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ② 매칭 원시함수 자체를 의심하라 ── -->
+    <section class="gs reveal" id="kwmatch">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">② Root Primitive</div>
+          <div class="gs-title">부분 문자열 충돌 — 매칭 원시함수 자체를 의심하라</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "문화재"⊃"화재"(응급감지 오탐)·"여권"⊃"여권진위확인"(관할
+          오분류)·"비자"⊂"소비자"·"입영"⊂"수입영수증"(둘 다 국가기관
+          오분류) — 전부 짧은 키워드가 우연히 더 긴 무관한 단어에
+          삼켜지는 같은 클래스의 버그다. 처음 세 번(BUG-025/026/030)은
+          발견될 때마다 그 단어 하나만 화이트리스트·복합어로 고쳤다.
+          네 번째(BUG-031)에서야 패턴 자체를 고쳤다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          수정 방식 — _kwMatch 신설
+        </h4>
+        <div class="gs-code">function _kwMatch(text, k) {
+  if (!text || !k) return false;
+  let idx = text.indexOf(k);
+  while (idx !== -1) {
+    const before = idx &gt; 0 ? text[idx - 1] : '';
+    if (!/[가-힣]/.test(before)) return true;
+    idx = text.indexOf(k, idx + 1);
+  }
+  return false;
+}</div>
+        <p>
+          매칭 지점 바로 앞 글자가 한글 음절이면 그 위치의 매칭을
+          무시한다(뒤쪽은 조사가 자연스럽게 붙으므로 검사하지 않는다).
+          이 파일 전역 12개 <code>text.includes(k)</code> 호출 지점을
+          전부 교체했다. BUG-031의 개별 복합어 치환을 전부 폐기하고
+          bare 키워드로 원복해도 정상 작동함을 확인했다 — 이게 "진짜
+          근본 수정"이라는 증거다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            실전 규칙
+          </div>
+          같은 클래스 버그가 2번 이상 재발하면 3번째 사례를 개별
+          패치하기 전에 매칭 메커니즘 자체를 의심하라. 단, 응급감지
+          (<code>EMERGENCY_RE</code>)는 예외다(⑤ 참고).
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ③ "예외 지점"이라는 착각 ── -->
+    <section class="gs reveal" id="exception">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l6 6M15 9l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">③ False Assumption</div>
+          <div class="gs-title">"예외 지점"이라는 착각</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          BUG-028 때 EMD 확정 직전 "규칙 F 우회 검사" 지점을 "예외
+          감지라 위험 비대칭적"이라며 LLM 구제망 적용 대상에서 일부러
+          뺐다. 코드 구조만 보면 합리적이었다. 그런데 정부24 전수취합
+          코퍼스를 전체 주소(읍면동 명시)로 라이브 재실행하니, 그
+          "예외 지점"이 350건 중 다수를 처리하는 주 경로였다 — 실제
+          AC는 항상 정확한 위치를 알기 때문이다.
+        </p>
+        <p>
+          코드 구조상 "드물게 보이는 것"과 "실사용에서 드문 것"은
+          다르다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            실전 규칙
+          </div>
+          "이 지점은 예외라서 안전망 없어도 된다"고 판단할 때는 실제
+          호출 조건을 반영한 시나리오로 그 판단을 검증하라.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ④ 구조적 수정은 파급효과를 남긴다 ── -->
+    <section class="gs reveal" id="ripple">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">④ Blast Radius</div>
+          <div class="gs-title">구조적 수정은 반드시 파급효과를 남긴다 — BUG-034→BUG-035</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          BUG-034(EMD 비대칭 제거)는 "1단계는 성공했지만 확정을 보류하고
+          뒤 단계에 기회를 준다"는 새로운 상태를 만들었다. 문제는
+          2026-08-22에 이미 있던 다른 코드(5단계 SP-EMD-LAZY 재질문
+          로직)가 "이 지점 도달 = 1단계가 이미 실패했다는 뜻"이라는
+          전제로 짜여 있었다는 것이다. BUG-034가 그 전제를 깨뜨리면서,
+          이미 위치를 확보해둔 진짜 EMD 사무(주민등록표 등본 등)까지
+          전부 다시 "어느 읍면동이세요?"라고 되묻는 회귀가 생겼다.
+        </p>
+        <p>
+          이번엔 코드 리뷰가 아니라 라이브 스모크테스트 재실행으로
+          잡았다 — 로컬 사고실험(제한된 목)으로는 이 조합을 재현하기
+          어려웠다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          점검 절차
+        </h4>
+        <ol>
+          <li>구조적 수정</li>
+          <li>로컬 회귀 테스트(최소 기준일 뿐)</li>
+          <li>가능하면 라이브 재검증</li>
+          <li>이전에 정상이던 게 이상해지면 "이 수정이 새로 만든 상태를
+            몰랐던 다른 코드"부터 찾기(날짜 주석 "이 지점 도달=X가
+            실패" 검색하면 빠름)</li>
+        </ol>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            실전 규칙
+          </div>
+          큰 구조적 리팩터링을 할 때는 "이 변경이 만드는 새로운 상태
+          (또는 없애는 상태)를 전제로 짜인 다른 코드가 또 있는가"를
+          코드베이스 전체에서 검색하라.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑤ 일반화 vs 화이트리스트 ── -->
+    <section class="gs reveal" id="generalize">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l6 6M15 9l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑤ Decision — DECISION-01</div>
+          <div class="gs-title">언제 일반화하고 언제 화이트리스트를 유지할 것인가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "개별 해법을 무한 반복할 수 없다" 원칙은 맞지만 모든 코드에
+          똑같이 적용하면 안 된다. 응급감지 부분문자열 오탐도
+          <code>_kwMatch</code>류로 일반화하자는 제안이 나왔는데, 실제
+          반영 전 적대적 시나리오로 스트레스 테스트했다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>규칙</th><th>내용</th><th>스트레스 테스트 결과</th></tr></thead>
+            <tbody>
+              <tr><td>근접기반 일반화</td><td>응급 키워드 앞뒤 15자에 서류마커면 예외 처리</td><td>위험 — 12건 중 4건이 진짜 응급을 비응급으로 오판</td></tr>
+              <tr><td>보수적(화이트리스트 유지)</td><td>긴급강조어 있으면 무조건 응급 유지</td><td>11/12 통과, 유일 실패도 안전 방향</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>결론: 화이트리스트 유지.</p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>판단기준</th><th>라우팅</th><th>응급감지</th></tr></thead>
+            <tbody>
+              <tr><td>오분류 비용</td><td>낮음</td><td>비대칭적으로 큼</td></tr>
+              <tr><td>방향</td><td>구조적 일반화</td><td>화이트리스트 유지(순수 추가 전용, 회귀 위험 없음)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            실전 규칙
+          </div>
+          안전 관련 코드를 고칠 때 "일반화하면 편해진다"는 유혹이 들면
+          먼저 적대적 시나리오 5개 이상으로 스트레스 테스트하라. 위음성
+          1건이라도 나오면 화이트리스트 유지가 맞다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑥ 사고실험과 라이브 테스트의 역할 분담 ── -->
+    <section class="gs reveal" id="verification">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑥ Methodology</div>
+          <div class="gs-title">검증 방법론 — 사고실험과 라이브 테스트의 역할 분담</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          혼디 라우팅은 문자매칭(빠른 경로)+의미검색(LLM
+          <code>classifyFn</code>, 느린 경로)의 하이브리드다. 로컬
+          사고실험(목 <code>classifyFn</code>)은 "메커니즘이 작동하는가"는
+          증명하지만 "실제로 정확한가"는 증명 못한다 — 이 착시를 세 번
+          겪었다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>착시 사례</th><th>실제 원인</th><th>알아챈 방법</th></tr></thead>
+            <tbody>
+              <tr><td>"어린이집"이 도서관으로 감 → 새 버그로 의심</td><td>실제로는 2026-08-21에 이미 고친 계층 충돌인데 목이 그 판단을 못 흉내냄</td><td>division-tables.js 주석·커밋 이력 확인</td></tr>
+              <tr><td>"1372 소비자상담센터"가 출입국으로 감 → 처음엔 목 오류로 추정</td><td>실제로는 진짜 코드버그(bare 비자⊂소비자)</td><td><code>classifyFn=null</code>로 고정해 순수 키워드 경로만 격리 재현</td></tr>
+              <tr><td>350건 라이브에서 EMD 무차별 확정 확인 → 즉시 새 원인으로 판단</td><td>실제 코드버그(BUG-034 필요성 확인, 이번엔 착시 아니라 진짜)</td><td>trace의 "규칙 F 일반화" 문구 유무로 즉시확정 vs 폴백 구분</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            결정적 도구
+          </div>
+          "이상해 보이는 결과"를 볼 때마다 <code>classifyFn</code>을
+          진짜 <code>null</code>(함수가 아니라 값 자체가 null)로 고정해
+          같은 발화를 다시 돌려봐라 — 결과가 그대로면 순수 키워드 매칭
+          단계의 진짜 코드버그, 결과가 사라지면(제네릭으로 떨어지면)
+          목의 한계이거나 실제 LLM 판단력에 의존하는 부분이다.
+        </div>
+        <p>
+          라이브 테스트 인프라 자체도 버그를 가질 수 있다는 걸 잊지
+          마라 — 이번 세션에서 Origin 헤더 누락(403)과 결과 브랜치
+          경쟁 상태(동시 실행 시 데이터 유실) 두 건을 인프라 자체에서
+          발견했다. "라이브 결과가 이상하다"고 바로 코드를 의심하기
+          전에 테스트 스크립트·워크플로 자체가 의도한 조건을 정확히
+          재현하는지도 확인하라.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ⑦ 실제로 저지른 실수 목록 ── -->
+    <section class="gs reveal" id="mistakes">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑦ Post-Mortem</div>
+          <div class="gs-title">이번 세션에서 실제로 저지른 실수 목록</div>
+          <div class="gs-badges">
+            <span class="badge badge-gate">작업자 본인 실수</span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          아래는 작업을 수행한 AI 비서(Claude) 본인이 저지른 실수를
+          시간 순으로 정리한 것이다. 다음 세션이 같은 실수를 반복하지
+          않도록 숨기지 않고 전부 남긴다.
+        </p>
+        <ol>
+          <li><strong>디렉터리 복사 실수를 두 번 반복</strong> —
+            <code>cp -r src/gopang 대상/src/gopang</code>을 대상이 이미
+            있는 상태에서 실행해 <code>대상/src/gopang/gopang/...</code>로
+            중첩 복사되는 사고를 두 번 냈다. 그때마다 방금 수정한
+            코드가 아니라 오래된 코드로 테스트를 돌리고 있었다. 이후
+            <code>rm -rf</code>로 대상을 먼저 지우고 복사하는 걸
+            원칙으로 삼았다.</li>
+          <li><strong>목이 만든 착시를 새 버그로 성급하게 단정할
+            뻔함</strong> — "어린이집→도서관" 사례에서 코드 주석·커밋
+            이력을 먼저 확인 안 했으면 이미 고쳐진 문제를 다시 고치려
+            들 뻔했다.</li>
+          <li><strong>키워드를 잘못된 자매 테이블에 넣음</strong> —
+            '취업지원 대상자' 키워드를
+            <code>_guessNatAgencyDomainFromText</code>용 테이블(비제주
+            전용)에 넣었다가, 재검증 과정에서 효과 없는 걸 보고서야
+            <code>JEJU_NATIONAL_TABLE</code>(실제 제주가 쓰는 표)로
+            옮겼다 — BUG-022가 경고했던 "자매 테이블 반영 누락"
+            함정에 스스로 빠졌다가 잡은 사례다.</li>
+          <li><strong>위험한 일반화 규칙을 먼저 제안함</strong> — 응급감지
+            화이트리스트를 근접기반 일반화 규칙으로 대체하자고 먼저
+            제안했는데, 스트레스 테스트 결과 진짜 응급 상황 4건을
+            비응급으로 오판하는 위험한 규칙이었다. 실제 코드 반영 전
+            검증한 게 다행이었다.</li>
+          <li><strong>EMD "규칙 F" 지점을 "예외라서 안전"이라고 잘못
+            판단</strong> — BUG-028 당시 이 지점을 LLM 구제망 적용
+            대상에서 뺐는데, 이후 라이브 테스트로 그 지점이 실사용에서
+            주 경로였다는 게 드러났다(별도 재수정 BUG-034 필요).</li>
+          <li><strong>구조적 수정(BUG-034)이 다른 코드의 전제를
+            깨뜨림</strong> — 리팩터링 직후 "이 변경이 새로 만든
+            상태에 의존하는 다른 코드가 있는가"를 미리 점검 안 해서,
+            진짜 EMD 사무가 불필요하게 재질문하는 회귀(BUG-035)를
+            만들었다 — 사용자의 라이브 재실행으로 발견됐다.</li>
+          <li><strong>라이브 스모크테스트 워크플로를 경쟁 상태로
+            설계</strong> — 배치 7개를 동시 실행할 수 있게 만들면서도
+            결과를 커밋하는 브랜치를 배치 구분 없이 하나로 뒀다. 동시
+            실행 시 나중에 끝난 실행이 먼저 끝난 실행들의 결과를
+            <code>--force</code> 푸시로 덮어써서, 처음 7개 배치를
+            돌렸을 때 6개의 결과가 유실됐다. "배치별로 나눠 여러 번
+            돌린다"는 설계 목적 자체가 동시 실행을 전제하고 있었는데
+            그걸 놓쳤다.</li>
+          <li><strong>메모리에서 데이터를 재구성하다 한 배치를 통째로
+            잃어버림</strong> — 정부24 사고실험 시나리오 8개 배치(총
+            400건)를 라이브 테스트용으로 취합하는 과정에서 원본
+            스크립트 파일 중 하나가 이미 다른 작업으로 덮어써진
+            상태였다. 기억만으로 재구성하려다 한 배치를 다른 배치와
+            중복 입력해서 결국 7개 배치(350건)만 신뢰성 있게 복구,
+            나머지 1개는 "허위로 지어내지 않겠다"며 사용자에게 정직하게
+            누락을 알리고 원본을 다시 요청했다.</li>
+        </ol>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            공통점
+          </div>
+          8개 실수 중 6개는 "검증하지 않고 넘어간 가정"에서 비롯됐다 —
+          복사가 제대로 됐다는 가정, 자매 테이블 이름이 맞다는 가정,
+          예외 지점이 실제로도 드물다는 가정, 구조적 수정이 다른
+          코드에 영향 없다는 가정, 워크플로가 동시 실행을 잘 처리한다는
+          가정, 저장소에 이미 해법이 없다는 가정. 전부 "확인 한 번이면
+          잡을 수 있었던" 것들이다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑧ 다음 세션 체크리스트 ── -->
+    <section class="gs reveal" id="checklist">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑧ Checklist</div>
+          <div class="gs-title">다음 세션 체크리스트</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          새 키워드를 추가하기 전
+        </h4>
+        <ul>
+          <li>이 키워드가 2글자 이하로 짧은가? → <code>_kwMatch</code>
+            쓰는 경로인지 확인, 아니면 부분문자열 충돌 위험을 직접
+            점검한다.</li>
+          <li>같은 이름·목적의 자매 테이블이 또 있는가? → 추가 후
+            실제로 그 표가 쓰이는 표인지 재검증한다.</li>
+        </ul>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          계층별 매칭 로직을 고치기 전
+        </h4>
+        <ul>
+          <li>다른 계층에 이미 있는 "즉시확정 vs 보류" 패턴을 이 계층도
+            갖고 있는가?</li>
+          <li>"예외 지점"이라고 판단한 곳이 있다면 실사용 조건(전체
+            주소 등)을 반영한 시나리오로 검증했는가?</li>
+        </ul>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          구조적 리팩터링 직후
+        </h4>
+        <ul>
+          <li>이 변경이 새로 만든/없앤 상태를 전제로 짜인 다른 코드가
+            있는지 관련 주석("이 지점 도달=X")을 검색했는가?</li>
+          <li>로컬 회귀 테스트 통과가 최소 기준일 뿐이라는 걸 인지하고
+            가능하면 라이브 재검증까지 했는가?</li>
+        </ul>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l6 6M15 9l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+          안전 관련 코드를 고치기 전
+        </h4>
+        <ul>
+          <li>일반화 규칙을 실제 코드 반영 전 적대적 시나리오로
+            스트레스 테스트했는가?</li>
+          <li>위음성 1건이라도 나오면 화이트리스트 유지로 되돌렸는가?</li>
+        </ul>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          새 테스트/CI 인프라를 만들기 전
+        </h4>
+        <ul>
+          <li>저장소에 이미 비슷한 문제를 해결한 스크립트가 있는지
+            검색했는가?</li>
+          <li>여러 번(동시) 실행될 걸 전제로 설계했다면 결과 저장
+            위치가 실행 간 충돌하지 않는가?</li>
+        </ul>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          과거 데이터를 재구성해야 할 때
+        </h4>
+        <ul>
+          <li>원본 파일이 남아있는지 먼저 확인했는가?</li>
+          <li>기억으로 재구성해야 한다면 완료 후 건수·중복 여부를
+            프로그램적으로 검증했는가?</li>
+          <li>재구성이 불완전하면 지어내지 말고 정직하게 누락을
+            알렸는가?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 관련 문서 ── -->
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li><a href="./SESSION_SUMMARY_GOV_ROUTER_STRUCTURAL_NORMALIZATION_20260823_v1_0.html" target="_blank">가버넌스 라우터 구조적 정상화 세션 요약</a> — 같은 세션 사실관계 요약</li>
+          <li><a href="./SESSION_LESSONS_ROUTING_ARCHITECTURE_20260806_v1_0.html" target="_blank">라우팅 아키텍처 실전 교훈 매뉴얼</a> — 선행편</li>
+          <li><a href="./SESSION_LESSONS_ROUTING_FIXES_20260807_v1_0.html" target="_blank">라우팅 수정 3건 + 인프라 실전 교훈 매뉴얼</a></li>
+          <li>저장소 내 <code>docs/manual/05-bug-log.md</code> — BUG-023~035·DECISION-01 원문</li>
+          <li>저장소 내 <code>src/gopang/gov/gov-router.js</code> —
+            <code>_kwMatch</code>·<code>_resolveCityDeptMatch</code>·
+            <code>emdFallback</code>·<code>_localGovCollisionCandidate</code></li>
+          <li><a href="./MANUAL_INDEX.html" target="_blank">개발 문서 전체 지도</a></li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
