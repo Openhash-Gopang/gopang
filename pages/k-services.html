@@ -4,33 +4,293 @@
 <link rel="icon" href="data:,">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <title>K-서비스 — 혼디</title>
 </head>
 <body>
 <style>
+/* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: #f4f6f9; color: #0f172a;
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
-  font-size: 14px; line-height: 1.8;
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --bg:        #eef1f6;
+  --surface:   #ffffff;
+  --border:    #e2e8f0;
+  --navy:      #0e1c3f;
+  --brand:     #0c6cc3;
+  --brand-dk:  #094a86;
+  --text:      #0f172a;
+  --text3:     #475569;
+  --text4:     #64748b;
+  --radius:    8px;
+  --radius-lg: 12px;
 }
-.ug-doc { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
-.ug-header { background: #0e1c3f; color: #fff; border-radius: 12px; padding: 28px 32px; margin-bottom: 20px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ug-doc { max-width: 1040px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* ── 헤더 ── */
+.ug-header {
+  background: var(--navy); color: #fff; border-radius: var(--radius-lg); padding: 28px 32px; margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(14,28,63,0.18), 0 1px 4px rgba(14,28,63,0.12);
+}
 .ug-header h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
 .ug-header .ug-sub { font-size: 13.5px; color: #b3bfd1; }
-.ug-placeholder {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-  padding: 40px; text-align: center; color: #475569;
+
+/* ── 서비스 탭 (2행 x 8열) ── */
+.svc-tabs {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
 }
+.svc-tab {
+  background: var(--surface); border: none; border-radius: 10px;
+  padding: 10px 6px; text-align: center; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--text3);
+  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.07);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, color 0.18s ease;
+  white-space: nowrap;
+}
+.svc-tab:hover {
+  color: var(--brand-dk); transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.08);
+}
+.svc-tab.active {
+  background: var(--brand); color: #fff;
+  box-shadow: 0 6px 16px rgba(12,108,195,0.35), 0 2px 6px rgba(12,108,195,0.2);
+}
+@media (max-width: 900px) {
+  .svc-tabs { grid-template-columns: repeat(4, 1fr); }
+  .svc-tab { font-size: 12px; padding: 9px 4px; }
+}
+@media (max-width: 560px) {
+  .svc-tabs { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── 본문 콘텐츠 ── */
+.svc-content {
+  background: var(--surface); border: none; border-radius: var(--radius-lg);
+  padding: 40px; min-height: 320px;
+  box-shadow: 0 2px 10px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+}
+.svc-content-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 260px; color: var(--text4); text-align: center; gap: 8px;
+}
+.svc-content-empty .svc-empty-title { font-size: 15px; font-weight: 600; color: var(--text3); }
+.svc-content-empty .svc-empty-sub { font-size: 13px; }
+
+/* ── 서비스 상세 콘텐츠 (전문적 스타일) ── */
+.svc-detail h2 { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+.svc-detail .svc-lead { font-size: 14.5px; color: var(--text3); line-height: 1.7; margin-bottom: 28px; }
+.svc-detail h3 {
+  font-size: 15px; font-weight: 600; color: var(--navy);
+  margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border);
+}
+.svc-detail h3:first-of-type { margin-top: 0; }
+.svc-flow { counter-reset: flow; margin: 0 0 4px; padding: 0; list-style: none; }
+.svc-flow li {
+  counter-increment: flow; position: relative; padding: 0 0 18px 34px; font-size: 13.5px;
+  color: var(--text3); line-height: 1.6;
+}
+.svc-flow li::before {
+  content: counter(flow); position: absolute; left: 0; top: -1px;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff;
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.svc-flow li::after {
+  content: ''; position: absolute; left: 11px; top: 22px; bottom: 0; width: 1px; background: var(--border);
+}
+.svc-flow li:last-child::after { display: none; }
+.svc-flow li b { color: var(--text); }
+.svc-table-wrap { overflow-x: auto; margin: 8px 0 4px; }
+table.svc-table { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
+table.svc-table th, table.svc-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+table.svc-table thead th { background: #f1f5f9; color: var(--navy); font-weight: 600; white-space: nowrap; }
+table.svc-table tbody tr:last-child td { border-bottom: none; }
+table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
+.svc-callout {
+  background: #eff6ff; border: 1px solid #93c5fd; border-left: 4px solid var(--brand);
+  border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #1e3a5f;
+}
+.svc-callout.important { background: #fff7ed; border-color: #fbbf24; border-left-color: #d97706; color: #7c4a03; }
+
+/* ── 외부 링크 칩 (Material outlined button) ── */
+.svc-link-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #fff; border: 1.5px solid var(--brand);
+  color: var(--brand-dk); font-weight: 700; font-size: 13.5px;
+  padding: 8px 18px; border-radius: 24px; text-decoration: none;
+  margin-bottom: 18px; box-shadow: 0 1px 3px rgba(12,108,195,0.15);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, color 0.18s ease;
+}
+.svc-link-btn:hover {
+  background: var(--brand); color: #fff;
+  box-shadow: 0 6px 16px rgba(12,108,195,0.35), 0 2px 6px rgba(12,108,195,0.2);
+  transform: translateY(-2px);
+}
+.svc-link-btn:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(12,108,195,0.25); }
+.svc-link-btn svg { flex-shrink: 0; }
+
+.ug-footer { text-align: center; font-size: 12px; color: var(--text4); border-top: 1px solid var(--border); padding-top: 18px; margin-top: 40px; }
 </style>
+
 <div class="ug-doc">
+
   <header class="ug-header">
     <h1>K-서비스</h1>
-    <p class="ug-sub">16개 K-서비스 안내 — 준비 중</p>
+    <p class="ug-sub">법률·세무·의료·교육 등 16개 공익 서비스를 한 플랫폼에서</p>
   </header>
-  <div class="ug-placeholder">
-    <p>이 페이지는 현재 초안을 작성 중입니다.</p>
+
+  <div class="svc-tabs" id="svcTabs">
+    <div class="svc-tab active" data-svc="k119">K-119</div>
+    <div class="svc-tab" data-svc="klaw">K-Law</div>
+    <div class="svc-tab" data-svc="kpolice">K-Police</div>
+    <div class="svc-tab" data-svc="ksecurity">K-Security</div>
+    <div class="svc-tab" data-svc="khealth">K-Health</div>
+    <div class="svc-tab" data-svc="kschool">K-School</div>
+    <div class="svc-tab" data-svc="gdc">GDC</div>
+    <div class="svc-tab" data-svc="kstock">K-Stock</div>
+    <div class="svc-tab" data-svc="kinsurance">K-Insurance</div>
+    <div class="svc-tab" data-svc="ktax">K-Tax</div>
+    <div class="svc-tab" data-svc="kmarket">K-Market</div>
+    <div class="svc-tab" data-svc="ktraffic">K-Traffic</div>
+    <div class="svc-tab" data-svc="klogistics">K-Logistics</div>
+    <div class="svc-tab" data-svc="kcleaner">K-Cleaner</div>
+    <div class="svc-tab" data-svc="kpublic">K-Public</div>
+    <div class="svc-tab" data-svc="kdemocracy">K-Democracy</div>
   </div>
+
+  <div class="svc-content" id="svcContent">
+    <!-- 각 탭의 본문이 이 안에 렌더링됩니다. 지금은 전부 빈 상태(준비 중)입니다. -->
+  </div>
+
+  <footer class="ug-footer">
+    혼디 개발자 대표 도영민 · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com · hondi.net
+  </footer>
+
 </div>
+
+<script>
+// 서비스별 본문 콘텐츠 저장소 — 지금은 전부 비어있는 상태(빈 문서).
+// 나중에 각 키에 실제 HTML을 채우면 해당 탭 클릭 시 그대로 표시됩니다.
+var SVC_CONTENT = {
+  k119: `
+    <div class="svc-detail">
+      <h2>K-119 — 응급 신고·구조 자동화</h2>
+      <a href="https://911.hondi.net" target="_blank" rel="noopener" class="svc-link-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        911.hondi.net 바로가기
+      </a>
+      <p class="svc-lead">사고나 응급 상황이 감지되면, 혼디가 신고 접수와 동시에 중증도 분류·출동 배차·응급처치 안내까지 자동으로 진행합니다.</p>
+
+      <h3>처리 흐름</h3>
+      <ol class="svc-flow">
+        <li><b>사고 감지</b> — 차량 블랙박스 충격 감지 또는 사용자의 직접 신고로 시작됩니다.</li>
+        <li><b>중증도 자동 분류</b> — AI가 상황을 즉시 1~4급으로 분류합니다.</li>
+        <li><b>출동번호 발급</b> — 예: <code>FD-20260604-XXXX</code> 형식의 고유 번호가 즉시 발급됩니다.</li>
+        <li><b>최근접 소방서·구급대 자동 배치</b> — Haversine 거리 계산으로 가장 가까운 가용 자원을 자동 배차합니다.</li>
+        <li><b>응급처치 가이드 실시간 제공</b> — 구급대 도착 전까지 AI가 현장 대응을 안내합니다.</li>
+        <li><b>가용 응급실 자동 매칭</b> — 수용 가능한 응급실을 찾아 환자 정보를 사전 전송합니다.</li>
+      </ol>
+
+      <h3>다른 서비스와의 자동 연계</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>상황</th><th>자동 연동</th></tr></thead>
+          <tbody>
+            <tr><td>범죄 연루 의심 시</td><td class="svc-hondi">K-Police 자동 연동 — 별도 경찰 출동번호 발급</td></tr>
+            <tr><td>사고 기록</td><td class="svc-hondi">K-Law 자동 연동 — 법적 책임 소재 AI 분석</td></tr>
+            <tr><td>보험 처리</td><td class="svc-hondi">K-Insurance 자동 연동 — 청구 서류 자동 생성</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>기존 119 신고와 무엇이 다른가</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>구분</th><th>기존 방식</th><th>혼디 K-119</th></tr></thead>
+          <tbody>
+            <tr><td>상황 설명</td><td>신고자가 위치·상황을 직접 설명</td><td class="svc-hondi">위치·상황 자동 파악, 신고자는 확인만</td></tr>
+            <tr><td>중증도 판단</td><td>상담원이 청취 후 판단</td><td class="svc-hondi">AI가 즉시 1~4급 자동 분류</td></tr>
+            <tr><td>배차</td><td>관할 소방서 수동 확인</td><td class="svc-hondi">최근접 자원 자동 계산·배치</td></tr>
+            <tr><td>후속 처리</td><td>경찰·보험 별도로 각각 신고</td><td class="svc-hondi">K-Police·K-Law·K-Insurance 자동 연동</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>사용자 발화 시나리오</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>사용자 발화</th><th>자동 분류</th><th>처리</th></tr></thead>
+          <tbody>
+            <tr><td>"차 사고 났어요, 사람이 안 움직여요"</td><td>교통사고 · 중증(1급 의심)</td><td class="svc-hondi">구급대+경찰 동시 출동, CPR 필요 여부 확인 안내</td></tr>
+            <tr><td>"집에 불이 났어요!"</td><td>화재</td><td class="svc-hondi">소방서 자동 출동, 대피 경로 실시간 안내</td></tr>
+            <tr><td>"아빠가 갑자기 쓰러졌어요, 숨을 안 쉬어요"</td><td>심정지 의심 · 1급</td><td class="svc-hondi">최우선 배차, CPR 가이드 실시간 제공</td></tr>
+            <tr><td>"아이가 목에 뭐가 걸렸어요"</td><td>기도 폐쇄</td><td class="svc-hondi">하임리히법 즉시 안내, 구급대 동시 배차</td></tr>
+            <tr><td>"등산하다 발목이 부러진 것 같은데 여기 위치를 모르겠어요"</td><td>산악 조난·골절</td><td class="svc-hondi">GPS 위치 자동 확인 후 산악구조대 연동</td></tr>
+            <tr><td>"가스 냄새가 심하게 나요"</td><td>가스 누출 의심</td><td class="svc-hondi">소방서+가스안전공사 동시 연동, 대피 안내</td></tr>
+            <tr><td>"물에 빠진 사람을 봤어요"</td><td>익수 사고</td><td class="svc-hondi">최근접 구조대 자동 배차, 목격자 안전 안내</td></tr>
+            <tr><td>"화상을 입었어요, 손이 다 부풀었어요"</td><td>화상(중등도 이상 의심)</td><td class="svc-hondi">응급 처치 안내 + 화상 전문 응급실 자동 매칭</td></tr>
+            <tr><td>"친구가 알레르기 쇼크가 온 것 같아요, 에피펜이 없어요"</td><td>아나필락시스 의심 · 1급</td><td class="svc-hondi">최근접 응급실 매칭, 응급처치 실시간 안내</td></tr>
+            <tr><td>"밤에 혼자 있는데 누가 침입하려고 해요"</td><td>범죄 위험(응급 아님)</td><td class="svc-hondi">K-Police 우선 자동 연동, 상황에 따라 K-119 대기</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px; color:var(--text4); margin-top:8px;">위 시나리오는 이해를 돕기 위한 예시이며, 실제 분류·처리 결과는 상황에 따라 달라질 수 있습니다.</p>
+
+      <div class="svc-callout">
+        위험 신호(폭력·사기·의료 응급 키워드) 감지의 실측 응답 시간은 <b>0.246ms</b>로, 목표치 대비 3.3배를 초과 달성했습니다 (혼디 자체 측정 결과).
+      </div>
+      <div class="svc-callout important">
+        실제 출동 여부 판단과 현장 처치는 언제나 소방 당국의 권한입니다. 혼디는 신고 접수와 정보 전달을 신속하게 중개하는 역할을 합니다.
+      </div>
+    </div>
+  `,
+  klaw: '', kpolice: '', ksecurity: '', khealth: '', kschool: '',
+  gdc: '', kstock: '', kinsurance: '', ktax: '', kmarket: '', ktraffic: '',
+  klogistics: '', kcleaner: '', kpublic: '', kdemocracy: ''
+};
+var SVC_LABEL = {
+  k119: 'K-119', klaw: 'K-Law', kpolice: 'K-Police', ksecurity: 'K-Security',
+  khealth: 'K-Health', kschool: 'K-School', gdc: 'GDC', kstock: 'K-Stock',
+  kinsurance: 'K-Insurance', ktax: 'K-Tax', kmarket: 'K-Market', ktraffic: 'K-Traffic',
+  klogistics: 'K-Logistics', kcleaner: 'K-Cleaner', kpublic: 'K-Public', kdemocracy: 'K-Democracy'
+};
+
+function renderSvc(key) {
+  var contentEl = document.getElementById('svcContent');
+  var html = SVC_CONTENT[key];
+  if (html && html.trim()) {
+    contentEl.innerHTML = html;
+  } else {
+    contentEl.innerHTML =
+      '<div class="svc-content-empty">' +
+        '<div class="svc-empty-title">' + SVC_LABEL[key] + ' — 준비 중</div>' +
+        '<div class="svc-empty-sub">이 서비스의 상세 내용은 곧 채워질 예정입니다.</div>' +
+      '</div>';
+  }
+}
+
+document.getElementById('svcTabs').addEventListener('click', function (e) {
+  var tab = e.target.closest('.svc-tab');
+  if (!tab) return;
+  document.querySelectorAll('.svc-tab').forEach(function (t) { t.classList.remove('active'); });
+  tab.classList.add('active');
+  renderSvc(tab.getAttribute('data-svc'));
+});
+
+renderSvc('k119');
+</script>
 </body>
 </html>
