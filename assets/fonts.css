@@ -1,0 +1,29 @@
+/* ══════════════════════════════════════════════════════════════════
+   fonts.css — 혼디 전체 폰트 강제 통일 (단일 소스)
+
+   hondi.net의 모든 한글(및 전체) 텍스트는 Pretendard를 사용합니다.
+   이 파일 하나를 <head>에 <link>로 불러오면:
+     1) Pretendard 웹폰트를 로드하고
+     2) !important로 페이지별 font-family 선언을 모두 덮어써
+        어떤 페이지가 다른 폰트를 지정하더라도 항상 Pretendard가
+        적용되도록 강제합니다.
+
+   사용법 — 각 페이지의 <head> 안에 한 줄만 추가:
+     <link rel="stylesheet" href="/assets/fonts.css">
+
+   절대 각 페이지에 이 규칙을 복사해서 넣지 마십시오 — 폰트를
+   바꿀 일이 생기면 이 파일 하나만 고치면 전체 페이지에 반영됩니다.
+   ══════════════════════════════════════════════════════════════════ */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+html, body,
+h1, h2, h3, h4, h5, h6,
+p, span, a, li, ul, ol, dl, dt, dd,
+div, section, article, header, footer, nav, aside, main,
+table, thead, tbody, tfoot, tr, th, td,
+input, button, textarea, select, label,
+blockquote, figcaption, caption, small, strong, em, b, i {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif !important;
+}
