@@ -123,7 +123,19 @@ async function main() {
     let r;
     let error = null;
     try {
-      r = await assembleGovSystemPrompt(s.utterance, s.locationHint || '제주시', realClassifyFn);
+      // ★ 2026-08-23 수정(사용자 지적) — '제주시'(시 단위)만 넘기면
+      // _matchEmd가 요구하는 읍면동 정보가 없어 "위치 불명 — 사용자
+      // 재질문 필요"가 뜬다. 이건 라우팅 버그가 아니라 이 스크립트의
+      // 테스트 설계 결함이다 — 실제 AC(사용자 AI 비서)는 GPS/프로필
+      // 주소로 처음부터 구체적 위치(읍면동까지)를 알고 있으므로 이런
+      // 재질문은 실사용에서 발생하지 않는다. gov_router_2026_08_21_
+      // department_live_smoketest.mjs가 이미 쓰던 전체 주소 관례를
+      // 그대로 따른다.
+      r = await assembleGovSystemPrompt(
+        s.utterance,
+        s.locationHint || '제주특별자치도 제주시 애월읍 애월리 123-4',
+        realClassifyFn,
+      );
     } catch (e) {
       error = e.message;
     }
