@@ -1,0 +1,116 @@
+/* ══════════════════════════════════════════════════════════════════
+   site-header.css — 혼디 공용 헤더 스타일시트 (단일 소스)
+
+   desktop.html(메인)과 그 외 모든 페이지가 이 파일 하나를 참조합니다.
+   여기서 색상·여백·레이아웃을 바꾸면 별도 수정 없이 전체 페이지에
+   그대로 반영됩니다. 절대 각 페이지에 이 내용을 복사해서 넣지 마십시오.
+
+   원본: desktop.html의 site-strip / site-nav / site-hero 정의를
+   그대로 옮긴 것입니다(2026-08-23 기준).
+   ══════════════════════════════════════════════════════════════════ */
+
+.site-strip {
+  background: #0a1730; padding: 6px 20px; text-align: center;
+  text-decoration: none; display: block;
+}
+.site-strip span { color: #c9d6ee; font-size: 12px; font-family: 'Pretendard', sans-serif; }
+.site-strip:hover span { color: #fff; }
+.site-nav {
+  background: #12234f; padding: 0 20px; display: flex; align-items: center;
+  height: 54px; gap: 16px; border-bottom: 1px solid #1f3568; position: relative;
+}
+.site-nav-logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; text-decoration: none; }
+.site-nav-logo img { width: 26px; height: 26px; border-radius: 6px; }
+.site-nav-logo span { color: #fff; font-size: 16px; font-weight: 500; font-family: 'Pretendard', sans-serif; }
+.site-nav-links { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.site-nav-links::-webkit-scrollbar { display: none; }
+.site-nav-links a {
+  color: #9fb0d1; font-size: 13.5px; padding: 17px 10px; text-decoration: none;
+  white-space: nowrap; border-bottom: 2px solid transparent; display: flex;
+  align-items: center; gap: 5px; font-family: 'Pretendard', sans-serif;
+  transition: color 0.15s;
+}
+.site-nav-links a:hover { color: #fff; }
+.site-nav-links a.active { color: #fff; border-bottom-color: #3b82f6; }
+.site-nav-status { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.site-nav-status .dot-status {
+  display: flex; align-items: center; gap: 5px; color: #c9d6ee; font-size: 12px;
+  white-space: nowrap; font-family: 'Pretendard', sans-serif;
+}
+.site-nav-status .dot-status .dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+.site-nav-status .badge {
+  background: #1a2e5c; color: #c9d6ee; font-size: 12px; padding: 5px 10px;
+  border-radius: 20px; white-space: nowrap; font-family: 'Pretendard', sans-serif;
+  display: flex; align-items: center; gap: 5px;
+}
+/* ── 강조 탭(K-서비스·전문가 페르소나·K-정부) ── */
+.site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.site-nav-highlight a {
+  display: flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: 1px solid rgba(255,255,255,0.45); color: #fff; font-size: 12.5px; font-weight: 600;
+  padding: 6px 13px; border-radius: 20px; white-space: nowrap;
+  text-decoration: none; font-family: 'Pretendard', sans-serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.site-nav-highlight a:hover {
+  background: linear-gradient(135deg, #4a90ff, #2f6feb);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+.site-nav-highlight a .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; flex-shrink: 0; }
+@media (max-width: 900px) {
+  .site-nav-highlight a span.label-text { display: none; }
+  .site-nav-highlight a { padding: 6px 9px; }
+}
+
+.site-hero {
+  background: #0e1c3f; padding: 48px 40px 40px; position: relative;
+}
+.site-hero-badge {
+  display: inline-flex; align-items: center; gap: 6px; background: #16295a;
+  color: #c5ccd8; font-size: 12px; font-weight: 500; padding: 5px 12px;
+  border-radius: 20px; margin-bottom: 20px; font-family: 'Pretendard', sans-serif;
+}
+.site-hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; }
+.site-hero-corner-logo {
+  position: absolute; top: 40px; right: 40px; background: #fff; border-radius: 10px;
+  padding: 8px 16px; display: flex; align-items: center; gap: 8px; text-decoration: none;
+}
+.site-hero-corner-logo img { height: 60px; width: auto; display: block; }
+.site-hero h1 {
+  font-size: 30px; font-weight: 500; line-height: 1.4; margin: 0 0 16px;
+  max-width: 560px; font-family: 'Pretendard', sans-serif;
+}
+.site-hero h1 .l1 { color: #ffffff; }
+.site-hero h1 .l2 { color: #90c4ff; }
+.site-hero-sub {
+  color: #b3bfd1; font-size: 15px; line-height: 1.7; margin: 0 0 24px;
+  max-width: 520px; font-family: 'Pretendard', sans-serif;
+}
+.site-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.site-hero-actions a {
+  font-size: 14px; padding: 12px 22px; border-radius: 6px; text-decoration: none;
+  font-family: 'Pretendard', sans-serif; transition: opacity 0.15s;
+}
+.site-hero-actions a:hover { opacity: 0.85; }
+.site-hero-actions a.primary { background: #006cc3; color: #fff; font-weight: 500; }
+.site-hero-actions a.outline { background: #14356c; color: #dce1ea; border: 1px solid #435e8b; }
+
+/* ── 돌아가기 화살표 (메인이 아닌 페이지에서만 렌더링됨) ── */
+.page-back-arrow {
+  position: fixed; top: 96px; left: 16px; z-index: 1700;
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #fff; border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 10px rgba(15,23,42,0.14);
+  color: #374151; cursor: pointer; text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .site-nav { padding: 0 12px; }
+  .site-hero { padding: 32px 20px 28px; }
+  .site-hero-corner-logo { display: none; }
+  .site-hero h1 { font-size: 24px; }
+}
