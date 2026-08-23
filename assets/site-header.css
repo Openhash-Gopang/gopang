@@ -10,11 +10,19 @@
    ══════════════════════════════════════════════════════════════════ */
 
 .site-strip {
-  background: #0a1730; padding: 6px 20px; text-align: center;
-  text-decoration: none; display: block;
+  background: #0a1730; padding: 6px 20px;
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
 }
-.site-strip span { color: #c9d6ee; font-size: 12px; font-family: 'Pretendard', sans-serif; }
-.site-strip:hover span { color: #fff; }
+.site-strip-text { color: #c9d6ee; font-size: 12px; font-family: 'Pretendard', sans-serif; text-decoration: none; }
+.site-strip-text:hover { color: #fff; }
+.site-strip-support-btn {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  background: #1a2e5c; color: #fff; font-size: 11.5px; font-weight: 600;
+  padding: 3px 12px; border-radius: 20px; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.18); white-space: nowrap;
+  font-family: 'Pretendard', sans-serif; transition: background 0.15s;
+}
+.site-strip-support-btn:hover { background: #24356b; }
 .site-nav {
   background: #12234f; padding: 0 20px; display: flex; align-items: center;
   height: 54px; gap: 16px; border-bottom: 1px solid #1f3568; position: relative;
