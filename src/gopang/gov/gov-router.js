@@ -5908,8 +5908,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
 
   // 1) 읍면동/리 이름이 직접 언급되면 규칙 B/C/F: 행정시 → 읍면동 체인
   const emdRecords = await _loadEmdRecords();
+  // ★ 2026-08-23 구조적 강화(라이브 스모크테스트 전수취합 실측 발견,
+  // 주피터 재차 지시 — "땜빵 말고 근본 논리 구조를 고쳐라") — _matchCity
+  // 는 "발화 자체에서 매칭됐는지, 위치 힌트로만 매칭됐는지"를
+  // _matchedViaTextItself로 추적해서, 힌트로만 매칭되면 즉시 확정하지
+  // 않고 뒤 단계(L2/국가기관/전역 폴백)에 먼저 기회를 준 뒤 그래도
+  // 안 걸리면 최후의 수단으로만 쓴다(cityOnlyFallback). 그런데 _matchEmd
+  // 는 이 구분 자체가 없어서, 실제 AC가 항상 정확한 위치(읍면동까지)를
+  // 아는 실사용 환경에서 — 즉 emdMatch가 거의 항상 "위치 힌트로만"
+  // 성립하는 상황에서 — BUG-028/032로도 못 잡는 발화(토지대장·대학
+  // 성적증명서 등, city-dept도 아니고 EMD도 아닌 제3의 기관 소관)가
+  // 전부 무조건 EMD로 확정돼버렸다(실측 다건 확인). _matchCity와 동일한
+  // 비대칭 방지 패턴을 EMD 레벨에도 대칭적으로 적용한다.
+  const emdMatchedViaTextItself = !!_matchEmd(text, emdRecords);
   let emdMatch = _matchEmd(text, emdRecords)
     || (pdvLocationHint ? _matchEmd(pdvLocationHint, emdRecords) : null);
+  let emdFallback = null; // ★ 신설 — cityOnlyFallback과 동일한 "보류" 그릇
 
   if (emdMatch) {
     // ★ 2026-08-05 — v1.3 신규 필드(상위기관명) 우선, 구 스키마(행정시명)는
@@ -5917,8 +5931,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const cityCode = _findCityByName(emdMatch.상위기관명 || emdMatch.행정시명);
     if (cityCode) {
       const cityText = await _fetchCityText(cityCode);
-      parts.push(cityText);
-      trace.push(cityCode.code);
+      // ★ 2026-08-23 수정 — cityText/cityCode.code를 여기서 곧바로 바깥
+      // parts/trace에 push하지 않는다. 아래에서 EMD를 "보류"하기로
+      // 결정하면(힌트 전용 매칭 + AI 있음), 바깥 parts/trace는 전혀 안
+      // 건드린 채로 2)~5) 단계로 그대로 넘어가야 한다 — 여기서 먼저
+      // push해버리면 뒤 단계가 최종적으로 다른 답(L2/국가기관 등)을
+      // 찾아도 이 시청 프리픽스가 결과에 잘못 섞여버린다. 확정하는
+      // 분기(cityDeptMatch/상하수도/즉시확정 EMD)에서만 각자 push한다.
 
       // ★ 2026-07-23 수정(주피터 지시) — 규칙 F(서귀포 상하수도는 읍면동
       // 생략)를 상하수도 전용에서 모든 시청 국(局) 도메인으로 일반화한다.
@@ -5943,6 +5962,8 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // "이게 진짜 읍면동 사무가 맞는지"까지 포함해 판단시킨다.
       const cityDeptMatch = await _resolveCityDeptMatch(text, cityCode.시코드, classifyFn);
       if (cityDeptMatch) {
+        parts.push(cityText);
+        trace.push(cityCode.code);
         const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch, text);
         if (cityDeptText) {
           parts.push(cityDeptText);
@@ -5955,8 +5976,14 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
             trace.push(`${divisionMatch.code}(과/팀 특정)`);
           }
         }
+        await _appendExpertIfMatched();
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       } else if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
+        parts.push(cityText);
+        trace.push(cityCode.code);
         trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
+        await _appendExpertIfMatched();
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       } else {
         // ★ 2026-08-05 신설 — §5-2 PocketBase 우선 조회 + STUB/MISSING
         // 미스 신호(§4-1). 여기 도달했다는 건 이 발화가 실제로 읍면동
@@ -5964,29 +5991,50 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         const emdNlGovTreeKey = { tier: 'emd', 도코드: _resolveProvinceCode(), 읍면동명: emdMatch.읍면동명 };
         const emdNlPbHit = await _fetchGovTreeInstancePocketBase(emdNlGovTreeKey);
         if (_classifyEmdInstance(emdMatch) !== 'REAL') _reportGovTreeInstanceMiss(emdNlGovTreeKey, text);
+        const emdContentParts = [];
+        const emdContentTrace = [];
         if (emdNlPbHit) {
-          parts.push(emdNlPbHit.generated_content);
-          trace.push(`SP-EMD-${emdMatch.읍면동명}(PocketBase)`);
+          emdContentParts.push(emdNlPbHit.generated_content);
+          emdContentTrace.push(`SP-EMD-${emdMatch.읍면동명}(PocketBase)`);
         } else {
-        const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
-        parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
-        trace.push(`SP-EMD-${emdMatch.읍면동명}`);
-        // ★ 2026-08-02 신설 — 팀 단위 세부 매칭(division과 동일 원칙,
-        // 동점일 때만 LLM). 읍면동 확정 후 그 안의 팀 중 더 구체적으로
-        // 일치하는 게 있으면 이어붙인다(교체 아님).
-        const teamMatch = await _resolveEmdTeam(text, emdMatch, classifyFn);
-        if (teamMatch) {
-          const teamResult = await _fetchEmdTeamText(teamMatch, emdMatch);
-          if (teamResult) {
-            parts.push(teamResult.text);
-            trace.push(teamResult.code);
+          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
+          emdContentParts.push(_renderEmdTemplate(emdTemplate, emdMatch));
+          emdContentTrace.push(`SP-EMD-${emdMatch.읍면동명}`);
+          // ★ 2026-08-02 신설 — 팀 단위 세부 매칭(division과 동일 원칙,
+          // 동점일 때만 LLM). 읍면동 확정 후 그 안의 팀 중 더 구체적으로
+          // 일치하는 게 있으면 이어붙인다(교체 아님).
+          const teamMatch = await _resolveEmdTeam(text, emdMatch, classifyFn);
+          if (teamMatch) {
+            const teamResult = await _fetchEmdTeamText(teamMatch, emdMatch);
+            if (teamResult) {
+              emdContentParts.push(teamResult.text);
+              emdContentTrace.push(teamResult.code);
+            }
           }
         }
-        }
-      }
-      await _appendExpertIfMatched();
 
-      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        // ★ 2026-08-23 신설 — emdMatch가 발화 자체(읍면동 이름을 직접
+        // 언급)로 성립했거나 classifyFn이 없으면(AI 상담 불가) 기존처럼
+        // 즉시 확정한다. 위치 힌트로만 성립했고 AI가 있으면, 이 결과를
+        // 폴백으로만 들고 뒤 단계(2~5, cityOnly/L2/국가기관/전역 분류)에
+        // 더 구체적인 매칭 기회를 먼저 준다 — _matchCity의 cityOnlyFallback
+        // 과 완전히 동일한 원칙. 아무 데서도 안 걸리면 6)에서 이 폴백을
+        // 쓴다(최종 결과는 최소 기존과 동일하거나 더 정확함 — 절대
+        // 나빠지지 않는다).
+        if (emdMatchedViaTextItself || !classifyFn) {
+          parts.push(cityText);
+          trace.push(cityCode.code);
+          parts.push(...emdContentParts);
+          trace.push(...emdContentTrace);
+          await _appendExpertIfMatched();
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+        emdFallback = {
+          parts: [...parts, cityText, ...emdContentParts],
+          trace: [...trace, cityCode.code, ...emdContentTrace],
+        };
+        // return 하지 않고 통과 — 2)~5) 단계에 기회를 준다.
+      }
     }
     // 행정시 테이블(AdministrativeCity)에서 emdMatch.행정시명을 못 찾으면
     // (도 실사 불일치 등) 이 EMD 매칭은 신뢰하지 않고 무시한다 — 잘못된
@@ -6124,6 +6172,12 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 모른다"고 말하는 셈). 이 경우엔 cityOnlyFallback 쪽(시청 정보 포함)에
   // 전문가 SP만 추가로 얹어 반환한다.
   if (isWaterQuery) {
+    if (emdFallback) {
+      const expText = await _fetchText('06-expert/SP-EXP-WATER_v1.1.md');
+      emdFallback.parts.push(expText);
+      emdFallback.trace.push('SP-EXP-WATER', '(1단계 힌트 전용 매칭 폴백 + 상하수도 전문 SP)');
+      return { systemPrompt: emdFallback.parts.join('\n\n---\n\n'), trace: emdFallback.trace };
+    }
     if (cityOnlyFallback) {
       const expText = await _fetchText('06-expert/SP-EXP-WATER_v1.1.md');
       cityOnlyFallback.parts.push(expText);
@@ -6246,6 +6300,16 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // cityOnlyFallback이 있으면 완전히 빈손으로 끝내는 대신 그 시청
   // 페이지로 대체한다(더 구체적인 도메인 매칭은 다 실패했지만, PDV
   // 힌트로 시는 이미 알고 있었으므로 최소한 그 정보는 활용).
+  // ★ 2026-08-23 신설 — 1)에서 보류해둔 emdFallback이 있으면
+  // cityOnlyFallback보다 먼저 확인한다(EMD가 시청 일반보다 더 구체적인
+  // 정보이므로). 뒤 단계(2~5)에서 더 정확한 매칭을 못 찾았다는 뜻이니,
+  // 위치 힌트로 이미 확보해둔 이 결과를 최후의 수단으로 쓴다 — _matchCity
+  // 의 cityOnlyFallback과 동일한 원칙.
+  if (emdFallback) {
+    await _appendExpertIfMatched();
+    emdFallback.trace.push('(1단계 힌트 전용 매칭 폴백 — EMD가 위치 힌트로만 잡혀 2~5단계에 더 구체적인 매칭 기회를 먼저 줬으나 실패)');
+    return { systemPrompt: emdFallback.parts.join('\n\n---\n\n'), trace: emdFallback.trace };
+  }
   if (cityOnlyFallback) {
     await _appendExpertIfMatched();
     cityOnlyFallback.trace.push('(2단계 힌트 전용 매칭 폴백 — 3~5단계에서 더 구체적인 매칭 실패)');
