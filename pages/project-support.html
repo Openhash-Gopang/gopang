@@ -7,21 +7,28 @@
 <title>혼디 프로젝트 지원 — 국내 AI 서버 구축 — 혼디</title>
 </head>
 <body>
-<script>
-window.PAGE_HERO = {
-  badge: '혼디 프로젝트 지원',
-  l1: '국내 AI 서버 구축을 위해',
-  l2: '혼디 프로젝트를 지원해 주십시오',
-  sub: '2026년 9월 현재 혼디의 완성도는 90% 수준입니다. 해외 LLM 기반 베타 테스트를 국내 오픈소스 LLM 서버로 전환하기 위한 배경, 비교, 비용, 요금제를 투명하게 공개합니다.',
-  actions: [
-    { label: '연간 GDC 충전으로 지원하기', href: '#report', style: 'primary' },
-    { label: '개요 읽기', href: '#overview', style: 'outline' }
-  ]
-};
-</script>
-<link rel="stylesheet" href="/assets/site-header.css">
-<script src="/assets/site-header.js"></script>
-<div id="site-hero-mount"></div>
+<header class="ps-topbar">
+  <a class="ps-back" href="/desktop.html" aria-label="돌아가기">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  </a>
+  <a class="ps-brand" href="/desktop.html">
+    <img src="/icons/icon-192.png" alt="혼디">
+    <span>혼디</span>
+  </a>
+  <span class="ps-topbar-title">혼디 프로젝트 지원</span>
+</header>
+
+<section class="ps-hero">
+  <div class="ps-hero-inner">
+    <div class="section-tag">혼디 프로젝트 지원</div>
+    <h1 class="ps-hero-title">국내 AI 서버 구축을 위해<span>혼디 프로젝트를 지원해 주십시오</span></h1>
+    <p class="ps-hero-sub">2026년 9월 현재 혼디의 완성도는 90% 수준입니다. 해외 LLM 기반 베타 테스트를 국내 오픈소스 LLM 서버로 전환하기 위한 배경, 비교, 비용, 요금제를 투명하게 공개합니다.</p>
+    <div class="ps-hero-actions">
+      <a href="#report" class="primary">연간 GDC 충전으로 지원하기</a>
+      <a href="#overview" class="outline">개요 읽기</a>
+    </div>
+  </div>
+</section>
 
 <style>
 /* ── RESET ── */
@@ -108,9 +115,44 @@ h3.sub-heading {
 }
 h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 
+/* ── 간단 상단바 ── */
+.ps-topbar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 24px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.ps-back {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text3); text-decoration: none;
+}
+.ps-back:hover { background: var(--bg-subtle); color: var(--text); }
+.ps-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.ps-brand img { width: 24px; height: 24px; border-radius: 6px; }
+.ps-brand span { font-size: 15px; font-weight: 700; color: var(--navy); }
+.ps-topbar-title {
+  font-size: 13px; color: var(--text4); padding-left: 12px;
+  border-left: 1px solid var(--border); margin-left: 2px;
+}
+
+/* ── 페이지 타이틀 영역 (기존 공용 다크 히어로 대체) ── */
+.ps-hero { background: var(--surface); padding: 44px 8% 36px; border-bottom: 1px solid var(--border); }
+.ps-hero-inner { max-width: 860px; margin: 0 auto; }
+.ps-hero-title {
+  font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; color: var(--navy);
+  line-height: 1.4; margin: 14px 0 14px;
+}
+.ps-hero-title span { color: var(--brand); display: block; margin-top: 2px; }
+.ps-hero-sub { font-size: 13.5px; color: var(--text3); line-height: 1.8; max-width: 620px; margin-bottom: 22px; }
+.ps-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.ps-hero-actions a { font-size: 13.5px; font-weight: 700; padding: 11px 20px; border-radius: 8px; text-decoration: none; }
+.ps-hero-actions a.primary { background: var(--brand); color: #fff; }
+.ps-hero-actions a.primary:hover { background: var(--brand-dk); }
+.ps-hero-actions a.outline { background: var(--surface); border: 1px solid var(--border2); color: var(--text2); }
+.ps-hero-actions a.outline:hover { background: var(--bg-subtle); }
+
 /* ── 인트로 배너 (원문 상단 인용구) ── */
 .intro-banner {
-  max-width: 860px; margin: -40px auto 0; padding: 0 8%;
+  max-width: 860px; margin: 32px auto 0; padding: 0 8%;
 }
 .intro-banner-inner {
   background: linear-gradient(135deg, var(--navy), #16295a);
