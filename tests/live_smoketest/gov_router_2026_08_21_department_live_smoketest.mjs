@@ -72,7 +72,18 @@ async function realClassifyFn(text, candidatesText) {
   try {
     const r = await fetch(`${PROXY}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // ★ 2026-08-23 신설(라이브 스모크테스트 403 실패 진단) — worker.js의
+        // AI_PROXY_PATHS 방어벽(2026-06-28 DeepSeek 크레딧 소진 사고 이후
+        // 추가, "AI 프록시 호출에는 브라우저 Origin이 필요합니다")이 Node
+        // fetch()의 기본 동작(Origin 헤더 미전송)을 봇/스크립트로 간주해
+        // 403으로 차단한다. 실제 프로덕션(pages/regional-gov.html)은
+        // 브라우저에서 실행돼 자동으로 Origin이 붙지만, 이 스크립트는
+        // 명시적으로 흉내내야 한다 — 보안 우회가 아니라 "실제 프로덕션과
+        // 동일하게 재현한다"는 이 스크립트의 원래 목표를 지키는 수정.
+        Origin: 'https://hondi.net',
+      },
       body: JSON.stringify({
         model: 'deepseek-v4-flash', max_tokens: 30, temperature: 0,
         messages: [
