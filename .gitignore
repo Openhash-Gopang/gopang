@@ -17,3 +17,10 @@ sync_*.py
 migrate_*.py
 
 tests/live_smoketest/pa_live_results_debug.json
+
+# 세션 작업 산출물 - 저장소에 커밋하지 않음
+*_update.zip
+*/live_results.jsonl
+*/live_results.json
+*/live_results.csv
+*/live_summary.json
