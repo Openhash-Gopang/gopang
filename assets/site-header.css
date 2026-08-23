@@ -55,7 +55,7 @@
 .site-nav-highlight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .site-nav-highlight a {
   display: flex; align-items: center; gap: 5px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: #1a2e5c;
   border: 1px solid rgba(255,255,255,0.45); color: #fff; font-size: 12.5px; font-weight: 600;
   padding: 6px 13px; border-radius: 20px; white-space: nowrap;
   text-decoration: none; font-family: 'Pretendard', sans-serif;
@@ -63,7 +63,7 @@
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 .site-nav-highlight a:hover {
-  background: linear-gradient(135deg, #4a90ff, #2f6feb);
+  background: #24356b;
   box-shadow: 0 3px 10px rgba(0,0,0,0.3);
   transform: translateY(-1px);
 }
