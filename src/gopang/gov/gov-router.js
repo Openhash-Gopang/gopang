@@ -735,6 +735,53 @@ function _matchCityDept(text, 시코드) {
   return null;
 }
 
+// ── 시청 국(局) 계층 LLM 구제망 (2026-08-23 신설 — "근본적 정상화" 2단계) ──
+// 배경(주피터 지시): BUG-024~027을 거치며 정부24 실제 민원 246건을 사고
+// 실험한 결과, 매번 "제네릭(시청 일반)으로 멈춤" 사례가 나올 때마다 kw
+// 하나씩 추가해왔다. 이 패턴 자체가 근본 결함의 증상이었다 — 원인을
+// 추적해보니 _buildCandidatesText()(step 5 전역 LLM 안전망)는 도청 L2·
+// 시청 자체·국가기관 코드만 후보로 올리고 시청 국(局) 하위부서
+// (SP-CITYDEPT-*)는 애초에 후보 목록에 넣지 않았고, agency/org 계층엔
+// 있는 "키워드 매칭 실패 시 LLM에게 물어보는" 안전망(_resolveInstitutionMatch)이
+// city-dept 계층엔 아예 없었다. 그 결과 정부24 서비스명이 kw와 정확히
+// 안 겹치면(띄어쓰기 하나만 달라도) LLM이 판단할 기회조차 없이 조용히
+// 시청 일반 안내로 떨어졌다 — 새 표현이 나올 때마다 kw를 무한히 추가해야
+// 했던 진짜 이유. _resolveInstitutionMatch와 동일한 패턴을 이식해 이
+// 계층에도 구제망을 만든다: 키워드 완전매칭(고속경로, 지금까지 쌓아온
+// kw 전부는 이 경로로 계속 유효하며 LLM 호출 없이 그대로 확정)이 실패
+// 하면, 그 시의 모든 국(局) 후보를 한 번에 놓고 LLM에게 직접 고르게
+// 한다. 이러면 앞으로 kw 사전에 없는 새 표현이 나와도(정부24가 서비스를
+// 추가하거나 이름을 바꿔도) 코드 수정 없이 LLM이 알아서 처리한다.
+function _cityDeptCandidateList(시코드) {
+  return _cityDeptTable()
+    .filter(d => d.시코드 === 시코드)
+    .map(d => {
+      const code = `SP-CITYDEPT-${시코드}-${d.국코드}`;
+      const label = d.국이름 || CITY_DEPT_DEFAULT_LABEL[d.국코드] || d.국코드;
+      return {
+        code, name: code,
+        desc: `${label}(${d.국코드}) 소관 — 관련 키워드 예시: ${d.kw.slice(0, 6).join(', ')}`,
+        _dept: d,
+      };
+    });
+}
+
+async function _resolveCityDeptMatch(text, 시코드, classifyFn) {
+  const direct = _matchCityDept(text, 시코드);
+  if (direct) return direct; // 강한/명시적 키워드 매칭 — 고속경로, LLM 호출 없음(회귀 없음)
+  if (!classifyFn) return null; // 하위호환 — AI 상담 불가 시 기존처럼 즉시 미확정
+  const candidates = _cityDeptCandidateList(시코드);
+  if (!candidates.length) return null;
+  let picked;
+  try {
+    picked = await _classifyDivisionFallback(text, candidates, classifyFn);
+  } catch (e) {
+    if (e instanceof NeedsClarificationSignal) throw e;
+    picked = null;
+  }
+  return picked ? picked._dept : null;
+}
+
 // ── 국가기관(정책기관/집행기관) ↔ 시청 국(局, jachi 등) 계층 충돌 감지
 // (2026-08-23 신설, "근본적 라우팅 정상화" 재설계 1단계) ───────────────
 // 배경: BUG-016류(여권) — "여권 재발급"이 한때 MOFA(외교부, 국가기관)
@@ -5118,10 +5165,12 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   if (cityOnly) {
     const cityText = await _fetchCityText(cityOnly);
 
-    // 2-1) 시청 국(局) 단위 매칭 (2026-07-23 신설) — 예: "서귀포시
-    // 건축허가 신청하고 싶어요" → 안전도시건설국(국코드 housing)까지 특정.
-    // 매칭 안 되면 조용히 시청 레이어에서 멈춘다(기존 동작 그대로).
-    const cityDeptMatch = _matchCityDept(text, cityOnly.시코드);
+    // 2-1) 시청 국(局) 단위 매칭 (2026-07-23 신설, 2026-08-23 구조적
+    // 강화) — 키워드 완전매칭이면 즉시 확정(고속경로, 기존과 동일).
+    // 실패하면(kw 사전에 없는 새 표현) 조용히 포기하지 않고 이 시의
+    // 모든 국(局) 후보를 LLM에게 한 번에 보여주고 직접 고르게 한다
+    // (_resolveCityDeptMatch, BUG-024~027의 근본 원인 수정).
+    const cityDeptMatch = await _resolveCityDeptMatch(text, cityOnly.시코드, classifyFn);
     if (cityDeptMatch) {
       parts.push(cityText);
       trace.push(cityOnly.code);
