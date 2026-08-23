@@ -1,0 +1,61 @@
+name: Live Smoketest — 정부24 전수취합 코퍼스 (실제 DeepSeek)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios_file:
+        description: "tests/live_smoketest/ 안의 시나리오 JSON 파일명 (배치 1~7, 각 50건)"
+        required: false
+        default: "scenarios_gov24_corpus_batch1_20260823.json"
+        type: choice
+        options:
+          - scenarios_gov24_corpus_batch1_20260823.json
+          - scenarios_gov24_corpus_batch2_20260823.json
+          - scenarios_gov24_corpus_batch3_20260823.json
+          - scenarios_gov24_corpus_batch4_20260823.json
+          - scenarios_gov24_corpus_batch5_20260823.json
+          - scenarios_gov24_corpus_batch6_20260823.json
+          - scenarios_gov24_corpus_batch7_20260823.json
+
+permissions:
+  contents: write
+
+jobs:
+  run-gov24-corpus-smoketest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run gov24 corpus routing live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_gov24_corpus_batch1_20260823.json"; fi
+          echo "scenarios=$SCEN"
+          node gov24_corpus_live_smoketest.mjs --scenarios "$SCEN"
+
+      - name: Commit results to results branch
+        if: always()
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-gov24-corpus
+          git add -f results/
+          git diff --cached --quiet || git commit -m "chore: 정부24 전수취합 코퍼스 live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-gov24-corpus
+
+      - name: Upload artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-gov24-corpus-results
+          path: results/
