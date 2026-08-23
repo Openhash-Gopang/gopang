@@ -33,6 +33,11 @@ body {
   font-size: 14px;
   line-height: 1.8;
 }
+/* 모든 하위 요소가 Pretendard를 상속하도록 강제 — code/pre 등 브라우저 기본 monospace로
+   깨지는 요소를 포함해 한글이 들어가는 모든 태그가 Pretendard를 벗어나지 않게 한다. */
+code, pre, kbd, samp, input, button, textarea, select {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+}
 
 .ug-doc { max-width: 1040px; margin: 0 auto; padding: 40px 24px 80px; }
 
@@ -64,6 +69,10 @@ body {
 }
 .base-sp-link:hover { background: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(12,108,195,0.3); transform: translateY(-2px); }
 .base-sp-link svg { flex-shrink: 0; }
+.code-badge {
+  background: #eef2f7; color: var(--brand-dk); font-weight: 600;
+  padding: 1px 7px; border-radius: 5px; font-size: 12.5px;
+}
 
 /* ── 1단: 대분류 탭 (한 줄 고정, 컴팩트) ── */
 .tier1-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
@@ -97,13 +106,14 @@ body {
   display: inline-flex; align-items: center; gap: 6px;
   background: #f1f5f9; border: none; border-radius: 20px;
   padding: 7px 16px; font-size: 12.5px; font-weight: 600; color: var(--text3);
-  cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
+  cursor: pointer; white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 .tier2-tab svg { flex-shrink: 0; }
 .tier2-tab .t2-count { color: var(--text4); font-weight: 500; margin-left: 2px; }
-.tier2-tab:hover { background: #e2e8f0; }
-.tier2-tab.active { background: var(--brand); color: #fff; }
+.tier2-tab:hover { background: #e2e8f0; box-shadow: 0 3px 8px rgba(15,23,42,0.12); transform: translateY(-1px); }
+.tier2-tab.active { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(12,108,195,0.32); }
 .tier2-tab.active .t2-count { color: #dbeafe; }
 
 /* ── 본문 콘텐츠 ── */
@@ -130,7 +140,12 @@ body {
 .svc-callout.important { background: #fff7ed; border-color: #fbbf24; border-left-color: #d97706; color: #7c4a03; }
 
 .subfield-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 8px; }
-.subfield-chip { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--text3); text-align: center; }
+.subfield-chip {
+  background: #f8fafc; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--text3); text-align: center;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+.subfield-chip:hover { box-shadow: 0 3px 8px rgba(15,23,42,0.1); transform: translateY(-1px); }
 @media (max-width: 720px) { .subfield-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .svc-table-wrap { overflow-x: auto; margin: 8px 0 4px; }
@@ -165,7 +180,7 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
     <h2>전문가 페르소나란</h2>
     <p>페르소나란 전문직 종사자 개인의 지적 역량과 경험 격차를 상향 평준화하려는 의도로 설계된 전문가 AI입니다. 변호사마다 실제 지식·경험은 천차만별이지만, 변호사 페르소나의 도움을 받으면 어떤 변호사든 세상의 모든 법률 지식에 통달한 것과 다름없는 조력을 받을 수 있습니다.</p>
     <div class="intro-quote">K-서비스가 공익을 우선하는 것과 달리, 전문가 페르소나는 사용자의 사익을 우선합니다. K-서비스와 변호사 페르소나의 관계는 법원과 변호사의 관계와 같습니다.</div>
-    <p>현재 법률·의료·교육·금융·공학 등 62개 직업군, 총 505명의 전문가 페르소나가 등록되어 있으며, 모든 페르소나는 공통 골격(<code>SP_EXPERT_BASE</code>)을 상속한 뒤 각 직업의 고유 지식과 절차로 확장되는 3단 구조(공통 골격 → 직업군 SP → 세부분야 SP)로 설계되어 있습니다.</p>
+    <p>현재 법률·의료·교육·금융·공학 등 62개 직업군, 총 505명의 전문가 페르소나가 등록되어 있으며, 모든 페르소나는 공통 골격(<span class="code-badge">SP_EXPERT_BASE</span>)을 상속한 뒤 각 직업의 고유 지식과 절차로 확장되는 3단 구조(공통 골격 → 직업군 SP → 세부분야 SP)로 설계되어 있습니다.</p>
     <a class="base-sp-link" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_EXPERT_BASE_v1_1.md" target="_blank" rel="noopener">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
       SP_EXPERT_BASE — 모든 페르소나가 상속하는 공통 골격 보기
