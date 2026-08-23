@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-23 혼디 라우팅 "근본적 정상화" 세션 전체 요약.
+  ① BUG-023 — 국가기관 vs 지방행정 계층충돌 통합판단(첫 구조적 재설계)
+  ② BUG-024~027 — 정부24 실제 민원 246건(5개 배치) 사고실험 기반 키워드
+     공백·과잉매칭 정정, 응급감지 안전성 스트레스 테스트 → 화이트리스트
+     유지 결정(DECISION-01)
+  ③ BUG-028 — 시청 국(局) 계층 LLM 구제망 신설(진짜 첫 근본 수정 — 반복되던
+     "제네릭 폴백" 패턴의 원인 제거)
+  ④ BUG-030/031 — 여권 과잉매칭 재발 + bare 키워드 부분문자열 충돌 발견
+     ("비자"⊂"소비자", "입영"⊂"수입영수증")
+  ⑤ BUG-033 — 키워드 매칭 원시함수 전면 교체(_kwMatch, 어절 경계 인식) —
+     BUG-025/030/031을 개별 패치가 아니라 매칭 메커니즘 자체 수정으로 해결
+  ⑥ 라이브 스모크테스트 인프라 신설 — 정부24 전수취합 코퍼스(350건, 7배치),
+     실행 중 발견한 인프라 버그 2건(Origin 헤더 누락, 결과 브랜치 경쟁 상태)
+  ⑦ BUG-034/035 — EMD 즉시확정의 구조적 비대칭 제거 + 그 직접 회귀까지
+     라이브 실측으로 잡고 수정(구조적 수정의 연쇄 반응 실사례)
+  ⑧ 최종 라이브 검증 결과 — 350건 전수, 크래시/응급오탐/재질문회귀 전부 0건
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-23): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 라우팅 근본적 정상화 — Gopang 개발자 문서</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --good:     #2e7d4f;
+  --good-lt:  #eaf6ef;
+  --bad:      #b3392c;
+  --bad-lt:   #fbeceb;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout.good { border-left-color: var(--good); background: var(--good-lt); }
+.callout.bad { border-left-color: var(--bad); background: var(--bad-lt); }
+.callout strong { color: var(--ink); }
+
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  padding: 9px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+.badge {
+  display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; letter-spacing: .3px;
+}
+.badge.pass { background: var(--good-lt); color: var(--good); border: 1px solid var(--good); }
+.badge.fail { background: var(--bad-lt); color: var(--bad); border: 1px solid var(--bad); }
+.badge.skip { background: var(--bg-3); color: var(--ink-3); border: 1px solid var(--line-2); }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .4s ease, transform .4s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+.doc-hero {
+  padding: 8px 0 30px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.4;
+  color: var(--ink); margin-bottom: 14px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  margin-top: 18px; font-size: 12px; color: var(--ink-4);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#bug023">① BUG-023 — 계층충돌 통합판단(첫 재설계)</a>
+    <a href="#bug024">② BUG-024~027 — 정부24 사고실험·응급감지 결정</a>
+    <a href="#bug028">③ BUG-028 — 시청 국 LLM 구제망(첫 근본 수정)</a>
+    <a href="#bug030">④ BUG-030/031 — 여권 재발·bare 키워드 충돌</a>
+    <a href="#bug033">⑤ BUG-033 — 키워드 매칭 원시함수 전면 교체</a>
+    <a href="#livetest">⑥ 라이브 스모크테스트 인프라 + 인프라 버그 2건</a>
+    <a href="#bug034">⑦ BUG-034/035 — EMD 비대칭 제거 + 직접 회귀</a>
+    <a href="#final">⑧ 최종 라이브 검증 — 350건 전수</a>
+    <a href="#lessons">교훈</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SESSION SUMMARY — 2026-08-23</div>
+      <h1 class="doc-hero-title">"사소한 사례 보완이 아니라<br><em>근본적으로 정상화하라</em>"는 한 문장이,<br>13개의 구조적 버그 수정으로 이어지기까지</h1>
+      <p class="doc-hero-desc">
+        지난 세션이 "여권 재발급이 시청이 아니라 외교부로 잘못 간다"는
+        키워드 하나를 고치다 크레딧이 끊긴 자리에서 시작했다. 이 세션은
+        그 개별 수정을 이어받는 대신, <strong>왜 이런 종류의 버그가
+        계속 재발하는가</strong>라는 질문으로 방향을 틀었다. 순차 확정
+        방식의 라우팅 로직을 통합판단 구조로 재설계하고(BUG-023),
+        정부24 실제 민원 350건을 8개 배치로 나눠 로컬 사고실험한 끝에
+        "제네릭 폴백으로 계속 새는" 진짜 원인(시청 국 계층에 LLM
+        구제망이 아예 없었던 것, BUG-028)을 찾아 고쳤다. 그 뒤로도
+        "키워드 하나씩 화이트리스트에 추가하는 방식 자체가 문제"라는
+        지적을 받고 매칭 메커니즘 자체(<code>_kwMatch</code>, BUG-033)
+        를 바꿨고, 마지막엔 로컬 사고실험으로는 재현 불가능했던 조합형
+        회귀(BUG-035)를 <strong>실제 DeepSeek API를 쓰는 라이브
+        스모크테스트</strong>로 잡아냈다. 이 문서는 그 전체 과정 —
+        무엇을 고쳤고, 무엇을 고치지 않기로 결정했으며(DECISION-01),
+        왜 그렇게 판단했는지 — 를 순서대로 정리한다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>작성</strong> 2026-08-23</span>
+        <span><strong>핵심 변경</strong> src/gopang/gov/gov-router.js · docs/manual/05-bug-log.md · tests/live_smoketest/*</span>
+        <span><strong>버그 기록</strong> BUG-023 ~ BUG-035, DECISION-01</span>
+      </div>
+    </div>
+
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          혼디 라우팅은 <strong>문자매칭(빠른 경로)과 의미검색(LLM
+          classifyFn, 느린 경로)의 하이브리드</strong>다. 이 세션 내내
+          반복된 실패 패턴은 크게 두 갈래였다 — <strong>①문자매칭이
+          놓쳐서 의미검색이 구제해야 하는데 그 통로 자체가 없던 경우</strong>
+          (BUG-028, BUG-034)와 <strong>②문자매칭이 우연히 잘못 걸려서
+          의미검색이 검토할 기회조차 없이 즉시 확정돼버린 경우</strong>
+          (BUG-025/030/031). 다음에 이 라우팅 로직을 만지는 사람이 같은
+          클래스의 버그를 또 개별 패치로 땜빵하지 않도록, 각 수정이
+          <strong>왜 필요했고 어떤 일반 원칙으로 이어졌는지</strong>를
+          기록한다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            읽는 법
+          </div>
+          ①~⑦은 시간 순서다. 특히 ⑦(BUG-034/035)은 구조적 수정 하나가
+          다른 코드의 암묵적 전제를 깨뜨려 새 회귀를 낳고, 그걸 다시
+          구조적으로 고치는 실사례라 이 세션 전체의 방법론을 가장 잘
+          보여준다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug023">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">① BUG-023</div>
+          <div class="gs-title">국가기관 ↔ 지방행정 계층충돌 통합판단 — 첫 구조적 재설계</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          지난 세션이 남긴 "여권 재발급" 버그(국가기관 MOFA 키워드로
+          잘못 확정되고 시/군/구 소관이라는 사실을 몰랐던 문제)를 이어
+          받으며 저장소를 직접 클론해 실측한 결과, 진단이 예상보다
+          정교해야 했다 — agency/org 계층은 이미 2026-08-21에 L2 후보를
+          병합하는 방식으로 부분 통합판단이 구현돼 있었다. 진짜 남은
+          구멍은 <strong>국가기관(정책기관/집행기관) 판별 함수 두 개가
+          매칭되면 classifyFn 호출 없이 즉시 <code>return</code>해버려서,
+          시청 국(jachi)이나 도청 L2 계층에 같은 발화가 걸리는지 전혀
+          몰랐던 것</strong>이었다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          조치
+        </h4>
+        <p>
+          <code>_localGovCollisionCandidate()</code>를 신설해 국가기관
+          즉시확정 두 지점(정책기관/집행기관) 모두에 끼워넣었다 —
+          지방행정(시청 국 → 도청 L2 순) 후보가 있으면 국가기관 후보와
+          함께 기존 <code>_classifyDivisionFallback</code> 인프라로
+          통합판단 한 번, 없으면 기존과 완전히 동일하게 즉시 확정(고속
+          경로, 회귀 없음).
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            검증
+          </div>
+          회귀 테스트 29건 중 28→29 통과로 개선. 실제로 오확정되던
+          "소상공인 정책자금 대출 상담" 사례(MSS 국가기관으로 잘못 가던
+          것)가 이 수정으로 정확히 <code>SP-DO-ECON</code>(지방행정)으로
+          바뀜을 실측 확인했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug024">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">② BUG-024~027</div>
+          <div class="gs-title">정부24 실제 민원 246건 사고실험 + 응급감지 안전성 결정</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          정부24 실제 민원서비스 목록을 5개 배치(각 50건 내외)로 나눠
+          자연스러운 발화체로 변환하고, 실제 마스터데이터 위에서
+          <code>assembleGovSystemPrompt</code>를 직접 실행하는 사고실험을
+          시작했다. 발견되는 키워드 사전 공백·과잉매칭을 매 배치마다
+          하나씩 정정해 나갔다(BUG-024~027).
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          DECISION-01 — 응급감지 일반화 규칙, 스트레스 테스트 후 기각
+        </h4>
+        <p>
+          이 과정에서 응급감지(<code>EMERGENCY_RE</code>)도 같은 클래스의
+          "문화재⊃화재" 부분문자열 오탐을 반복 겪었다(BUG-025, BUG-029).
+          화이트리스트 방식이 whack-a-mole처럼 보여 일반화 규칙(응급
+          키워드 주변에 서류 마커가 있으면 예외처리)을 제안했지만, 실제
+          코드에 반영하기 전 <strong>적대적 시나리오로 먼저 스트레스
+          테스트</strong>했다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>후보 규칙</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>규칙 1(근접 기반 — 앞뒤 15자 이내 서류 마커면 예외)</td><td><span class="badge fail">위험</span> 12건 중 5건 실패, 그중 4건이 진짜 응급 상황을 비응급으로 오판(생명 관련 최악의 실패 방향)</td></tr>
+              <tr><td>규칙 2(보수적 — 긴급강조어 있으면 무조건 응급 유지)</td><td><span class="badge pass">양호</span> 12건 중 11건 통과, 유일한 실패도 안전한 방향(과잉판정)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            최종 결정
+          </div>
+          <strong>화이트리스트 방식을 유지한다.</strong> 라우팅 정확도와
+          응급감지는 오분류 비용의 구조가 다르다 — 라우팅은 최악의 경우
+          재질문하면 되지만, 응급감지의 위음성은 생명과 직결된다.
+          화이트리스트는 유지보수 부담이 있지만 <strong>기존 탐지 범위를
+          절대 줄이지 않는다는 보장</strong>(순수 추가 전용, 회귀 위험
+          없음)이 있다. "개별 해법을 무한 반복할 수 없다"는 원칙은
+          오분류 비용이 낮은 코드에는 그대로 적용되지만, 비대칭적으로
+          큰 코드에서는 반복되는 화이트리스트 유지보수 자체가
+          안전장치일 수 있다는 걸 실측으로 확인했다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug028">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">③ BUG-028</div>
+          <div class="gs-title">시청 국(局) 계층 LLM 구제망 신설 — 진짜 첫 "근본" 수정</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "재차 강조하지만, 땜빵식 처방이 아니라 근원적인 해결책을
+          강구해야 합니다" — 이 지시를 받고 BUG-024~027에서 반복된
+          "제네릭(시청 일반)으로 멈춤" 패턴 자체를 다시 진단했다. 코드를
+          추적한 결과 두 가지가 겹쳐 있었다:
+        </p>
+        <ol>
+          <li>전역 LLM 안전망(<code>_buildCandidatesText</code>, step 5)이
+            도청 L2·시청 자체·국가기관 코드만 후보로 올리고 시청 국(局)
+            하위부서(<code>SP-CITYDEPT-*</code>)는 애초에 후보 목록에
+            넣지 않았다.</li>
+          <li>agency/org 계층엔 이미 있는 "키워드 매칭 실패 시 LLM에게
+            물어보는" 안전망(<code>_resolveInstitutionMatch</code>)이
+            city-dept 계층(<code>_matchCityDept</code>)엔 아예 없었다.</li>
+        </ol>
+        <p>
+          <code>_resolveInstitutionMatch</code>와 동일한 패턴을
+          <code>_resolveCityDeptMatch</code>로 이식했다 — 키워드
+          완전매칭이면 즉시 확정(고속경로, 회귀 없음), 실패하면 그
+          시의 모든 국(局) 후보를 LLM 한 번으로 판단시킨다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            검증 — 하드코딩 규칙 없는 범용 목으로 증명
+          </div>
+          이 구조적 기여를 증명하려고, 개별 발화 규칙을 하드코딩하는 대신
+          "후보 설명과 발화의 문자 중첩도로 최선 후보를 고르는" 범용 근사
+          목을 만들어 재실행했다. <strong>새 키워드를 단 하나도 추가하지
+          않고, 순전히 이 구조 변경만으로</strong> 5차 배치의 구체적
+          확정이 31/49 → 42/49로 즉시 개선됐다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug030">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">④ BUG-030 / BUG-031</div>
+          <div class="gs-title">여권 과잉매칭 세 번째 재발 + bare 키워드 부분문자열 충돌</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          6·7차 배치를 진행하며 여권 관련 과잉매칭(jachi의 bare
+          <code>'여권'</code>이 "여권 유효기간 만료일 사전알림 서비스"
+          같은 외교부 중앙조회형 서비스까지 흡수)이 <strong>세 번째로
+          재발</strong>했다(BUG-025→026→030). 매번 신호 단어를 화이트
+          리스트에 추가하는 패턴 자체가 의심스러워지던 차에, 8차 배치를
+          목 개선 과정에서 재검증하다가 <strong>목이 아니라 진짜 코드
+          버그</strong>를 발견했다.
+        </p>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            실제 버그 — classifyFn=null 고정 재현으로 확인
+          </div>
+          "1372 소비자상담센터"가 <code>SP-NAT-IMMIGRATION</code>(출입국)
+          으로 확정됐다. classifyFn을 강제로 <code>null</code>(무응답)로
+          고정한 순수 키워드 경로 재현에서도 동일하게 재현돼, 목이 아닌
+          실제 코드 결함임을 확인했다 — immigration 도메인의 bare 키워드
+          <code>'비자'</code>가 <strong>"소비자"</strong>에 부분 문자열로
+          포함된 것이다. 전수 점검 결과 mma의 bare 키워드
+          <code>'입영'</code>도 <strong>"수입영수증"</strong>에 포함되는
+          동일 결함이 발견됐다.
+        </div>
+        <p>
+          두 키워드를 실제 발화형 복합어로 대체(BUG-031)해 급한 불은
+          껐지만, 이 시점에서 사용자가 재차 지적했다 — "땜빵 방식으로
+          문제를 해결하면 안됩니다. 오류가 발생하면, 라우팅 메커니즘의
+          근본적인 논리 구조를 수정해야 합니다."
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug033">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑤ BUG-033</div>
+          <div class="gs-title">키워드 매칭 원시함수 전면 교체 — <code>_kwMatch</code></div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          BUG-025(라우팅 계층 부분)·030·031을 다시 보니 전부 같은 근본
+          원인의 다른 증상이었다 — 이 파일 전역 <strong>12개 키워드
+          매칭 호출 지점</strong>이 전부 <code>text.includes(k)</code>
+          (순수 부분 문자열 포함 검사)를 썼다. 이 원시함수 자체가
+          "짧은 키워드가 더 긴 무관한 단어에 우연히 삼켜지는" 문제를
+          구조적으로 막을 수 없었다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          해법 — 어절 경계 인식
+        </h4>
+        <p>
+          <code>_kwMatch(text, k)</code> 신설 — 키워드가 매칭된 지점의
+          바로 앞 글자가 한글 음절(가-힣)이면 그 위치의 매칭을 무시한다
+          ("소비자"의 "비자", "수입영수증"의 "입영", "문화재"의 "화재"
+          전부 이 규칙 하나로 걸러짐). 뒤쪽 글자는 검사하지 않는다 —
+          조사(을/를/은/는 등)가 자연스럽게 붙는 게 정상이라서다. 이
+          파일 전역의 12개 호출 지점을 전부 이 함수로 교체했다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            증명 — 개별 패치를 폐기하고 원복해도 정상 작동
+          </div>
+          BUG-031에서 넣었던 '비자'→'비자 발급' 등의 복합어 치환을
+          <strong>전부 폐기하고 bare 키워드('비자','입영')로 원복</strong>
+          했다. <code>classifyFn=null</code> 고정 재현에서 "소비자
+          상담센터"·"수입영수증" 둘 다 더 이상 오확정 안 되면서, "비자
+          발급받고 싶어요"·"입영통지서... 연기하고 싶어요" 같은 정상
+          발화는 여전히 정확히 매칭됨을 확인했다 — 개별 패치 없이
+          원시함수 하나만 고쳤는데 전부 정상 작동한다는 게, 이게 진짜
+          근본 수정이라는 증거다.
+        </div>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="livetest">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6.343L4.4 17.4A2 2 0 0 0 6.2 20h11.6a2 2 0 0 0 1.8-2.6L15 8.343V2"/><line x1="8" y1="2" x2="16" y2="2"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑥ 라이브 스모크테스트 인프라</div>
+          <div class="gs-title">정부24 전수취합 코퍼스(350건) + 인프라 버그 2건</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          "혼디 라우팅은 문자 매칭과 의미 검색의 하이브리드입니다"라는
+          지적을 받고, 로컬 사고실험의 근본 한계(목 classifyFn은 실제
+          LLM의 의미 이해 능력과 다르다)를 인정한 뒤 8개 배치의 정부24
+          사고실험 시나리오를 전부 취합해 <strong>실제 DeepSeek API를
+          쓰는 라이브 스모크테스트</strong>로 전환했다. 기존
+          <code>gov_router_2026_08_21_department_live_smoketest.mjs</code>
+          (프로덕션 <code>_govClassifyFn</code>을 그대로 복제)를 확장해
+          외부 JSON 시나리오 파일을 읽는 <code>gov24_corpus_live_
+          smoketest.mjs</code>를 신설, 350건을 배치당 50건씩 7개 파일로
+          나눴다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          실행 중 발견한 인프라 버그 2건
+        </h4>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>증상</th><th>원인</th><th>조치</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>첫 실행에서 모든 classifyFn 호출이 403으로 실패 — 사실상
+                  순수 키워드 매칭만으로 돌아간 것</td>
+                <td><code>worker.js</code>가 2026-06-28 DeepSeek 크레딧
+                  소진 사고 이후 AI 프록시 경로에 브라우저 Origin 헤더
+                  없는 요청을 403 차단. Node <code>fetch()</code>는
+                  Origin을 자동으로 안 보냄</td>
+                <td><code>Origin: 'https://hondi.net'</code> 헤더 추가
+                  (이미 저장소에 같은 문제를 해결해둔
+                  <code>live-gov-router-smoketest.mjs</code>가 있었음)</td>
+              </tr>
+              <tr>
+                <td>7개 배치를 동시 실행했더니 결과 브랜치에 1개 배치
+                  분량만 남고 6개가 사라짐</td>
+                <td>모든 배치가 같은 브랜치명에 <code>git push
+                  --force</code> — 나중에 끝난 실행이 먼저 끝난 실행들의
+                  결과를 통째로 덮어쓰는 경쟁 상태</td>
+                <td>배치 식별자를 브랜치 이름에 포함
+                  (<code>results/live-smoketest-gov24-corpus-batch{N}</code>)
+                  — 배치별로 브랜치 자체를 분리해 경쟁을 원천 제거</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          두 인프라 버그 모두 라우팅 코드(<code>gov-router.js</code>)와는
+          무관하지만, 검증 결과 자체를 무효화할 수 있는 문제였다는 점에서
+          기록해둔다 — "테스트 인프라가 실제로 재현하고자 하는 조건을
+          정확히 재현하는지"도 근본 원인 분석 대상이었다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="bug034">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑦ BUG-034 / BUG-035</div>
+          <div class="gs-title">EMD 즉시확정의 구조적 비대칭 제거 + 그 직접 회귀</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          라이브 인프라를 고친 뒤 batch1(50건)을 처음 돌렸을 때, "토지
+          대장등본"·"세목별납세증명"·"대학 성적증명서"처럼 전혀 무관한
+          발화 다수가 전부 <code>SP-EMD-애월읍</code>으로 확정되는 게
+          실측됐다. BUG-028의 city-dept LLM 구제망은 정상 작동했지만,
+          그 체크가 실패하면 <strong>다른 계층(L2·국가기관·전역 분류)을
+          시도해볼 기회조차 없이 곧바로 EMD로 확정</strong>되고
+          함수가 끝나버렸다.
+        </p>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          BUG-034 — city 계층에 이미 있던 패턴을 EMD 계층에 대칭 이식
+        </h4>
+        <p>
+          <code>_matchCity()</code>는 "발화 자체 매칭 vs 위치 힌트만
+          매칭"을 <code>_matchedViaTextItself</code>로 구분해서, 힌트로만
+          매칭되면 즉시 확정 대신 뒤 단계에 먼저 기회를 주는 패턴
+          (<code>cityOnlyFallback</code>)이 이미 있었다. <strong>그런데
+          <code>_matchEmd()</code>에는 이 패턴 자체가 없었다</strong> —
+          실제 AC는 항상 정확한 위치(읍면동까지)를 알기 때문에, 이
+          비대칭이 예외가 아니라 거의 모든 요청이 지나가는 주 경로였다.
+          <code>emdMatchedViaTextItself</code> 추적과
+          <code>emdFallback</code>(보류 그릇)을 신설해 city 계층과
+          대칭화했다.
+        </p>
+        <div class="callout good">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            효과 — 실측
+          </div>
+          정부24 350건 재실행에서 EMD 확정 비율이 <strong>대부분 →
+          7.4%(26/350)</strong>로 극적 개선. 그 26건도 전부 이미 알려진
+          구조적 공백(교육부 등 대응 도메인 자체가 없는 기관)이었다.
+        </div>
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          BUG-035 — 구조적 수정이 낳은 직접 회귀
+        </h4>
+        <p>
+          그런데 같은 재실행에서, 진짜 EMD 사무(주민등록표 등본·전입신고
+          등)가 이번엔 전부 <strong>"어느 읍면동에 거주하시나요"</strong>
+          라고 되묻고 있었다 — locationHint에 이미 읍면동이 명시돼
+          있었는데도. BUG-034가 만든 "1단계는 성공했지만 보류 중"이라는
+          새로운 상태를, 2026-08-22에 만들어진 SP-EMD-LAZY 재질문 로직
+          ("이 지점 도달 = 1단계가 이미 실패했다는 뜻"이라는 전제로
+          짜여 있던 코드)이 몰랐던 것이다.
+        </p>
+        <div class="callout bad">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            정확히 경고했던 그 실패 사례
+          </div>
+          "땜빵으로 해결하면 이전에 정상 작동하던 다른 곳에서 오류가
+          발생한다"는 지적이 문자 그대로 실현된 사례다. SP-EMD-LAZY
+          분기에서 <code>NeedsLocationSignal</code>을 던지기 전에
+          <code>emdFallback</code> 존재 여부를 먼저 확인하도록 정정 —
+          있으면 그 결과를 그대로 확정, 없으면 기존처럼 위치를 되묻는다.
+        </div>
+        <p>
+          재검증 결과 진짜 EMD 사무 <strong>12/12건 전부 재질문 없이
+          정확히 확정</strong>됐다. 이 사이클(구조적 수정 → 라이브 실측
+          → 직접 회귀 발견 → 재수정 → 재실측)이 이 세션 전체의 방법론을
+          가장 압축적으로 보여준다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="final">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">⑧ 최종 검증</div>
+          <div class="gs-title">정부24 전수취합 코퍼스 350건 — 최종 라이브 결과</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>지표</th><th>결과</th></tr></thead>
+            <tbody>
+              <tr><td>크래시</td><td><span class="badge pass">0건</span></td></tr>
+              <tr><td>응급감지 오탐</td><td><span class="badge pass">0건</span></td></tr>
+              <tr><td>위치 재질문 회귀(BUG-035 대상)</td><td><span class="badge pass">0건</span> — 12/12 진짜 EMD 사무 정확 확정</td></tr>
+              <tr><td>국가기관 정확 확정</td><td>145/350건(41.4%)</td></tr>
+              <tr><td>EMD 확정(전부 구조적 공백 계열 또는 진짜 EMD 사무)</td><td>86/350건(24.6%) — 새 버그 없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          남은 EMD 확정 항목의 다수(교육부·국토교통부·국세청 일부 등)는
+          코드 버그가 아니라 <strong>대응하는 국가기관 실사 데이터가
+          시스템에 아예 없는 구조적 공백</strong>이다 — 라우팅 로직이
+          할 수 있는 최선(정직하게 가장 가까운 폴백으로 떨어짐)을 하고
+          있을 뿐, 실사 데이터 보강이라는 별도 작업이 필요하다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="lessons">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.5-.7 2.5-1.5 3.5S13 12 13 13.5V15H11v-1.5c0-1.5.7-2.5 1.5-3.5S14 8 14 6a2 2 0 0 0-4 0"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Lessons</div>
+          <div class="gs-title">교훈</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <strong>"제네릭으로 떨어진다"는 결과가 반복되면, 그 지점의
+          매칭이 실패했을 때 무슨 일이 벌어지는지부터 확인한다.</strong>
+          키워드를 추가하기 전에 "이 실패가 다른 계층에 물어볼 기회를
+          아예 못 얻고 끝나는가"를 먼저 물어야 한다(BUG-028, BUG-034).
+        </p>
+        <p>
+          <strong>같은 파일 안에 이미 있는 "정답 패턴"과의 비대칭을
+          찾는 게 근본 원인을 찾는 가장 빠른 길이다.</strong>
+          <code>_matchCity</code>에 있던 <code>_matchedViaTextItself</code>
+          패턴이 <code>_matchEmd</code>엔 왜 없는지 자문한 것이 BUG-034
+          발견의 핵심이었다.
+        </p>
+        <p>
+          <strong>구조적 수정은 그 자체로 끝이 아니다 — 그 변경이
+          성립시키던 암묵적 불변조건에 의존하는 다른 코드가 또 있는가를
+          함께 점검해야 한다.</strong> BUG-034가 BUG-035를 낳은 사례가
+          이를 실증한다. 그리고 이 조합형 회귀는 로컬 사고실험(제한된
+          목 classifyFn)으로는 재현이 사실상 불가능했고, 실제 DeepSeek
+          API를 쓰는 라이브 스모크테스트로만 잡을 수 있었다.
+        </p>
+        <p>
+          <strong>모든 버그가 같은 방식으로 고쳐져야 하는 건 아니다.</strong>
+          라우팅 정확도(오분류 비용 낮음)는 구조적 일반화가 맞는
+          방향이지만, 응급감지(오분류 비용 비대칭적으로 큼)에서는 반복
+          되는 화이트리스트 유지보수 자체가 안전장치일 수 있다
+          (DECISION-01). "땜빵 금지"를 기계적으로 모든 곳에 적용하면
+          오히려 위험할 수 있다는 것도 이번 세션이 확인한 원칙이다.
+        </p>
+        <p>
+          <strong>사고실험(로컬 목)과 라이브 스모크테스트(실제 API)는
+          서로 다른 실행 경로를 드러낸다.</strong> 사고실험은 "메커니즘이
+          작동하는가"를 확인하는 데는 확실하지만 "실제로 정확한가"는
+          검증할 수 없다는 근본 한계가 이 세션에서 최소 세 번(SP-EMD-LAZY
+          계층충돌 오인, 어린이집→도서관 오인, BUG-035) 확인됐다. 두
+          검증 방식을 상호 보완적으로 함께 쓰는 게 결론이다.
+        </p>
+      </div>
+    </section>
+
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li>저장소 내 <code>docs/manual/05-bug-log.md</code> — BUG-023~035·DECISION-01 원문 기록(원인·조치·검증·교훈 전부)</li>
+          <li>저장소 내 <code>src/gopang/gov/gov-router.js</code> — <code>_kwMatch</code>·<code>_resolveCityDeptMatch</code>·<code>emdFallback</code>·<code>_localGovCollisionCandidate</code> 등 이번 세션의 핵심 함수</li>
+          <li>저장소 내 <code>src/tests/gov-router-2026-08-21-session-smoketest.test.mjs</code> — 로컬 회귀 테스트(29건, 이번 세션 전체에서 0 실패 유지)</li>
+          <li>저장소 내 <code>tests/live_smoketest/gov24_corpus_live_smoketest.mjs</code> + <code>scenarios_gov24_corpus_batch1~7_20260823.json</code> — 정부24 전수취합 코퍼스 라이브 스모크테스트</li>
+          <li>저장소 내 <code>.github/workflows/live-smoketest-gov24-corpus.yml</code> — 배치별 브랜치 분리로 결과 경쟁 상태를 해결한 워크플로</li>
+          <li>results 브랜치 <code>results/live-smoketest-gov24-corpus-batch1</code>~<code>batch7</code> — 350건 최종 라이브 결과 원본</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
