@@ -722,15 +722,58 @@ const JEJU_CITY_DEPT_TABLE = [
 // 동일한 "알려진 근접 오탐 문구를 먼저 걸러낸다"는 원칙.
 const _JACHI_PASSPORT_LOOKUP_SIGNALS = ['진위', '발급 이력', '발급이력', '발급 상태', '발급상태', '정보증명서', '발급기록', '분실', '유효기간', '만료일', '사전알림'];  // ★ 2026-08-23 '발급기록'/'분실' 추가(4차 사고실험 발견) — "여권 발급기록 증명서", "여권 분실 신고"도 외교부 중앙 대국민서비스. '유효기간'/'만료일'/'사전알림' 추가(7차 사고실험 발견) — "여권 유효기간 만료일 사전알림 서비스"도 외교부 중앙 대국민서비스
 
+// ── 키워드 매칭 핵심 원시함수 — 어절 경계 인식 (2026-08-23 신설,
+// "근본적 정상화" — 개별 단어 화이트리스트/복합어 치환 패치 폐기) ──────
+// 배경(주피터 재차 지시): BUG-025("문화재"⊃"화재")·BUG-030(여권 계열)·
+// BUG-031("소비자"⊃"비자", "수입영수증"⊃"입영")이 전부 같은 근본 원인의
+// 서로 다른 증상이었다 — 이 파일 전역의 키워드 매칭이 전부
+// `text.includes(k)`(순수 부분 문자열 포함 검사)를 썼는데, 이건 짧은
+// 키워드가 우연히 더 긴 무관한 단어에 삼켜지는 걸 원천적으로 막을 수
+// 없다. 발견될 때마다 그 단어 하나만 화이트리스트에 추가하거나 복합어로
+// 바꾸는 방식(BUG-031까지의 조치)은, 아직 발견 안 된 수백 개의 잠재적
+// 충돌이 코드베이스 전역에 그대로 남아있고 계속 재발할 수밖에 없는
+// whack-a-mole이었다.
+//
+// 이 함수는 그 매칭 "원시함수" 자체를 고친다: 키워드가 매칭된 지점의
+// 바로 앞 글자가 한글 음절(가-힣)이면, 그 키워드가 더 긴 단어의 일부로
+// 삼켜진 것으로 보고 그 위치의 매칭은 무시한다("소비자"의 "비자",
+// "수입영수증"의 "입영", "문화재"의 "화재" 전부 이 규칙 하나로 걸러짐).
+// 뒤쪽 글자는 검사하지 않는다 — 한국어 조사(을/를/은/는/이/가/의/에/로
+// 등)가 키워드 바로 뒤에 공백 없이 자연스럽게 붙는 게 정상이라
+// ("여권을", "비자는") 뒤쪽까지 막으면 오히려 정상 매칭을 깨뜨린다.
+// 텍스트 안에 키워드가 여러 번 나오면, 그 중 하나라도 어절 경계를
+// 지키면 매칭으로 인정한다(한 곳은 삼켜져 있어도 다른 곳은 독립된
+// 단어로 쓰였을 수 있으므로).
+//
+// 이 함수로 교체한 뒤에는 BUG-031에서 넣었던 '비자'→'비자 발급' 등의
+// 복합어 치환이 더 이상 필요 없다 — bare '비자'를 그대로 둬도 "소비자"
+// 오매칭 없이 "비자 발급"/"비자를 연장"은 정상 매칭된다(아래에서 원복).
+// 이건 이 구조적 수정이 진짜로 근본 원인을 없앴다는 증거이기도 하다.
+//
+// 응급감지(EMERGENCY_RE)는 이 함수를 쓰지 않는다 — 그건 정규식 기반이고
+// (DECISION-01에서 이미 검토·기각한 대로) 생명안전 게이트는 다른 위험
+// 기준이 적용돼 화이트리스트 방식을 의도적으로 유지한다. 이 함수는
+// 라우팅 정확도(오분류 비용이 낮은 영역)에만 적용한다.
+function _kwMatch(text, k) {
+  if (!text || !k) return false;
+  let idx = text.indexOf(k);
+  while (idx !== -1) {
+    const before = idx > 0 ? text[idx - 1] : '';
+    if (!/[가-힣]/.test(before)) return true;
+    idx = text.indexOf(k, idx + 1);
+  }
+  return false;
+}
+
 function _matchCityDept(text, 시코드) {
   for (const d of _cityDeptTable()) {
     if (d.시코드 !== 시코드) continue;
     if (d.국코드 === 'jachi' && text.includes('여권') && _JACHI_PASSPORT_LOOKUP_SIGNALS.some(s => text.includes(s))) {
       const otherKw = d.kw.filter(k => k !== '여권');
-      if (otherKw.some(k => text.includes(k))) return d;
+      if (otherKw.some(k => _kwMatch(text, k))) return d;
       continue; // '여권' 신호만으로는 이 레코드를 확정하지 않는다.
     }
-    if (d.kw.some(k => text.includes(k))) return d;
+    if (d.kw.some(k => _kwMatch(text, k))) return d;
   }
   return null;
 }
@@ -799,7 +842,7 @@ function _cityDeptCollisionCandidate(text, pdvLocationHint) {
   const deptMatch = _matchCityDept(text, cityMatch.시코드);
   if (!deptMatch) return null;
   const code = `SP-CITYDEPT-${cityMatch.시코드}-${deptMatch.국코드}`;
-  const matchedKw = deptMatch.kw.filter(k => text.includes(k));
+  const matchedKw = deptMatch.kw.filter(k => _kwMatch(text, k));
   return {
     code,
     name: code,
@@ -1234,7 +1277,7 @@ const JEJU_NATIONAL_TABLE = [
          '차상위 본인부담', '노인장기요양', '건강보험 연말정산'] },  // ★ 2026-08-23 추가(1~5차 사고실험 발견) — 순수 '건강보험'은 과잉매칭 우려로 안 넣고 실제 발화형 복합어만 추가
   { code: 'SP-NAT-IMMIGRATION',
     domain: 'immigration', 도코드: 'jeju',
-    kw: ['출입국', '외국인청', '체류자격', '비자 발급', '비자발급', '비자 신청', '비자신청', '비자 연장', '관광비자', '취업비자', '귀화', '하이코리아', '외국인등록', '외국국적동포', '국내거소'] },  // ★ 2026-08-23 추가(1·5차 사고실험 발견) — "외국인등록사실증명"·"외국국적동포 국내거소" 등. bare '비자' 제거(8차 사고실험 발견) — "소비자"에 부분문자열로 포함돼 "1372 소비자상담센터"가 출입국으로 오확정되는 문화재⊃화재류 버그. 실제 발화형 복합어로 대체
+    kw: ['출입국', '외국인청', '체류자격', '비자', '귀화', '하이코리아', '외국인등록', '외국국적동포', '국내거소'] },  // ★ 2026-08-23 추가(1·5차 사고실험 발견) — "외국인등록사실증명"·"외국국적동포 국내거소" 등. '비자' bare 유지 — _kwMatch(어절 경계 인식)로 교체돼 "소비자" 오매칭 없이 안전(BUG-031의 복합어 치환은 이제 불필요해 원복, 구조적 수정으로 대체됨)
   { code: 'SP-NAT-POST',
     domain: 'post', 도코드: 'jeju',
     kw: ['우체국', '우정청', '등기우편', '우편'] },
@@ -1260,7 +1303,7 @@ const JEJU_NATIONAL_TABLE = [
     kw: ['조달청', '나라장터'] },
   { code: 'SP-NAT-MMA',
     domain: 'mma', 도코드: 'jeju',
-    kw: ['병무청', '징병검사', '입영통지', '입영 연기', '입영연기', '입영 날짜', '입영일자', '입영 대상'] },  // ★ 2026-08-23 bare '입영' 제거(8차 사고실험 발견) — "수입영수증"에 부분문자열로 포함될 위험(관세·세무 관련 실존 단어). 실제 발화형 복합어로 대체
+    kw: ['병무청', '징병검사', '입영'] },  // ★ 2026-08-23 bare '입영' 유지(원복) — _kwMatch(어절 경계 인식)로 교체돼 "수입영수증" 오매칭 없이 안전(BUG-031의 복합어 치환은 이제 불필요해 원복, 구조적 수정으로 대체됨)
   { code: 'SP-NAT-VETERANS',
     domain: 'veterans', 도코드: 'jeju',
     kw: ['보훈청', '국가유공자', '보훈급여', '취업지원 대상자'] },  // ★ 2026-08-23 '취업지원 대상자' 추가(사고실험 발견) — 이전에 잘못된 자매 테이블(_guessNatAgencyDomainFromText용)에 넣었던 걸 여기(JEJU_NATIONAL_TABLE, 실제 _matchNational이 쓰는 표)로 정정
@@ -2343,7 +2386,7 @@ const _L2_DOMAIN_LABEL_KO = {
 };
 function _matchL2Canonical(text) {
   for (const [domain, kws] of Object.entries(L2_CANONICAL_KEYWORDS)) {
-    if (kws.some(k => text.includes(k))) return domain;
+    if (kws.some(k => _kwMatch(text, k))) return domain;
   }
   return null;
 }
@@ -2355,7 +2398,7 @@ function _renderL2CanonicalFallback(domain) {
 }
 function _matchCatalogOnly(text) {
   for (const c of CATALOG_ONLY) {
-    if (c.kw.some(k => text.includes(k))) return c;
+    if (c.kw.some(k => _kwMatch(text, k))) return c;
   }
   return null;
 }
@@ -3169,11 +3212,11 @@ function _matchEmd(text, records) {
 // 시도한다"는 판단이 가능해진다(아래 stage 2 참고).
 function _matchCity(text, pdvLocationHint) {
   for (const c of _cityTable()) {
-    if (c.kw.some(k => text.includes(k))) return { ...c, _matchedViaTextItself: true };
+    if (c.kw.some(k => _kwMatch(text, k))) return { ...c, _matchedViaTextItself: true };
   }
   if (pdvLocationHint) {
     for (const c of _cityTable()) {
-      if (c.kw.some(k => pdvLocationHint.includes(k))) return { ...c, _matchedViaTextItself: false };
+      if (c.kw.some(k => _kwMatch(pdvLocationHint, k))) return { ...c, _matchedViaTextItself: false };
     }
   }
   return null;
@@ -3425,7 +3468,7 @@ const _SIGUNGU_DOMAIN_KEYWORDS = {
 };
 function _guessDomainFromText(text) {
   for (const [domain, kws] of Object.entries(_SIGUNGU_DOMAIN_KEYWORDS)) {
-    if (kws.some(k => text.includes(k))) return domain;
+    if (kws.some(k => _kwMatch(text, k))) return domain;
   }
   return null;
 }
@@ -3505,9 +3548,9 @@ const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   laborrel: ['노동위원회', '부당해고'],
   nhis: ['건강보험공단', '국민건강보험', '건강보험료', '건강검진'],
   nps: ['국민연금공단', '국민연금'],
-  immigration: ['출입국', '비자 발급', '비자발급', '비자 신청', '비자신청', '외국인등록', '체류자격', '외국인청', '귀화', '하이코리아'],  // ★ 2026-08-23 bare '비자' 제거(8차 사고실험 발견, 자매 표도 함께 정정 — BUG-022 교훈)
+  immigration: ['출입국', '비자', '외국인등록', '체류자격', '외국인청', '귀화', '하이코리아'],  // ★ 2026-08-23 bare '비자' 유지(원복) — _kwMatch 구조적 수정으로 대체(BUG-031)
   post: ['우정청', '우체국', '우편', '등기우편'],
-  mma: ['병무청', '징병', '입영통지', '입영 연기', '병역', '징병검사', '신체검사'],  // ★ 2026-08-23 bare '입영' 제거(8차 사고실험 발견, 자매 표도 함께 정정)
+  mma: ['병무청', '징병', '입영', '병역', '징병검사', '신체검사'],  // ★ 2026-08-23 bare '입영' 유지(원복) — _kwMatch 구조적 수정으로 대체(BUG-031)
   customs: ['세관', '관세', '통관'],
   // ★ 2026-08-17 수정 — 단독 '보훈'이 국가보훈부(MPVA) 정식 명칭과 매번
   // 충돌해 -0.8) 게이트를 건너뛰게 만들었다(전수 감사로 발견). '보훈청'·
@@ -3536,7 +3579,7 @@ const _NAT_AGENCY_DOMAIN_KEYWORDS = {
 };
 function _guessNatAgencyDomainFromText(text) {
   for (const [domain, kws] of Object.entries(_NAT_AGENCY_DOMAIN_KEYWORDS)) {
-    if (kws.some(k => text.includes(k))) return domain;
+    if (kws.some(k => _kwMatch(text, k))) return domain;
   }
   return null;
 }
@@ -3779,7 +3822,7 @@ const _POLICY_BODY_NAME_KO = {
 
 function _guessPolicyBodyFromText(text) {
   for (const [code, kws] of Object.entries(_POLICY_BODY_DOMAIN_KEYWORDS)) {
-    if (kws.some(k => text.includes(k))) return code;
+    if (kws.some(k => _kwMatch(text, k))) return code;
   }
   return null;
 }
@@ -3830,7 +3873,7 @@ async function _tryDivisionMatch(기관코드, text, onProgress) {
 const _MUNICIPAL_TAX_KEYWORDS = ['지방세', '취득세', '재산세', '자동차세', '세정'];  // ★ 2026-08-23 '자동차세' 추가(사고실험 발견)
 function _isMunicipalTaxOnlyMatch(text, entry) {
   if (!entry || entry.code !== 'SP-DO-PLAN') return false;
-  const matchedKw = entry.kw.filter(k => text.includes(k));
+  const matchedKw = entry.kw.filter(k => _kwMatch(text, k));
   if (matchedKw.length === 0) return false;
   return matchedKw.every(k => _MUNICIPAL_TAX_KEYWORDS.includes(k));
 }
@@ -3844,7 +3887,7 @@ function _scoreMatchTies(text, table) {
   let bestScore = 0;
   let tied = [];
   for (const entry of table) {
-    const score = entry.kw.filter(k => text.includes(k)).length;
+    const score = entry.kw.filter(k => _kwMatch(text, k)).length;
     if (score === 0) continue;
     if (score > bestScore) { bestScore = score; tied = [entry]; }
     else if (score === bestScore) { tied.push(entry); }
