@@ -3827,6 +3827,91 @@ function _guessPolicyBodyFromText(text) {
   return null;
 }
 
+// ── 국가 공기업(enterprises) 매칭 (2026-08-23 신설) ──────────────────
+// ★ 구조적 결함 발견 및 수정: 09-national/enterprises(29개 공기업 SP)가
+// gov-router.js 어디에도 fetch되지 않고, sp-catalog.json을 만드는
+// tools/build_manifest.py도 이 폴더를 스캔 대상에서 제외하고 있었다 —
+// 즉 이 29개 SP는 콘텐츠는 있지만 실제로는 어떤 사용자에게도 도달할
+// 수 없는 완전한 죽은 콘텐츠였다(policy-bodies/agencies와 달리 배선
+// 자체가 처음부터 없었음). GOV-TASK-904-GAP 감사(REQUIRED_DOCUMENTS_
+// REGISTRY 배선 여부)를 진행하기 전에 이 결함을 먼저 고친다 — 배선이
+// 안 된 파일에 GOV_TASK 섹션을 추가해봐야 아무도 볼 수 없다.
+//
+// policy-bodies와 동일한 패턴(도별 지사 없는 전국 단일 SP → 키워드
+// 매칭 + 지연 fetch)을 그대로 복제한다. 충돌 위험을 최소화하기 위해
+// 키워드는 원칙적으로 기관의 공식 명칭(고유명사)만 쓰고, 시민이 실제
+// 자주 쓰는 약칭(한전·코레일·LH·수자원공사 등) 몇 개만 개별 확인 후
+// 추가했다(기존 _POLICY_BODY_DOMAIN_KEYWORDS·_NAT_AGENCY_DOMAIN_
+// KEYWORDS·L2_CANONICAL_KEYWORDS 전체와 대조해 겹치는 항목 없음을
+// 확인함, 2026-08-23).
+const _ENTERPRISE_DOMAIN_KEYWORDS = {
+  EWP: ['한국동서발전'],
+  EX: ['한국도로공사', '도로공사'],
+  GKL: ['그랜드코리아레저'],
+  HUG: ['주택도시보증공사', 'HUG'],
+  IIAC: ['인천국제공항공사'],
+  JDC: ['제주국제자유도시개발센터'],
+  KAC: ['한국공항공사'],
+  KDN: ['한전KDN', '한전케이디엔'],
+  KEPCOENG: ['한국전력기술'],
+  KEPCOKPS: ['한전KPS', '한전케이피에스'],
+  KEPCO: ['한국전력공사', '한전'],
+  KHNP: ['한국수력원자력', '한수원'],
+  KL: ['강원랜드'],
+  KNOC: ['한국석유공사'],
+  KODIT: ['한국지역난방공사', '지역난방공사'],
+  KOEM: ['해양환경공단'],
+  KOEN: ['한국남동발전'],
+  KOGAS: ['한국가스공사'],
+  KOGAT: ['한국가스기술공사'],
+  KOMIPO: ['한국중부발전'],
+  KOMIR: ['한국광해광업공단'],
+  KOMSCO: ['한국조폐공사'],
+  KORAIL: ['한국철도공사', '코레일'],
+  KOSPO: ['한국남부발전'],
+  KRA: ['한국마사회'],
+  KWATER: ['한국수자원공사', '수자원공사'],
+  LH: ['한국토지주택공사', 'LH공사'],
+  REB: ['한국부동산원'],
+  SR: ['에스알(SR)', 'SR고속열차', '에스알열차'],
+  WP: ['한국서부발전'],
+};
+const _ENTERPRISE_NAME_KO = {
+  EWP: '한국동서발전', EX: '한국도로공사', GKL: '그랜드코리아레저', HUG: '주택도시보증공사',
+  IIAC: '인천국제공항공사', JDC: '제주국제자유도시개발센터', KAC: '한국공항공사', KDN: '한전KDN',
+  KEPCOENG: '한국전력기술', KEPCOKPS: '한전KPS', KEPCO: '한국전력공사', KHNP: '한국수력원자력',
+  KL: '강원랜드', KNOC: '한국석유공사', KODIT: '한국지역난방공사', KOEM: '해양환경공단',
+  KOEN: '한국남동발전', KOGAS: '한국가스공사', KOGAT: '한국가스기술공사', KOMIPO: '한국중부발전',
+  KOMIR: '한국광해광업공단', KOMSCO: '한국조폐공사', KORAIL: '한국철도공사', KOSPO: '한국남부발전',
+  KRA: '한국마사회', KWATER: '한국수자원공사', LH: '한국토지주택공사', REB: '한국부동산원',
+  SR: '에스알(SR)', WP: '한국서부발전',
+};
+function _guessEnterpriseFromText(text) {
+  for (const [code, kws] of Object.entries(_ENTERPRISE_DOMAIN_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return code;
+  }
+  return null;
+}
+const _enterpriseSpCache = new Map();
+async function resolveEnterpriseLazy(code, onProgress) {
+  if (_enterpriseSpCache.has(code)) {
+    return { text: _enterpriseSpCache.get(code), source: 'cache' };
+  }
+  try {
+    onProgress?.({ stage: 'enterprise-fetch', code });
+    const text = await _fetchText(`09-national/enterprises/SP-NAT-ENT-${code}_v1.1.md`);
+    _enterpriseSpCache.set(code, text);
+    return { text, source: 'fetched' };
+  } catch (e) {
+    console.warn('[gov-router] resolveEnterpriseLazy 실패, 기본 문구로 대체:', e?.message);
+    const label = _ENTERPRISE_NAME_KO[code] || code;
+    return {
+      text: `[정보 없음] ${label} 관련 SP를 지금 불러오지 못했습니다 — 정부24(gov.kr) 또는 해당 기관 공식 홈페이지를 확인해 주세요.`,
+      source: 'fallback',
+    };
+  }
+}
+
 const _policyBodySpCache = new Map();
 async function resolvePolicyBodyLazy(code, onProgress) {
   if (_policyBodySpCache.has(code)) {
@@ -4951,6 +5036,24 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // 통과시킨다. 그 경로가 PERMIT-CRITERIA-PROTOCOL·division 매칭 등
     // 기존 배선을 이미 다 갖추고 있어 여기서 중복 구현하지 않는다.
     trace.push(`(계층충돌 통합판단 — 지방행정(${picked.code}) 소관으로 판정, 아래 라우팅 경로로 위임)`);
+  }
+
+  // -0.78) 국가 공기업(enterprises) 매칭 (2026-08-23 신설) — policy-body
+  // 블록과 완전히 분리된 별도 키워드 사전이라 위 -0.8) 블록의 충돌가드와
+  // 무관하게 독립 실행한다. enterprises도 policy-bodies와 마찬가지로 도별
+  // 지사가 없는 전국 단일 SP라(§0 "이 기관은 도지사 지휘·감독을 받지
+  // 않으며 전국 단일 공기업이다") 위치 판별 게이트(-0.5)보다 먼저 와야
+  // 한다. 키워드는 전부 기관 고유명사라 policy-bodies/agencies 사전과
+  // 겹치지 않음을 확인했다(§ 위 주석 참조) — 별도 충돌가드 불필요.
+  const enterpriseGuess = _guessEnterpriseFromText(text);
+  if (enterpriseGuess) {
+    const nationalSp = await _loadNationalSp();
+    parts.push(nationalSp);
+    trace.push('JEJU-NATIONAL-SP');
+    const resolvedEnt = await resolveEnterpriseLazy(enterpriseGuess, onProgress);
+    parts.push(resolvedEnt.text);
+    trace.push(`SP-ENT-LAZY(${enterpriseGuess}/${resolvedEnt.source})`);
+    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
   // -0.5) 도 판별 실패(발화·PDV 위치 힌트 둘 다 실패) — 2026-07-21 신설.

@@ -120,6 +120,10 @@ const DEPT_TASK_TAXONOMY = {
     // REQUIRED_DOCUMENTS_REGISTRY(worker.js)의 'kcc'(방송통신위원회)가
     // 이 taxonomy에 대응 항목이 없어 AGENCY_TO_DEPT_TARGET 매핑이 불가능했다.
     'national:kcc',
+    // 2026-08-23 추가 — 09-national/enterprises(국가 공기업) 최초 등록.
+    // 이 폴더 전체가 gov-router.js에 배선돼 있지 않던 결함을 먼저 고친
+    // 뒤(같은 세션), 실제 GOV_TASK 사례로 HUG(주택도시보증공사)를 등록.
+    'national:hug',
   ]),
   'k-service': new Set([
     // worker.js SP_DELEGATION_REGISTRY와 동일 목록 — 두 레지스트리가 갈라지지

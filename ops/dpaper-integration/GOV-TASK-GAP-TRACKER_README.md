@@ -521,3 +521,63 @@ JACHI-GENERAL 2건(내부행정).
 이 표 자체가 커지거나 다음 세션 판단이 이전 판단과 어긋나면, 이 README도
 함께 갱신할 것 — 특히 "제외(오탐)" 기준은 한 번 잘못 적용된 전례가 있으니
 바뀌면 반드시 사유를 남길 것.
+
+## 2026-08-23 세션 — 09-national 착수, 구조적 결함 발견·수정
+
+인계서(2026-08-20)가 남긴 미결 사항("혼디가 국가기관 서류를 대행하는 게
+제도적으로 가능한가")부터 확인. **별도 조사 불필요로 결론** —
+`UNIVERSAL-common_v1_12.md` §U1(권한의 한계)이 이미 "업무 수행(준비·초안)은
+능동적으로, 권한 행사(최종 확정)는 절대 대행하지 않고 인간 승인 필수"라는
+원칙을 명시하고 있고, 09-national SP 전부가 이 문서를 상속한다. 국가기관
+이라고 지방행정과 다른 제도적 장벽이 없음을 확인.
+
+**★★★ 핵심 발견 — enterprises·other·qgov(337건) 전체가 라우팅 자체가 안 됨**:
+09-national 하위 4개 폴더(agencies 28·policy-bodies 71·enterprises 29·
+other 250·qgov 58·unlisted 23) 중 `agencies`와 `policy-bodies`만
+`gov-router.js`에 실제로 배선돼 있었다. `enterprises`·`other`·`qgov`
+337건은 `gov-router.js` 어디에도 fetch 코드가 없고, `sp-catalog.json`을
+만드는 `tools/build_manifest.py`도 이 세 폴더를 스캔 대상에서 제외하고
+있었다 — **콘텐츠는 있지만 어떤 사용자에게도 절대 도달할 수 없는 완전한
+죽은 콘텐츠**였다. GOV_TASK 배선(REQUIRED_DOCUMENTS_REGISTRY 등록) 이전에
+이 결함부터 고쳐야 의미가 있다.
+
+**enterprises(29건) 라우팅 인프라 신설**: policy-bodies와 동일한 패턴(도별
+지사 없는 전국 단일 SP → 키워드 매칭 + 지연 fetch)을 그대로 복제.
+`_ENTERPRISE_DOMAIN_KEYWORDS`(29개 기관, 원칙적으로 공식 명칭만 키워드로
+사용해 기존 policy-bodies/agencies/L2_CANONICAL 사전과의 충돌 위험을
+최소화 — 한전·코레일·LH공사 등 시민이 실제 자주 쓰는 약칭만 개별 확인
+후 추가)·`resolveEnterpriseLazy()`·파이프라인 삽입(-0.78단계, policy-body
+블록 완전 통과 이후·도 판별 게이트 이전) 신설. `node --check`·
+`check_stale_refs.py`(586건 정상 0건 문제) 통과 확인.
+
+**HUG(주택도시보증공사) 첫 실사례 등록**: 전세보증금 반환보증을 정부24
+공식 등록 정보(제공근거: 주택도시기금법 제1조) + HUG 공식 "이용절차 및
+제출서류" 페이지 교차검증(2026-08-23)으로 `REQUIRED_DOCUMENTS_REGISTRY`
+(`hug:jeonse_deposit_return_guarantee`)·`AGENCY_TO_DEPT_TARGET`·
+`DEPT_TASK_TAXONOMY.national`(`national:hug`)에 등록, SP 본문에 §1-2
+GOV_TASK 섹션 추가. **주의**: policy-bodies와 마찬가지로 이 지연 fetch
+패턴은 파일명에 `_v1.1.md`가 하드코딩돼 있어, 내용을 갱신해도 파일명·
+헤더 버전은 v1.1로 고정 유지한다(버전 올리면 fetch 경로가 깨짐) — 이
+관행을 모르고 다음 세션이 실수로 파일을 rename하지 않도록 주의.
+
+**09-national 진행률**: 완료 1(HUG)·미착수 436. 다만 이번 세션에서 밝힌
+구조적 결함 때문에, 앞으로 enterprises 나머지 28건과 other·qgov 337건은
+**GOV_TASK 개별 등록보다 라우팅 배선 자체가 먼저 필요**하다는 게
+확정됐다 — other(250)·qgov(58)는 아직 라우팅 배선도 안 된 상태.
+
+**다음 세션 우선순위**:
+1. `other`(250)·`qgov`(58)도 동일 패턴(policy-bodies/enterprises 복제)으로
+   라우팅부터 배선 — 이게 없으면 그 안의 어떤 GOV_TASK 등록도 무의미.
+   단, 337건 규모라 키워드 사전을 한 번에 만들면 충돌 검증이 부실해질
+   위험이 있다 — 배치를 나눠서 진행하고 매 배치마다 기존 4개 사전
+   (L2_CANONICAL/POLICY_BODY/NAT_AGENCY/ENTERPRISE)과의 충돌을 개별
+   확인할 것.
+2. enterprises 나머지 28건은 라우팅은 됐으나 GOV_TASK 접수(§1-2)는
+   미배선 — 기관별로 "실제 서류기반 시민 접수가 있는지" 개별 검증
+   필요(LH 검토 중 확인: 청약 신청 자체는 LH청약플러스 등 자체 시스템을
+   통하는 구조라 "재정의" 후보일 가능성 있음 — 07-org의 "안내형 일괄
+   재정의" 실수를 반복하지 않도록 기관마다 실제로 확인할 것).
+3. benefit-categories(13건)는 여전히 미착수 — REQUIRED_DOCUMENTS_REGISTRY
+   패턴 자체가 안 맞을 가능성이 크다는 이전 세션 판단 유지, 별도 재정의
+   필요.
+

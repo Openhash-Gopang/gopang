@@ -20182,6 +20182,28 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — 법조문상 허가권자는 국가유산청장이나 위임 규정에 따라 시·도지사(제주는 도지사) 위임 사무인 경우가 많다 — 이 SP(세계유산본부)가 실무 창구로 위임전결하는 구조로 보이나, 정확한 위임 범위(전부 위임인지 경미한 사항만인지)는 이번 조사에서 확인 못함, TBD. SP-AGY-HERITAGE(자연공원법 특별출입허가)와는 근거법이 다른 별개 처분임에 유의 — 둘 다 이 본부 소관이지만 혼동하지 말 것.',
   },
+  // ★ 2026-08-23 추가 — 09-national/enterprises(국가 공기업) 최초 등록.
+  // 09-national/enterprises·other·qgov(337건)가 gov-router.js에 전혀
+  // 배선돼 있지 않던 구조적 결함을 먼저 발견·수정(라우팅 배선은
+  // gov-router.js의 _ENTERPRISE_DOMAIN_KEYWORDS/resolveEnterpriseLazy
+  // 참조, 2026-08-23 신설) — 그 인프라 위에 실제 GOV_TASK 접수 사례로
+  // 주택도시보증공사(HUG) 전세보증금반환보증을 등록한다. 근거는
+  // 정부24 서비스 등록 정보(gov.kr, 제공근거: 주택도시기금법 제1조,
+  // 접수기관 주택도시보증공사) + HUG 공식 홈페이지 "이용절차 및
+  // 제출서류" 페이지 교차검증(2026-08-23 웹검색).
+  'hug:jeonse_deposit_return_guarantee': {
+    agency: 'hug', agency_name: '주택도시보증공사',
+    task_name: '전세보증금 반환보증 가입 신청(임차인용)',
+    legal_basis: '주택도시기금법 제1조(정부24 제공근거 명시) — 개별 보증상품 약관은 HUG 자체 규정(주택도시기금법에 직접적 가입요건 조항은 없어, 정확한 가입기준·보증한도는 HUG 내규·약관 재확인 필요, TBD)',
+    documents: [
+      { id: 'application_form', name: '전세보증금 반환보증 신청서', required: true, acquisition: 'user_authored' },
+      { id: 'privacy_consent',  name: '개인정보 제공동의서(임차인용)', required: true, acquisition: 'user_authored' },
+      { id: 'confirmation',     name: '전세보증금 반환보증 확약서', required: true, acquisition: 'user_authored' },
+      { id: 'lease_contract',   name: '임대차계약서 사본', required: true, acquisition: 'user_authored' },
+      { id: 'registry_cert',    name: '부동산등기사항전부증명서(등기부등본)', required: true, acquisition: 'government_issued', max_age_days: 30 }, // HUG 공식 안내: 신청일 기준 1개월 이내 발급분
+    ],
+    note: '★ 정직하게 밝힘 — 신청 방법은 HUG 지사·위탁은행 방문 또는 모바일(네이버부동산·카카오페이·토스·안심전세App)이 공식 경로다. Hondi는 서류 준비·정리까지만 능동적으로 돕고(UNIVERSAL-common U1 원칙), 실제 신용조사·보증심사·보증서 발급은 HUG가 확정한다. 소득증빙·혼인관계증명서 등 신청인 상황별(다자녀·신혼부부·한부모 등) 추가서류가 있을 수 있어 위 목록이 전부가 아닐 수 있음 — HUG 홈페이지 "상황별 추가 필요서류" 표 참조 권장. 전세계약기간 1/2 경과 전까지 신청 필요.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -20214,6 +20236,12 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
 const AGENCY_TO_DEPT_TARGET = {
   kcc:      { target_type: 'national', target_id: 'national:kcc' },
   court:    { target_type: 'national', target_id: 'national:court' },
+  // ★ 2026-08-23 추가 — 09-national/enterprises 최초 등록(HUG). agency
+  // 코드 'hug'는 REQUIRED_DOCUMENTS_REGISTRY의 'hug:jeonse_deposit_
+  // return_guarantee'와 짝을 이룬다 — 세분 키(agency:task_key)만
+  // 등록하고 agency 단독 폴백은 두지 않음(이 기관 전용 task_key가
+  // 현재 이것 하나뿐이라 불필요).
+  'hug:jeonse_deposit_return_guarantee': { target_type: 'national', target_id: 'national:hug' },
   seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' }, // 폴백 — 기존 8개(전부 안전도시건설국) 전용, 새 항목은 세분 키를 쓸 것
   jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조). 폴백 — 기존 6개(전부 도시건설국) 전용
   // ── 여기부터 agency:task_key 세분 항목 (국 단위 폴백과 다른 국일 때 필수) ──
