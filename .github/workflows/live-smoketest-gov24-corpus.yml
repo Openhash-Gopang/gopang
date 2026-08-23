@@ -48,10 +48,24 @@ jobs:
         run: |
           git config user.name "hondi-live-smoketest-bot"
           git config user.email "actions@users.noreply.github.com"
-          git checkout -B results/live-smoketest-gov24-corpus
+          # ★ 2026-08-23 수정(사용자 실측 발견) — 7개 배치를 한꺼번에
+          # workflow_dispatch로 트리거하면 여러 실행이 동시에 돌아가는데,
+          # 이전 버전은 배치 구분 없이 전부 같은 브랜치
+          # (results/live-smoketest-gov24-corpus)에 --force 푸시했다.
+          # 그 결과 마지막에 완료된 실행이 다른 6개 배치의 결과를 통째로
+          # 덮어써서 날려버리는 경쟁 상태(race condition)가 실제로
+          # 발생했다(7개 트리거 후 results.json이 1개만 남음을 확인).
+          # 배치별로 브랜치 자체를 분리해 이 경쟁을 원천적으로 없앤다.
+          SCEN="${{ github.event.inputs.scenarios_file }}"
+          if [ -z "$SCEN" ]; then SCEN="scenarios_gov24_corpus_batch1_20260823.json"; fi
+          BATCH_ID=$(echo "$SCEN" | grep -oE 'batch[0-9]+')
+          if [ -z "$BATCH_ID" ]; then BATCH_ID="unknown"; fi
+          BRANCH="results/live-smoketest-gov24-corpus-${BATCH_ID}"
+          echo "results branch=$BRANCH"
+          git checkout -B "$BRANCH"
           git add -f results/
-          git diff --cached --quiet || git commit -m "chore: 정부24 전수취합 코퍼스 live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-          git push --force origin HEAD:results/live-smoketest-gov24-corpus
+          git diff --cached --quiet || git commit -m "chore: 정부24 전수취합 코퍼스 live smoketest results ($BATCH_ID, $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:"$BRANCH"
 
       - name: Upload artifact (backup)
         if: always()
