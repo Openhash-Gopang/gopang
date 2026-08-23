@@ -30,9 +30,6 @@
 (function () {
 
   var NAV_HTML =
-    '<a class="site-strip" href="https://github.com/Openhash-Gopang/gopang" target="_blank">' +
-      '<span>2026년 9월 1일 테스트 시작 · 2027년 완전한 AI 정부 구현 목표 · 오픈소스 코드 공개</span>' +
-    '</a>' +
     '<div class="site-nav">' +
       '<a class="site-nav-logo" href="/desktop.html" onclick="return __hondiBack(event);">' +
         '<img src="/icons/icon-192.png" alt="혼디">' +
@@ -58,6 +55,10 @@
         '<a href="/pages/expert-personas.html"><span class="dot"></span><span class="label-text">전문가 페르소나</span></a>' +
         '<a href="/pages/k-government.html"><span class="dot"></span><span class="label-text">K-정부</span></a>' +
       '</div>' +
+    '</div>' +
+    '<div class="site-strip">' +
+      '<a class="site-strip-text" href="https://github.com/Openhash-Gopang/gopang" target="_blank">2026년 9월 1일 테스트 시작 · 2027년 완전한 AI 정부 구현 목표 · 오픈소스 코드 공개</a>' +
+      '<a class="site-strip-support-btn" href="/pages/project-support.html">혼디 프로젝트 지원</a>' +
     '</div>';
 
   var BACK_ARROW_HTML =
