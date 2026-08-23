@@ -164,6 +164,9 @@ body {
   transform: translateY(-4px);
 }
 .stat-card:active { transform: translateY(-2px); transition-duration: 0.08s; }
+.stat-card.open {
+  box-shadow: 0 12px 28px rgba(15,23,42,0.16), 0 4px 10px rgba(15,23,42,0.08);
+}
 .site-stats .num { font-size: 26px; font-weight: 500; margin-bottom: 6px; }
 .site-stats .title { color: var(--text); font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .site-stats .desc {
@@ -176,36 +179,44 @@ body {
   transition: transform 0.25s ease;
 }
 .stat-card.open .stat-card-chevron { transform: rotate(180deg); }
-.stat-panel {
+.stat-panel { display: none; } /* 콘텐츠 원본 저장용 — 화면에는 직접 표시하지 않고 공유 패널로 복사해 사용 */
+
+/* ── 공유 전체폭 상세 패널 — 카드 폭이 아니라 페이지 폭을 사용 ── */
+.stat-detail-panel {
   max-height: 0; opacity: 0; overflow: hidden;
-  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease, margin-top 0.32s ease;
+  margin: 0 20px; background: #fff; border-radius: 14px;
+  transition: max-height 0.36s cubic-bezier(0.4,0,0.2,1), opacity 0.26s ease, margin-bottom 0.36s ease;
 }
-.stat-card.open .stat-panel {
-  max-height: 480px; opacity: 1; margin-top: 14px;
-  border-top: 1px solid var(--border); padding-top: 14px;
+.stat-detail-panel.open {
+  max-height: 620px; opacity: 1; margin: -6px 20px 28px;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.08);
   overflow-y: auto;
 }
-.stat-panel-inner { font-size: 12.5px; color: var(--text3); line-height: 1.7; min-height: 40px; }
-.pw-compare-item { margin-bottom: 10px; }
+.stat-detail-inner { padding: 26px 30px; font-size: 13px; color: var(--text3); line-height: 1.75; }
+.stat-detail-inner .pw-svc-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2px 32px;
+}
+.pw-svc-note { font-size: 13px; color: var(--text3); line-height: 1.7; margin-bottom: 14px; }
+.pw-compare-item { margin-bottom: 12px; }
 .pw-compare-item:last-child { margin-bottom: 0; }
-.pw-compare-item b { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin-bottom: 2px; }
-.pw-compare-item span { display: block; color: var(--text4); font-size: 11.5px; line-height: 1.5; }
+.pw-compare-item b { display: block; color: var(--text); font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.pw-compare-item span { display: block; color: var(--text4); font-size: 12.5px; line-height: 1.6; }
 .pw-compare-item span .before { color: #94a3b8; }
-.pw-compare-item span .arrow { color: #cbd5e1; margin: 0 3px; }
+.pw-compare-item span .arrow { color: #cbd5e1; margin: 0 4px; }
 .pw-compare-item span .after { color: #0c6cc3; font-weight: 500; }
-.pw-svc-note { font-size: 12px; color: var(--text3); line-height: 1.6; margin-bottom: 12px; }
-.pw-svc-list { padding-right: 4px; }
 .pw-svc-item {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-  padding: 7px 0; border-bottom: 1px solid #f1f5f9;
+  padding: 8px 0; border-bottom: 1px solid #f1f5f9;
 }
 .pw-svc-item:last-child { border-bottom: none; }
-.pw-svc-name { font-size: 12.5px; font-weight: 600; color: var(--text); flex-shrink: 0; width: 72px; }
-.pw-svc-desc { font-size: 11.5px; color: var(--text4); flex: 1; line-height: 1.4; }
-.pw-svc-link { font-size: 11px; color: #0c6cc3; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+.pw-svc-name { font-size: 13px; font-weight: 600; color: var(--text); flex-shrink: 0; width: 80px; }
+.pw-svc-desc { font-size: 12.5px; color: var(--text4); flex: 1; line-height: 1.5; }
+.pw-svc-link { font-size: 12px; color: #0c6cc3; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
 .pw-svc-link:hover { text-decoration: underline; }
 @media (max-width: 900px) {
   .site-stats { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .stat-detail-inner { padding: 20px; }
+  .stat-detail-inner .pw-svc-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
   .site-nav { padding: 0 12px; }
@@ -1520,7 +1531,6 @@ section.section[data-tab].tab-active { display: block; }
     <a href="#" onclick="loadPage('ai-engine');return false;">AI 엔진</a>
     <a href="#" onclick="loadPage('openhash');return false;">오픈해시</a>
     <a href="#" onclick="loadPage('hondi-market');return false;">혼디마켓</a>
-    <a href="#" onclick="loadPage('rule-of-law');return false;">법치국가</a>
   </nav>
   <div class="site-nav-highlight">
     <a href="#" onclick="loadPage('k-services');return false;"><span class="dot"></span><span class="label-text">K-서비스</span></a>
@@ -1540,7 +1550,8 @@ section.section[data-tab].tab-active { display: block; }
   <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
   <div class="site-hero-actions">
-    <a href="./integrated-system.html" class="primary">입법 + 사법 + 행정 통합 시스템이란?</a>
+    <a href="./integrated-system.html" class="primary">입법.사법.행정 통합 체계</a>
+    <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;">법치 국가: K-Law</a>
   </div>
 </section>
 
@@ -1636,14 +1647,29 @@ section.section[data-tab].tab-active { display: block; }
     </div></div>
   </div>
 </div>
+<div class="stat-detail-panel" id="statDetailPanel">
+  <div class="stat-detail-inner" id="statDetailInner"></div>
+</div>
 
 <script>
 function toggleStatCard(card) {
   var wasOpen = card.classList.contains('open');
+  var detailPanel = document.getElementById('statDetailPanel');
+  var detailInner = document.getElementById('statDetailInner');
+
   document.querySelectorAll('.stat-card.open').forEach(function (c) {
-    if (c !== card) c.classList.remove('open');
+    c.classList.remove('open');
   });
-  card.classList.toggle('open', !wasOpen);
+
+  if (wasOpen) {
+    detailPanel.classList.remove('open');
+    return;
+  }
+
+  card.classList.add('open');
+  var source = card.querySelector('.stat-panel-inner');
+  detailInner.innerHTML = source ? source.innerHTML : '';
+  detailPanel.classList.add('open');
 }
 document.addEventListener('click', function (e) {
   if (e.target.closest('.pw-svc-link')) e.stopPropagation();
