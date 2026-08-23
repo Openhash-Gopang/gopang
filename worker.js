@@ -20232,6 +20232,77 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — 연기 가능 기간은 최대 3년 이내로 제한된다(도로교통법 시행규칙 제83조). 연기사유 증명서류는 전자정부법 제36조에 따른 행정정보 공동이용으로 담당공무원이 직접 확인 가능한 경우 제출을 생략할 수 있다 — 사유별로 구체적 증빙서류가 다르므로(해외여행: 항공권/출입국사실증명, 질병: 진단서, 군복무: 병적증명서 등) 위 목록은 대표 예시이며 개별 확인 필요. 실제 연기 승인 여부는 한국도로교통공단이 최종 결정한다.',
   },
+  // ★ 2026-08-23 추가 — 09-national/qgov 배치2(품질 우선 3~5건) 1번째.
+  // 정부24 등록 서비스 "비급여진료비확인"(B55118200010) 확인 + HIRA
+  // 공식 홈페이지 "조회·신청 > 진료비 확인" 페이지(서류서식·확인요청
+  // 대상별 필요서류표) 교차검증(2026-08-23 웹검색).
+  'hira:medical_expense_confirmation_request': {
+    agency: 'hira', agency_name: '건강보험심사평가원',
+    task_name: '진료비(비급여) 확인 요청',
+    legal_basis: '국민건강보험법상 요양급여 대상 여부 확인 제도 — 보건복지부 고시 「요양급여 대상 여부의 확인 방법 및 절차 등에 관한 기준」(정부24 제공서비스 B55118200010 근거)',
+    documents: [
+      { id: 'request_form',  name: '요양급여 대상 여부 확인 요청서(서식1-1, 국민용)', required: true, acquisition: 'user_authored' },
+      { id: 'receipt',       name: '진료비계산서·영수증 또는 진료비(약제비) 납입확인서', required: true, acquisition: 'user_authored' },
+      { id: 'consent_form',  name: '진료비 확인 요청 동의서(서식1-2, 환자 본인이 아닌 가족·동일 건강보험증 등재자가 요청 시)', required: false, acquisition: 'user_authored' },
+      { id: 'family_cert',   name: '가족관계 확인서류(동일 건강보험증 등재 시 제출 생략)', required: false, acquisition: 'government_issued' },
+      { id: 'delegation_form', name: '위임장(서식1-3, 위임 받은 자·민영보험사 요청 시) + 위임자·수임자 신분증 사본', required: false, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 신청인 유형(본인/가족/동일 건보증 등재자/위임받은 자)에 따라 필요서류 조합이 다르다. PC 온라인 신청(본인인증 필요) 또는 모바일 앱·우편·FAX·방문도 가능하며, 이 SP는 그중 우편·팩스·방문 접수 경로의 서류 준비만 돕는다 — 온라인/앱 신청은 HIRA 시스템에서 직접 진행해야 한다. 법령상 자료보존기간(5년)이 지난 진료비는 확인이 어려울 수 있고, 산재보험·자동차보험 등 다른 법률에 따른 요양급여는 확인 대상에서 제외된다. 실제 진료비 확인·환불 여부는 병·의원 자료요청 및 진료심사평가위원회 심의를 거쳐 HIRA가 최종 확정한다.',
+  },
+  // ★ 2026-08-23 추가 — 09-national/qgov 배치2 2번째(GEPS). 정부24
+  // "유족연금부가금 지급 서비스"(B55264000018) 서류기반 청구 확인 —
+  // GEPS 정부24 등록 서비스 대부분은 "구비서류 없이" 발급되는 순수
+  // 증명서형(재정의 후보)이지만, 유족급여 청구는 예외적으로 서류형이다.
+  // 근거: 정부24 서비스 등록정보 + 공무원연금법 제54조(2026-08-23 웹검색).
+  'geps:survivor_benefit_claim': {
+    agency: 'geps', agency_name: '공무원연금공단',
+    task_name: '퇴직유족급여(유족연금·유족연금부가금·유족일시금) 청구',
+    legal_basis: '공무원연금법 제54조(퇴직유족연금 및 퇴직유족연금부가금 등) — 정부24 제공서비스(B55264000018) 등록 정보 기준',
+    documents: [
+      { id: 'claim_form',   name: '퇴직유족(연금·일시금)/퇴직수당 청구서', required: true, acquisition: 'user_authored' },
+      { id: 'death_cert',   name: '사망자 기본증명서(사망정리 미완료 시 주민등록말소자등본 또는 사망진단서)', required: true, acquisition: 'government_issued' },
+      { id: 'relation_cert', name: '유족임을 확인할 수 있는 증명서(부모·자녀: 가족관계증명서 / 배우자: 혼인관계증명서 / 조부모·손자녀·양부모: 해당 관계증명서)', required: true, acquisition: 'government_issued' },
+      { id: 'account_copy', name: '청구인 명의 계좌 사본', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — GEPS의 다른 정부24 등록 서비스(공무원연금 예상 퇴직급여 명세서 등 각종 증명서 발급)는 대부분 공동인증서 로그인만으로 구비서류 없이 온라인 발급되는 순수 증명서형이라, 이 SP가 GOV_TASK로 접수할 서류 자체가 없다 — 유족급여 청구만 예외적으로 서류형이라 이번에 등록한다. 급여 사유 발생일로부터 5년 이내 청구해야 하며(소멸시효), 실제 유족 요건·재직기록 확인과 급여 종류·금액 산정은 GEPS가 최종 결정한다. 사망 사실 신고가 선행되어야 기존 연금 지급이 정지되고 유족급여 산정이 시작된다.',
+  },
+  // ★ 2026-08-23 추가 — 09-national/qgov 배치2 3번째(KRC2). 정부24
+  // 등록 서비스 "농지연금"(154300000128) 서류목록 확인. 근거: 한국농어촌
+  // 공사 및 농지관리기금법 제24조의5(2026-08-23 웹검색).
+  'krc2:farmland_pension_application': {
+    agency: 'krc2', agency_name: '한국농어촌공사',
+    task_name: '농지연금 지원 신청',
+    legal_basis: '한국농어촌공사 및 농지관리기금법 제24조의5(농지연금), 같은 법 시행령 제19조의9 — 정부24 제공서비스(154300000128) 등록 정보 기준',
+    documents: [
+      { id: 'application_form', name: '농지연금지원신청서', required: true, acquisition: 'user_authored' },
+      { id: 'id_copy',        name: '신분증 사본 및 주민등록초본', required: true, acquisition: 'government_issued' },
+      { id: 'registry_cert',  name: '등기부등본(부동산등기사항전부증명서)', required: true, acquisition: 'government_issued' },
+      { id: 'realestate_cert', name: '부동산종합증명서', required: true, acquisition: 'government_issued' },
+      { id: 'farmer_cert',    name: '농업경영체등록확인서', required: true, acquisition: 'government_issued' },
+      { id: 'privacy_consent', name: '개인정보제공동의서', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 신청 대상은 60세 이상(은퇴직불형은 65세 이상 79세 이하)·영농경력 5년 이상(은퇴직불형 10년 이상) 농업인으로, 담보농지도 별도 요건(공부상 지목 전·답·과수원, 2년 이상 보유, 주소지 30km 이내, 근저당 채권최고액이 담보농지 가격 15% 미만 등)을 충족해야 한다 — 요건 미충족 시 접수 자체가 반려될 수 있음을 함께 안내한다. 한국농어촌공사 각 지사 방문 또는 온라인 신청 모두 가능하며, 이 SP는 서류 준비까지만 돕는다. 등기부등본·부동산종합증명서는 정부24·인터넷등기소에서 온라인 발급 가능. 실제 담보평가·가입승인·월 지급액 산정은 한국농어촌공사가 최종 결정한다.',
+  },
+  // ★ 2026-08-23 추가 — 09-national/qgov 배치2 4번째(KOSHA2). 정부24
+  // 등록 서비스 "유해위험방지계획서 등 제출"(14900000170, 산업안전보건법
+  // 시행규칙 별지 16·17·25호서식) + 국가법령정보센터 산업안전보건법
+  // 시행규칙 제42조·별표10 교차검증(2026-08-23 웹검색). B2B(사업주 대상)
+  // 성격이나, 정부24에 서류목록이 명시된 정식 등록 서비스라 §4 재정의
+  // 기준(온라인 자체 시스템형)에 해당하지 않음 — 서류형으로 등록.
+  'kosha2:hazard_prevention_plan_submission': {
+    agency: 'kosha2', agency_name: '한국산업안전보건공단',
+    task_name: '유해위험방지계획서 제출(제조업 등)',
+    legal_basis: '산업안전보건법 제42조(유해위험방지계획서의 작성·제출 등), 같은 법 시행규칙 별지 제25호서식 — 정부24 제공서비스(14900000170) 등록 정보 기준',
+    documents: [
+      { id: 'plan_form',     name: '제조업 등 유해·위험방지계획서(산업안전보건법 시행규칙 별지 제25호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'floor_plan',    name: '건축물 각 층의 평면도', required: true, acquisition: 'user_authored' },
+      { id: 'equipment_desc', name: '기계·설비의 개요를 나타내는 서류', required: true, acquisition: 'user_authored' },
+      { id: 'layout_drawing', name: '기계·설비의 배치도면', required: true, acquisition: 'user_authored' },
+      { id: 'process_desc',  name: '원재료 및 제품의 취급·제조 등 작업방법의 개요', required: true, acquisition: 'user_authored' },
+      { id: 'other_docs',    name: '그 밖에 고용노동부장관이 정하는 도면 및 서류(대상 설비·업종별 상이)', required: false, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 제출 대상은 13개 업종 중 전기 계약용량 300kW 이상 사업장의 건설물·기계·기구·설비 설치·이전·주요 구조부분 변경, 또는 지정 설비(국소배기장치·화학설비·건조설비·가스집합용접장치 등 5종) 설치·이전·변경이다. 건설공사(지상 31m 이상 건축물 등)는 별도 서류목록(공사개요서·전체공정표 등, 시행규칙 별표10)이 적용되어 이 등록 항목과 다르다 — 혼동 방지를 위해 반드시 대상 구분(제조업 등 vs 건설공사)을 먼저 확인해야 한다. 작업 시작 15일 전까지 관할 지역본부·지사에 제출해야 하며, 일정 요건 충족 시 자격을 갖춘 자의 사전 검토를 생략하고 자체심사 후 제출할 수 있다. 서류심사 결과에 따른 현장확인, 실제 심사·확인 여부는 KOSHA가 최종 결정한다.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -20273,6 +20344,14 @@ const AGENCY_TO_DEPT_TARGET = {
   // ★ 2026-08-23 추가 — 09-national/qgov 첫 GOV_TASK 등록 2건.
   'kosaf:national_scholarship_supplement_document': { target_type: 'national', target_id: 'national:kosaf' },
   'ts:driving_license_renewal_postponement': { target_type: 'national', target_id: 'national:ts' },
+  // ★ 2026-08-23 추가 — qgov 배치2 1번째(HIRA).
+  'hira:medical_expense_confirmation_request': { target_type: 'national', target_id: 'national:hira' },
+  // ★ 2026-08-23 추가 — qgov 배치2 2번째(GEPS).
+  'geps:survivor_benefit_claim': { target_type: 'national', target_id: 'national:geps' },
+  // ★ 2026-08-23 추가 — qgov 배치2 3번째(KRC2).
+  'krc2:farmland_pension_application': { target_type: 'national', target_id: 'national:krc2' },
+  // ★ 2026-08-23 추가 — qgov 배치2 4번째(KOSHA2).
+  'kosha2:hazard_prevention_plan_submission': { target_type: 'national', target_id: 'national:kosha2' },
   seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' }, // 폴백 — 기존 8개(전부 안전도시건설국) 전용, 새 항목은 세분 키를 쓸 것
   jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조). 폴백 — 기존 6개(전부 도시건설국) 전용
   // ── 여기부터 agency:task_key 세분 항목 (국 단위 폴백과 다른 국일 때 필수) ──

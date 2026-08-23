@@ -130,6 +130,14 @@ const DEPT_TASK_TAXONOMY = {
     // 'national' 패턴 재사용(qgov 전용 네임스페이스 신설 없이 hug처럼
     // 개별 기관 코드를 그대로 national: 아래 등록).
     'national:kosaf', 'national:ts',
+    // 2026-08-23 추가 — qgov 배치2(품질 우선 3~5건) 1번째: HIRA(건강보험심사평가원).
+    'national:hira',
+    // 2026-08-23 추가 — qgov 배치2 2번째: GEPS(공무원연금공단).
+    'national:geps',
+    // 2026-08-23 추가 — qgov 배치2 3번째: KRC2(한국농어촌공사).
+    'national:krc2',
+    // 2026-08-23 추가 — qgov 배치2 4번째: KOSHA2(한국산업안전보건공단).
+    'national:kosha2',
   ]),
   'k-service': new Set([
     // worker.js SP_DELEGATION_REGISTRY와 동일 목록 — 두 레지스트리가 갈라지지
