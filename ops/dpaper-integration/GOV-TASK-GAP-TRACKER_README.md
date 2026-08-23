@@ -680,3 +680,32 @@ enterprises/qgov와 동일 기준) + 비고에 라우팅 준비 완료 기록. �
 3. benefit-categories(13건) 재정의 필요 — 이전 세션 판단대로 여전히
    미착수.
 
+## 2026-08-23 세션 (계속) — qgov GOV_TASK 개별 등록 착수 (KOSAF·TS)
+
+라우팅 배선 완료 후 실제 GOV_TASK 등록으로 이동. enterprises·qgov·other
+329건 중 어디부터 조사할지는 **agencies에 이미 지사가 있는 기관(NHIS·
+NPS·KCOMWEL 등)은 제외**하고 시작해야 한다는 걸 먼저 확인 — 그 기관들은
+qgov SP 자체가 라우팅 우선순위상 사실상 도달 불가능해(agencies가 항상
+먼저 걸림), GOV_TASK 작업도 무의미하다.
+
+**2건 등록**:
+- **KOSAF(한국장학재단)**: 국가장학금 신청정보 불일치 시 소명서류 제출
+  (`kosaf:national_scholarship_supplement_document`). 근거: 한국장학재단
+  설립 등에 관한 법률 제50조의4, 정부24 서비스 등록정보로 교차검증.
+  신청 자체는 무서류 온라인 완결, 불일치 시에만 선택적 서류 제출.
+- **TS(한국도로교통공단)**: 운전면허 정기적성검사(갱신) 연기 신청
+  (`ts:driving_license_renewal_postponement`). 근거: 도로교통법
+  제87조제4항·시행령 제55조제1항·시행규칙 제83조제1항 및 별지 제59호
+  서식, 정부24 서비스 등록정보로 교차검증.
+
+**작업 표준 절차 확립(다음 세션도 따를 것)**: 정부24에서 기관명+업무로
+검색 → 서비스 등록 여부·구비서류·법적근거 확인(1차 판별) → 기관 공식
+홈페이지에서 세부 서류 목록 교차검증 → REQUIRED_DOCUMENTS_REGISTRY·
+AGENCY_TO_DEPT_TARGET·DEPT_TASK_TAXONOMY.national 등록(HUG와 동일하게
+`target_type: 'national', target_id: 'national:{code}'` 패턴 재사용,
+qgov 전용 네임스페이스 불필요) → SP 본문 §1-2 섹션 삽입 + §CAPABILITIES
+갱신 → 검증 → CSV 갱신.
+
+**09-national 진행률**: 완료 3(HUG·KOSAF·TS). 남은 327건은 여전히
+미착수 — 규모가 커서 향후 여러 세션에 걸쳐 이어갈 필요.
+

@@ -124,6 +124,12 @@ const DEPT_TASK_TAXONOMY = {
     // 이 폴더 전체가 gov-router.js에 배선돼 있지 않던 결함을 먼저 고친
     // 뒤(같은 세션), 실제 GOV_TASK 사례로 HUG(주택도시보증공사)를 등록.
     'national:hug',
+    // 2026-08-23 추가 — 09-national/qgov(준정부기관) 첫 GOV_TASK 사례
+    // 2건(한국장학재단·한국도로교통공단). enterprises/qgov/other 라우팅
+    // 인프라(같은 세션 신설) 위에 얹는 실제 등록 — HUG와 동일한 target_type
+    // 'national' 패턴 재사용(qgov 전용 네임스페이스 신설 없이 hug처럼
+    // 개별 기관 코드를 그대로 national: 아래 등록).
+    'national:kosaf', 'national:ts',
   ]),
   'k-service': new Set([
     // worker.js SP_DELEGATION_REGISTRY와 동일 목록 — 두 레지스트리가 갈라지지

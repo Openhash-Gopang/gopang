@@ -20204,6 +20204,34 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
     ],
     note: '★ 정직하게 밝힘 — 신청 방법은 HUG 지사·위탁은행 방문 또는 모바일(네이버부동산·카카오페이·토스·안심전세App)이 공식 경로다. Hondi는 서류 준비·정리까지만 능동적으로 돕고(UNIVERSAL-common U1 원칙), 실제 신용조사·보증심사·보증서 발급은 HUG가 확정한다. 소득증빙·혼인관계증명서 등 신청인 상황별(다자녀·신혼부부·한부모 등) 추가서류가 있을 수 있어 위 목록이 전부가 아닐 수 있음 — HUG 홈페이지 "상황별 추가 필요서류" 표 참조 권장. 전세계약기간 1/2 경과 전까지 신청 필요.',
   },
+  // ★ 2026-08-23 추가 — 09-national/qgov(준정부기관) 최초 등록 2건.
+  // enterprises·qgov·other 라우팅 인프라(같은 세션 신설) 위에 실제
+  // GOV_TASK 접수 사례를 올린다. 정부24 서비스 등록 정보로 1차 확인 후
+  // 기관 공식 안내로 교차검증(2026-08-23 웹검색).
+  'kosaf:national_scholarship_supplement_document': {
+    agency: 'kosaf', agency_name: '한국장학재단',
+    task_name: '국가장학금 신청정보 불일치 시 소명서류 제출',
+    legal_basis: '한국장학재단 설립 등에 관한 법률 제50조의4(자료요구 및 질문) — 정부24 제공서비스 "국가장학금 Ⅰ유형(학생직접지원형)" 등록 정보 기준',
+    documents: [
+      { id: 'family_cert',   name: '가족관계증명서', required: false, acquisition: 'government_issued', max_age_days: null }, // 신청정보와 재단 확인정보 불일치 시에만 필요
+      { id: 'livelihood_cert', name: '기초생활보장 수급자증명서', required: false, acquisition: 'government_issued' },
+      { id: 'single_parent_cert', name: '한부모가족증명서', required: false, acquisition: 'government_issued' },
+      { id: 'disability_cert', name: '장애인등록증(또는 장애인증명서)', required: false, acquisition: 'government_issued' },
+    ],
+    note: '★ 정직하게 밝힘 — 국가장학금 신청 자체는 필수서류 없이 온라인으로 완결된다(한국장학재단 홈페이지·모바일 앱). 위 서류들은 재단이 보유한 확인정보와 신청정보가 불일치할 때만(신청 후 1~3일 뒤 "서류제출대상자" 여부 표시) 선택적으로 제출한다 — 불일치 사유별로 요구서류가 다르므로 위 목록이 전부가 아닐 수 있음. 소득분위 산정 자체는 국세청·건강보험공단 연계자료 기반 실시간 심사라 Hondi가 직접 계산하지 않는다(기존 §2 고지와 동일 원칙).',
+  },
+  'ts:driving_license_renewal_postponement': {
+    agency: 'ts', agency_name: '한국도로교통공단',
+    task_name: '운전면허 정기적성검사(갱신) 연기 신청',
+    legal_basis: '도로교통법 제87조제4항, 도로교통법 시행령 제55조제1항, 도로교통법 시행규칙 제83조제1항 및 별지 제59호서식',
+    documents: [
+      { id: 'postponement_form', name: '적성검사연기신청서(도로교통법 시행규칙 별지 제59호서식)', required: true, acquisition: 'user_authored' },
+      { id: 'reason_proof', name: '연기사유 증명서류(해외체류 항공권·진단서 등, 사유별 상이)', required: true, acquisition: 'user_authored' }, // 행정정보 공동이용으로 확인 가능한 경우 제출 생략 가능
+      { id: 'military_cert', name: '병적증명서(군 복무 중 사유인 경우만)', required: false, acquisition: 'government_issued' },
+      { id: 'id_proof', name: '신분증명서(원본 제시 또는 해외체류 시 사본 제출)', required: true, acquisition: 'user_authored' },
+    ],
+    note: '★ 정직하게 밝힘 — 연기 가능 기간은 최대 3년 이내로 제한된다(도로교통법 시행규칙 제83조). 연기사유 증명서류는 전자정부법 제36조에 따른 행정정보 공동이용으로 담당공무원이 직접 확인 가능한 경우 제출을 생략할 수 있다 — 사유별로 구체적 증빙서류가 다르므로(해외여행: 항공권/출입국사실증명, 질병: 진단서, 군복무: 병적증명서 등) 위 목록은 대표 예시이며 개별 확인 필요. 실제 연기 승인 여부는 한국도로교통공단이 최종 결정한다.',
+  },
 };
 // REQUIRED_DOCUMENTS_REGISTRY의 agency 코드를 DEPT_TASK_TAXONOMY의
 // target_type/target_id로 잇는다. 여기 없는 agency는 아직 매핑이 없다는
@@ -20242,6 +20270,9 @@ const AGENCY_TO_DEPT_TARGET = {
   // 등록하고 agency 단독 폴백은 두지 않음(이 기관 전용 task_key가
   // 현재 이것 하나뿐이라 불필요).
   'hug:jeonse_deposit_return_guarantee': { target_type: 'national', target_id: 'national:hug' },
+  // ★ 2026-08-23 추가 — 09-national/qgov 첫 GOV_TASK 등록 2건.
+  'kosaf:national_scholarship_supplement_document': { target_type: 'national', target_id: 'national:kosaf' },
+  'ts:driving_license_renewal_postponement': { target_type: 'national', target_id: 'national:ts' },
   seogwipo: { target_type: 'dept', target_id: 'city-dept:seogwipo:construction' }, // 폴백 — 기존 8개(전부 안전도시건설국) 전용, 새 항목은 세분 키를 쓸 것
   jejusi:   { target_type: 'dept', target_id: 'city-dept:jeju:construction' }, // ★ 'jejusi' agency → 'jeju' city-dept (네이밍 불일치 보정, 위 주석 참조). 폴백 — 기존 6개(전부 도시건설국) 전용
   // ── 여기부터 agency:task_key 세분 항목 (국 단위 폴백과 다른 국일 때 필수) ──
