@@ -5099,7 +5099,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // 발화 내용 자체가 읍면동 사무(민원 등)가 아니라 시청 국 소관
       // 사무(예: 건축허가)인 경우, 읍면동 템플릿 대신 시청 국을 붙인다
       // — 읍면동은 건축허가를 처리하지 않으므로 이게 실제로 맞는 관할이다.
-      const cityDeptMatch = _matchCityDept(text, cityCode.시코드);
+      //
+      // ★ 2026-08-23 구조적 강화(라이브 스모크테스트 실측 발견) — 순수
+      // 키워드(_matchCityDept)만 쓰면, 실제 AC가 항상 정확한 위치(읍면동
+      // 까지)를 아는 실사용 환경에서 아주 흔한 실패가 발생한다: "세목별
+      // 납세증명"·"미과세증명"처럼 jachi 소관이 명백한데 kw 사전에 정확히
+      // 안 걸리는 발화가, LLM에게 물어볼 기회도 없이 그냥 읍면동으로
+      // 확정돼버렸다("토지대장등본"·"대학 성적증명서" 등 EMD와 무관한
+      // 발화까지 전부 SP-EMD-*로 오확정되는 게 실측 확인됨 — BUG-028
+      // 당시 "예외 감지 지점이라 위험 비대칭적"이라 판단해 이 지점만
+      // 일부러 LLM 구제망 적용 대상에서 뺐었는데, 반대 방향(진짜 시청
+      // 국 사무를 읍면동으로 오확정)의 피해가 훨씬 크고 흔하다는 게
+      // 실측으로 확인돼 판단을 뒤집는다. _resolveCityDeptMatch(BUG-028)
+      // 를 여기에도 적용 — 키워드 완전매칭이면 기존처럼 즉시 확정(고속
+      // 경로, 회귀 없음), 실패하면 시청 국 후보를 LLM에게 보여주고
+      // "이게 진짜 읍면동 사무가 맞는지"까지 포함해 판단시킨다.
+      const cityDeptMatch = await _resolveCityDeptMatch(text, cityCode.시코드, classifyFn);
       if (cityDeptMatch) {
         const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch, text);
         if (cityDeptText) {
