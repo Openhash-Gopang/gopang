@@ -632,3 +632,51 @@ enterprises(29)·qgov(58) 총 87건은 라우팅 도달 가능 상태 확보, GO
    기관마다 "실제 서류기반 시민 접수가 있는지" 확인 필요(LH 검토 중
    확인: 자체 시스템 안내형이라 재정의 후보 가능성).
 
+## 2026-08-23 세션 (계속) — other(254) 라우팅 배선, 09-national 전체 라우팅 완결
+
+**other(254건) 라우팅 인프라 신설**: enterprises·qgov와 동일 패턴
+(`_OTHER_DOMAIN_KEYWORDS`·`resolveOtherLazy`, -0.76단계). 등록 전 5개
+키워드 사전(L2_CANONICAL/POLICY_BODY/NAT_AGENCY/ENTERPRISE/QGOV) 전체와
+파이썬으로 전수 대조 — 지난 배치의 교훈(KAC/KEIT2류 사후발견)을 반영해
+이번엔 배선 *전에* 먼저 검사했다.
+
+**254건 중 11건 등록 제외**:
+- **KVMC·POSTFIN·POSTLOG(3건)**: qgov에 완전히 동일한 기관명(KVMC2·
+  POSTFIN2·POSTLOG2)이 이미 등록돼 있음 — 원본 저장소에 같은 기관 SP가
+  09-national/qgov와 /other 양쪽에 중복 생성된 것으로 추정(콘텐츠 정리는
+  범위 밖, 여기선 중복 등록만 회피).
+- **EXSERVICE·KRDIST·KRLOG·KRNW·KRTC·KRTECH·KEPCOMCS·KNF(8건)**: 이름이
+  이미 등록된 enterprises 키워드(EX'한국도로공사'·KORAIL'코레일'·
+  KEPCO'한전')를 전부 포함하는 자회사 — 상위 enterprises 매칭이 검사
+  순서상 항상 먼저 걸려 등록해도 코드에 절대 도달 못 함(죽은 코드가
+  되므로 등록 자체를 보류).
+
+나머지 **243건**은 격리 테스트로 정상 매칭 확인(서울대학교병원·
+국립중앙의료원·예술의전당 등), 부산항만공사류(agency 'port' 도메인과
+부분 문자열 충돌)는 기존 `_natAgencyHit` 가드로 안전 처리 확인.
+
+**CSV 반영**: 라우팅만 된 243건은 미착수 유지(GOV_TASK 접수 미배선,
+enterprises/qgov와 동일 기준) + 비고에 라우팅 준비 완료 기록. 등록
+제외 11건 중 CSV에 원래 있던 9건은 '재정의' 처리(2건은 애초에 원본
+904건 감사 대상에 없었음 — CSV가 250건만 추적하는 이유, 254건 전체
+목록이 아니라 원본 감사에서 걸린 것만 추적하는 표이기 때문, 정상).
+
+**09-national 최종 진행률(이 세션 종료)**: 완료 1(HUG)·미착수 428.
+**agencies(28)·policy-bodies(70)·enterprises(29)·qgov(58)·other(254)
+전부 라우팅 도달 가능 상태 확보 — 09-national 전체 라우팅 배선 결함이
+이 세션에서 완전히 해소됐다.** 남은 작업은 GOV_TASK 개별 등록
+(REQUIRED_DOCUMENTS_REGISTRY)뿐이며, 이는 기관마다 실제 서류기반
+시민 접수 여부를 웹검색으로 개별 검증해야 하는 별도 트랙이다.
+
+**다음 세션 우선순위**:
+1. enterprises(28)·qgov(58)·other(243) = 329건의 GOV_TASK 접수(§1-2)
+   개별 검증 — 기관마다 "실제 서류기반 시민 접수가 있는지" 확인 필요.
+   HUG 사례(정부24 등록 여부 확인이 가장 빠른 1차 판별법)를 표준
+   절차로 삼을 것 — 정부24에 등록된 서비스면 절차·구비서류가 이미
+   공식 확인돼 있어 조사가 빠르다.
+2. EXSERVICE류 8개 자회사·KVMC/POSTFIN/POSTLOG 3개 중복 파일은 정리
+   과제로 남아있음(삭제 또는 병합) — 이번 세션은 라우팅 충돌만 회피,
+   콘텐츠 정리는 안 함.
+3. benefit-categories(13건) 재정의 필요 — 이전 세션 판단대로 여전히
+   미착수.
+
