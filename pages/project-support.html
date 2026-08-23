@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 프로젝트 지원 — 국내 AI 서버 구축 — 혼디</title>
+</head>
+<body>
+<script>
+window.PAGE_HERO = {
+  badge: '혼디 프로젝트 지원',
+  l1: '국내 AI 서버 구축을 위해',
+  l2: '혼디 프로젝트를 지원해 주십시오',
+  sub: '2026년 9월 현재 혼디의 완성도는 90% 수준입니다. 해외 LLM 기반 베타 테스트를 국내 오픈소스 LLM 서버로 전환하기 위한 배경, 비교, 비용, 요금제를 투명하게 공개합니다.',
+  actions: [
+    { label: '연간 GDC 충전으로 지원하기', href: '#report', style: 'primary' },
+    { label: '개요 읽기', href: '#overview', style: 'outline' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+<div id="site-hero-mount"></div>
+
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+  --surface2:  #f8f9fa;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --navy:      #0e1c3f;
+  --brand:     #0c6cc3;
+  --brand-dk:  #0a4d92;
+  --brand-lt:  #dbeafe;
+  --brand-bg:  #eff6ff;
+
+  --amber:     #d97706;
+  --amber-lt:  #fffbeb;
+  --red:       #b91c1c;
+  --red-lt:    #fef2f2;
+  --green:     #0f8a5f;
+  --green-lt:  #ecfdf5;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #475569;
+  --text4:     #94a3b8;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  font-weight: 400;
+  font-size: 13.5px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section:nth-of-type(odd) { background: var(--bg-alt); }
+.section:nth-of-type(even) { background: var(--surface2); }
+
+.section-tag {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--brand-dk); background: var(--brand-bg);
+  border: 1px solid var(--brand-lt);
+  padding: 3px 10px; border-radius: 99px;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: clamp(20px, 2.6vw, 26px); font-weight: 700;
+  letter-spacing: -0.4px; color: var(--navy);
+  margin-bottom: 10px; line-height: 1.3;
+}
+.section-sub {
+  font-size: 13px; color: var(--text3); margin-bottom: 28px;
+}
+.section-body { font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.section-body p { margin-bottom: 12px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body strong { color: var(--text); font-weight: 700; }
+
+h3.sub-heading {
+  font-size: 15px; font-weight: 700; color: var(--navy);
+  margin: 32px 0 12px; padding-top: 20px; border-top: 1px solid var(--border);
+}
+h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* ── 인트로 배너 (원문 상단 인용구) ── */
+.intro-banner {
+  max-width: 860px; margin: -40px auto 0; padding: 0 8%;
+}
+.intro-banner-inner {
+  background: linear-gradient(135deg, var(--navy), #16295a);
+  color: #fff; border-radius: var(--radius-lg);
+  padding: 28px 32px; box-shadow: var(--shadow);
+}
+.intro-banner-inner .eyebrow {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px;
+  color: #93c5fd; text-transform: uppercase; margin-bottom: 10px;
+}
+.intro-banner-inner .line1 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.intro-banner-inner .line2 { font-size: 17px; font-weight: 700; color: #93c5fd; }
+
+/* ── TOC ── */
+.toc {
+  max-width: 860px; margin: 32px auto 0; padding: 0 8%;
+}
+.toc-inner {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 18px 22px;
+}
+.toc-inner .toc-label { font-size: 11px; font-weight: 700; color: var(--text4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.toc-list { list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 24px; }
+.toc-list a {
+  display: flex; gap: 8px; font-size: 13px; color: var(--text2); text-decoration: none; padding: 4px 0;
+}
+.toc-list a span.n { color: var(--brand); font-weight: 700; flex-shrink: 0; }
+.toc-list a:hover { color: var(--brand); }
+@media (max-width: 640px) { .toc-list { grid-template-columns: 1fr; } }
+
+/* ── 리스트 ── */
+.reason-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 14px 0 4px; }
+.reason-list li { display: flex; gap: 10px; font-size: 13.5px; color: var(--text2); line-height: 1.7; }
+.reason-list li::before { content: '◆'; color: var(--brand); font-size: 0.55em; margin-top: 7px; flex-shrink: 0; }
+.reason-list li b { color: var(--text); }
+
+/* ── 테이블 ── */
+.tbl-wrap { overflow-x: auto; margin: 10px 0 4px; border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+table.rpt-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--surface); }
+table.rpt-table th, table.rpt-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+table.rpt-table thead th { background: var(--navy); color: #fff; font-weight: 700; white-space: nowrap; }
+table.rpt-table tbody tr:last-child td { border-bottom: none; }
+table.rpt-table tbody tr:nth-child(even) { background: var(--surface2); }
+table.rpt-table td.emphasis { color: var(--brand-dk); font-weight: 700; }
+table.rpt-table tfoot td { background: var(--brand-bg); font-weight: 700; color: var(--navy); border-top: 2px solid var(--brand-lt); }
+.tbl-caption { font-size: 11.5px; color: var(--text4); margin-top: 6px; }
+
+/* ── 가정 카드 ── */
+.assume-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 18px 22px; margin: 14px 0 24px;
+}
+.assume-box .label { font-size: 11px; font-weight: 700; color: var(--text4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.assume-box ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.assume-box li { font-size: 13px; color: var(--text2); display: flex; gap: 8px; }
+.assume-box li::before { content: '·'; color: var(--brand); font-weight: 700; }
+
+/* ── 비용 요약 카드 ── */
+.cost-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin: 24px 0; }
+.cost-summary .cell { background: var(--surface); padding: 24px 18px; text-align: center; }
+.cost-summary .cell .k { font-size: 11px; color: var(--text4); font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; }
+.cost-summary .cell .v { font-size: 20px; font-weight: 700; color: var(--navy); line-height: 1.4; }
+.cost-summary .cell .v small { display: block; font-size: 11.5px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+.cost-summary .cell.highlight .v { color: var(--brand-dk); }
+@media (max-width: 640px) { .cost-summary { grid-template-columns: 1fr; } }
+
+.per-user-note {
+  margin-top: 18px; padding: 16px 20px; background: var(--brand-bg); border-left: 4px solid var(--brand);
+  border-radius: var(--radius); font-size: 13px; color: var(--text2); line-height: 1.8;
+}
+
+/* ── 요금제 카드 ── */
+.plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0 8px; }
+.plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+.plan-card.featured { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-lt), var(--shadow); position: relative; }
+.plan-card.featured::before {
+  content: '추천'; position: absolute; top: -10px; right: 18px;
+  background: var(--brand); color: #fff; font-size: 10.5px; font-weight: 700;
+  padding: 3px 10px; border-radius: 99px;
+}
+.plan-card .name { font-size: 13px; font-weight: 700; color: var(--text4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.plan-card .price { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.plan-card .price small { font-size: 12px; color: var(--text4); font-weight: 500; }
+.plan-card .desc { font-size: 12.5px; color: var(--text3); line-height: 1.7; margin-top: 8px; flex: 1; }
+.plan-card .discount { display: inline-block; margin-top: 10px; font-size: 11.5px; font-weight: 700; color: var(--green); background: var(--green-lt); padding: 2px 9px; border-radius: 99px; }
+@media (max-width: 720px) { .plan-grid { grid-template-columns: 1fr; } }
+
+.plan-footnote { margin-top: 18px; font-size: 12.5px; color: var(--text3); background: var(--bg-subtle); padding: 14px 18px; border-radius: var(--radius); line-height: 1.7; }
+
+/* ── 리포트 분야 그리드 ── */
+.report-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 20px; }
+.report-grid .item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; font-size: 12.5px; color: var(--text2); font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.report-grid .item .idx { color: var(--brand); font-weight: 700; font-size: 11px; flex-shrink: 0; }
+@media (max-width: 720px) { .report-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .report-grid { grid-template-columns: 1fr; } }
+
+/* ── 체크리스트 ── */
+.check-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 14px 0 4px; }
+.check-list li { display: flex; gap: 10px; font-size: 13px; color: var(--text2); line-height: 1.7; align-items: flex-start; }
+.check-list li .box {
+  width: 16px; height: 16px; border: 1.5px solid var(--border2); border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+}
+
+/* ── CTA ── */
+.cta-box {
+  background: linear-gradient(135deg, var(--navy), #16295a); color: #fff;
+  border-radius: var(--radius-lg); padding: 36px 32px; text-align: center; margin-top: 8px;
+}
+.cta-box h3 { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+.cta-box p { font-size: 13.5px; color: #c9d6ee; margin-bottom: 20px; line-height: 1.7; }
+.cta-box .price-line { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.cta-box .price-line s { color: #93a3c4; font-weight: 400; font-size: 16px; margin-right: 8px; }
+.cta-box .price-note { font-size: 12px; color: #93c5fd; margin-bottom: 22px; }
+.cta-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.cta-actions a {
+  display: inline-flex; align-items: center; gap: 6px; padding: 11px 22px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 700; text-decoration: none;
+}
+.cta-actions a.primary { background: var(--brand); color: #fff; }
+.cta-actions a.primary:hover { background: #0958a3; }
+.cta-actions a.outline { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+.cta-actions a.outline:hover { background: rgba(255,255,255,0.15); }
+
+/* ── 각주 ── */
+.footnote { font-size: 12px; color: var(--text4); background: var(--bg-subtle); border-radius: var(--radius); padding: 12px 16px; margin: 14px 0 4px; line-height: 1.7; }
+
+.page-footer { text-align: center; font-size: 11.5px; color: var(--text4); padding: 28px 0 40px; background: var(--bg-alt); }
+</style>
+
+<!-- 인트로 배너 -->
+<div class="intro-banner">
+  <div class="intro-banner-inner">
+    <div class="eyebrow">2026년 9월 현재</div>
+    <div class="line1">혼디의 완성도는 90% 수준입니다.</div>
+    <div class="line2">지금 혼디에 가입하여, 혼디의 완성을 지원하십시오.</div>
+  </div>
+</div>
+
+<!-- 목차 -->
+<div class="toc">
+  <div class="toc-inner">
+    <div class="toc-label">목차</div>
+    <ul class="toc-list">
+      <li><a href="#overview"><span class="n">1</span>개요</a></li>
+      <li><a href="#llm-compare"><span class="n">2</span>국내 오픈소스 LLM 비교</a></li>
+      <li><a href="#infra-cost"><span class="n">3</span>인프라 구축 비용 추산</a></li>
+      <li><a href="#pricing"><span class="n">4</span>혼디 요금제</a></li>
+      <li><a href="#report"><span class="n">5</span>GDC 충전 기반 연간 이용료 정책 및 리포트 제공</a></li>
+      <li><a href="#next-steps"><span class="n">6</span>다음 단계</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- 1. 개요 -->
+<section class="section" id="overview">
+  <div class="section-inner">
+    <div class="section-tag">01 — Background</div>
+    <h2 class="section-title">개요</h2>
+    <div class="section-body">
+      <p>혼디(HONDI)는 2026년 9월 1일부터 12월 31일까지 진행되는 베타 테스트 기간 동안 ChatGPT, Claude, Gemini, DeepSeek 등 해외 LLM을 백엔드로 사용합니다. 베타 테스트 종료 시점까지, 이들 해외 LLM을 <strong>오픈소스 LLM 기반의 국내 서버</strong>로 전면 대체하는 것을 목표로 합니다.</p>
+
+      <h3 class="sub-heading" style="margin-top:24px;padding-top:0;border-top:none;font-size:13.5px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">전환의 이유</h3>
+      <ul class="reason-list">
+        <li><b>데이터 주권</b> — 국민의 행정·사법·의료·금융 관련 질의가 해외 서버를 거치지 않도록 보장 (PDV, Private Data Vault 철학과 일치)</li>
+        <li><b>비용 예측 가능성</b> — 해외 API 종량제 요금은 환율·정책 변화에 취약하며, 자체 서버는 장기적으로 총소유비용(TCO)을 고정</li>
+        <li><b>주권 AI 인프라</b> — 정부·공공기관 연계 서비스인 만큼 국내 법제·데이터센터 규정 준수가 유리</li>
+        <li><b>한국어·행정 도메인 특화</b> — 국내 오픈소스 모델은 한국어 및 국내 법률·행정 용어에 대한 파인튜닝 여지가 큼</li>
+      </ul>
+
+      <p style="margin-top:18px">전환은 베타 테스트 기간 중 병행 운영(해외 LLM + 국내 오픈소스 LLM A/B 검증) 후, 정식 서비스 전환 시점에 완전 대체하는 단계적 접근을 취합니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 국내 오픈소스 LLM 비교 -->
+<section class="section" id="llm-compare">
+  <div class="section-inner">
+    <div class="section-tag">02 — Comparison</div>
+    <h2 class="section-title">국내 오픈소스 LLM 비교</h2>
+    <div class="section-body">
+      <div class="tbl-wrap">
+        <table class="rpt-table">
+          <thead>
+            <tr><th>모델</th><th>개발사</th><th>규모(파라미터)</th><th>라이선스</th><th>장점</th><th>단점</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>EXAONE 3.5</strong></td>
+              <td>LG AI연구원</td>
+              <td>2.4B / 7.8B / 32B</td>
+              <td>비상업 연구용 무료, 상업적 사용은 LG AI와 별도 협의</td>
+              <td>KMMLU(한국어 벤치마크) 최상위권, 법률·과학·의학 도메인 추론 강점, 32K 컨텍스트, 함수 호출 지원</td>
+              <td>상업적 사용 시 라이선스 협의 필요(비용·절차 리스크), 대형(32B) 모델은 자체 서빙 인프라 부담</td>
+            </tr>
+            <tr>
+              <td><strong>HyperCLOVA X SEED</strong></td>
+              <td>네이버</td>
+              <td>0.5B / 1.5B / 3B</td>
+              <td>오픈 가중치 공개</td>
+              <td>한국어 데이터 학습량이 압도적(GPT-3 대비 약 6,500배), 국내 문화·시사 상식에 강함, 경량 모델은 온디바이스·엣지 배포 가능</td>
+              <td>오픈 공개된 버전은 상대적으로 소형이라 복잡한 추론 작업에는 한계, 초대형 플래그십은 비공개</td>
+            </tr>
+            <tr>
+              <td><strong>Solar (Upstage)</strong></td>
+              <td>업스테이지</td>
+              <td>10.7B (Solar Mini/Pro 라인 확장)</td>
+              <td>Apache 2.0 (일부 가중치 OpenAccess)</td>
+              <td>상업적 사용 자유로운 라이선스, Depth Up-Scaling으로 경량 대비 성능 우수, 온프레미스 설치가 가벼워 보안성 높음, 환각 억제 튜닝</td>
+              <td>32B급 모델 대비 최상위 추론력은 낮음, 법률·행정 특화 튜닝은 자체 진행 필요</td>
+            </tr>
+            <tr>
+              <td><strong>Kanana</strong></td>
+              <td>카카오</td>
+              <td>다양한 크기 (1.5 버전부터 오픈소스화)</td>
+              <td>오픈소스 배포</td>
+              <td>카카오 생태계(메신저·커머스) 연동 경험 축적, 지속적 업데이트</td>
+              <td>행정·공공 도메인 특화 사례 상대적으로 적음</td>
+            </tr>
+            <tr>
+              <td><strong>VARCO LLM</strong></td>
+              <td>NCsoft</td>
+              <td>13B 등</td>
+              <td>자체 라이선스</td>
+              <td>대화형 시나리오·멀티턴 대화에 강점</td>
+              <td>게임·콘텐츠 도메인 중심 설계로 행정 도메인 적합도는 별도 검증 필요</td>
+            </tr>
+            <tr>
+              <td><strong>Luxia (Saltlux)</strong></td>
+              <td>솔트룩스</td>
+              <td>엔터프라이즈용</td>
+              <td>상업 라이선스</td>
+              <td>금융·법률·공공 도메인 적합도 높음(엔터프라이즈 레퍼런스 보유)</td>
+              <td>오픈소스가 아닌 상업 라이선스로 자체 서버 완전 통제에는 제약</td>
+            </tr>
+            <tr>
+              <td><strong>KULLM / Polyglot-Ko</strong></td>
+              <td>학계(고려대 등)·EleutherAI 계열</td>
+              <td>다양</td>
+              <td>오픈소스</td>
+              <td>완전한 오픈 가중치, 커스텀 파인튜닝 자유도 최대</td>
+              <td>최신 상용 모델 대비 성능 격차, 유지보수·커뮤니티 지원이 기업 모델보다 약함</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footnote">
+        <strong>1차 후보 압축</strong> — 행정·법률 도메인 추론 강점(EXAONE 3.5 32B) + 상업 라이선스 자유도(Solar) + 한국어 상식 보강(HyperCLOVA X SEED)을 조합한 <strong>멀티모델 라우팅 구조</strong>가 유력합니다. 도메인별(입법/사법/행정 vs 일상 대화)로 모델을 분기하는 방식입니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 인프라 구축 비용 추산 -->
+<section class="section" id="infra-cost">
+  <div class="section-inner">
+    <div class="section-tag">03 — Cost Estimate</div>
+    <h2 class="section-title">인프라 구축 비용 추산</h2>
+    <div class="section-sub">혼디 사용자 100만 명 기준</div>
+    <div class="section-body">
+      <p style="font-size:12.5px;color:var(--text4);margin-bottom:18px">아래 수치는 2026년 상반기 국내 GPU 클라우드/베어메탈 임대 시세와 자체 데이터센터 구축 사례를 참고한 <strong>추정치</strong>이며, 실제 계약 조건에 따라 변동될 수 있습니다. 정확한 산정을 위해서는 벤더 견적 비교가 필요합니다.</p>
+
+      <h3 class="sub-heading">3-1. 가정</h3>
+      <div class="assume-box">
+        <div class="label">Assumptions</div>
+        <ul>
+          <li>혼디 등록 사용자 100만 명, 일 활성 사용자(DAU) 약 10~15%(10만~15만 명) 가정</li>
+          <li>1인당 평균 질의 3~5회/일, 질의당 평균 응답 토큰 500~800 토큰</li>
+          <li>피크 시간대 동시 접속 약 3,000~5,000명 목표 처리 용량</li>
+          <li>서빙 모델: EXAONE 32B급(양자화 적용) + Solar 10.7B 경량 라우팅 혼합</li>
+        </ul>
+      </div>
+
+      <h3 class="sub-heading">3-2. LLM 추론 서버 비용</h3>
+      <div class="tbl-wrap">
+        <table class="rpt-table">
+          <thead><tr><th>항목</th><th>구성</th><th>월 예상 비용</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>GPU 추론 클러스터 (온프레미스/코로케이션)</td><td>H100 80GB ×8 (또는 A100 80GB ×16)</td><td class="emphasis">약 4,000만~6,000만 원</td><td>구매 시 초기 CAPEX 별도(대당 3천만~4천만 원대), 표는 임대/리스 기준</td></tr>
+            <tr><td>GPU 클라우드 임대 (탄력 확장용)</td><td>A100/H100 온디맨드, 피크 대응</td><td class="emphasis">약 1,500만~3,000만 원</td><td>트래픽 급증 시 오토스케일링 완충용</td></tr>
+            <tr><td>추론 최적화 스택</td><td>vLLM/TensorRT-LLM, 로드밸런서</td><td class="emphasis">약 300만~500만 원</td><td>인건비·라이선스 포함</td></tr>
+            <tr><td>네트워크/스토리지</td><td>고속 네트워크, NVMe 스토리지</td><td class="emphasis">약 500만~800만 원</td><td>로그·캐시·PDV 연동 포함</td></tr>
+          </tbody>
+          <tfoot><tr><td>LLM 서버 소계</td><td></td><td>약 6,300만~1억 300만 원/월</td><td></td></tr></tfoot>
+        </table>
+      </div>
+
+      <h3 class="sub-heading">3-3. Openhash Network 서버 비용</h3>
+      <div class="tbl-wrap">
+        <table class="rpt-table">
+          <thead><tr><th>항목</th><th>구성</th><th>월 예상 비용</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>PocketBase / DB 클러스터</td><td>실시간 드래프트 + git JSON 원장 이중화</td><td class="emphasis">약 500만~800만 원</td><td>100만 사용자 규모 트랜잭션 처리</td></tr>
+            <tr><td>Cloudflare Workers / Edge</td><td>요청 라우팅, PDV 게이트웨이</td><td class="emphasis">약 300만~600만 원</td><td>트래픽 종량 과금</td></tr>
+            <tr><td>Ed25519 지갑 인증·GDC 원장(UTXO) 노드</td><td>분산 원장 운영</td><td class="emphasis">약 400만~700만 원</td><td>OpenHash Network 검증 노드 포함</td></tr>
+            <tr><td>백업/재해복구</td><td>이중화 데이터센터</td><td class="emphasis">약 300만~500만 원</td><td></td></tr>
+          </tbody>
+          <tfoot><tr><td>Openhash Network 소계</td><td></td><td>약 1,500만~2,600만 원/월</td><td></td></tr></tfoot>
+        </table>
+      </div>
+
+      <h3 class="sub-heading">3-4. 합계</h3>
+      <div class="cost-summary">
+        <div class="cell">
+          <div class="k">LLM 서버</div>
+          <div class="v">6,300만~1억 300만 원<small>월 비용(추정)</small></div>
+        </div>
+        <div class="cell">
+          <div class="k">Openhash Network 서버</div>
+          <div class="v">1,500만~2,600만 원<small>월 비용(추정)</small></div>
+        </div>
+        <div class="cell highlight">
+          <div class="k">총 인프라 비용</div>
+          <div class="v">7,800만~1억 2,900만 원<small>월 비용(연 9.4억~15.5억 원)</small></div>
+        </div>
+      </div>
+
+      <div class="per-user-note">
+        📊 100만 명 기준 사용자 1인당 연간 인프라 원가는 약 <strong>940원~1,550원</strong> 수준으로 추산됩니다. 이는 이용료 정책(연 10만 원, GDC 충전 시)의 원가 구조를 검토하는 기초 자료로 활용할 수 있습니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 혼디 요금제 -->
+<section class="section" id="pricing">
+  <div class="section-inner">
+    <div class="section-tag">04 — Pricing</div>
+    <h2 class="section-title">혼디 요금제</h2>
+    <div class="section-sub">사용자의 이용 패턴에 맞춰 아래 세 가지 요금제 중 선택할 수 있습니다.</div>
+
+    <div class="plan-grid">
+      <div class="plan-card">
+        <div class="name">종량제</div>
+        <div class="price">월 1,000원<small> 기본료 +α</small></div>
+        <div class="desc">기본료에 더해 혼디 서비스 각각의 사용량에 따라 부과됩니다. 서비스별로 실제 쓴 만큼만 추가 과금되어, 사용량이 적은 사용자에게 유리합니다.</div>
+      </div>
+      <div class="plan-card">
+        <div class="name">정액제</div>
+        <div class="price">월 10,000원</div>
+        <div class="desc">일정한 한도 내에서 모든 서비스를 무제한 이용할 수 있습니다. 사용량이 많거나 예측이 어려운 사용자에게 유리합니다.</div>
+      </div>
+      <div class="plan-card featured">
+        <div class="name">연간 GDC 충전형</div>
+        <div class="price">연 100,000원<small> (정가 12만 원)</small></div>
+        <div class="desc">개발 진행 상황 정기 리포트를 제공하는, 장기 이용자를 위한 절감형 요금제입니다.</div>
+        <span class="discount">GDC 선결제 시 2만 원 할인</span>
+      </div>
+    </div>
+
+    <div class="plan-footnote">
+      종량제·정액제는 GDC 잔액 차감 방식으로 운영되며, 월 단위 자동 결제 또는 수동 충전 중 선택할 수 있습니다. 정액제의 "일정한 한도"는 서비스 안정성을 위한 과도한 어뷰징 방지 목적이며, 일반적인 사용 범위에서는 사실상 무제한으로 운영됩니다.
+    </div>
+  </div>
+</section>
+
+<!-- 5. GDC 충전 기반 연간 이용료 정책 및 리포트 제공 -->
+<section class="section" id="report">
+  <div class="section-inner">
+    <div class="section-tag">05 — Support Program</div>
+    <h2 class="section-title">GDC 충전 기반 연간 이용료 정책 및 리포트 제공</h2>
+
+    <div class="cta-box">
+      <h3>혼디 프로젝트를 지원해 주십시오</h3>
+      <p>GDC로 연간 이용료를 선결제하면 혼디 개발 진행 상황 정기 리포트를 받아보실 수 있습니다.</p>
+      <div class="price-line"><s>정가 12만 원</s>10만 원</div>
+      <div class="price-note">GDC 선결제 시 2만 원 할인 적용</div>
+      <div class="cta-actions">
+        <a href="/pages/dashboard.html" class="primary">GDC로 연간 이용료 충전하기</a>
+        <a href="/desktop.html" class="outline">혼디 가입 / 시작하기</a>
+      </div>
+    </div>
+
+    <div class="section-body" style="margin-top:32px">
+      <h3 class="sub-heading" style="margin-top:0;padding-top:0;border-top:none;">리포트 대상 개발 분야</h3>
+      <p>정기 리포트는 아래 12개 분야별 개발 진행 상황을 다룹니다. 각 분야별로 SP(System Prompt) 구축 현황, 라우팅 정확도, 실제 처리 사례, 향후 로드맵을 정리하여 GDC 충전 사용자에게 투명하게 공개함으로써 서비스 신뢰도와 참여도를 높입니다.</p>
+
+      <div class="report-grid">
+        <div class="item"><span class="idx">01</span>입법</div>
+        <div class="item"><span class="idx">02</span>사법</div>
+        <div class="item"><span class="idx">03</span>행정</div>
+        <div class="item"><span class="idx">04</span>교육</div>
+        <div class="item"><span class="idx">05</span>의료</div>
+        <div class="item"><span class="idx">06</span>금융</div>
+        <div class="item"><span class="idx">07</span>시장</div>
+        <div class="item"><span class="idx">08</span>산업</div>
+        <div class="item"><span class="idx">09</span>기업 (자영업 포함)</div>
+        <div class="item"><span class="idx">10</span>사교</div>
+        <div class="item"><span class="idx">11</span>교통/물류</div>
+        <div class="item"><span class="idx">12</span>통신</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 다음 단계 -->
+<section class="section" id="next-steps">
+  <div class="section-inner">
+    <div class="section-tag">06 — Roadmap</div>
+    <h2 class="section-title">다음 단계</h2>
+    <div class="section-sub">초안 검토용 메모</div>
+
+    <ul class="check-list">
+      <li><span class="box"></span>국내 오픈소스 LLM 벤치마크 자체 검증(행정·법률 도메인 질의 세트로 A/B 테스트)</li>
+      <li><span class="box"></span>GPU 인프라 벤더(온프레미스 vs 클라우드) 실견적 비교</li>
+      <li><span class="box"></span>GDC 리포트 발행 주기(월간/분기) 확정</li>
+      <li><span class="box"></span>베타 테스트 기간 중 해외 LLM ↔ 국내 오픈소스 LLM 병행 운영 계획 수립</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="page-footer">혼디 개발자 대표 도영민 · 제주특별자치도 제주시 한림읍 · tensor.city@gmail.com · hondi.net</footer>
+
+</body>
+</html>
