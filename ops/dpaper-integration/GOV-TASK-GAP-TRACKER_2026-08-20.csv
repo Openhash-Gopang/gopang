@@ -352,7 +352,7 @@
 09-national,09-national/enterprises/SP-NAT-ENT-KEPCO_v1.1.md,SP-NAT-ENT-KEPCO_v1.1,Y,N,미착수,,,
 09-national,09-national/enterprises/SP-NAT-ENT-EWP_v1.1.md,SP-NAT-ENT-EWP_v1.1,Y,N,미착수,,,
 09-national,09-national/enterprises/SP-NAT-ENT-REB_v1.1.md,SP-NAT-ENT-REB_v1.1,Y,N,미착수,,,
-09-national,09-national/enterprises/SP-NAT-ENT-HUG_v1.1.md,SP-NAT-ENT-HUG_v1.1,Y,N,미착수,,,
+09-national,09-national/enterprises/SP-NAT-ENT-HUG_v1.1.md,SP-NAT-ENT-HUG_v1.1,Y,N,완료,"routing 인프라 신설(enterprises 29건 전체, gov-router.js 배선 결함 발견·수정) 위에 전세보증금반환보증(hug:jeonse_deposit_return_guarantee) 등록. 근거: 정부24 제공정보(주택도시기금법 제1조)+HUG 공식 제출서류 안내",,2026-08-23
 09-national,09-national/enterprises/SP-NAT-ENT-KOGAS_v1.1.md,SP-NAT-ENT-KOGAS_v1.1,Y,N,미착수,,,
 09-national,09-national/enterprises/SP-NAT-ENT-KOGAT_v1.1.md,SP-NAT-ENT-KOGAT_v1.1,Y,N,미착수,,,
 09-national,09-national/enterprises/SP-NAT-ENT-LH_v1.1.md,SP-NAT-ENT-LH_v1.1,Y,N,미착수,,,
