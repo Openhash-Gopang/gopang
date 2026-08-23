@@ -44,15 +44,31 @@ body {
 .ug-header h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
 .ug-header .ug-sub { font-size: 13.5px; color: #b3bfd1; }
 
-/* ── 1단: 대분류 탭 (한 줄 고정, 컴팩트) ── */
-.tier1-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 14px;
+/* ── 첫 섹션: 전문가 페르소나 역할 설명 ── */
+.intro-section {
+  background: var(--surface); border-radius: var(--radius-lg); padding: 28px 32px;
+  margin-bottom: 24px; box-shadow: 0 2px 10px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
 }
+.intro-section h2 { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 14px; }
+.intro-section p { font-size: 14px; color: var(--text3); line-height: 1.8; margin-bottom: 12px; }
+.intro-section p:last-of-type { margin-bottom: 0; }
+.intro-quote {
+  background: #f8fafc; border-left: 4px solid var(--brand); border-radius: 8px;
+  padding: 14px 18px; margin: 14px 0; font-size: 13.5px; color: var(--text3); font-style: normal;
+}
+.base-sp-link {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+  background: #eff6ff; border: 1.5px solid var(--brand); border-radius: 24px;
+  padding: 9px 18px; text-decoration: none; color: var(--brand-dk); font-weight: 700; font-size: 13.5px;
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.base-sp-link:hover { background: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(12,108,195,0.3); transform: translateY(-2px); }
+.base-sp-link svg { flex-shrink: 0; }
+
+/* ── 1단: 대분류 탭 (한 줄 고정, 컴팩트) ── */
+.tier1-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
 .tier1-tab {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 0; min-width: 0;
   background: var(--surface); border: none; border-radius: 8px;
   padding: 9px 4px; text-align: center; cursor: pointer;
   font-size: 12px; font-weight: 700; color: var(--text3);
@@ -78,12 +94,14 @@ body {
 .tier2-label { font-size: 11.5px; font-weight: 700; color: var(--text4); margin-bottom: 10px; letter-spacing: 0.02em; }
 .tier2-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
 .tier2-tab {
+  display: inline-flex; align-items: center; gap: 6px;
   background: #f1f5f9; border: none; border-radius: 20px;
   padding: 7px 16px; font-size: 12.5px; font-weight: 600; color: var(--text3);
   cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
-.tier2-tab .t2-count { color: var(--text4); font-weight: 500; margin-left: 4px; }
+.tier2-tab svg { flex-shrink: 0; }
+.tier2-tab .t2-count { color: var(--text4); font-weight: 500; margin-left: 2px; }
 .tier2-tab:hover { background: #e2e8f0; }
 .tier2-tab.active { background: var(--brand); color: #fff; }
 .tier2-tab.active .t2-count { color: #dbeafe; }
@@ -94,7 +112,9 @@ body {
   padding: 40px; min-height: 320px;
   box-shadow: 0 2px 10px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
 }
-.svc-detail h2 { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.svc-detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.prof-icon-lg { flex-shrink: 0; width: 30px; height: 30px; color: var(--brand); }
+.svc-detail h2 { font-size: 20px; font-weight: 700; color: var(--navy); }
 .svc-detail .svc-eyebrow { font-size: 12px; font-weight: 700; color: var(--brand-dk); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
 .svc-detail .svc-lead { font-size: 14.5px; color: var(--text3); line-height: 1.7; margin: 10px 0 24px; }
 .svc-detail h3 {
@@ -120,6 +140,17 @@ table.svc-table thead th { background: #f1f5f9; color: var(--navy); font-weight:
 table.svc-table tbody tr:last-child td { border-bottom: none; }
 table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
 
+.svc-link-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #fff; border: 1.5px solid var(--brand);
+  color: var(--brand-dk); font-weight: 700; font-size: 13px;
+  padding: 7px 16px; border-radius: 24px; text-decoration: none;
+  margin: 4px 0 0; box-shadow: 0 1px 3px rgba(12,108,195,0.15);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, color 0.18s ease;
+}
+.svc-link-btn:hover { background: var(--brand); color: #fff; box-shadow: 0 6px 16px rgba(12,108,195,0.35); transform: translateY(-2px); }
+.svc-link-btn svg { flex-shrink: 0; }
+
 .ug-footer { text-align: center; font-size: 12px; color: var(--text4); border-top: 1px solid var(--border); padding-top: 18px; margin-top: 40px; }
 </style>
 
@@ -129,6 +160,17 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
     <h1>전문가 페르소나</h1>
     <p class="ug-sub">505명의 전문가 AI 페르소나 — 대분류 → 세부 직업 2단 구조</p>
   </header>
+
+  <section class="intro-section">
+    <h2>전문가 페르소나란</h2>
+    <p>페르소나란 전문직 종사자 개인의 지적 역량과 경험 격차를 상향 평준화하려는 의도로 설계된 전문가 AI입니다. 변호사마다 실제 지식·경험은 천차만별이지만, 변호사 페르소나의 도움을 받으면 어떤 변호사든 세상의 모든 법률 지식에 통달한 것과 다름없는 조력을 받을 수 있습니다.</p>
+    <div class="intro-quote">K-서비스가 공익을 우선하는 것과 달리, 전문가 페르소나는 사용자의 사익을 우선합니다. K-서비스와 변호사 페르소나의 관계는 법원과 변호사의 관계와 같습니다.</div>
+    <p>현재 법률·의료·교육·금융·공학 등 62개 직업군, 총 505명의 전문가 페르소나가 등록되어 있으며, 모든 페르소나는 공통 골격(<code>SP_EXPERT_BASE</code>)을 상속한 뒤 각 직업의 고유 지식과 절차로 확장되는 3단 구조(공통 골격 → 직업군 SP → 세부분야 SP)로 설계되어 있습니다.</p>
+    <a class="base-sp-link" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_EXPERT_BASE_v1_1.md" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+      SP_EXPERT_BASE — 모든 페르소나가 상속하는 공통 골격 보기
+    </a>
+  </section>
 
   <!-- 1단: 대분류 -->
   <div class="tier1-tabs" id="tier1Tabs">
@@ -155,73 +197,142 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
 </div>
 
 <script>
-// ── 62개 최상위 직업군 데이터 (expert-registry-*.js grep 결과 기반, 2026-08-23 재검증) ──
+var ICONS = {
+  'lawyer': '<path d="M12 3v18M5 7h14M5 7l-3 7a4 4 0 0 0 8 0L5 7zM19 7l-3 7a4 4 0 0 0 8 0l-5-7z"/><path d="M8 21h8"/>',
+  'judicial-scrivener': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>',
+  'appraiser': '<path d="M20.6 13.4 11 3.8 3.8 11l9.6 9.6a2 2 0 0 0 2.8 0l4.4-4.4a2 2 0 0 0 0-2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  'loss-adjuster': '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9 14 11 16 15 12"/>',
+  'labor-attorney': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'patent-attorney': '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.6c.4.3.6.8.6 1.4v.5h6.8v-.5c0-.6.2-1.1.6-1.4A7 7 0 0 0 12 2z"/>',
+  'customs-broker': '<path d="M4 16V8l8-4 8 4v8"/><path d="M2 20l1.5-4h17L22 20"/><line x1="12" y1="4" x2="12" y2="16"/>',
+  'tax-accountant': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/>',
+  'accountant': '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  'financial-planner': '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  'advisor': '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  'dentist': '<path d="M12 3c-2.5 0-5 1.6-5 5 0 2.4.8 4 1.2 6.2.3 1.8.8 3.8 1.8 3.8.9 0 1-2 1-3.5s.7-2.5 1.5-2.5 1.5 1 1.5 2.5-.1 3.5 1 3.5c1 0 1.5-2 1.8-3.8C17.2 12 18 10.4 18 8c0-3.4-2.5-5-5-5z"/>',
+  'traditional-medicine-doctor': '<path d="M20 4C12 4 5 9 5 16a7 7 0 0 0 7 7c7 0 12-9 12-17 0-1 0-1.5-.2-2z"/><path d="M8 21c0-6 3-9 9-12"/>',
+  'pharmacist': '<rect x="2" y="9" width="20" height="6" rx="3"/><line x1="12" y1="9" x2="12" y2="15"/>',
+  'veterinarian': '<circle cx="6" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="9.5" cy="5" r="1.5"/><circle cx="14.5" cy="5" r="1.5"/><path d="M12 21c-4 0-6-2-6-5 0-2 2-4 6-4s6 2 6 4c0 3-2 5-6 5z"/>',
+  'nurse': '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  'physical-therapist': '<line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="9" x2="2" y2="15"/><line x1="22" y1="9" x2="22" y2="15"/><line x1="6" y1="12" x2="18" y2="12"/>',
+  'medical-lab-technologist': '<path d="M6 18h8M3 22h18M14 22a7 7 0 1 0-7-7"/><path d="M13 4v6l-2.5 3.5"/>',
+  'radiologic-technologist': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  'dental-hygienist': '<path d="M12 3c-2.5 0-5 1.6-5 5 0 2.4.8 4 1.2 6.2.3 1.8.8 3.8 1.8 3.8.9 0 1-2 1-3.5s.7-2.5 1.5-2.5 1.5 1 1.5 2.5-.1 3.5 1 3.5c1 0 1.5-2 1.8-3.8C17.2 12 18 10.4 18 8c0-3.4-2.5-5-5-5z"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/>',
+  'occupational-therapist': '<path d="M9.5 2a3.5 3.5 0 0 0-3.5 3.5c0 .6.1 1.1.4 1.6A3.5 3.5 0 0 0 4 10.4c0 1 .3 1.9.9 2.6A3.5 3.5 0 0 0 8.5 19h1a3.5 3.5 0 0 0 3.5-3.5v-10A3.5 3.5 0 0 0 9.5 2z"/><path d="M14.5 5a3.5 3.5 0 0 1 3.5 3.5v3a3.5 3.5 0 0 1-3.5 3.5"/>',
+  'dental-technician': '<path d="M12 3c-2.5 0-5 1.6-5 5 0 2.4.8 4 1.2 6.2.3 1.8.8 3.8 1.8 3.8.9 0 1-2 1-3.5s.7-2.5 1.5-2.5 1.5 1 1.5 2.5-.1 3.5 1 3.5c1 0 1.5-2 1.8-3.8C17.2 12 18 10.4 18 8c0-3.4-2.5-5-5-5z"/><circle cx="19" cy="5" r="2"/>',
+  'advanced-practice-nurse': '<path d="M18 2l4 4-1.5 1.5-4-4z"/><path d="M17.5 3.5 4 17l-1 4 4-1L20.5 6.5z"/><line x1="8" y1="12" x2="12" y2="16"/>',
+  'dietitian': '<path d="M12 21a8 8 0 0 0 8-8c0-3-2-5-4-5-1 0-2 .5-3 1-1-.5-2-1-3-1-2 0-4 2-4 5a8 8 0 0 0 6 8z"/><path d="M12 8c0-2 1-4 3-4"/>',
+  'paramedic': '<rect x="2" y="8" width="20" height="10" rx="2"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/>',
+  'midwife': '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  'speech-language-pathologist': '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  'optician': '<circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 12h6M3 12l-1-3M21 12l1-3"/>',
+  'sanitarian': '<path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/>',
+  'health-educator': '<path d="M3 11v3a1 1 0 0 0 1 1h2l4 4V6l-4 4H4a1 1 0 0 0-1 1z"/><path d="M14 8a4 4 0 0 1 0 8M17 5a8 8 0 0 1 0 14"/>',
+  'teacher': '<rect x="2" y="3" width="20" height="14" rx="1"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+  'clinical-psychologist': '<path d="M9.5 2a3.5 3.5 0 0 0-3.5 3.5c0 .6.1 1.1.4 1.6A3.5 3.5 0 0 0 4 10.4c0 1 .3 1.9.9 2.6A3.5 3.5 0 0 0 8.5 19h1a3.5 3.5 0 0 0 3.5-3.5v-10A3.5 3.5 0 0 0 9.5 2z"/><path d="M14.5 5a3.5 3.5 0 0 1 3.5 3.5v3a3.5 3.5 0 0 1-3.5 3.5"/>',
+  'school-counselor': '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  'mental-health-professional': '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  'social-worker': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'curator': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  'librarian': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  'youth-counselor': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'childcare-teacher': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+  'lifelong-educator': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  'architect': '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/>',
+  'professional-engineer': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  'marine-pilot': '<circle cx="12" cy="5" r="2"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>',
+  'naval-architect': '<path d="M4 16V8l8-4 8 4v8"/><path d="M2 20l1.5-4h17L22 20"/><line x1="12" y1="4" x2="12" y2="16"/>',
+  'navigation-officer': '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+  'marine-engineer': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  'industrial-safety-consultant': '<path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/>',
+  'weather-forecaster': '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  'fire-safety-manager': '<path d="M12 2s-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1-3s-1 2-2 2c0-3-2-5-2-9z"/>',
+  'landscape-engineer': '<path d="M12 2l4 6h-2l4 6h-2l4 6H4l4-6H6l4-6H8z"/><line x1="12" y1="20" x2="12" y2="22"/>',
+  'surveying-engineer': '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  'electrical-safety-engineer': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  'gas-safety-engineer': '<path d="M12 2s-5 5-5 10a5 5 0 0 0 10 0c0-2-1-3-1-3s-1 2-2 2c0-3-2-5-2-9z"/>',
+  'real-estate-agent': '<path d="M3 12l9-9 9 9"/><path d="M9 21V12h6v9"/><path d="M5 10v11h14V10"/>',
+  'security-engineer': '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'translator-interpreter': '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  'tour-guide': '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  'sports-instructor': '<circle cx="13" cy="4" r="2"/><path d="M4 21l4-6 3 2 2-5 4 2-1 5-3-1-2 5"/>',
+  'hairdresser': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
+  'chef': '<path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/>',
+  'physician': '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  'professor': '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5"/>'
+};
+
 var PROFESSIONS = {
-  'judicial-scrivener': { label: '법무사', category: 'LAW', icon: '📜', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'tax-accountant': { label: '세무사', category: 'FIN', icon: '🧾', agencyLabel: 'K-Tax', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.' },
-  'accountant': { label: '공인회계사', category: 'FIN', icon: '📊', agencyLabel: 'K-Stock', subCount: 9, samples: ['공인회계사(외부감사)','공인회계사(기업가치평가)','공인회계사(내부통제·컴플라이언스)','공인회계사(IFRS·연결재무제표)','공인회계사(M&A 실사)','공인회계사(IPO·상장자문)'], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.' },
-  'financial-planner': { label: '재무설계사', category: 'FIN', icon: '📈', agencyLabel: '금융 서비스(준비 중)', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.' },
-  'appraiser': { label: '감정평가사', category: 'LAW', icon: '🏷️', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'loss-adjuster': { label: '손해사정사', category: 'LAW', icon: '📋', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'labor-attorney': { label: '공인노무사', category: 'LAW', icon: '👷', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'patent-attorney': { label: '변리사', category: 'LAW', icon: '💡', agencyLabel: 'K-Law', subCount: 10, samples: ['변리사(특허)','변리사(상표)','변리사(디자인)','변리사(심판·소송)','변리사(국제출원)','변리사(IT·소프트웨어)'], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'customs-broker': { label: '관세사', category: 'LAW', icon: '🛃', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'dentist': { label: '치과의사', category: 'HEALTH', icon: '🦷', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'traditional-medicine-doctor': { label: '한의사', category: 'HEALTH', icon: '🌿', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'pharmacist': { label: '약사', category: 'HEALTH', icon: '💊', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'veterinarian': { label: '수의사', category: 'HEALTH', icon: '🐾', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'nurse': { label: '간호사', category: 'HEALTH', icon: '👩‍⚕️', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'physical-therapist': { label: '물리치료사', category: 'HEALTH', icon: '💪', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'medical-lab-technologist': { label: '임상병리사', category: 'HEALTH', icon: '🔬', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'radiologic-technologist': { label: '방사선사', category: 'HEALTH', icon: '📡', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'dental-hygienist': { label: '치과위생사', category: 'HEALTH', icon: '🦷', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'occupational-therapist': { label: '작업치료사', category: 'HEALTH', icon: '🧠', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'dental-technician': { label: '치과기공사', category: 'HEALTH', icon: '🦷', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'advanced-practice-nurse': { label: '전문간호사', category: 'HEALTH', icon: '💉', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'dietitian': { label: '영양사', category: 'HEALTH', icon: '🥗', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'paramedic': { label: '응급구조사', category: 'HEALTH', icon: '🚑', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'midwife': { label: '조산사', category: 'HEALTH', icon: '🤱', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'speech-language-pathologist': { label: '언어재활사', category: 'HEALTH', icon: '🗣️', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'optician': { label: '안경사', category: 'HEALTH', icon: '👓', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'sanitarian': { label: '위생사', category: 'HEALTH', icon: '🧼', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'health-educator': { label: '보건교육사', category: 'HEALTH', icon: '📢', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'teacher': { label: '교사(정교사)', category: 'EDU', icon: '👩‍🏫', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'advisor': { label: '구매자문(K-Advisor)', category: 'FIN', icon: '🔍', agencyLabel: 'K-Market', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.' },
-  'clinical-psychologist': { label: '임상심리사', category: 'EDU', icon: '🧑‍⚕️', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'school-counselor': { label: '전문상담교사', category: 'EDU', icon: '🛋️', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'mental-health-professional': { label: '정신건강전문요원', category: 'EDU', icon: '💬', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'social-worker': { label: '사회복지사', category: 'EDU', icon: '🤝', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'curator': { label: '학예사(큐레이터)', category: 'EDU', icon: '🎨', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'librarian': { label: '사서', category: 'EDU', icon: '📖', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'youth-counselor': { label: '청소년상담사', category: 'EDU', icon: '🧑‍🤝‍🧑', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'childcare-teacher': { label: '보육교사', category: 'EDU', icon: '🧸', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'lifelong-educator': { label: '평생교육사', category: 'EDU', icon: '🎓', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' },
-  'architect': { label: '건축사', category: 'ENG', icon: '🏗️', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'professional-engineer': { label: '기술사', category: 'ENG', icon: '📐', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'marine-pilot': { label: '도선사', category: 'ENG', icon: '⚓', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'naval-architect': { label: '조선사', category: 'ENG', icon: '🚢', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'navigation-officer': { label: '항해사', category: 'ENG', icon: '🧭', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'marine-engineer': { label: '기관사(선박)', category: 'ENG', icon: '⚙️', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'industrial-safety-consultant': { label: '산업안전·보건지도사', category: 'ENG', icon: '🦺', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'weather-forecaster': { label: '기상예보사', category: 'ENG', icon: '🌤️', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'fire-safety-manager': { label: '소방시설관리사', category: 'ENG', icon: '🧯', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'landscape-engineer': { label: '조경기술사', category: 'ENG', icon: '🌳', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'surveying-engineer': { label: '측량 및 지형공간정보기술사', category: 'ENG', icon: '📐', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'electrical-safety-engineer': { label: '전기안전기술사', category: 'ENG', icon: '⚡', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'gas-safety-engineer': { label: '가스기술사', category: 'ENG', icon: '🔥', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.' },
-  'real-estate-agent': { label: '공인중개사', category: 'ETC', icon: '🏠', agencyLabel: '부동산 서비스(준비 중)', subCount: 0, samples: [], lead: '부동산 거래 경험의 개인차를 줄여, 계약·시세·권리분석에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 중개·계약의 자격과 책임은 언제나 공인중개사 본인에게 있습니다. 페르소나는 정보 제공을 보조할 뿐입니다.' },
-  'security-engineer': { label: '정보보안전문가', category: 'ETC', icon: '🔒', agencyLabel: 'K-Security', subCount: 0, samples: [], lead: '보안 지식과 대응 경험의 개인차를 줄여, 개인·소상공인도 전문적인 보안 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 보안 사고 대응과 시스템 조치의 책임은 언제나 해당 전문가·조직에게 있습니다. 페르소나는 자문을 보조할 뿐입니다.' },
-  'translator-interpreter': { label: '통역사·번역사', category: 'ETC', icon: '🌐', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '언어·문화 이해도의 개인차를 줄여, 정확한 통번역 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '공식 문서의 법적 효력이 필요한 번역·통역은 언제나 자격을 갖춘 전문가의 확인을 거쳐야 합니다.' },
-  'tour-guide': { label: '관광통역안내사', category: 'ETC', icon: '🗺️', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '지역 관광 정보와 안내 경험의 개인차를 줄여, 여행자가 언제든 전문적인 안내를 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 안내 및 동행 서비스의 자격과 책임은 언제나 관광통역안내사 본인에게 있습니다.' },
-  'sports-instructor': { label: '생활스포츠지도사', category: 'ETC', icon: '🏃', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '운동 지도 경험의 개인차를 줄여, 생활 체육 이용자가 전문적인 코칭 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 운동 지도와 안전 관리의 책임은 언제나 자격을 갖춘 지도자 본인에게 있습니다.' },
-  'hairdresser': { label: '미용사', category: 'ETC', icon: '💇', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '미용 시술·스타일링 경험의 개인차를 줄여, 이용자가 전문적인 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 시술의 자격과 책임은 언제나 해당 미용 전문가 본인에게 있습니다.' },
-  'chef': { label: '조리사', category: 'ETC', icon: '👨‍🍳', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '조리 지식과 경험의 개인차를 줄여, 이용자가 전문적인 조리·메뉴 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 조리·위생 관리의 책임은 언제나 자격을 갖춘 조리사 본인과 소속 시설에게 있습니다.' },
-  'lawyer': { label: '변호사', category: 'LAW', icon: '⚖️', agencyLabel: 'K-Law', subCount: 46, samples: ['변호사(형사법)','변호사(민사법)','변호사(기업법무)','변호사(가사법)','변호사(상속)','변호사(부동산)','변호사(교통사고)','변호사(행정법)'], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.' },
-  'physician': { label: '의사', category: 'HEALTH', icon: '🩺', agencyLabel: 'K-Health', subCount: 23, samples: ['의사(내과)','의사(외과)','의사(정형외과)','의사(정신건강의학과)','의사(소아청소년과)','의사(산부인과)'], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.' },
-  'professor': { label: '교수', category: 'EDU', icon: '🎓', agencyLabel: 'K-School', subCount: 355, samples: ['교수(언어·문학 중계열)','교수(인문학 중계열)','교수(법학)','교수(헌법)','교수(의학)','교수(내과학)','교수(경영학)','교수(회계학)','교수(작곡)','교수(성악)','교수(컴퓨터공학)','교수(인공지능)'], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다. 정부 공식 학문분야 분류상 152개 유효 세부분야를 모두 커버합니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.' }
+  'judicial-scrivener': { label: '법무사', category: 'LAW', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_judicial-scrivener_v2_2.md' },
+  'tax-accountant': { label: '세무사', category: 'FIN', agencyLabel: 'K-Tax', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_tax-accountant_v2_2.md' },
+  'accountant': { label: '공인회계사', category: 'FIN', agencyLabel: 'K-Stock', subCount: 9, samples: ['공인회계사(외부감사)','공인회계사(기업가치평가)','공인회계사(내부통제·컴플라이언스)','공인회계사(IFRS·연결재무제표)','공인회계사(M&A 실사)','공인회계사(IPO·상장자문)'], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_accountant_v1_10.md' },
+  'financial-planner': { label: '재무설계사', category: 'FIN', agencyLabel: '금융 서비스(준비 중)', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_financial-planner_v1_7.md' },
+  'appraiser': { label: '감정평가사', category: 'LAW', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_appraiser_v1_9.md' },
+  'loss-adjuster': { label: '손해사정사', category: 'LAW', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_loss-adjuster_v1_7.md' },
+  'labor-attorney': { label: '공인노무사', category: 'LAW', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_labor-attorney_v1_7.md' },
+  'patent-attorney': { label: '변리사', category: 'LAW', agencyLabel: 'K-Law', subCount: 10, samples: ['변리사(기계·전기전자)','변리사(화학·소재)','변리사(바이오·제약)','변리사(IT·소프트웨어)','변리사(상표)','변리사(디자인)'], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_patent-attorney_v1_8.md' },
+  'customs-broker': { label: '관세사', category: 'LAW', agencyLabel: 'K-Law', subCount: 0, samples: [], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_customs-broker_v1_7.md' },
+  'dentist': { label: '치과의사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_dentist_v1_9.md' },
+  'traditional-medicine-doctor': { label: '한의사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_traditional-medicine-doctor_v2_0.md' },
+  'pharmacist': { label: '약사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_pharmacist_v1_9.md' },
+  'veterinarian': { label: '수의사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_veterinarian_v3_1.md' },
+  'nurse': { label: '간호사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_nurse_v3_7.md' },
+  'physical-therapist': { label: '물리치료사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_physical-therapist_v3_9.md' },
+  'medical-lab-technologist': { label: '임상병리사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_medical-lab-technologist_v3_9.md' },
+  'radiologic-technologist': { label: '방사선사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_radiologic-technologist_v3_9.md' },
+  'dental-hygienist': { label: '치과위생사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_dental-hygienist_v3_9.md' },
+  'occupational-therapist': { label: '작업치료사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_occupational-therapist_v3_9.md' },
+  'dental-technician': { label: '치과기공사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_dental-technician_v3_9.md' },
+  'advanced-practice-nurse': { label: '전문간호사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_advanced-practice-nurse_v3_9.md' },
+  'dietitian': { label: '영양사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_dietitian_v3_9.md' },
+  'paramedic': { label: '응급구조사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_paramedic_v1_6.md' },
+  'midwife': { label: '조산사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_midwife_v1_6.md' },
+  'speech-language-pathologist': { label: '언어재활사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_speech-language-pathologist_v1_6.md' },
+  'optician': { label: '안경사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_optician_v1_6.md' },
+  'sanitarian': { label: '위생사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_sanitarian_v1_6.md' },
+  'health-educator': { label: '보건교육사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 0, samples: [], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_health-educator_v1_6.md' },
+  'teacher': { label: '교사(정교사)', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_teacher_v3_3.md' },
+  'advisor': { label: '구매자문(K-Advisor)', category: 'FIN', agencyLabel: 'K-Market', subCount: 0, samples: [], lead: '세무·회계·재무 지식의 개인차를 줄여, 복잡한 금융 의사결정에서도 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 세무 신고·회계 감사·재무 계약의 최종 책임은 언제나 해당 자격사에게 있습니다. 페르소나는 준비·검토를 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_advisor_v1_3.md' },
+  'clinical-psychologist': { label: '임상심리사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_clinical-psychologist_v3_4.md' },
+  'school-counselor': { label: '전문상담교사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_school-counselor_v3_3.md' },
+  'mental-health-professional': { label: '정신건강전문요원', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_mental-health-professional_v3_3.md' },
+  'social-worker': { label: '사회복지사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_social-worker_v2_1.md' },
+  'curator': { label: '학예사(큐레이터)', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_curator_v3_3.md' },
+  'librarian': { label: '사서', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_librarian_v3_3.md' },
+  'youth-counselor': { label: '청소년상담사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_youth-counselor_v1_8.md' },
+  'childcare-teacher': { label: '보육교사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_childcare-teacher_v1_8.md' },
+  'lifelong-educator': { label: '평생교육사', category: 'EDU', agencyLabel: 'K-School', subCount: 0, samples: [], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_lifelong-educator_v1_8.md' },
+  'architect': { label: '건축사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_architect_v3_3.md' },
+  'professional-engineer': { label: '기술사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_professional-engineer_v3_3.md' },
+  'marine-pilot': { label: '도선사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_marine-pilot_v3_3.md' },
+  'naval-architect': { label: '조선사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_naval-architect_v3_3.md' },
+  'navigation-officer': { label: '항해사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_navigation-officer_v3_3.md' },
+  'marine-engineer': { label: '기관사(선박)', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_marine-engineer_v3_3.md' },
+  'industrial-safety-consultant': { label: '산업안전·보건지도사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_industrial-safety-consultant_v3_3.md' },
+  'weather-forecaster': { label: '기상예보사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_weather-forecaster_v3_4.md' },
+  'fire-safety-manager': { label: '소방시설관리사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_fire-safety-manager_v3_3.md' },
+  'landscape-engineer': { label: '조경기술사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_landscape-engineer_v1_8.md' },
+  'surveying-engineer': { label: '측량 및 지형공간정보기술사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_surveying-engineer_v1_8.md' },
+  'electrical-safety-engineer': { label: '전기안전기술사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_electrical-safety-engineer_v1_8.md' },
+  'gas-safety-engineer': { label: '가스기술사', category: 'ENG', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '설계·안전·기술 심사 경험의 개인차를 줄여, 전문적인 기술 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 설계·시공·안전 판단의 자격과 책임은 언제나 해당 기술사·전문가에게 있습니다. 페르소나는 검토·자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_gas-safety-engineer_v1_8.md' },
+  'real-estate-agent': { label: '공인중개사', category: 'REAL_ESTATE', agencyLabel: '부동산 서비스(준비 중)', subCount: 0, samples: [], lead: '부동산 거래 경험의 개인차를 줄여, 계약·시세·권리분석에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 중개·계약의 자격과 책임은 언제나 공인중개사 본인에게 있습니다. 페르소나는 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_real-estate-agent_v2_0.md' },
+  'security-engineer': { label: '정보보안전문가', category: 'IT', agencyLabel: 'K-Security', subCount: 0, samples: [], lead: '보안 지식과 대응 경험의 개인차를 줄여, 개인·소상공인도 전문적인 보안 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 보안 사고 대응과 시스템 조치의 책임은 언제나 해당 전문가·조직에게 있습니다. 페르소나는 자문을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_security-engineer_v1_8.md' },
+  'translator-interpreter': { label: '통역사·번역사', category: 'TRANSLATION', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '언어·문화 이해도의 개인차를 줄여, 정확한 통번역 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '공식 문서의 법적 효력이 필요한 번역·통역은 언제나 자격을 갖춘 전문가의 확인을 거쳐야 합니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_translator-interpreter_v1_9.md' },
+  'tour-guide': { label: '관광통역안내사', category: 'TOURISM', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '지역 관광 정보와 안내 경험의 개인차를 줄여, 여행자가 언제든 전문적인 안내를 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 안내 및 동행 서비스의 자격과 책임은 언제나 관광통역안내사 본인에게 있습니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_tour-guide_v1_8.md' },
+  'sports-instructor': { label: '생활스포츠지도사', category: 'SPORTS', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '운동 지도 경험의 개인차를 줄여, 생활 체육 이용자가 전문적인 코칭 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 운동 지도와 안전 관리의 책임은 언제나 자격을 갖춘 지도자 본인에게 있습니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_sports-instructor_v1_7.md' },
+  'hairdresser': { label: '미용사', category: 'BEAUTY', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '미용 시술·스타일링 경험의 개인차를 줄여, 이용자가 전문적인 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 시술의 자격과 책임은 언제나 해당 미용 전문가 본인에게 있습니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_hairdresser_v1_8.md' },
+  'chef': { label: '조리사', category: 'CULINARY', agencyLabel: '고팡 플랫폼 직접 연동', subCount: 0, samples: [], lead: '조리 지식과 경험의 개인차를 줄여, 이용자가 전문적인 조리·메뉴 자문을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 조리·위생 관리의 책임은 언제나 자격을 갖춘 조리사 본인과 소속 시설에게 있습니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_chef_v1_8.md' },
+  'lawyer': { label: '변호사', category: 'LAW', agencyLabel: 'K-Law', subCount: 46, samples: ['변호사(형사법)','변호사(민사법)','변호사(기업법무)','변호사(가사법)','변호사(상속)','변호사(부동산)'], lead: '법률 지식과 절차 경험의 개인차를 줄여, 어떤 상황에서도 최신 법리와 판례에 근거한 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 법적 자격과 최종 책임은 언제나 해당 자격을 갖춘 전문가 본인에게 있습니다. 페르소나는 자문·정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_lawyer_v5_4.md' },
+  'physician': { label: '의사', category: 'HEALTH', agencyLabel: 'K-Health', subCount: 23, samples: ['의사(내과)','의사(외과)','의사(신경과)','의사(소아청소년과)','의사(산부인과)','의사(정신건강의학과)'], lead: '의료 지식과 임상 경험의 개인차를 줄여, 예비 상담과 정보 제공 수준에서 신뢰할 수 있는 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 진단·처방·처치의 권한과 책임은 언제나 의료진에게 있습니다. 페르소나는 예비 상담과 정보 제공을 보조할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_physician_v2_5.md' },
+  'professor': { label: '교수(1:1 맞춤교육)', category: 'EDU', agencyLabel: 'K-School', subCount: 355, samples: ['교수(언어·문학 중계열)','교수(인문학 중계열)','교수(법학)','교수(헌법)','교수(의학)','교수(내과학)'], lead: '교육·상담 현장 경험의 개인차를 줄여, 학습자와 보호자가 언제든 전문적인 조력을 받을 수 있도록 설계된 전문가 AI입니다.', disclaimer: '실제 교육·상담·돌봄의 책임은 언제나 해당 전문가와 소속 기관에게 있습니다. 페르소나는 보조적 조력을 제공할 뿐입니다.', spUrl: 'https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP_professor_v1_5.md' }
 };
 
 var CAT_LABEL = { EDU: 'K-EDU', LAW: 'K-Law', HEALTH: 'K-Health', FIN: 'K-Fin', ENG: 'K-Eng', ETC: '기타' };
+
+function iconSvg(id, cls) {
+  var inner = ICONS[id] || '<circle cx="12" cy="12" r="9"/>';
+  return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+}
 
 var CATEGORY_ORDER = { EDU: [], LAW: [], HEALTH: [], FIN: [], ENG: [], ETC: [] };
 Object.keys(PROFESSIONS).forEach(function (id) {
@@ -248,8 +359,12 @@ function buildDetailHtml(id) {
   return (
     '<div class="svc-detail">' +
       '<div class="svc-eyebrow">' + CAT_LABEL[p.category] + ' · 전문가 페르소나</div>' +
-      '<h2>' + p.icon + ' ' + p.label + ' 페르소나</h2>' +
+      '<div class="svc-detail-head">' + iconSvg(id, 'prof-icon-lg') + '<h2>' + p.label + ' 페르소나</h2></div>' +
       '<p class="svc-lead">' + p.lead + '</p>' +
+      '<a class="svc-link-btn" href="' + p.spUrl + '" target="_blank" rel="noopener">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>' +
+        p.label + ' SP 프롬프트 원문 보기' +
+      '</a>' +
       subfieldSection +
       '<h3>관련 K-서비스와의 관계</h3>' +
       '<div class="svc-table-wrap">' +
@@ -273,7 +388,7 @@ function renderTier2(cat) {
     var el = document.createElement('div');
     el.className = 'tier2-tab' + (i === 0 ? ' active' : '');
     el.setAttribute('data-id', id);
-    el.innerHTML = p.icon + ' ' + p.label + (p.subCount > 0 ? '<span class="t2-count">(' + p.subCount + ')</span>' : '');
+    el.innerHTML = iconSvg(id, '') .replace('<svg ', '<svg width="14" height="14" ') + ' ' + p.label + (p.subCount > 0 ? '<span class="t2-count">(' + p.subCount + ')</span>' : '');
     wrap.appendChild(el);
   });
   renderContent(CATEGORY_ORDER[cat][0]);
