@@ -114,9 +114,37 @@
     return html;
   }
 
+  // document.currentScript는 이 스크립트가 "동기적으로 실행되는 바로 그 순간"에만
+  // 유효하다. 반면 #site-hero-mount 같은 요소는 이 스크립트 태그보다 뒤에 있어서
+  // 즉시 조회하면 아직 존재하지 않는다. 그래서 스크립트 자신에 대한 참조는 지금
+  // 동기적으로 잡아두고, 실제 DOM 삽입은 뒤로 미룬다.
+  var THIS_SCRIPT = document.currentScript;
+
   function init() {
-    document.body.insertAdjacentHTML('afterbegin', BACK_ARROW_HTML);
-    document.body.insertAdjacentHTML('afterbegin', NAV_HTML);
+    // document.body는 항상 desktop.html의 실제 body를 가리킨다 — 오버레이 안에
+    // 주입된 콘텐츠 안에서 이 스크립트가 실행되더라도 마찬가지다. 그래서
+    // document.body를 기준으로 삽입하면 오버레이로 열 때마다 desktop.html의
+    // 진짜 헤더 위에 사본이 계속 쌓인다(중복 버그). 대신 이 스크립트 태그 자신이
+    // 실제로 놓인 위치를 기준으로 삽입한다 — 오버레이 안이든 새 탭 단독 실행이든
+    // 항상 올바른 컨테이너에 삽입된다.
+    var container = THIS_SCRIPT ? THIS_SCRIPT.parentNode : document.body;
+
+    function insertHtml(html) {
+      var temp = document.createElement('div');
+      temp.innerHTML = html;
+      var nodes = Array.prototype.slice.call(temp.childNodes);
+      nodes.forEach(function (node) {
+        if (THIS_SCRIPT) {
+          container.insertBefore(node, THIS_SCRIPT);
+        } else {
+          container.insertBefore(node, container.firstChild);
+        }
+      });
+    }
+
+    insertHtml(NAV_HTML);
+    insertHtml(BACK_ARROW_HTML);
+
     var mount = document.getElementById('site-hero-mount');
     if (mount) {
       mount.outerHTML = renderHero(window.PAGE_HERO);
@@ -126,6 +154,8 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
+    // activateScripts로 재실행되는 경우 document.readyState는 이미 'complete'이므로
+    // DOMContentLoaded가 다시 발생하지 않는다 — 이 경우 바로 실행한다.
     init();
   }
 })();
