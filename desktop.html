@@ -146,6 +146,15 @@ body {
   .site-hero h1 { font-size: 24px; }
 }
 
+/* 히어로 오른쪽 여백 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
+.site-hero-illustration {
+  position: absolute; top: 50%; right: 40px; transform: translateY(-50%);
+  width: 400px; height: auto; border-radius: 10px; display: block;
+}
+@media (max-width: 1180px) {
+  .site-hero-illustration { display: none; }
+}
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1480,6 +1489,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 
 <section class="site-hero" id="top">
+  <img src="/assets/hondi-ai-communication.svg" alt="사람 간 직접 소통과 혼디를 통한 AI 간 소통 비교 애니메이션" class="site-hero-illustration">
   <h1><span class="l1">사람 간의 업무를</span><br><span class="l2">혼디 간의 소통으로 보완합니다.</span></h1>
   <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
