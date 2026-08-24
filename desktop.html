@@ -252,6 +252,20 @@ body {
   letter-spacing: 0.3px;
 }
 
+/* ── DOC-LINK (원문 보기 — 통일된 화살표 버튼, 2026-08-25 추가) ── */
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 12px;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--brand); text-decoration: none;
+  transition: gap 0.15s;
+}
+.doc-link:hover { gap: 8px; text-decoration: underline; }
+.doc-link svg { flex-shrink: 0; transition: transform 0.15s; }
+.doc-link:hover svg { transform: translateX(2px); }
+.doc-link-row { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 12px; }
+.doc-link-row .doc-link { margin-top: 0; }
+
 /* ── NAV ── */
 /* ── SIDEBAR ── */
 :root { --sb-w: 52px; --sb-expanded: 220px; }
@@ -1651,6 +1665,7 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="section-body">
       <p>혼디는 5천만 한국인 각각의 AI 비서이자, 입법·사법·행정·교육·의료·문화·시장 등 우리 사회의 모든 기관·부서를 위한 "AI 비서"입니다. 또한 혼디는 의료·법률·기술 등 수백 개 분야에 특화된 수백 개 AI 모듈의 집합체입니다.</p>
       <p>시민의 혼디가 각 기관의 혼디와 직접 소통하여, 사람이 처리하던 서류 준비·제출·확인 업무를 혼디가 대행할 뿐 아니라 초기 의사 결정을 대신합니다. 시범적으로 제주도청·시청·읍면동 행정복지센터를 혼디로 구현한 혼디 AI 공공기관을 <strong>9월 1일부터</strong> 서비스합니다. 물론, 최종 의사 결정은 언제나 사람의 몫입니다.</p>
+      <a class="doc-link" href="./integrated-system.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
     </div>
   </div>
 </section>
@@ -1677,6 +1692,10 @@ document.addEventListener("DOMContentLoaded", function () {
       </table>
     </div>
     <p class="cmp-summary">혼디의 수백 개 AI 기능 중 하나인 <strong>K-Law</strong>는 사실관계와 헌법·법률·판례를 근거로 가상의 대법원 판결문을 3~5분 만에 작성합니다. 대법원 공개 판례 대상 자체 측정 기준, K-Law 가상 판결문의 대법원 실제 판결 일치도는 약 75~90%로, 공개 판례의 1~2심 법원 일치도(45~48%)보다 높습니다. 파산·면책 절차에도 같은 방식을 적용해 K-Law가 진행안 초안을 작성하고, 사람 판사가 검증해 최종 결정을 내립니다.</p>
+    <div class="doc-link-row">
+      <a class="doc-link" href="./reports/hondi-bankruptcy-automation-scenario.html" target="_blank" rel="noopener">개인파산 시나리오 원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a class="doc-link" href="./reports/hondi-legal-arbitration-scenario.html" target="_blank" rel="noopener">K-Law 화해계약 사례 원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
   </div>
 </section>
 
@@ -1707,6 +1726,35 @@ document.addEventListener("DOMContentLoaded", function () {
       </table>
     </div>
     <p class="cmp-summary">준공 검사(사용승인)도 동일한 원칙을 따릅니다 — 착공 신고부터 서류 심사·현장 실사 일정 조율까지 혼디가 대행하되, <strong>현장 실사와 최종 승인은 언제나 담당 공무원(사람)</strong>이 수행합니다. 혼디가 준비한 검토 의견은 참고 자료일 뿐, 법적 책임과 최종 결재권은 전적으로 인간 공무원에게 있습니다.</p>
+    <a class="doc-link" href="./reports/hondi-example.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+  </div>
+</section>
+
+<!-- ── 활용 시나리오 추가 카드 3개 (2026-08-25 추가) ──
+     본문에 대응 섹션이 없던 세 문서(AI 도청·시청·읍면동, 법치 사회,
+     금융권 CBDC 대비)를 case-permit과 feature-summary 사이에
+     step-card 3개로 요약 배치. -->
+<section class="section" id="more-scenarios">
+  <div class="section-inner">
+    <span class="section-tag">더 넓어지는 활용</span>
+    <h2 class="section-title">함께 확장 중인 <strong>시나리오</strong></h2>
+    <div class="steps-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="step-card">
+        <h3>AI 도청·시청·읍면동사무소</h3>
+        <p>혼디에 내장된 AI 행정 관청은 정부기관을 대체하지 않는 순수 중개자입니다. 이용자의 요청을 그대로 전달하고 답변을 재전달할 뿐, 판단·재량은 행사하지 않으며 실제 심사·결정 권한은 언제나 정부 기관에 있습니다.</p>
+        <a class="doc-link" href="./reports/hondi-ai-town-office.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+      <div class="step-card">
+        <h3>법치 사회로의 전환</h3>
+        <p>모든 기관·부서의 AI 비서는 법제처 국가법령정보(law.go.kr)에서 실시간 수집한 근거 법령·규정에 결박되어 응답합니다. 인간 검수(팀장급 승인) 없이는 어떤 항목도 반영되지 않도록 코드 레벨에서 강제됩니다.</p>
+        <a class="doc-link" href="./reports/hondi-rule-of-law.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+      <div class="step-card">
+        <h3>금융권, 오늘을 대비하십시오</h3>
+        <p>디지털 화폐로의 전환은 이미 세계 곳곳에서 진행 중입니다. GDC는 상용화 전 구독료·K-Law 등 소규모 결제로 필드 테스트를 시작하며, 은행·보험·증권 현직 종사자의 설계 검증 참여를 요청합니다.</p>
+        <a class="doc-link" href="./reports/hondi-prepare-today-finance.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1718,26 +1766,32 @@ document.addEventListener("DOMContentLoaded", function () {
       <div class="step-card">
         <h3>혼디란 무엇인가 — 카톡+AI+로봇</h3>
         <p>대화 상대가 사람뿐 아니라 사물·개념까지 포함하며, 지시받은 업무를 실제로 수행합니다. 모든 인증·데이터는 서버가 아닌 사용자 단말기에만 저장됩니다.</p>
+        <a class="doc-link" href="./docs/legacy_overview_20260821.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
         <h3>나만의 AI 비서 & 그만의 AI 비서</h3>
         <p>모든 시민에게 '나만의 AI 비서'를, 입법·사법·행정 전 기관·부서에 '그만의 AI 비서'를 배정해 업무를 실시간으로 주고받습니다.</p>
+        <a class="doc-link" href="./reports/hondi-mine-vs-their-ai.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
         <h3>PDV — 프라이빗 데이터 금고</h3>
         <p>출생부터 평생을 기록하는 나만의 데이터 금고. 오직 내 단말기에만 저장되어 나 외에는 누구도 접근할 수 없습니다.</p>
+        <a class="doc-link" href="./reports/hondi-mine-ai-secretary.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
         <h3>교육 — 유치원부터 대학원까지</h3>
         <p>학교 제도를 보완합니다. 학습 세션을 append-only로 기록하고, Bloom 6단계 이해도를 임의로 건너뛰지 않습니다.</p>
+        <a class="doc-link" href="./reports/hondi-professor-teacher-complement.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
         <h3>혼디 vs 카카오톡·일반 AI·블록체인</h3>
         <p>MoTE(소형 특화 모델 조합)로 전력 사용량 최대 96% 절감, Openhash로 에너지 소비 최대 99.8% 절감(FPGA 18.2W vs GPU 160.3W).</p>
+        <a class="doc-link" href="./reports/hondi-vs-kakao-ai-blockchain.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
         <h3>GDC — 화폐 하나에 은행·보험·증권 융합</h3>
         <p>위변조 불가능한 재무제표 자체가 신용이 되는 것이 목표. 현재는 서비스 결제·거버넌스 투표가 실제 동작(LIVE) 중입니다.</p>
+        <a class="doc-link" href="./reports/hondi-gdc-currency-scenario.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
     </div>
   </div>
