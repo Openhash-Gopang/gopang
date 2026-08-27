@@ -127,17 +127,24 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
   </div>
 
   <div id="content" style="display:none">
-    <!-- 2026-08-28 신설(주피터 지시: "구독은 선택이 아니라 필수이며,
-         디폴트여야 한다") — 브라우저는 어떤 사이트도 알림 권한을
-         강제로 켤 수 없어(사용자가 반드시 브라우저 팝업에서 직접
-         "허용"을 눌러야 함) 완전한 강제는 불가능하다. 대신 이 화면
-         (GDC 충전) 진입 시점에 아직 한 번도 물어본 적 없으면(default)
-         즉시 자동으로 권한 팝업을 띄우고, 거부/미설정 상태면 충전
-         화면에서 눈에 띄게 계속 경고해 "몰라서 놓쳤다"가 없도록 한다. -->
+    <!-- 2026-08-28 신설(주피터 지시: "구독은 선택이 아니라 필수이며
+         디폴트여야 한다" + "웹앱(설치된 PWA) 기준으로 설명하라") —
+         브라우저 탭이 아니라 "홈 화면에 설치된 앱" 상태를 기준으로
+         판단한다. iOS(Safari)는 브라우저 탭 상태로는 웹 푸시 자체가
+         플랫폼 차원에서 아예 불가능하고(iOS 16.4+ 포함), 반드시
+         "홈 화면에 추가"로 설치된 standalone 앱이어야만 푸시가
+         작동한다 — 그래서 iOS는 "권한을 켜달라"가 아니라 "먼저 앱을
+         설치해달라"고 안내해야 한다. Android는 브라우저 탭에서도
+         푸시 자체는 되지만, 설치된 앱이 백그라운드에서 훨씬 안정적
+         이라 마찬가지로 설치를 우선 권한다. -->
     <div id="push-required-banner" class="notice" style="display:none;background:#FFF4E5;border-color:#f5c98a;color:#92400e">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
         <span id="push-required-text">🔔 충전 확인 알림이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받을 수 있어요.</span>
         <button id="push-required-btn" class="retry-btn" style="flex-shrink:0;white-space:nowrap" onclick="_retryPushSubscription()">지금 켜기</button>
+      </div>
+      <div id="push-install-guide" style="display:none;margin-top:8px;font-size:12px;line-height:1.6">
+        하단 <strong>공유 버튼</strong> → <strong>홈 화면에 추가</strong>로 먼저 앱을 설치해 주세요.
+        설치된 앱으로 열어야 알림을 받을 수 있어요.
       </div>
     </div>
 
@@ -542,19 +549,34 @@ async function loadChargeHistory() {
 }
 
 // ── 푸시 알림 필수화 (2026-08-28 신설, 주피터 지시) ──────────────────
-// "구독은 선택이 아니라 필수이며, 디폴트여야 한다". 브라우저 정책상
-// 완전한 강제(사용자 동의 없이 권한 ON)는 불가능하므로, 이 페이지가
-// 열릴 때마다 다음을 보장한다:
-//   1. Notification.permission이 'default'(한 번도 안 물어봄)면
-//      즉시 자동으로 권한 팝업을 띄운다 — 사용자가 뭘 누를 필요 없이
-//      페이지 진입 자체가 "요청 시도"가 된다(디폴트로 시도하는 것).
-//   2. 'denied'거나, 'granted'인데 서버에 실제 구독이 없는(네트워크
-//      실패 등으로 등록이 안 된) 경우엔 이 화면에 계속 눈에 띄는
-//      배너로 경고하고, 그 자리에서 바로 재시도할 수 있게 한다.
-//   3. 'granted' + 구독 정상이면 배너를 숨긴다.
+// "구독은 선택이 아니라 필수이며, 디폴트여야 한다" — 그리고 "웹앱
+// (설치된 PWA) 기준으로 설명하라". 브라우저 탭이 아니라 "홈 화면에
+// 설치된 앱" 상태를 우선 기준으로 판단한다:
+//   - iOS(Safari)는 브라우저 탭에서는 웹 푸시가 플랫폼 차원에서
+//     아예 불가능하다(iOS 16.4+ 포함, 예외 없음) — 반드시 홈 화면에
+//     추가해 standalone으로 열어야만 구독 자체가 성립한다. 그래서
+//     iOS + 미설치 상태에서는 "권한을 켜주세요"가 아니라 "먼저
+//     앱을 설치해주세요"로 안내를 완전히 바꿔야 한다(권한 요청
+//     자체를 시도해봐야 100% 실패하므로 시도하지 않는다).
+//   - Android는 브라우저 탭에서도 푸시 자체는 되지만, 설치된 앱이
+//     백그라운드에서 훨씬 안정적으로 살아남는다(OS가 일반 탭보다
+//     설치된 PWA를 덜 죽인다) — 그래서 미설치 상태에서도 권한 요청은
+//     시도하되, 설치를 권장하는 문구를 함께 보여준다.
+//   - 이미 standalone(설치된 앱)으로 열려 있으면 플랫폼 구분 없이
+//     일반적인 권한 요청 흐름을 그대로 탄다.
+function _isStandaloneWebApp() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true; // iOS Safari 전용 프로퍼티
+}
+function _isIOSDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
 async function _checkPushRequired() {
   const banner = document.getElementById('push-required-banner');
   const textEl = document.getElementById('push-required-text');
+  const btnEl = document.getElementById('push-required-btn');
+  const installGuideEl = document.getElementById('push-install-guide');
   if (!banner) return;
 
   if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -565,11 +587,23 @@ async function _checkPushRequired() {
   const guid = getGuid();
   if (!guid) { banner.style.display = 'none'; return; }
 
+  const standalone = _isStandaloneWebApp();
+  const isIOS = _isIOSDevice();
+
+  // ── iOS + 미설치: 권한 요청 자체가 무의미(항상 실패) — 설치부터 안내 ──
+  if (isIOS && !standalone) {
+    textEl.textContent = '🔔 충전 확인 알림을 받으려면 먼저 혼디를 홈 화면에 설치된 앱으로 열어야 해요.';
+    btnEl.style.display = 'none';
+    installGuideEl.style.display = 'block';
+    banner.style.display = 'block';
+    return;
+  }
+  btnEl.style.display = '';
+  installGuideEl.style.display = 'none';
+
   if (Notification.permission === 'default') {
     // 한 번도 안 물어본 상태 — 사용자 조작 없이 이 페이지 진입 자체로
-    // 즉시 시도한다(디폴트 요청). 브라우저가 실제 팝업을 띄울지는
-    // 브라우저 정책에 달려있지만(제스처 요구 브라우저도 있음), 최소한
-    // 우리 쪽에서 매번 자동으로 시도는 한다.
+    // 즉시 시도한다(디폴트 요청).
     try {
       const { requestPushSubscription } = await import('/src/gopang/services/push.js');
       const result = await requestPushSubscription(guid);
@@ -578,10 +612,14 @@ async function _checkPushRequired() {
   }
 
   if (Notification.permission === 'denied') {
-    textEl.textContent = '🔔 알림 권한이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받아요. 브라우저 설정 → 알림에서 이 사이트를 허용해 주세요.';
+    textEl.textContent = standalone
+      ? '🔔 알림 권한이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받아요. 기기의 앱 설정 → 알림에서 혼디를 허용해 주세요.'
+      : '🔔 알림 권한이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받아요. 브라우저 설정 → 알림에서 이 사이트를 허용해 주세요.';
     banner.style.display = 'block';
   } else if (Notification.permission !== 'granted') {
-    textEl.textContent = '🔔 충전 확인 알림이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받을 수 있어요.';
+    textEl.textContent = standalone
+      ? '🔔 충전 확인 알림이 꺼져 있어요. GDC 입금이 확인돼도 알림을 못 받을 수 있어요.'
+      : '🔔 충전 확인 알림이 꺼져 있어요. 지금 앱으로 설치해 두면 더 안정적으로 받을 수 있어요.';
     banner.style.display = 'block';
   } else {
     // permission은 granted인데 실제 구독 등록까지 됐는지는
@@ -609,7 +647,10 @@ window._retryPushSubscription = async function () {
     if (result.ok) {
       document.getElementById('push-required-banner').style.display = 'none';
     } else if (result.reason === 'permission_denied') {
-      alert('🔔 알림 권한이 브라우저에서 꺼져 있어요. 브라우저 설정 → 사이트 설정 → 알림에서 직접 허용해 주셔야 합니다(웹사이트가 되돌릴 수 없는 브라우저 자체 정책이에요).');
+      const standalone = _isStandaloneWebApp();
+      alert(standalone
+        ? '🔔 알림 권한이 꺼져 있어요. 기기의 앱 설정 → 알림에서 혼디를 직접 허용해 주셔야 합니다(웹앱이 되돌릴 수 없는 시스템 정책이에요).'
+        : '🔔 알림 권한이 브라우저에서 꺼져 있어요. 브라우저 설정 → 사이트 설정 → 알림에서 직접 허용해 주셔야 합니다(웹사이트가 되돌릴 수 없는 브라우저 자체 정책이에요).');
     } else {
       alert('⚠️ 알림 등록 실패: ' + (result.reason || '알 수 없는 오류'));
     }

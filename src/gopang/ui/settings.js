@@ -218,7 +218,22 @@ window._openUsagePage = function () {
     alert('사용량을 보려면 먼저 가입/로그인이 필요합니다.');
     return;
   }
-  window.open(`/usage.html?guid=${encodeURIComponent(guid)}`, '_blank', 'noopener');
+  const url = `/usage.html?guid=${encodeURIComponent(guid)}`;
+  // 2026-08-28 신설(주피터 지시: "웹앱 기준으로 설명하라") — iOS에서
+  // 홈 화면에 설치된 standalone 앱 안에서 window.open()으로 새 탭을
+  // 열면 Safari로 튕겨져 나가면서 standalone 컨텍스트 자체가 깨진다
+  // (iOS PWA의 알려진 제약 — 여러 창/탭을 지원하지 않음). 이러면
+  // usage.html이 "이미 설치된 앱인데도 설치 안내"를 잘못 띄우게 된다
+  // (display-mode: standalone이 false로 보임). standalone으로 이미
+  // 실행 중이면 같은 창 안에서 이동해 그 컨텍스트를 유지하고, 일반
+  // 브라우저 탭에서 열린 경우(기존 동작)만 새 탭으로 연다.
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                        window.navigator.standalone === true;
+  if (isStandalone) {
+    window.location.href = url;
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 // ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
