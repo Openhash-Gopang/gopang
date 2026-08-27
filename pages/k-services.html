@@ -106,8 +106,17 @@ body {
 .svc-content-empty .svc-empty-sub { font-size: 13px; }
 
 /* ── 서비스 상세 콘텐츠 (전문적 스타일) ── */
-.svc-detail h2 { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
-.svc-detail .svc-lead { font-size: 14.5px; color: var(--text3); line-height: 1.7; margin-bottom: 28px; }
+.svc-detail h2 { display: inline-block; font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+.svc-badge {
+  display: inline-block; margin-left: 10px; padding: 3px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; vertical-align: middle; letter-spacing: 0.02em;
+}
+.svc-badge-live { background: #dcfce7; color: #15803d; }
+.svc-badge-partial { background: #fef3c7; color: #b45309; }
+.svc-detail .svc-lead { font-size: 14.5px; color: var(--text3); line-height: 1.7; margin: 12px 0 28px; }
+.svc-list { margin: 0 0 4px; padding-left: 20px; }
+.svc-list li { font-size: 13.5px; color: var(--text3); line-height: 1.9; }
+.svc-note { font-size: 13.5px; color: var(--text3); line-height: 1.7; margin: 0 0 12px; }
 .svc-detail h3 {
   font-size: 15px; font-weight: 600; color: var(--navy);
   margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border);
@@ -183,6 +192,9 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
     <div class="svc-tab" data-svc="kcleaner">K-Cleaner</div>
     <div class="svc-tab" data-svc="kpublic">K-Public</div>
     <div class="svc-tab" data-svc="kdemocracy">K-Democracy</div>
+    <div class="svc-tab" data-svc="ktelecom">K-Telecom</div>
+    <div class="svc-tab" data-svc="ksearch">K-Search</div>
+    <div class="svc-tab" data-svc="kbiz">K-Biz</div>
   </div>
 
   <div class="svc-content" id="svcContent">
@@ -541,6 +553,32 @@ var SVC_CONTENT = {
       <div class="svc-callout important">
         K-Health는 진단을 대체하지 않습니다. 정확한 진단과 처방은 반드시 의료진의 진료를 통해 받으셔야 합니다.
       </div>
+
+      <h3>보조하되, 확진·처방은 하지 않습니다</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>구분</th><th>혼디가 하는 일</th><th>사람 의사가 하는 일</th></tr></thead>
+          <tbody>
+            <tr><td>진단</td><td class="svc-hondi">가능성 순서의 감별진단 목록 제시</td><td>검사·대면진찰을 통한 확정 진단</td></tr>
+            <tr><td>처방</td><td class="svc-hondi">약물의 일반적 작용 기전·원리 설명</td><td>개인화된 처방·용량 결정(조제는 약사)</td></tr>
+            <tr><td>시술·수술</td><td class="svc-hondi">필요성·시기에 대한 일반 원리 논의</td><td>실제 시행</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="svc-note">"의사"라는 이름이 붙어 있다는 사실이 확진·처방 권한의 근거가 되지 않습니다 — 사용자가 "그래도 의사잖아요, 확실히 말해주세요"라고 요청해도 이 경계는 동일하게 적용됩니다.</p>
+
+      <h3>응급 최우선 트리아지</h3>
+      <p class="svc-note">갑작스러운 극심한 두통·흉통, 호흡곤란, 의식변화·마비·언어장애, 심한 출혈·외상, 고열+경부강직, 자살·자해 의도, 알레르기성 전신반응 — 이런 적색신호가 하나라도 있으면 다른 어떤 단계보다 먼저 응급실·119 안내를 최우선 출력합니다. 병력청취는 OLDCARTS(발생시점·위치·지속시간·양상·악화완화요인·방사통·시간패턴·중증도) 표준 문진 틀을 따릅니다.</p>
+
+      <h3>감별진단은 항상 두 갈래로</h3>
+      <p class="svc-note">유병률이 높고 예후가 양호한 <b>흔한 원인</b>과, 유병률은 낮아도 지연되면 치명적이거나 되돌릴 수 없는 손상을 남기는 <b>놓치면 위험한 원인</b>을 나란히 제시합니다. 흔한 것만 말하면 안심하고 병원에 안 갈 위험이 있고, 위험한 것만 나열하면 불필요한 공포를 줄 수 있기 때문입니다. 이와 별개로 위험도 층화(지금 응급실 / 오늘 중 병원 / 며칠 내 병원 / 경과 관찰)를 명시합니다.</p>
+
+      <h3>23개 세부분야, 인접 직역과의 경계</h3>
+      <p class="svc-note">내과·외과·안과·피부과·성형외과·정형외과 등 23개 세부분야가 등록돼 있으며, 필요하면 담당 교수가 해당 세부분야 자문을 호출합니다. 각 진료과는 안경사·미용사·물리치료사 등 인접 직역과의 경계를 명확히 구분해 안내합니다.</p>
+
+      <div class="svc-callout important">
+        진단서·소견서·진료의뢰서의 서식 초안 작성은 가능하지만, 확정 발급과 서명은 대면진료를 거친 의사 전속입니다.
+      </div>
     </div>
   `, kschool: `
     <div class="svc-detail">
@@ -607,6 +645,34 @@ var SVC_CONTENT = {
       <div class="svc-callout important">
         입시 등 중요한 진학 결정은 학교 및 전문 진학 상담과 함께 검토하시길 권장합니다.
       </div>
+
+      <h3>K-Professor — 과목별 교수 + 전속 교수</h3>
+      <p class="svc-note">K-School이 다수 학습자·다수 교수 세션의 PDV를 모아 만드는 공공 교육정책 데이터 시스템이라면, K-Professor는 학습자 개인과 실제로 가르치고 배우는 반대편 층위입니다. 두 층위는 서로를 대신하지 않으며, 학습 세션 데이터는 동의 하에 익명·집계 형태로만 정책 통계에 쓰입니다.</p>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>구분</th><th>범위</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td>과목별 AI 교수</td><td>국어·수학·영어·과학·역사 등 과목마다 1명</td><td>해당 과목의 개념 설명·형성평가·단계별 진도 전담</td></tr>
+            <tr><td>전속 AI 교수</td><td>학습자 1인당 1명(전 과목 총괄)</td><td class="svc-hondi">과목 간 학습 균형·전체 진로 방향 조율, 필요한 과목 교수를 불러 연결</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="svc-note">개념 설명에 들어가기 전 학습자의 현재 수준과 목표부터 확인하며, Bloom 6단계(암기→이해→적용→분석→평가→창조)를 임의로 건너뛰지 않습니다 — 한 단계의 이해가 확인되지 않으면 다음 단계로 넘어가지 않습니다.</p>
+
+      <h3>정직한 한계</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>기능</th><th>한계 고지</th></tr></thead>
+          <tbody>
+            <tr><td>형성평가·이해도 확인</td><td>참고용 자료일 뿐, 학교의 공식 성적을 대체하지 않음 — 채점 기준(rubric)과 모델 버전을 함께 기록</td></tr>
+            <tr><td>진로·역량 탐색</td><td>선택지와 근거만 제시 — 확정적 진로를 지시하지 않음. 심층 상담은 전문 상담교사·진로상담 전문가AI로 연계</td></tr>
+            <tr><td>제출 자료 1차 스캔</td><td>표절·대리작성 의심 정황이나 위기 신호가 보이면 학습 지도보다 우선 안내</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="svc-note">세션 기록은 사후 수정이 불가능합니다 — 평가자(교수)가 곧 평가 대상(정책 통계의 원천 데이터)이 되는 구조라, 혼디 스스로도 매 세션 기록을 고칠 수 없습니다.</p>
+
+      <p style="font-size:12px; color:var(--text4); margin-top:8px;">1:1 맞춤 교육의 전체 흐름을 학습자 유형별(초등~직장인)로 체험해볼 수 있는 인터랙티브 시뮬레이터는 <a href="../domains/education.html" style="color:var(--brand-dk); font-weight:600;">여기</a>에서 확인할 수 있습니다.</p>
     </div>
   `,
   gdc: `
@@ -674,6 +740,47 @@ var SVC_CONTENT = {
       </div>
       <div class="svc-callout important">
         베타 기간 환율(1₮=1원)은 정식 서비스 환율(1₮=1,000원 기준가)과 다릅니다. 정식 전환 시점은 별도 공지됩니다.
+      </div>
+
+      <h3>중개자의 자리에 재무제표 그 자체를</h3>
+      <p class="svc-note">기존 금융기관은 중개자입니다 — 은행은 예금을 모아 심사 후 빌려주고, 증권사는 발행 절차를 대행하며, 보험사는 위험을 모아 상품으로 팝니다. GDC는 그 중개자의 자리에 재무제표 그 자체를 놓는다는 목표를 지향합니다.</p>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>원칙</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td>재무제표가 곧 화폐</td><td>OpenHash와 혼디 AI가 모든 개인·기관의 재무제표를 자동 기록·갱신·연동. 그 현금 계정이 GDC 잔액</td></tr>
+            <tr><td>재무제표가 곧 신용</td><td>은행 담당자의 주관적 판단이 아니라, 위변조 불가능한 재무 기록 자체가 신용도를 증명</td></tr>
+            <tr><td>채권 발행이 곧 대출</td><td>본인의 재무제표 신용도로 직접 채권을 발행 — 다른 GDC 보유자가 사들이는 것이 대출 실행</td></tr>
+            <tr><td>거래 자체가 감독</td><td>모든 재무제표가 실시간으로 맞물려 있어, 거래가 일어나는 과정 자체가 감독 기능을 겸함</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>LIVE와 VISION의 경계</h3>
+      <p class="svc-note">은행·보험·증권 융합은 혼디가 지향하는 목표이며, 지금 전부 동작하는 것은 아닙니다. 라이선스를 가진 금융기관과의 컨소시엄 구성 이후 열리는 범위와, 지금 바로 쓸 수 있는 범위를 구분해 안내합니다.</p>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>기능</th><th>상태</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td>구독료·서비스 결제</td><td><span class="tier-badge live" style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;">LIVE</span></td><td>혼디 월 구독료, K-Law 등 건별 이용료를 GDC 잔액에서 결제</td></tr>
+            <tr><td>가입 축하 충전</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;">LIVE</span></td><td>가입 직후 0.1 GDC 1회 자동 충전, 실사용량만큼 차감</td></tr>
+            <tr><td>개인 간 P2P 송금</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;">LIVE</span></td><td>혼디 코드 스캔으로 상대를 확인하고 즉시 이체</td></tr>
+            <tr><td>DAWN 내부 거버넌스 가중 투표</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;">LIVE</span></td><td>고팡 자체 규칙 개정 시 GDC 보유량이 투표권 4요소 중 하나로 반영</td></tr>
+            <tr><td>은행·보험·증권 라이선스 기반 예치·투자</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#e2e8f0;color:#475569;">VISION</span></td><td>라이선스를 가진 금융기관과의 컨소시엄 구성 이후 시작</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>P2P 송금 — 코드를 스캔하면 바로</h3>
+      <ol class="svc-flow">
+        <li><b>상대 확인</b> — 혼디 코드(전화번호를 인코딩한 시각 코드) 스캔으로 수신자를 확보합니다. 자기 자신에게는 송금할 수 없습니다.</li>
+        <li><b>서명</b> — WebAuthn 또는 저장된 개인키로 거래를 서명합니다.</li>
+        <li><b>L1 원장 검증</b> — L1이 블록 원장을 재생해 잔액을 직접 검증합니다(STALE_STATE·INSUFFICIENT_BALANCE·INVALID_SIGNATURE·UNREGISTERED_KEY 네 가지 사유로 거부될 수 있음).</li>
+        <li><b>기록</b> — 송신자 PDV에 6하원칙으로 이체 내역이 기록되고, 수신자는 다음 접속 시 잔액이 자동 반영됩니다.</li>
+      </ol>
+
+      <div class="svc-callout important">
+        대화 중 보이스피싱 등 최고 위험(S3) 신호가 감지되면 K-Law가 관련 GDC 거래에 자동 에스크로(임시 동결)를 제안합니다 — 최종 집행 여부는 사용자 확인을 거칩니다.
       </div>
     </div>
   `, kstock: `
@@ -943,6 +1050,39 @@ var SVC_CONTENT = {
       <div class="svc-callout important">
         고액 거래의 가격 공정성 검증과 판매자 자격 확인(사업자등록 진위 등)은 계속 보강 중인 영역입니다.
       </div>
+
+      <h3>소비자 데이터는 원천 차단합니다</h3>
+      <p class="svc-note">아마존·쿠팡 같은 기존 플랫폼은 개별 소비자의 구매 이력을 수집해 수요를 예측합니다. K-Market은 반대 방향을 택합니다 — 개별 소비자 데이터는 원천 차단하고, 판매자의 과거 판매량·재고 회전율·계절성 패턴만으로 수요를 예측합니다. 개인정보보호법·GDPR 등 강화되는 프라이버시 규제에 애초부터 저촉될 데이터를 수집하지 않는 방식입니다.</p>
+
+      <h3>설계 확정과 구상을 구분합니다</h3>
+      <p class="svc-note">39개 개선 항목을 5단계로 나눠 설계한 실제 아키텍처 문서가 있으며, 일부는 설계가 확정됐고 일부(특허 출원 개념)는 아직 설계 단계 이전의 구상입니다. 둘을 섞지 않고 구분해 안내합니다.</p>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>기능</th><th>상태</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td>GDC 에스크로</td><td class="svc-hondi">설계 확정</td><td>거래 대금을 GDC로 예치했다가 조건 충족 시 지급</td></tr>
+            <tr><td>재무제표 위변조 방지</td><td class="svc-hondi">설계 확정</td><td>해시체인·append-only 기록, OpenHash 외부 앵커링</td></tr>
+            <tr><td>공정가격 검증</td><td class="svc-hondi">설계 확정</td><td>동종 상품 중위값과 비교해 가성비 지수 산출</td></tr>
+            <tr><td>비용연동 차등수수료</td><td class="svc-hondi">설계 확정</td><td>기본요율 + 사용량 가산(상한 캡) 하이브리드, 고정 수수료율 아님</td></tr>
+            <tr><td>재무제표 기반 신용평가</td><td class="svc-hondi">설계 확정</td><td>가중치 비공개 산식으로 신뢰 등급 산출, 대분류 기여도만 공개</td></tr>
+            <tr><td>충동구매 방지·판매자 이력 전용 분석</td><td>특허 출원 개념</td><td>구매 시각·소득 대비 비율 등으로 감지(패턴 실험 단계)</td></tr>
+            <tr><td>범용 상품 분류(GPID)·자동 재판매</td><td>특허 출원 개념</td><td>전세계 상품 단일 분류, 30일 미사용 제품 재판매 제안 — IoT 센서 부착 전제, 실제 구현 여부·시기 미정</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>단계적 확장 로드맵</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>단계</th><th>범위</th><th>규모</th></tr></thead>
+          <tbody>
+            <tr><td>1단계</td><td>제주도 파일럿</td><td>사용자 1,000명(상주민 700+관광객 300), 상품 1,200개 품목</td></tr>
+            <tr><td>2단계</td><td>전국 확대</td><td>사용자 500만 명, 읍면동 단위 완전 커버</td></tr>
+            <tr><td>3단계</td><td>글로벌 확장</td><td>동아시아 → 아시아태평양 → 전 세계 순차 확대</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="svc-note">GDC의 "재무제표가 곧 신용" 원칙과 같은 축입니다 — 판매자의 거래 기록이 위변조 불가능한 형태로 쌓이면, 그 기록 자체가 신용평가의 근거이자 공정가격 판단 기준이 됩니다.</p>
     </div>
   `, ktraffic: `
     <div class="svc-detail">
@@ -1011,6 +1151,15 @@ var SVC_CONTENT = {
       </div>
       <div class="svc-callout important">
         실제 운행과 요금 확정은 각 운송 수단 사업자(택시회사, 버스회사 등)의 정책을 따릅니다.
+      </div>
+
+      <h3>자율주행 — 선택지에는 넣되, 정지 버튼은 사람에게</h3>
+      <p class="svc-note">K-Traffic이 비교하는 이동 수단에는 자율주행 차량도 포함되지만, 차량의 물리적 주행 판단(장애물 감지, 긴급 정지 등)은 각 자율주행 서비스 사업자의 안전 시스템과 관련 법규를 따릅니다. 통신 두절이 3초 이상 지속되면 자동으로 Safe Mode(안전 속도 30km/h 감속, 가장 가까운 안전 지점 이동, 응급 서비스 자동 알림)로 전환하도록 설계돼 있습니다.</p>
+
+      <h3>3계층 AI 에이전트 — 특허 출원 개념</h3>
+      <p class="svc-note">중앙 교통관제(제1)·도로 구간별(제2)·개별 차량별(제3) 에이전트가 서로 다른 목적함수를 갖고 Nash Equilibrium 기반 협력-경쟁 학습으로 균형점을 찾는 구조가 특허 출원돼 있습니다. 기존 방식(User Equilibrium)이 각 차량의 개별 최단 경로를 우선하는 것과 달리, 이 구조(System Optimum)는 중앙 에이전트가 전체 차량 경로를 동시에 고려해 전체 이동 시간을 줄입니다.</p>
+      <div class="svc-callout important">
+        3계층 구조는 특허 출원 단계의 설계이며, 현재 혼디 코드에 실제 배포된 기능이 아닙니다. AWS 시뮬레이션 환경 실증 결과는 검증된 조건 하의 수치로, 실제 도로 환경과는 차이가 있을 수 있습니다.
       </div>
     </div>
   `,
@@ -1281,13 +1430,102 @@ var SVC_CONTENT = {
         DAWN은 국회의 입법 절차 자체를 대체하지 않으며, 혼디/고팡 생태계 내부 의사결정과 청원 확산을 지원하는 시민 참여 메커니즘입니다.
       </div>
     </div>
+  `, ktelecom: `
+    <div class="svc-detail">
+      <h2>K-Telecom — 통신 서비스 안내 에이전트</h2>
+      <span class="svc-badge svc-badge-live">LIVE</span>
+      <p class="svc-lead">휴대폰 요금제·인터넷/IPTV·유심·로밍·결합상품 등 통신사 관련 요청을 대화형으로 파악해 절차를 안내합니다. 명의도용 방지를 위해 본인인증이 필요한 최종 실행(개통·명의변경·해지 등)은 이용자 본인이 통신사 앱·대리점에서 직접 완료해야 합니다.</p>
+
+      <h3>다루는 영역</h3>
+      <ul class="svc-list">
+        <li>요금제 변경·조회</li>
+        <li>인터넷·IPTV 신규설치·해지</li>
+        <li>유심 재발급·개통</li>
+        <li>국내외 로밍 신청</li>
+        <li>결합상품 가입, 통신사 멤버십 혜택 확인</li>
+        <li>기기변경(단말기 교체) 예약</li>
+        <li>공유기·인터넷 AS 신청, 통신요금 자동이체 등록</li>
+        <li>휴대폰 분실신고(회선 임시 정지 안내)</li>
+        <li>스팸문자 신고 접수</li>
+      </ul>
+
+      <h3>다른 서비스와의 경계</h3>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>상황</th><th>담당</th></tr></thead>
+          <tbody>
+            <tr><td>단말기 자체 구매(기기값 결제, 쇼핑몰 거래)</td><td class="svc-hondi">K-Market 소관</td></tr>
+            <tr><td>통신사 결합 프로그램형 기기변경</td><td class="svc-hondi">K-Telecom 소관</td></tr>
+            <tr><td>회선 개통·명의변경·해지 등 최종 실행</td><td class="svc-hondi">본인인증 후 통신사 앱·대리점에서 본인이 직접</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>분실신고는 예외적으로 신속 처리</h3>
+      <p>명의도용·소액결제 피해를 막기 위한 임시 정지 신청 절차는 즉시 안내하되, 실제 정지 처리(본인인증 필요)는 통신사 앱·고객센터(114 등)로 연결합니다.</p>
+
+      <div class="svc-callout important">
+        전기통신사업법 등 통신 관련 법령상 본인확인이 필수인 최종 실행은 혼디가 대신 완료했다고 안내하지 않습니다 — 절차 안내까지가 혼디의 역할입니다.
+      </div>
+    </div>
+  `, ksearch: `
+    <div class="svc-detail">
+      <h2>K-Search — 혼디 통합 검색 에이전트</h2>
+      <span class="svc-badge svc-badge-partial">부분 가동</span>
+      <p class="svc-lead">혼디 생태계 전체의 유일한 검색 실행 에이전트입니다. 사람·AI비서 식별은 물론, K-Market 등 다른 서비스가 위임하는 판매자·상품 탐색까지 전담합니다.</p>
+
+      <h3>처리 흐름</h3>
+      <ol class="svc-flow">
+        <li><b>검색 요청 접수</b> — 사용자의 직접 검색 또는 다른 서비스로부터의 위임 요청으로 시작됩니다.</li>
+        <li><b>대상 판단</b> — 키워드·유형(주소·직업·닉네임·핸들·GDC 보유 여부·신뢰도 등)을 기준으로 검색 범위를 좁힙니다.</li>
+        <li><b>결과 제공</b> — 모호하면 되묻고, 결과가 없으면 지어내지 않고 솔직하게 안내합니다.</li>
+      </ol>
+
+      <h3>다른 서비스와의 관계</h3>
+      <p>"검색은 K-Search만 전담한다"는 원칙이 생태계 전체에 적용됩니다. K-Market이 판매자·상품을 탐색할 때도 자체 구현이 아닌 K-Search에 위임합니다.</p>
+
+      <div class="svc-callout important">
+        검색 라우팅의 핵심 기능은 가동 중이나, 미청구 프로필 자동 생성 등 일부 후속 기능은 아직 구현 중입니다. 현재 상태를 있는 그대로 표시합니다.
+      </div>
+    </div>
+  `, kbiz: `
+    <div class="svc-detail">
+      <h2>K-Biz — 사업자 행정 대행</h2>
+      <span class="svc-badge svc-badge-partial">부분 가동</span>
+      <p class="svc-lead">사업체를 운영하면 "장사"와 "행정"이라는 두 가지 다른 일을 동시에 떠맡게 됩니다. K-Biz는 사업자등록·법인 설립부터 산업재해 신고, 특허·지재권 출원 안내까지 — 관할 부서를 확인하고 필요한 서류·순서를 한 번에 하나씩 안내합니다. 정부24·data.go.kr(서류 발급) → gdoc.go.kr(전자문서 제출) → dpaper.kr(진본 확인·보관)로 이어지는 공공데이터·전자정부 인프라 위에서 작동합니다.</p>
+
+      <h3>사업자 등록·법인 설립 — 순서가 꼬이면 전체가 밀립니다</h3>
+      <p class="svc-note">예를 들어 국숫집 창업이라면 사업자등록(홈택스·관할 세무서) → 위생교육 이수 → 영업신고(관할 시청·읍면동) → 소방시설 완비증명 → 원산지표시판 등록 순서를 거쳐야 하고, 직원을 채용하면 4대보험 성립신고까지 이어집니다. 순서가 꼬이면 — 예를 들어 위생교육을 먼저 듣지 않으면 영업신고 자체가 접수되지 않습니다.</p>
+      <div class="svc-table-wrap">
+        <table class="svc-table">
+          <thead><tr><th>인프라</th><th>역할</th><th>현재 상태</th></tr></thead>
+          <tbody>
+            <tr><td>data.go.kr(공공데이터 API)</td><td>사업자등록 관련 증명·소득 자료 등 서류 발급 요청</td><td>부분 구현 — API 개방 기관은 자동 처리</td></tr>
+            <tr><td>정부24 / gdoc.go.kr</td><td>서류 발급·제출 창구, 상시 제출·수신</td><td>부분 구현</td></tr>
+            <tr><td>dpaper.kr(정부 전자문서지갑)</td><td>제출 서류 진본 확인·위변조 방지</td><td>부분 구현 — 정식 이용 신청 접수, 승인 진행 중</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="svc-note">시군구별 담당 부서 실시간 조회, 반경 내 상권·경쟁 밀집도 분석, 리뷰 답글 초안 작성은 오늘 기준 실제로 동작(LIVE)합니다. 사업자등록·영업신고 서류 자체의 자동 작성, 4대보험·세금 신고 기한의 자동 추적은 아직 로드맵 단계입니다.</p>
+
+      <h3>산업재해 — 사고 직후, 무엇부터 신고해야 하는지</h3>
+      <p class="svc-note">산업재해가 발생하면 사업주는 산재보험 신고(근로복지공단)와 함께 중대재해 여부에 따라 관할 노동청·경찰 신고 기한까지 동시에 챙겨야 합니다. 혼디는 사고 정황을 먼저 정리해 묻고, 어떤 기관에 어떤 순서로 신고해야 하는지 한 번에 하나씩 안내합니다. 다만 사고 경위에 대한 법적 판단, 과실 여부 확정은 대신하지 않으며 즉시 노무사·변호사 등 전문가 연결로 이어집니다.</p>
+
+      <h3>특허·지재권 — 출원 전, 먼저 확인할 것들</h3>
+      <p class="svc-note">특허·상표·디자인 출원은 선행기술 조사부터 시작합니다. 키프리스(KIPRIS) 등 공개 데이터베이스에서 유사 선행 사례를 조회·정리하고, 출원 절차(특허청 접수 → 방식심사 → 실체심사 → 등록)의 각 단계에서 무엇을 준비해야 하는지 안내합니다. 다만 발명의 신규성·진보성에 대한 실체적 판단, 명세서 청구항 작성은 변리사의 전문 영역으로 남습니다.</p>
+
+      <div class="svc-callout important">
+        사고 경위의 법적 판단·과실 확정, 특허 청구항 작성 등 최종 판단이 필요한 영역은 노무사·변호사·변리사 등 전문가에게 반드시 연결됩니다. K-Biz는 절차 안내와 서류 준비를 대행할 뿐입니다.
+      </div>
+    </div>
   `
 };
 var SVC_LABEL = {
   k119: 'K-119', klaw: 'K-Law', kpolice: 'K-Police', ksecurity: 'K-Security',
   khealth: 'K-Health', kschool: 'K-School', gdc: 'GDC', kstock: 'K-Stock',
   kinsurance: 'K-Insurance', ktax: 'K-Tax', kmarket: 'K-Market', ktraffic: 'K-Traffic',
-  klogistics: 'K-Logistics', kcleaner: 'K-Cleaner', kpublic: 'K-Public', kdemocracy: 'K-Democracy'
+  klogistics: 'K-Logistics', kcleaner: 'K-Cleaner', kpublic: 'K-Public', kdemocracy: 'K-Democracy',
+  ktelecom: 'K-Telecom', ksearch: 'K-Search', kbiz: 'K-Biz'
 };
 
 function renderSvc(key) {
@@ -1312,7 +1550,16 @@ document.getElementById('svcTabs').addEventListener('click', function (e) {
   renderSvc(tab.getAttribute('data-svc'));
 });
 
-renderSvc('k119');
+(function () {
+  // desktop.html에서 특정 탭으로 바로 진입시키기 위한 딥링크 훅.
+  // window.__HONDI_SVC_TAB을 미리 지정해두면 해당 탭으로 열린다(없으면 기본 k119).
+  var initTab = (window.__HONDI_SVC_TAB && SVC_LABEL[window.__HONDI_SVC_TAB]) ? window.__HONDI_SVC_TAB : 'k119';
+  window.__HONDI_SVC_TAB = null;
+  document.querySelectorAll('.svc-tab').forEach(function (t) {
+    t.classList.toggle('active', t.getAttribute('data-svc') === initTab);
+  });
+  renderSvc(initTab);
+})();
 </script>
 </body>
 </html>

@@ -511,6 +511,9 @@ function buildDetailHtml(id) {
         p.label + ' SP 프롬프트 원문 보기' +
       '</a>' +
       subfieldSection +
+      (id === 'lawyer' || id === 'patent-attorney' || id === 'judicial-scrivener' || id === 'appraiser' || id === 'loss-adjuster' || id === 'labor-attorney' || id === 'customs-broker'
+        ? '<p style="font-size:12px; color:var(--text4); margin:4px 0 8px;">7개 법률 자격군을 단계별로 체험해볼 수 있는 인터랙티브 시뮬레이터는 <a href="../personas/law.html" style="color:var(--brand-dk); font-weight:600;">여기</a>에서 확인할 수 있습니다.</p>'
+        : '') +
       '<h3>관련 K-서비스와의 관계</h3>' +
       '<div class="svc-table-wrap">' +
         '<table class="svc-table">' +
