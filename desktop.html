@@ -146,9 +146,9 @@ body {
   .site-hero h1 { font-size: 24px; }
 }
 
-/* 히어로 오른쪽 여백 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
+/* 히어로 배경 중앙 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
 .site-hero-illustration {
-  position: absolute; top: 50%; right: 40px; transform: translateY(-50%);
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: 500px; height: auto; border-radius: 10px; display: block; overflow: hidden;
 }
 .site-hero-illustration svg { display: block; width: 100%; height: auto; }
@@ -1552,7 +1552,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 
 <section class="site-hero" id="top">
-  <div id="hero-illustration" class="site-hero-illustration" role="img" aria-label="사람 간 직접 소통(느림)과 혼디 간 소통(빛의 속도) 비교 애니메이션"></div>
+  <div id="hero-illustration" class="site-hero-illustration" role="img" aria-label="사람 간 소통(느림) → 혼디가 반복 업무를 대신함(문구) → 혼디 간 소통(빛의 속도) 순으로 진행되는 애니메이션"></div>
   <h1 id="hero-title" style="transition:opacity .25s ease"><span class="l1">사람 간의 업무를</span><br><span class="l2">혼디 간의 소통으로 보강합니다.</span> <a class="hero-more" href="./highlights/hondi-communication.html">더보기<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></h1>
   <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
@@ -1603,27 +1603,40 @@ section.section[data-tab].tab-active { display: block; }
 
 <script>
 (function () {
-  var illustrations = ['/assets/hondi-human-slow.svg', '/assets/hondi-hondi-light-speed.svg'];
-  var illustIdx = 0;
   var illustEl = document.getElementById('hero-illustration');
   if (!illustEl) return;
+  var frameUrls = { frame1: '/assets/hondi-human-slow.svg', frame3: '/assets/hondi-hondi-light-speed.svg' };
   var cache = {};
-  function loadFrame(idx) {
-    var url = illustrations[idx];
+  var blankSvg = '<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img"><title>전환 여백</title><rect width="680" height="340" fill="#0E1B3A"/></svg>';
+  var phraseSvg = '<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img"><title>사람들 간의 단순 반복적인 일상을 혼디가 대신합니다</title><rect width="680" height="340" fill="#0E1B3A"/><text x="340" y="154" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="600" fill="#E7EAF5" font-family="sans-serif">사람들 간의 단순 반복적인 일상을</text><text x="340" y="192" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="600" fill="#E7EAF5" font-family="sans-serif">혼디가 대신합니다.</text></svg>';
+
+  function renderUrl(key) {
+    var url = frameUrls[key];
     if (cache[url]) {
       illustEl.innerHTML = cache[url];
       return;
     }
     fetch(url).then(function (res) { return res.text(); }).then(function (svgText) {
       cache[url] = svgText;
-      if (illustrations[illustIdx] === url) illustEl.innerHTML = svgText;
+      illustEl.innerHTML = svgText;
     });
   }
-  loadFrame(0);
-  setInterval(function () {
-    illustIdx = (illustIdx + 1) % illustrations.length;
-    loadFrame(illustIdx);
-  }, 2000);
+
+  var stages = [
+    { render: function () { renderUrl('frame1'); }, duration: 5000 },
+    { render: function () { illustEl.innerHTML = blankSvg; }, duration: 3000 },
+    { render: function () { illustEl.innerHTML = phraseSvg; }, duration: 5000 },
+    { render: function () { renderUrl('frame3'); }, duration: 8000 }
+  ];
+  var stageIdx = 0;
+  function runStage() {
+    stages[stageIdx].render();
+    setTimeout(function () {
+      stageIdx = (stageIdx + 1) % stages.length;
+      runStage();
+    }, stages[stageIdx].duration);
+  }
+  runStage();
 })();
 </script>
 
