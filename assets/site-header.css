@@ -21,6 +21,7 @@
   padding: 3px 12px; border-radius: 20px; text-decoration: none;
   border: 1px solid rgba(255,255,255,0.18); white-space: nowrap;
   font-family: 'Pretendard', sans-serif; transition: background 0.15s;
+  margin-left: 76px;
 }
 .site-strip-support-btn:hover { background: #24356b; }
 .site-nav {
@@ -124,10 +125,28 @@
 }
 .site-hero-domains a:hover { background: #006cc3; color: #fff; }
 
-.site-hero-personas {
-  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px;
-  padding-top: 16px; border-top: 1px solid #223764;
+.site-hero-kservices {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
 }
+.site-hero-kservices a {
+  font-size: 13px; font-weight: 500; color: #b3bfd1; text-decoration: none;
+  background: #16295a; padding: 7px 14px; border-radius: 20px;
+  font-family: 'Pretendard', sans-serif; transition: background 0.15s, color 0.15s;
+}
+.site-hero-kservices a:hover { background: #006cc3; color: #fff; }
+
+.site-hero-personas {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+}
+.site-hero-section-label {
+  display: flex; align-items: center; gap: 12px; margin-top: 16px;
+  color: #6b83ac; font-size: 11.5px; font-weight: 600;
+  font-family: 'Pretendard', sans-serif;
+}
+.site-hero-section-label::before, .site-hero-section-label::after {
+  content: ''; flex: 1; height: 1px; background: #223764;
+}
+.site-hero-section-label span { white-space: nowrap; }
 .site-hero-personas a {
   font-size: 13px; font-weight: 500; color: #b3bfd1; text-decoration: none;
   background: #16295a; padding: 7px 14px; border-radius: 20px;
