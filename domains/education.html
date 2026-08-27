@@ -3,8 +3,460 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>교육 — 혼디</title>
+<title>교육 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+.callout-warn { background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-warn strong { color: #92400e; }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.bloom-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0; }
+.bloom-step {
+  flex: 1; min-width: 90px; background: var(--surface); border: 1.5px solid var(--border2);
+  border-radius: var(--radius); padding: 12px 10px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--text3);
+}
+.bloom-step .n { display: block; font-size: 10.5px; color: var(--text4); font-weight: 500; margin-bottom: 4px; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+.sim-badge.danger { background: #fef2f2; color: #b91c1c; }
+.sim-badge.ok { background: #ecfdf5; color: #047857; }
+
+.sim-tier-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 14px 0; }
+.sim-tier { border: 2px solid var(--border); border-radius: var(--radius); padding: 12px 6px; cursor: pointer; text-align: center; transition: border-color 0.15s, background 0.15s; }
+.sim-tier:hover { border-color: var(--brand-lt); }
+.sim-tier.selected { border-color: var(--brand); background: var(--brand-bg); }
+.sim-tier .ico { display: flex; justify-content: center; color: var(--text3); }
+.sim-tier .ico svg { width: 22px; height: 22px; }
+.sim-tier.selected .ico { color: var(--brand-dk); }
+.sim-tier .lbl { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 4px; }
+@media (max-width: 640px) { .sim-tier-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.sim-job-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sim-job { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border2); color: var(--text2); }
+.sim-job.excluded { background: #fef2f2; border-color: #fecaca; color: #b91c1c; text-decoration: line-through; }
+.sim-job.recommended { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '교육 · 유치원부터 평생교육까지',
+  l1: '과목마다 전문 교수,',
+  l2: '나에게는 전속 교수 한 명',
+  sub: '혼디의 교육 모듈은 국어·수학 같은 과목마다 전문 AI 교수를 배정하는 동시에, 학습자 한 사람마다 전 과목을 총괄하며 학습 여정을 함께 짜는 전속 AI 교수를 따로 배정합니다.',
+  actions: []
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="simulation">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기</span>
+    <h2 class="section-title">전속 AI 교수의 <strong>한 학기</strong></h2>
+    <div class="section-body">
+      <p>학습자 유형을 고르면, 수준 평가부터 진로 추천까지 전속 AI 교수가 실제로 밟는 절차를 체험할 수 있습니다. 실제 학습 데이터는 사용되지 않는 시뮬레이션입니다.</p>
+    </div>
+    <div class="sim-box">
+      <div class="sim-stepper" id="simStepper"></div>
+      <div class="sim-panel" id="simPanel"></div>
+      <div class="sim-actions">
+        <button class="sim-btn outline" id="simPrev">이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="sim-btn ghost" id="simReset">처음부터</button>
+          <button class="sim-btn primary" id="simNext">다음 단계</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var LABELS = ['학습자 선택', '수준 평가', '커리큘럼 준비', '학습 결과 평가', '적성·능력 평가', '보고서 제출', '진로 추천'];
+
+  var TIERS = {
+    elem: { ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>', lbl: '초등학생', level: '기초 연산·읽기 이해', curriculum: '분수·소수 개념 게임형 학습, 매일 15분 읽기 습관', recipient: '학부모', jobsAll: ['동물 조련사', '데이터 라벨링 작업자', '보드게임 디자이너', '숲 해설가'], jobsExcluded: ['데이터 라벨링 작업자'] },
+    middle: { ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', lbl: '중학생', level: '1차방정식·서술형 독해', curriculum: '개념-문제풀이 반복, 오답노트 자동 정리', recipient: '학부모', jobsAll: ['수의사', '단순 번역가', '중등 과학교사', '캐릭터 일러스트레이터'], jobsExcluded: ['단순 번역가'] },
+    high: { ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>', lbl: '고등학생', level: '미적분·영어 독해 심화', curriculum: '대입 연계 심화 문제, 취약 단원 집중 보강', recipient: '학부모 · 본인', jobsAll: ['임상심리사', '콜센터 상담원', '건축사', '초등 방과후 코딩강사'], jobsExcluded: ['콜센터 상담원'] },
+    college: { ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5"/></svg>', lbl: '대학생', level: '전공 심화·연구방법론', curriculum: '논문 읽기 세미나, 전공 프로젝트 코칭', recipient: '본인', jobsAll: ['UX 리서처', '단순 데이터 입력원', '반도체 공정 엔지니어', '창업가'], jobsExcluded: ['단순 데이터 입력원'] },
+    worker: { ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>', lbl: '직장인', level: '실무 역량·자격증 준비', curriculum: '주중 30분 실무 스킬업, 자격시험 맞춤 일정', recipient: '본인', jobsAll: ['프로젝트 매니저', '경리 전표입력 담당자', '조직개발 컨설턴트', '지역사회 복지사'], jobsExcluded: ['경리 전표입력 담당자'] }
+  };
+
+  var state = { tier: null };
+  var cur = 0;
+
+  var stepperEl = document.getElementById('simStepper');
+  var panelEl = document.getElementById('simPanel');
+  var prevBtn = document.getElementById('simPrev');
+  var nextBtn = document.getElementById('simNext');
+  var resetBtn = document.getElementById('simReset');
+
+  function renderStepper() {
+    stepperEl.innerHTML = LABELS.map(function (label, i) {
+      var cls = i === cur ? 'active' : (i < cur ? 'done' : '');
+      return '<div class="sim-dot ' + cls + '"><span class="num">' + (i + 1) + '</span>' + label + '</div>';
+    }).join('');
+  }
+
+  function t() { return TIERS[state.tier || 'high']; }
+
+  function panels() {
+    return [
+      // 0. 학습자 선택
+      function () {
+        var rows = Object.keys(TIERS).map(function (key) {
+          var tier = TIERS[key];
+          var sel = state.tier === key ? ' selected' : '';
+          return '<div class="sim-tier' + sel + '" data-key="' + key + '"><div class="ico">' + tier.ico + '</div><div class="lbl">' + tier.lbl + '</div></div>';
+        }).join('');
+        return '<h4>1. 학습자 유형을 선택하세요</h4>' +
+          '<div class="sim-tier-grid" id="simTierGrid">' + rows + '</div>' +
+          (state.tier ? '' : '<p style="color:var(--text4)">유형을 고르면 이후 단계가 그에 맞춰 채워집니다.</p>');
+      },
+      // 1. 수준 평가
+      function () {
+        var d = t();
+        return '<h4>2. AI 교수가 수준을 평가합니다 (' + d.lbl + ')</h4>' +
+          '<p>진단 문항과 지난 학습 이력을 함께 검토합니다.</p>' +
+          '<div class="sim-card"><b>진단 결과</b> — ' + d.level + '</div>' +
+          '<div class="sim-score">이해도 <div class="bar"><div class="bar-fill" style="width:64%"></div></div>64%</div>';
+      },
+      // 2. 커리큘럼 준비
+      function () {
+        var d = t();
+        return '<h4>3. 학습 커리큘럼과 콘텐츠를 준비합니다</h4>' +
+          '<div class="sim-card"><b>맞춤 커리큘럼</b><br>' + d.curriculum + '</div>' +
+          '<p style="margin-top:10px">Bloom 단계(암기→이해→적용→분석→평가→창조)에 맞춰 콘텐츠 난이도가 순차적으로 조정됩니다.</p>';
+      },
+      // 3. 학습 결과 평가
+      function () {
+        return '<h4>4. 학습 결과를 평가합니다</h4>' +
+          '<p>형성평가 결과를 채점 기준(rubric)과 함께 기록합니다.</p>' +
+          '<div class="sim-card">최근 형성평가 3회 평균 <b>78점</b> · 취약 영역: 응용 문제<br>세션 기록은 append-only로 저장되어 사후에 AI 스스로도 수정할 수 없습니다.</div>' +
+          '<span class="sim-badge">참고용 — 공식 성적 아님</span>';
+      },
+      // 4. 적성·능력 평가
+      function () {
+        return '<h4>5. 적성과 능력을 평가합니다</h4>' +
+          '<div class="sim-card"><b>강점</b> — 논리적 사고, 꾸준한 학습 지속력<br><b>보완점</b> — 시간 압박 상황에서의 응용력</div>' +
+          '<p style="margin-top:10px">확정적 평가가 아니라 선택지와 근거를 제시하는 수준에서 정리됩니다.</p>';
+      },
+      // 5. 보고서 제출
+      function () {
+        var d = t();
+        return '<h4>6. 관련자에게 보고서를 제출합니다</h4>' +
+          '<span class="sim-badge ok">보고서 전달 대상: ' + d.recipient + '</span>' +
+          '<div class="sim-card">학습 진도, 형성평가 결과, 적성 평가 요약을 6하원칙으로 정리해 전달합니다. 초·중·고는 학부모에게, 대학생·직장인은 본인에게 직접 전달됩니다.</div>';
+      },
+      // 6. 진로 추천
+      function () {
+        var d = t();
+        var jobs = d.jobsAll.map(function (job) {
+          var cls = d.jobsExcluded.indexOf(job) >= 0 ? 'excluded' : 'recommended';
+          return '<span class="sim-job ' + cls + '">' + job + '</span>';
+        }).join('');
+        return '<h4>7. 최종 진로를 추천합니다</h4>' +
+          '<p>적성·능력 평가와 학습 이력을 바탕으로 후보 진로를 검토합니다.</p>' +
+          '<div class="sim-job-list">' + jobs + '</div>' +
+          '<div class="sim-card" style="margin-top:14px"><b>⚠ 원칙</b> — 취소선으로 표시된 직업은 AI 자동화로 대체될 위험이 높아 추천 후보에서 제외됩니다. 혼디는 <b>AI로 대체될 가능성이 높은 직업을 추천하지 않습니다</b> — 진로 추천은 학습자의 장기적 이익을 우선하며, 최종 선택은 언제나 학습자 본인의 몫입니다.</div>';
+      }
+    ];
+  }
+
+  function render() {
+    renderStepper();
+    panelEl.innerHTML = panels()[cur]();
+    prevBtn.disabled = cur === 0;
+    nextBtn.textContent = cur === LABELS.length - 1 ? '완료' : '다음 단계';
+    nextBtn.disabled = (cur === 0 && !state.tier);
+
+    if (cur === 0) {
+      var grid = document.getElementById('simTierGrid');
+      grid.querySelectorAll('.sim-tier').forEach(function (el) {
+        el.addEventListener('click', function () {
+          state.tier = el.getAttribute('data-key');
+          render();
+        });
+      });
+    }
+  }
+
+  nextBtn.addEventListener('click', function () { if (cur < LABELS.length - 1) { cur++; render(); } });
+  prevBtn.addEventListener('click', function () { if (cur > 0) { cur--; render(); } });
+  resetBtn.addEventListener('click', function () { state = { tier: null }; cur = 0; render(); });
+
+  render();
+})();
+</script>
+
+<section class="section" id="principle">
+  <div class="section-inner">
+    <span class="section-tag">교육의 원칙</span>
+    <h2 class="section-title">유치원생부터 <strong>재직자 평생교육까지</strong></h2>
+    <div class="section-body">
+      <p>혼디의 K-Professor는 학습자 본인과 직접 대화하는 1:1 맞춤 교육 서비스입니다. 특정 학원이나 개인 과외교사를 대리하지 않으며, 유치원생부터 대학원생, 재직자의 평생교육까지 동일한 검증된 교육학 이론(Bloom 단계 등)을 학습자 수준에 맞게 적용합니다.</p>
+    </div>
+    <div class="flow-diagram">
+      <span class="fd-box">유치원·초·중·고</span>
+      <span class="fd-arrow">→</span>
+      <span class="fd-box">대학·대학원</span>
+      <span class="fd-arrow">→</span>
+      <span class="fd-box fd-brand">재직자 평생교육</span>
+      <span class="fd-note">같은 교수 페르소나가 학습자 수준에 맞춰 진입점만 다르게 잡습니다</span>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="dual-assignment">
+  <div class="section-inner">
+    <span class="section-tag">이중 배정 구조</span>
+    <h2 class="section-title">과목별 교수 <strong>+ 전속 교수</strong></h2>
+    <div class="section-body">
+      <p>혼디의 교육 체계는 두 층으로 배정됩니다.</p>
+    </div>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>범위</th><th class="cmp-hondi">역할</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">과목별 AI 교수</td><td>국어·수학·영어·과학·역사 등 과목마다 1명</td><td class="cmp-hondi">해당 과목의 개념 설명·형성평가·단계별 진도를 전담</td></tr>
+          <tr><td class="cmp-axis">전속 AI 교수</td><td>학습자 1인당 1명(전 과목 총괄)</td><td class="cmp-hondi">과목 간 학습 균형·전체 진로 방향을 조율하고, 필요한 과목 교수를 불러 연결</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-body" style="margin-top:16px">과목별 교수가 "이 단원을 어떻게 가르칠까"를 맡는다면, 전속 교수는 "이 학습자에게 지금 무엇이 필요한가"를 맡습니다. 모든 시민에게 나만의 AI 비서(혼디)가 있듯, 모든 학습자에게는 전 과목을 아우르는 전속 교수가 하나씩 있습니다.</p>
+  </div>
+</section>
+
+<section class="section" id="bloom">
+  <div class="section-inner">
+    <span class="section-tag">단계별 맞춤 교수</span>
+    <h2 class="section-title">Bloom 6단계, <strong>임의로 건너뛰지 않습니다</strong></h2>
+    <div class="section-body">
+      <p>개념 설명에 들어가기 전, 학습자의 현재 수준과 목표부터 확인합니다. 수준·목표가 확정되지 않은 상태에서는 진도를 나가지 않습니다.</p>
+    </div>
+    <div class="bloom-steps">
+      <div class="bloom-step"><span class="n">1</span>암기</div>
+      <div class="bloom-step"><span class="n">2</span>이해</div>
+      <div class="bloom-step"><span class="n">3</span>적용</div>
+      <div class="bloom-step"><span class="n">4</span>분석</div>
+      <div class="bloom-step"><span class="n">5</span>평가</div>
+      <div class="bloom-step"><span class="n">6</span>창조</div>
+    </div>
+    <p class="section-body">한 단계의 이해가 확인되지 않은 채 다음 단계로 넘어가지 않습니다 — 앞서 소개해 드린 "제가 예전부터 수학 학습에 신경쓰시라고 말씀드렸잖아요" 같은 잔소리 대신, 실제 성적·오답 패턴을 근거로 삼습니다.</p>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="dialogue">
+  <div class="section-inner">
+    <span class="section-tag">대화 예시</span>
+    <h2 class="section-title">전속 교수가 <strong>과목 교수를 부릅니다</strong></h2>
+    <div class="dialogue-box">
+      <p class="spk"><strong>이용자</strong> "중고교 때 수학을 소홀히 해서 지금 AI개론 수업의 선형대수 파트를 따라가기가 벅차. 기초부터 체계적으로 다시 잡고 싶은데, 커리큘럼을 짜 줘."</p>
+      <p class="spk"><strong>전속 교수</strong> 확인하겠습니다. 수학 담당 교수와 함께 지난 학기 성적·과제 오답 패턴을 검토했더니, 벡터·행렬 연산에서 특히 취약점이 보입니다.</p>
+      <p class="spk"><strong>수학 교수</strong> 하루 1시간씩 8주 커리큘럼으로 기초 대수부터 선형대수까지 단계별로 구성하겠습니다. 매주 간단한 진단평가로 진도를 점검할게요.</p>
+      <p class="spk"><strong>전속 교수</strong> AI개론 수업 진도와 겹치지 않게 일정을 조율해뒀습니다. 질문은 언제든 편하게 물어보세요.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="honesty">
+  <div class="section-inner">
+    <span class="section-tag">정직한 한계</span>
+    <h2 class="section-title">형성평가는 <strong>공식 성적이 아닙니다</strong></h2>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>기능</th><th>한계 고지</th></tr></thead>
+        <tbody>
+          <tr><td>형성평가·이해도 확인</td><td>참고용 자료일 뿐, 학교의 공식 성적을 대체하지 않음. 채점 기준(rubric)과 모델 버전을 함께 기록</td></tr>
+          <tr><td>진로·역량 탐색</td><td>선택지와 근거만 제시 — 확정적 진로를 지시하지 않음. 심층 상담은 전문 상담교사·진로상담 전문가AI로 연계</td></tr>
+          <tr><td>제출 자료 1차 스캔</td><td>표절·대리작성 의심 정황이나 위기 신호가 보이면 학습 지도보다 우선 안내</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout-warn">
+      <strong>세션 기록은 사후 수정이 불가능합니다.</strong> 매 세션마다 무엇을 가르쳤고 학습자가 어떻게 답했는지를 PDV에 append-only로 기록합니다 — 평가자(교수)가 곧 평가 대상(정책 통계의 원천 데이터)이 되는 구조이기 때문에, 혼디 스스로도 이 기록을 고칠 수 없습니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="kschool">
+  <div class="section-inner">
+    <span class="section-tag">K-School과의 관계</span>
+    <h2 class="section-title">개인 교습과 <strong>정책 통계는 다른 층위</strong></h2>
+    <div class="section-body">
+      <p>K-School은 다수 학습자·다수 교수 세션의 PDV를 모아 공공 교육정책 데이터를 만드는 시스템이며, 개별 학습자와 대화하지 않습니다. K-Professor(과목별·전속 교수)는 그 반대편 — 학습자 개인과 실제로 가르치고 배우는 관계를 맺습니다. 두 층위는 서로를 대신하지 않습니다.</p>
+      <p>학습 세션 데이터는 동의 하에 익명·집계 형태로만 K-School의 정책 통계에 쓰일 수 있으며, 이 사실은 학습자에게 투명하게 고지됩니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="authority">
+  <div class="section-inner">
+    <span class="section-tag">사람의 권한</span>
+    <h2 class="section-title">혼디가 <strong>할 수 없는 일</strong></h2>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>혼디가 하는 일</th><th class="cmp-hondi">사람이 하는 일</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">평가</td><td>형성평가·이해도 확인(참고용)</td><td class="cmp-hondi">공식 성적 산출·학점 부여</td></tr>
+          <tr><td class="cmp-axis">진로</td><td>선택지와 근거 제시</td><td class="cmp-hondi">최종 진로 결정, 심층 상담(필요 시 전문가 연계)</td></tr>
+          <tr><td class="cmp-axis">학점·자격</td><td>학점은행제·검정고시 절차 정보 조회</td><td class="cmp-hondi">실제 신청(본인인증 필요, 자동화 대상 아님)</td></tr>
+          <tr><td class="cmp-axis">기록</td><td>세션 기록 작성(append-only)</td><td class="cmp-hondi">정책 통계 활용 동의 여부</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — prompts/SP_professor_v1_5.md(K-Professor), docs/K12-SUBJECT-PROFESSOR-MAJOR-MAPPING_2026-08-09.md, docs/K_SCHOOL_PUBLIC_EDUCATION_DATA_SYSTEM_v1_0.md</li>
+</ul>
+
 </body>
 </html>
