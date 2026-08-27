@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>입법 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text); resize: vertical; min-height: 80px;
+}
+.sim-field:focus { outline: 2px solid var(--brand-lt); border-color: var(--brand); }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-counter { font-size: 24px; font-weight: 700; color: var(--brand-dk); }
+.sim-counter span { font-size: 13px; font-weight: 500; color: var(--text4); }
+.sim-avatars { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sim-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--brand-bg); color: var(--brand-dk);
+  font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sim-vote-bar { display: flex; height: 28px; border-radius: 99px; overflow: hidden; margin-top: 10px; background: var(--border); }
+.sim-vote-bar .yes { background: var(--brand); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-vote-bar .no { background: var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
+</head>
+<body>
+<script>
+window.PAGE_HERO = {
+  badge: '입법 · 시민 주권',
+  l1: '시민 주권을 실현하는',
+  l2: '시민 입법 메커니즘',
+  sub: '혼디의 입법 모듈은 스스로 안건을 만들지 않습니다. 사법·행정 결정에 반복적으로 문제가 느껴질 때, 그 판단에 이의를 제기하는 시민의 경로를 넓히는 것이 유일한 역할입니다.',
+  actions: [
+    { label: '입법·사법·행정 통합 체계', href: '../integrated-system.html', style: 'primary' },
+    { label: '법치 국가: K-Law', href: '../reports/hondi-rule-of-law.html', style: 'outline' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="simulation">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기</span>
+    <h2 class="section-title">입법 청원 <strong>10단계 시뮬레이션</strong></h2>
+    <div class="section-body">
+      <p>직접 겪은 문제를 한 줄로 적어보세요. 실제 서비스가 아닌 진행 방식을 보여주는 시뮬레이션이며, 국회·DAWN에 실제로 전달되지 않습니다.</p>
+    </div>
+
+    <div class="sim-box">
+      <div class="sim-stepper" id="simStepper"></div>
+      <div class="sim-panel" id="simPanel"></div>
+      <div class="sim-actions">
+        <button class="sim-btn outline" id="simPrev">이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="sim-btn ghost" id="simReset">처음부터</button>
+          <button class="sim-btn primary" id="simNext">다음 단계</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var STEP_LABELS = [
+    '청원 작성', '타당성 검토', '취지 초안', '수정 보완', '게시판 등록',
+    '동의·투표 공고', '배심 선별', '투표', '국회 전달', '심의 개시'
+  ];
+
+  var state = { text: '', draft: '', score: 0, endorse: 0, jurors: [], yes: 0, no: 0 };
+  var cur = 0;
+
+  var stepperEl = document.getElementById('simStepper');
+  var panelEl = document.getElementById('simPanel');
+  var prevBtn = document.getElementById('simPrev');
+  var nextBtn = document.getElementById('simNext');
+  var resetBtn = document.getElementById('simReset');
+
+  function renderStepper() {
+    stepperEl.innerHTML = STEP_LABELS.map(function (label, i) {
+      var cls = i === cur ? 'active' : (i < cur ? 'done' : '');
+      return '<div class="sim-dot ' + cls + '"><span class="num">' + (i + 1) + '</span>' + label + '</div>';
+    }).join('');
+  }
+
+  function randScore() { return 86 + Math.floor(Math.random() * 11); }
+  function randId() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var s = '시민-';
+    for (var i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+
+  function panels() {
+    var text = state.text || '(예: 같은 이유로 건축 인허가가 세 번째 반려됐습니다)';
+    return [
+      // 0. 청원 작성
+      function () {
+        return '<h4>1. 청원을 간략히 기술하세요</h4>' +
+          '<p>지금 겪고 있는 문제를 한두 문장으로 적어주세요. "이 사건 하나"가 아니라 "제도 자체"에 대한 이야기인지가 중요합니다.</p>' +
+          '<textarea class="sim-field" id="simInput" placeholder="예: 같은 이유로 건축 인허가가 세 번째 반려됐습니다">' + state.text + '</textarea>';
+      },
+      // 1. 타당성 검토
+      function () {
+        state.score = state.score || randScore();
+        return '<h4>2. 입법 AI가 타당성을 검토합니다</h4>' +
+          '<p>정치적 중립성·극단 안건 자동 거부 기준을 먼저 통과하는지, 개별 사건 불복이 아니라 제도 개선 요구가 맞는지 확인합니다.</p>' +
+          '<div class="sim-card">"' + text + '"<br><br>→ 유사 반복 사례 감지, 제도 개선 요구로 판단됩니다.</div>' +
+          '<div class="sim-score">타당성 점수 <div class="bar"><div class="bar-fill" style="width:' + state.score + '%"></div></div>' + state.score + '/100</div>' +
+          '<p style="margin-top:10px;color:var(--brand-dk);font-weight:600">기준(80점) 통과 — 다음 단계로 진행합니다.</p>';
+      },
+      // 2. 취지 초안
+      function () {
+        state.draft = state.draft || ('"' + text + '"는 개별 사건이 아니라 동일한 사유로 반복되는 제도상의 문제로 판단됩니다. 이에 관련 규정의 재검토 및 개선을 요청하는 청원 초안을 다음과 같이 제안합니다: 관련 절차의 반려 기준을 명확히 공개하고, 반복 반려 시 상급 기관 재심 경로를 마련해 주시기 바랍니다.');
+        return '<h4>3. 입법 AI가 청원 취지를 작성합니다</h4>' +
+          '<p>사실관계와 근거를 바탕으로 초안을 작성합니다 — 받아쓰기가 아니라 표현과 근거를 함께 검토합니다.</p>' +
+          '<div class="sim-card">' + state.draft + '</div>';
+      },
+      // 3. 수정 보완
+      function () {
+        return '<h4>4. 취지를 직접 수정·보완하세요</h4>' +
+          '<p>AI 초안을 그대로 두거나, 자유롭게 고쳐보세요. 확정 여부는 항상 사용자가 결정합니다.</p>' +
+          '<textarea class="sim-field" id="simDraftEdit" style="min-height:120px">' + state.draft + '</textarea>';
+      },
+      // 4. 게시판 등록
+      function () {
+        var pid = 'DAWN-2026-' + (10000 + Math.floor(Math.random() * 89999));
+        return '<h4>5. 최종 취지 확정 · 게시판 등록</h4>' +
+          '<span class="sim-badge">등록 완료 · ' + pid + '</span>' +
+          '<div class="sim-card">' + (document.getElementById('simDraftEdit') ? document.getElementById('simDraftEdit').value : state.draft) + '</div>' +
+          '<p style="margin-top:10px">다른 이용자들이 이 청원에 동의를 표시할 수 있는 상태가 되었습니다.</p>';
+      },
+      // 5. 동의·투표 공고
+      function () {
+        return '<h4>6. 동의 수 집계 → 투표 개시 공고</h4>' +
+          '<p>동의 수가 리밋(1,000표 상당 가중치)을 넘으면 정식 안건으로 회부되어 투표가 공고됩니다.</p>' +
+          '<div class="sim-counter" id="simEndorseCounter">0 <span>/ 1,000</span></div>' +
+          '<p style="margin-top:10px;color:var(--brand-dk);font-weight:600" id="simEndorseMsg"></p>';
+      },
+      // 6. 배심 선별
+      function () {
+        if (state.jurors.length === 0) {
+          for (var i = 0; i < 9; i++) state.jurors.push(randId());
+        }
+        return '<h4>7. 투표에 참여할 시민을 무작위로 선별합니다</h4>' +
+          '<p>GDC 보유량과 무관하게, 자격을 갖춘 이용자 중 무작위로 배심단을 구성합니다(실명은 표시되지 않습니다).</p>' +
+          '<div class="sim-avatars">' + state.jurors.map(function (j) { return '<div class="sim-avatar" title="' + j + '">' + j.slice(-2) + '</div>'; }).join('') + '</div>';
+      },
+      // 7. 투표
+      function () {
+        return '<h4>8. 투표</h4>' +
+          '<p>선별된 시민들이 비밀 투표로 찬반을 표시합니다. 개표 전까지 개인별 투표 내용은 공개되지 않습니다.</p>' +
+          '<div class="sim-vote-bar" id="simVoteBar"><div class="yes" style="width:0%">찬성</div><div class="no" style="width:0%">반대</div></div>' +
+          '<p style="margin-top:10px" id="simVoteMsg">투표 집계 중입니다...</p>';
+      },
+      // 8. 국회 전달
+      function () {
+        return '<h4>9. 투표 결과 취합 → 국회 정식 전달</h4>' +
+          '<div class="sim-card">투표 결과 — 찬성 ' + state.yes + '% · 반대 ' + state.no + '%<br>가결 기준 충족, 시민 입법 청원으로 확정되었습니다.</div>' +
+          '<p style="margin-top:10px;color:var(--brand-dk);font-weight:600">국회사무처에 정식 청원으로 전달되었습니다.</p>';
+      },
+      // 9. 심의 개시
+      function () {
+        return '<h4>10. 국회 심의 개시</h4>' +
+          '<span class="sim-badge">국회 소관 · 심의 진행 중</span>' +
+          '<p>이후 상임위원회 회부·심사·법안 발의 여부는 전적으로 국회 소관이며, 혼디·DAWN은 더 이상 관여하지 않습니다.</p>' +
+          '<p style="margin-top:16px;color:var(--text4);font-size:12.5px">시뮬레이션이 끝났습니다. "처음부터"를 눌러 다시 체험해볼 수 있습니다.</p>';
+      }
+    ];
+  }
+
+  function animateCounter() {
+    var el = document.getElementById('simEndorseCounter');
+    var msg = document.getElementById('simEndorseMsg');
+    if (!el) return;
+    var n = 0;
+    var target = 1000;
+    var timer = setInterval(function () {
+      n += Math.ceil(target / 20);
+      if (n >= target) { n = target; clearInterval(timer); msg.textContent = '리밋 도달 — 투표가 공고되었습니다.'; }
+      el.innerHTML = n.toLocaleString() + ' <span>/ 1,000</span>';
+    }, 60);
+  }
+
+  function animateVote() {
+    var bar = document.getElementById('simVoteBar');
+    var msg = document.getElementById('simVoteMsg');
+    if (!bar) return;
+    state.yes = 60 + Math.floor(Math.random() * 25);
+    state.no = 100 - state.yes;
+    setTimeout(function () {
+      bar.querySelector('.yes').style.width = state.yes + '%';
+      bar.querySelector('.yes').textContent = '찬성 ' + state.yes + '%';
+      bar.querySelector('.no').style.width = state.no + '%';
+      bar.querySelector('.no').textContent = '반대 ' + state.no + '%';
+      msg.textContent = '투표가 마감되었습니다.';
+    }, 150);
+  }
+
+  function render() {
+    renderStepper();
+    panelEl.innerHTML = panels()[cur]();
+    prevBtn.disabled = cur === 0;
+    nextBtn.textContent = cur === STEP_LABELS.length - 1 ? '완료' : '다음 단계';
+    if (cur === 5) animateCounter();
+    if (cur === 7) animateVote();
+  }
+
+  function saveCurrentInput() {
+    var input = document.getElementById('simInput');
+    if (input) state.text = input.value.trim();
+    var draftEdit = document.getElementById('simDraftEdit');
+    if (draftEdit) state.draft = draftEdit.value;
+  }
+
+  nextBtn.addEventListener('click', function () {
+    saveCurrentInput();
+    if (cur === STEP_LABELS.length - 1) return;
+    cur++;
+    render();
+  });
+  prevBtn.addEventListener('click', function () {
+    saveCurrentInput();
+    if (cur === 0) return;
+    cur--;
+    render();
+  });
+  resetBtn.addEventListener('click', function () {
+    state = { text: '', draft: '', score: 0, endorse: 0, jurors: [], yes: 0, no: 0 };
+    cur = 0;
+    render();
+  });
+
+  render();
+})();
+</script>
+
+<section class="section" id="principle">
+  <div class="section-inner">
+    <span class="section-tag">입법의 원칙</span>
+    <h2 class="section-title">사법의 판단에 <strong>이의를 제기하는 방식</strong></h2>
+    <div class="flow-diagram">
+      <span class="fd-box">사법 — 법원의 결정</span>
+      <span class="fd-arrow">＋</span>
+      <span class="fd-box">행정 — 기관의 결정</span>
+      <span class="fd-arrow">→</span>
+      <span class="fd-box fd-brand">입법 — 시민 발의</span>
+      <span class="fd-note">개별 사건이 아니라 그 결정을 반복해서 낳는 제도 자체에 대한 이의일 때</span>
+    </div>
+    <div class="section-body">
+      <p>혼디에서 입법은 독립된 정책 제안 기능이 아니라, <b>사법(K-Law)·행정(K-services) 모듈의 판단에 시민이 이의를 제기하는 통로</b>로 설계되어 있습니다. 개별 사건 하나의 결과에 대한 불복은 원래도 정식 절차(항고·행정심판 등)로 다툴 수 있습니다. 입법 모듈이 개입하는 지점은 "이 사건 하나"가 아니라 <b>"이런 결과를 반복해서 만드는 제도 자체"</b>에 문제가 있다고 느껴질 때입니다.</p>
+      <p>이 통로를 혼디는 <b>DAWN</b>(Democracy is All We Need)이라 부릅니다. DAWN은 두 갈래로 나뉩니다 — ① 고팡(Hondi) 생태계 자체의 내부 규칙을 시민이 직접 발의·투표로 개정하는 <b>내부규칙 트랙</b>, ② 실제 국회 국민동의청원으로 이어지는 <b>청원준비 트랙</b>입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="petition-track">
+  <div class="section-inner">
+    <span class="section-tag">청원준비 트랙</span>
+    <h2 class="section-title">DAWN을 통해 <strong>국민동의청원</strong>으로</h2>
+    <div class="section-body">
+      <p>DAWN은 실제 국회 청원을 대신 접수하거나 집계하지 않습니다. 사법·행정 결정에 반복적으로 문제를 느끼는 시민을 <b>국민동의청원(petitions.assembly.go.kr)</b>으로 자연스럽게 연결하는 확산 허브 역할만 합니다. 국회청원심사규칙이 정한 실제 요건(등록 후 30일 내 100명 찬성 → 공개 → 공개일로부터 30일 내 5만 명 동의)은 그대로 두고, DAWN은 그 앞뒤로 "초안 작성"과 "확산·진행률 표시"만 돕습니다.</p>
+    </div>
+
+    <div class="dialogue-box">
+      <p class="spk"><strong>이용자</strong> "혼디야, 이번에도 또 같은 이유로 인허가가 반려됐어. 벌써 세 번째야."</p>
+      <p class="spk"><strong>혼디</strong> 최근 유사한 반려 사례가 여러 건 감지됩니다. 이 문제, 이번 건만의 불복(행정심판)이 아니라 제도 자체를 바꾸는 게 맞을까요?</p>
+      <p class="spk"><strong>이용자</strong> "응, 제도가 문제인 것 같아."</p>
+      <p class="spk"><strong>혼디</strong> 그럼 청원 초안을 함께 작성하겠습니다. 다만 제가 부르는 대로 받아쓰지는 않습니다 — 사실관계와 근거를 먼저 검토하고, 과장되거나 부정확한 부분이 있으면 말씀드리겠습니다.</p>
+    </div>
+
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">감지 · 제안</div>
+        <div class="fl-desc">사법·행정 사례에서 유사한 불만이 반복 감지되면, 혼디가 먼저 "법을 바꾸면 해결될까요?"라고 묻습니다. 개별 사건 불복과 제도 개선 요구를 혼동하지 않도록 반드시 먼저 확인합니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">초안을 함께 작성</div>
+        <div class="fl-desc">받아쓰기가 아닙니다. 혼디는 정치적 중립성·극단 안건 거부 기준을 먼저 통과하는지 검토한 뒤, 사실관계·근거·표현을 함께 다듬습니다. 확정 여부는 최종적으로 제안자가 결정합니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">실제 등록은 본인이 직접</div>
+        <div class="fl-desc">확정된 초안으로 국민동의청원 홈페이지에 <strong>제안자 본인이 직접</strong> 등록합니다(실명 인증 필요 — 혼디가 대신 등록하지 않습니다).</div>
+      </li>
+      <li>
+        <div class="fl-title">1차 확산 — 30일 내 100명 찬성</div>
+        <div class="fl-desc">등록된 청원 링크를 관심 있을 이용자(옵트인)에게 노출합니다. 진행률(<code>37/100명</code> 등)은 국회 사이트 원본을 그대로 읽어와 보여줍니다 — 혼디가 별도로 집계하는 숫자는 없습니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">2차 확산 — 공개일로부터 30일 내 5만 명 동의</div>
+        <div class="fl-desc">100명 찬성으로 공개되면, 동일한 방식으로 더 넓게 확산합니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">이후는 국회 소관</div>
+        <div class="fl-desc">상임위원회 회부·심사·법안 발의 여부는 전적으로 국회사무처 소관이며, 혼디는 관여하지 않습니다.</div>
+      </li>
+    </ol>
+
+    <a class="doc-link" href="../integrated-system.html#petition-bridge" target="_blank" rel="noopener">입법·사법·행정 통합 체계에서 자세히 보기 →</a>
+  </div>
+</section>
+
+<section class="section" id="internal-track">
+  <div class="section-inner">
+    <span class="section-tag">내부규칙 트랙</span>
+    <h2 class="section-title">고팡 자체 <strong>직접민주주의</strong></h2>
+    <div class="section-body">
+      <p>실제 국가 청원과 별개로, DAWN은 혼디·고팡(Hondi/Gopang) 생태계 자체의 운영 규칙을 시민(이용자)이 직접 발의하고 투표로 개정하는 내부 거버넌스 절차이기도 합니다. 원칙(Principle, 헌법 수준 — 전체 2/3 이상 필요)과 규칙(Rule, 법률 수준 — 일반 의결)을 구분하며, 우선순위는 <b>현실 헌법·법률 &gt; 고팡 원칙 &gt; 고팡 규칙</b> 순입니다.</p>
+    </div>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>요소</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>투표권 산정</td><td>GDC 보유·기여 코드·준법 이력·학습 이력 4요소를 공개 산정(총점만 제시하지 않음)</td></tr>
+          <tr><td>투표 방식</td><td>비밀 투표 — 개표 전 개인별 투표 내용 비공개</td></tr>
+          <tr><td>이의신청</td><td>집계 알고리즘 오픈소스 공개, 재검표(투표자 1% 이상 서명), 집행부 거부권 확인</td></tr>
+          <tr><td>정치적 중립성</td><td>찬반 논거 동수·동량 제시, AI 자신의 의견 표명 금지, 투표 결과 예측 금지</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout-info">
+      <strong>DAWN은 국가기관이 아닙니다.</strong> 자기소개를 요청받으면 항상 "고팡 생태계의 자체 거버넌스 절차를 지원하는 AI이며, 대한민국 정부기관을 대표하지 않는다"고 답합니다. 청원준비 트랙에서도 "국회 공식 사이트의 공개 정보를 그대로 보여드릴 뿐"이라는 점을 재확인합니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="authority">
+  <div class="section-inner">
+    <span class="section-tag">사람의 권한</span>
+    <h2 class="section-title">혼디가 <strong>할 수 없는 일</strong></h2>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>혼디(DAWN)가 하는 일</th><th class="cmp-hondi">사람이 하는 일</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">청원 초안</td><td>사실관계·근거·표현을 함께 검토·작성</td><td class="cmp-hondi">최종 문구 확정, 실제 등록(실명 인증)</td></tr>
+          <tr><td class="cmp-axis">서명·동의</td><td>진행률을 국회 사이트에서 그대로 인용·표시</td><td class="cmp-hondi">로그인·본인 인증·서명 클릭은 항상 본인이 직접</td></tr>
+          <tr><td class="cmp-axis">접수·심사·회부</td><td>관여하지 않음</td><td class="cmp-hondi">국회사무처 전속</td></tr>
+          <tr><td class="cmp-axis">내부규칙 최종 반영</td><td>발의·투표 절차 지원</td><td class="cmp-hondi">집행부 거부권 등 인간 절차를 거쳐 확정</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-body" style="margin-top:16px">서명 대행 금지, 진행률 조회는 읽기 전용, 확산 알림은 옵트인 — 이 세 가지는 예외 없이 지켜지는 안전장치입니다.</p>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — SP-12_kdemocracy(K-Democracy 거버넌스 SP), 입법·사법·행정 통합 체계(§PETITION-BRIDGE), dawn_proposals 스키마</li>
+</ul>
+
+</body>
+</html>
