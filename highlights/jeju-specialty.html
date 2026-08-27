@@ -3,8 +3,235 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>세계 1등 한국, 한국 1등 제주 — 혼디</title>
+<title>세계 1등 한국, 한국 1등 제주 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text); resize: vertical; min-height: 80px;
+}
+.sim-field:focus { outline: 2px solid var(--brand-lt); border-color: var(--brand); }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-counter { font-size: 24px; font-weight: 700; color: var(--brand-dk); }
+.sim-counter span { font-size: 13px; font-weight: 500; color: var(--text4); }
+.sim-avatars { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sim-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--brand-bg); color: var(--brand-dk);
+  font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sim-vote-bar { display: flex; height: 28px; border-radius: 99px; overflow: hidden; margin-top: 10px; background: var(--border); }
+.sim-vote-bar .yes { background: var(--brand); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-vote-bar .no { background: var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '하이라이트 · 제주 특산품',
+  l1: '세계 1등 한국, 한국 1등 제주',
+  l2: '혼디는 제주 특산품입니다',
+  sub: '혼디라는 이름부터가 제주 방언에서 왔습니다. 제주도청·시청·읍면동을 대상으로 한 첫 AI 공공기관 서비스도 이곳에서 시작합니다.',
+  actions: [
+    { label: '혼디 개발자 그룹', href: '../desktop.html#dev-team', style: 'primary' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="claim">
+  <div class="section-inner">
+    <span class="section-tag">이 문구가 던지는 주장</span>
+    <h2 class="section-title">이름부터 <strong>제주</strong>, 시작도 <strong>제주</strong></h2>
+    <div class="section-body">
+      <p>"혼디"는 제주 토속어로 "함께"(또는 "다함께")라는 뜻입니다. 이름 자체가 브랜드 정체성이자 개발 철학입니다 — 사람과 기관, 시민과 정부가 "혼디" 모여 업무를 처리한다는 뜻을 담고 있습니다. 혼디의 오픈소스 정신(모든 코드를 공개해 누구나 개발에 참여)도 이 "함께"라는 이름의 뜻과 그대로 이어집니다.</p>
+      <p>혼디는 실제로 제주에서 시작한 프로젝트입니다. 개발 책임자 도영민은 한림읍에 거주하며(마을에서 "판포 도씨"라 불립니다), 혼디는 한국인 개발자 50여 명과 서귀포 시청의 지원을 받아 완성됐습니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="pilot">
+  <div class="section-inner">
+    <span class="section-tag">시범 서비스</span>
+    <h2 class="section-title">9월 1일, <strong>제주도청부터</strong></h2>
+    <div class="section-body">
+      <p>시범적으로 제주도청·시청·읍면동 행정복지센터를 혼디로 구현한 "혼디 AI 공공기관"이 <b>9월 1일부터</b> 서비스를 시작합니다. 전국 5천만 명이 아니라 제주라는 한정된 지역에서 먼저 검증한 뒤 확장하는 방식으로, 제주의 인구 규모와 행정 구조가 초기 실증에 적합하다는 판단이 반영돼 있습니다.</p>
+      <p>사업자 티어 시범 사업도 제주 소상공인 3만 곳을 대상으로 우선 진행됩니다 — 앞서 산업 분야에서 다룬 요식업 창업 시나리오도 이 제주 소상공인 시범 사업을 배경으로 만들어졌습니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="identity">
+  <div class="section-inner">
+    <span class="section-tag">브랜드 정체성</span>
+    <h2 class="section-title">지역에서 <strong>출발해 전국으로</strong></h2>
+    <div class="section-body">
+      <p>"세계 1등 한국, 한국 1등 제주"라는 표현은 두 층위의 자부심을 겹쳐 놓은 것입니다 — 한국의 IT·행정 인프라가 세계적 수준이라는 전제 위에, 그 한국에서도 혼디라는 특산품이 제주에서 나왔다는 지역적 정체성입니다. 특산품이라는 표현이 시사하듯, 혼디는 처음부터 전국 단위로 기획된 것이 아니라 제주라는 구체적인 지역 공동체의 필요에서 출발했습니다.</p>
+    </div>
+    <div class="callout-info">
+      <strong>제주어 어원에 대한 추가 서술은 저장소 내에서 확인되지 않았습니다.</strong> "혼디"가 제주 방언으로 "함께"를 뜻한다는 서술은 hondi_flyer.html·docs/hondi_flyer_A4_source.html에서 확인되나, 그 이상의 어원·역사적 배경 자료는 없어 이 문서에서는 확인된 범위까지만 다뤘습니다.
+    </div>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — desktop.html §usage-guide(9월 1일 서비스), §dev-team(개발자 그룹), hondi_flyer.html("혼디"의 뜻)</li>
+</ul>
+
 </body>
 </html>

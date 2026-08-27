@@ -3,8 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>카톡을 혼디로, 한국 GDP 10% — 혼디</title>
+<title>한국 GDP를 10% 높일 수 있습니다 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text); resize: vertical; min-height: 80px;
+}
+.sim-field:focus { outline: 2px solid var(--brand-lt); border-color: var(--brand); }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-counter { font-size: 24px; font-weight: 700; color: var(--brand-dk); }
+.sim-counter span { font-size: 13px; font-weight: 500; color: var(--text4); }
+.sim-avatars { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sim-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--brand-bg); color: var(--brand-dk);
+  font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sim-vote-bar { display: flex; height: 28px; border-radius: 99px; overflow: hidden; margin-top: 10px; background: var(--border); }
+.sim-vote-bar .yes { background: var(--brand); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-vote-bar .no { background: var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '하이라이트 · GDP 성장 효과',
+  l1: '카톡을 혼디로 바꾸면,',
+  l2: '한국 GDP를 10% 높일 수 있습니다',
+  sub: '체제 비용과 처리 시간을 최대 99% 절감하겠다는 목표를, 실제 규제비용·카카오톡 이용률·CGE 모델링 통계에 대입해 계산한 추정치입니다. 비용절감뿐 아니라 마찰 감소가 만드는 후생효과까지 구분해 다룹니다. 자체 이론적 추정이며 실측 지표가 아닙니다.',
+  actions: [
+    { label: '경제효과 근거 원문(hondi_flyer)', href: '../hondi_flyer.html', style: 'primary' },
+    { label: '비용 비교 표 보기', href: '../desktop.html#cost-comparison', style: 'outline' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="claim">
+  <div class="section-inner">
+    <span class="section-tag">이 문구가 던지는 주장</span>
+    <h2 class="section-title">절차 자동화가 <strong>GDP로 이어지는 경로</strong></h2>
+    <div class="section-body">
+      <p>desktop.html의 히어로는 혼디의 목표를 "체제 비용과 처리 시간 최대 99% 절감"으로 제시합니다. 개인파산·건축 인허가 비교표(§cost-comparison)에서 보듯, 개인파산·면책은 기존 6~24개월에서 서류 발급·제출 1~10초로, 건축 인허가는 평균 20일에서 1~3일로 단축될 수 있다는 것이 그 근거입니다. 이 절감된 시간·비용을 국가 경제 전체로 환산하면 GDP 증가로 이어질 수 있다는 것이 이 문구의 논리입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="basis">
+  <div class="section-inner">
+    <span class="section-tag">근거·수치</span>
+    <h2 class="section-title">두 갈래의 <strong>독립적인 추정</strong></h2>
+    <div class="section-body">
+      <p>국내 규제비용 실증연구(2013년 기준)는 시장규제·행정조사·납세순응 비용을 GDP의 약 11%(오늘 기준 약 300조 원)로 추산합니다. 혼디의 절차 자동화 영역(서류·인증·절차)이 이 풀과 정확히 겹친다고 보고, 실현률별로 계산하면:</p>
+    </div>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>카카오톡 대비 도달률</th><th>연간 효과</th><th>GDP 대비</th></tr></thead>
+        <tbody>
+          <tr><td>30%(초기 확산)</td><td>약 44조 원</td><td>약 1.7%</td></tr>
+          <tr><td>60%(확산기)</td><td>약 88조 원</td><td>약 3.3%</td></tr>
+          <tr><td>100%(카톡 수준 완전 대체)</td><td>약 147조 원</td><td>약 5.5%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="section-body" style="margin-top:14px">
+      <p>이 수치는 카카오톡의 국내 월간활성이용자(약 4,900만 명, 전 국민의 약 95%) 수준으로 혼디가 완전히 확산됐을 때를 가정한 것으로, 절차자동화 중간 추정치(147조 원)를 카톡 대비 도달률로 그대로 스케일링한 것입니다. 이 표와는 별개로, 절차자동화 실현률(30%→44조·60%→88조·100%→147조)을 100% 기준으로 역산하면 실현률 1%p당 약 2.94조 원(≈300조 원의 100분의 1)이라는 일관된 비율이 나옵니다 — 세 지점이 거의 정확히 선형을 이룹니다.</p>
+      <p>여기에 별도로, 한국은행(2025.2, 'AI와 한국경제')은 AI 도입이 성공할 경우 생산성 1.1~3.2%, GDP 4.2~12.6% 상승 잠재력이 있다고 추산했습니다. 이는 혼디에 국한된 수치가 아니라 AI 기술 전반의 국가 경제 영향에 대한 별도의 독립적인 추정이며, 구간 중앙값은 약 8.4%입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="near-future">
+  <div class="section-inner">
+    <span class="section-tag">가까운 미래 시나리오</span>
+    <h2 class="section-title">전 기관 API가 <strong>열렸을 때의 계산</strong></h2>
+    <div class="section-body">
+      <p>desktop.html §half-performance는 기관 API 미비를 혼디 성능 제약의 절반으로 꼽으며, 완전한 AI 정부의 문이 2030년경 열릴 것으로 전망합니다. 그 시점을 가정한 근미래 시나리오를 그려보면 — 정부24·data.go.kr(서류 발급)·gdoc.go.kr(전자문서 제출)·dpaper.kr(진본 확인)에 더해, 국세청 홈택스 API(세무 신고·소득증명)와 특허청 KIPRIS API(지식재산권 출원·조회)까지 열려 입법·사법·행정·교통물류·의료·교육·금융·산업 전반의 반복적 정형 업무 대부분을 혼디가 즉시 대행하는 상태입니다. 다만 이 확장된 기관 목록은 새로운 비용 풀을 추가하는 것이 아니라, 애초 규제비용 실증연구가 측정한 "시장규제(의료·교육·금융·산업 인허가 포함)·행정조사·납세순응(국세청·특허청 포함)" 풀 안에 이미 속한 세부 항목들입니다.</p>
+      <p>이 전제 위에서 절차자동화 <b>실현률을 70~90%</b>로 잡습니다. 100%(모든 예외 없이 완전 자동)는 비현실적이므로 상한에서 제외하고, 초기 확산기 수치(30~60%)보다는 훨씬 높지만 여전히 사람의 예외처리 여지를 10~30% 남겨두는 구간입니다.</p>
+    </div>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>절차자동화 실현률</th><th>연간 효과</th><th>GDP 대비</th></tr></thead>
+        <tbody>
+          <tr><td>70%(보수적 근미래)</td><td>약 206조 원</td><td>약 7.7%</td></tr>
+          <tr><td>80%(중심 시나리오)</td><td>약 235조 원</td><td>약 8.8%</td></tr>
+          <tr><td>90%(낙관적 근미래)</td><td>약 264조 원</td><td>약 9.9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout-info">
+      <strong>교차검증:</strong> 이 8~10%대는 한국은행이 별도 방법론(거시 생산성 추정)으로 산출한 GDP 4.2~12.6%(중앙값 8.4%) 구간과 거의 겹칩니다. 서로 다른 두 방법론(상향식 절차비용 집계 / 하향식 거시 생산성 추정)이 비슷한 구간에서 수렴한다는 점이, 단순 합산보다 훨씬 근거 있는 확인입니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="welfare">
+  <div class="section-inner">
+    <span class="section-tag">비용절감을 넘어서 — 후생효과</span>
+    <h2 class="section-title">비용이 <strong>사라지는 것과 거래가 새로 생기는 것</strong></h2>
+    <div class="section-body">
+      <p>지금까지의 계산은 모두 <b>정태적 비용절감</b>입니다 — 서류 준비·제출·대기에 들던 노동시간과 수수료가 사라지는 효과입니다. 그러나 건축 인허가가 20일에서 수 분으로 줄어들 때 일어나는 일은 이것만이 아닙니다. 코즈(Coase)의 거래비용 이론이 말하듯, 거래비용을 낮추면 기존 거래가 싸지는 데서 그치지 않고 <b>그 비용 때문에 애초에 성립하지 않던 거래 자체가 새로 생깁니다</b> — 인허가 대기가 짧아지면 자금조달 기간이 줄어 사업성이 없던 프로젝트가 사업성을 갖게 되고, 자본 회전율이 올라가 같은 자본으로 더 많은 투자가 가능해집니다. 입법·사법·행정·교통물류·교육·의료 등 사회 전 영역에 이 원리가 적용되면, 그 효과는 단순 비용절감의 합을 넘어설 수 있습니다.</p>
+    </div>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>채널</th><th>성격</th><th>정량화 상태</th></tr></thead>
+        <tbody>
+          <tr><td>① 정태적 비용절감</td><td>이미 일어나는 거래·절차가 더 싸고 빨라짐</td><td>가능 — 규제비용 실증연구 기반, 근미래 시나리오 약 7.8~10.2%</td></tr>
+          <tr><td>② 동태적(CGE) 효과</td><td>마찰 감소로 투자·산출·고용이 재조정됨</td><td>가능 — 별도 CGE 모델링 연구, 포괄적 규제개혁 시 10년 후 실질GDP +8.6%</td></tr>
+          <tr><td>③ 신규 거래 창출</td><td>마찰 때문에 원래 없었던 거래·투자·사업이 새로 생김</td><td><b>불가능</b> — 정의상 과거 데이터가 없어 어떤 방법론으로도 책임 있는 추산 불가</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="section-body" style="margin-top:14px">
+      <p>①(약 9.0%)과 ②(8.6%, 10년 누적)가 거의 같은 크기로 수렴한다는 점이 흥미롭습니다. "후생효과가 비용절감을 현저히 초과할 것"이라는 직관과 달리, 규제개혁의 동태적 효과는 실증연구에서 보통 정태적 효과의 1~2배 수준에 머뭅니다 — 마찰이 사라져도 건설 인력·자재·자금이 무한 공급되지는 않아, "풀리는 수요"에는 현실적 상한이 있기 때문입니다. CGE 모델은 바로 이 자원 제약을 반영해 투자·산출 재조정을 시뮬레이션하므로, 이미 상당 부분 ②의 성격(귀하가 말씀하신 "unlocked되는 경제활동")을 포착하고 있는 셈입니다.</p>
+      <p>다만 ③은 다릅니다. 이 저장소의 신뢰경제(Openhash) 분석은 정확히 이 구분을 이미 다루고 있습니다 — 사기 방지 효과(연 3.3~6.6조 원)는 "기존 거래를 지키는" 방어적 효과로 정량화했지만, "신뢰확보 비용이 너무 커서 아예 일어나지 않았던 거래(낯선 개인 간 P2P 거래, AI 에이전트 간 자율거래, 검품 없는 국경 간 즉시결제 등)가 새로 생기는 효과"는 <b>"어떤 방법론으로도 오늘 시점 책임있는 추산이 불가능"</b>하다고 명시적으로 선을 그었습니다. Wallis-North의 거래비용 이론(선진 디지털경제에서 거래부문이 GDP의 70% 이상)이 이론적 상한의 감각만 줄 뿐, 혼디가 그중 몇 %p를 새로 여는지는 어떤 데이터로도 뒷받침되지 않습니다.</p>
+      <p>행정·규제 영역의 ③(입법 DAWN이 만드는 신규 시민발의, K-Law가 만드는 신규 계약·분쟁해결 활동, 건축 인허가가 즉시 처리됨을 알기에 애초에 계획조차 안 하던 개발이 새로 생기는 것)도 원리는 같습니다 — 방향은 명백히 상방이지만, 정의상 일어난 적 없는 일의 규모이므로 이 문서는 책임 있게 숫자를 내지 않습니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="honesty">
+  <div class="section-inner">
+    <span class="section-tag">과장 없이 다시 보기</span>
+    <h2 class="section-title">"10%"는 <strong>어디까지 방어 가능한가</strong></h2>
+    <div class="section-body">
+      <p>카톡→혼디 "전환"(도달률) 효과만 놓고 보면 100% 완전 대체 시나리오에서도 약 5.5%가 상한선입니다. 그러나 이는 "혼디가 카톡만큼 널리 쓰인다"는 도달률 가정이지, "각 기관의 API가 얼마나 열려 있는가"라는 실현률 가정이 아닙니다. 이 문서에서 다시 계산한 근미래 시나리오(기관 API 70~90% 개방, 절차자동화 실현률 70~90%)로 보면, 신뢰경제 방어적 효과(Openhash, 연 3.3~6.6조 원, GDP 0.1~0.25%)까지 더해 <b>정태적 채널만으로 약 7.8%~10.2%, 중심값 약 9.0%</b>가 계산됩니다. 한국은행의 독립적인 거시 추정(중앙값 8.4%), CGE 모델링의 동태적 효과(8.6%, 10년 누적) 모두 이 구간에 수렴합니다.</p>
+      <p>즉 "GDP 10%"라는 문구는 정태적 비용절감과 동태적 재조정 효과(위 채널 ①·②)만으로도 상징적 수사가 아니라 <b>근미래 시나리오의 낙관적 상한에 근접하는, 계산으로 방어 가능한 수치</b>입니다. 그리고 위에서 다뤘듯 채널 ③(신규 거래·투자 창출)까지 고려하면 실제 효과는 이 범위를 넘어설 가능성이 있습니다 — 다만 그 초과분은 정의상 계산할 수 없으므로, 이 문서는 9% 안팎을 "계산으로 방어되는 하한에 가까운 중심값"으로, 10% 이상을 "방향은 맞지만 정량화 불가능한 상방"으로 구분해 제시합니다.</p>
+      <p>이 계산에 포함하지 않은 요인은 또 있습니다 — 입법(DAWN)의 시민 발의 비용 절감, 사법(K-Law)의 분쟁 해결 기간 단축 자체가 만드는 거래비용 절감 효과(채널 ③에 해당)는 국내에 신뢰할 만한 정량화 연구가 없어 제외했습니다. 반대로 하방 요인도 있습니다 — 기관마다 API 개방 속도가 다르고, 국내 AI 서버 구축(약 10억 원 규모 클러스터)이 마무리되지 않으면 절차자동화 실현률 자체가 70%에도 못 미칠 수 있습니다.</p>
+    </div>
+    <div class="callout-info">
+      <strong>모든 수치는 이론적·자체 추정치입니다.</strong> 실측 프로덕션 지표가 아니며, 서로 다른 방법론(규제비용 실증연구의 선형 외삽 + 한국은행 거시 추정 + CGE 모델링과의 교차검증)을 결합한 계산입니다. 채널 ③(신규 거래·투자 창출)은 정의상 정량화하지 않았습니다 — 방향은 상방이나 근거 있는 숫자를 제시할 방법이 없습니다.
+    </div>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — hondi_flyer.html(규제비용·CGE 모델링·카톡전환 GDP 추정치, 2025 GDP 2,663조원 기준, "오픈해시의 전례 없는 신뢰경제" 정량화 가능/불가능 구분), 한국은행(2025.2) 'AI와 한국경제', reports/hondi-gdc-currency-scenario.html(신뢰경제 효과), desktop.html §cost-comparison·§half-performance·§join-completion(국내 AI 서버 구축), domains/industry.html(국세청·특허청 API), Wallis-North(1986) 거래비용 이론</li>
+</ul>
+
 </body>
 </html>
