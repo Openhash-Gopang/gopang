@@ -1011,6 +1011,49 @@
     }
 
     /**
+     * 2026-08-28 신설 — hydrateFromServer()가 로그인/가입 시점에만
+     * 호출되던 문제(BUG: GDC 잔액 UI 미반영)의 근본 수정.
+     *
+     * 지금까지는 로컬 IndexedDB(bs-cash)를 서버 값으로 교정하는
+     * hydrateFromServer()가 로그인 복구·가입 직후 딱 두 곳에서만
+     * 불렸다 — AI 채팅으로 GDC가 차감되거나(_settleAiUsage), 계좌
+     * 입금으로 GDC가 충전돼도(_mintAndRecordCharge) 그 사실이 로컬에
+     * 전혀 반영되지 않고, 헤더(#gdc-balance)·설정 화면(#gdc-balance
+     * -display) DOM 엘리먼트는 애초에 값을 쓰는 코드가 없어 항상
+     * "-- GDC"/"— GDC" 고정 표시였다(재로그인해야만 우연히 정상화).
+     *
+     * 이 메서드는 재대사(hydrateFromServer) + 두 DOM 엘리먼트 갱신을
+     * 한 번에 묶어, 아래 세 시점에서 공통으로 호출한다:
+     *   1. AI 채팅 응답 완료 후(call-ai.js) — 차감 반영
+     *   2. 설정 패널을 열 때(settings.js openSettings) — 조회 시점 정확성
+     *   3. GDC 지갑 시트를 열 때(settings.js openGopangWallet) — 조회
+     *      시점 정확성(충전 확인 포함)
+     *
+     * 실패해도(guid 없음, 네트워크 오류 등) 조용히 무시한다 — 잔액
+     * 표시가 한 박자 늦는 것뿐, 다른 기능을 막으면 안 되기 때문이다.
+     *
+     * @returns {{ drift: boolean, balance: number }|null}
+     */
+    async refreshBalanceUI() {
+      if (!this.guid) return null;
+      try {
+        const result = await this.hydrateFromServer();
+        const balance = result.serverBalance ?? await this.getBalance();
+        for (const id of ['gdc-balance', 'gdc-balance-display']) {
+          const el = (typeof document !== 'undefined') ? document.getElementById(id) : null;
+          if (!el) continue;
+          // 기존 표시 문법(헤더: "1,234 GDC", 설정 카드: "1,234 GDC")을
+          // 그대로 유지 — 두 곳 다 같은 포맷이라 분기 불필요.
+          el.textContent = `${balance.toLocaleString('ko-KR')} GDC`;
+        }
+        return { drift: result.drift, balance };
+      } catch (e) {
+        console.warn('[Wallet] refreshBalanceUI 실패(무시):', e.message);
+        return null;
+      }
+    }
+
+    /**
      * Hash Chain 전체 조회
      * @returns {Array} chain 이력 배열 (height 오름차순)
      */

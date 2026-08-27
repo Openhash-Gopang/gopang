@@ -102,6 +102,14 @@ export function openSettings() {
   // 4. GDC Wallet 섹션: GDC 사용자만 표시
   const gdcSec = document.getElementById('gdc-wallet-section');
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
+  // 2026-08-28 신설 — 설정 패널을 열 때마다 서버 실잔액으로 재대사
+  // (hydrateFromServer가 로그인 시점에만 불려 이후 차감/충전이 화면에
+  // 전혀 반영되지 않던 문제의 부분 수정 — 자세한 배경은
+  // gopang-wallet.js의 refreshBalanceUI() 주석 참조). fire-and-forget:
+  // 패널이 이미 열린 뒤 값이 늦게 갱신돼도 무방하다.
+  if (isGDC && window.gopangWallet?.refreshBalanceUI) {
+    window.gopangWallet.refreshBalanceUI().catch(() => {});
+  }
 
   // 5. AI 설정 카드: 등록 사용자만 표시
   const aiCard      = document.getElementById('_ai-card');
@@ -724,6 +732,12 @@ export async function openGopangWallet() {
     // 있었다). fs는 로컬 지갑(IndexedDB)이 유일한 원본이므로 거기서
     // 직접 읽는다.
     const wallet = window.gopangWallet;
+    // 2026-08-28 신설 — 지갑 시트는 "지금 잔액이 얼마인지" 확인하려고
+    // 여는 화면이라, 로컬 캐시를 보여주기 전에 서버로 재대사한다(실패
+    // 해도 무시하고 로컬 값으로 폴백 — 아래 getFinancialState()가
+    // 어차피 그 결과를 담은 IndexedDB를 다시 읽는다). AI 채팅 차감이나
+    // 계좌입금 충전 직후 이 시트를 열어도 항상 정확한 값을 보장한다.
+    if (wallet?.refreshBalanceUI) await wallet.refreshBalanceUI().catch(() => {});
     const fs = wallet?.getFinancialState ? await wallet.getFinancialState() : {};
     const balance = fs['bs-cash'] ?? 0;
 

@@ -210,6 +210,7 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
         관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통
         수 시간 정도 걸릴 수 있어요). 코드를 빠뜨리면 확인이 늦어질 수 있어요.
       </div>
+      <div id="cr-poll-status" style="display:none;margin-top:10px;font-size:13px;color:#0F9D58;font-weight:600"></div>
       <button class="modal-primary-btn" onclick="closeChargeModal()">확인했어요</button>
     </div>
   </div>
@@ -372,8 +373,54 @@ function openChargeModal() {
 }
 function closeChargeModal() {
   document.getElementById('charge-modal-backdrop').classList.remove('open');
+  _stopChargePolling();
   // 모달을 닫을 때(신청을 완료했든 취소했든) 내역을 새로고침해 최신 상태를 보여준다.
   loadChargeHistory();
+}
+
+// 2026-08-28 신설 — 지금까지는 신청 후 매칭코드만 보여주고 그대로
+// 끝이었다: 관리자가 입금 알림을 캡처해(방식 C, worker.js
+// handleChargeConfirmNotification) GDC를 실제로 발행해도, 이 모달을
+// 열어둔 사용자는 직접 모달을 닫았다 다시 열어야만(=loadChargeHistory
+// 재호출) 확정 여부를 알 수 있었다. 여기서는 신청 직후부터 짧은
+// 주기로 charge-status를 직접 폴링해, 확정되는 즉시 이 화면에서 바로
+// 보여주고 GDC 잔액 표시(balance-value)도 함께 새로고침한다.
+let _chargePollTimer = null;
+const CHARGE_POLL_INTERVAL_MS = 5000;
+const CHARGE_POLL_MAX_TRIES = 120; // 5초 × 120 = 최대 10분간만 자동 폴링(그 이상은 수동 새로고침 안내로 충분)
+
+function _stopChargePolling() {
+  if (_chargePollTimer) { clearInterval(_chargePollTimer); _chargePollTimer = null; }
+}
+
+function _startChargePolling(requestId) {
+  _stopChargePolling();
+  const guid = getGuid();
+  if (!guid || !requestId) return;
+  let tries = 0;
+  const statusEl = document.getElementById('cr-poll-status');
+  _chargePollTimer = setInterval(async () => {
+    tries++;
+    if (tries > CHARGE_POLL_MAX_TRIES) { _stopChargePolling(); return; }
+    try {
+      const res = await fetch(`${WORKER_URL}/biz/charge-status?guid=${encodeURIComponent(guid)}&request_id=${encodeURIComponent(requestId)}`);
+      const data = await res.json();
+      const status = data?.request?.status;
+      if (status === 'matched') {
+        _stopChargePolling();
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.textContent = '✅ 입금이 확인되어 GDC가 충전됐어요!';
+        }
+        loadUsage();        // 상단 GDC 잔액 표시 즉시 갱신
+        loadChargeHistory();
+      } else if (status === 'expired' || status === 'cancelled') {
+        _stopChargePolling();
+      }
+    } catch (e) {
+      // 네트워크 일시 오류는 다음 주기에 재시도 — 폴링 자체를 멈추지 않는다.
+    }
+  }, CHARGE_POLL_INTERVAL_MS);
 }
 
 async function submitChargeRequest() {
@@ -403,6 +450,8 @@ async function submitChargeRequest() {
     document.getElementById('cr-code').textContent = data.match_code;
     document.getElementById('charge-step-input').style.display = 'none';
     document.getElementById('charge-step-result').style.display = 'block';
+    document.getElementById('cr-poll-status').style.display = 'none';
+    _startChargePolling(data.request_id);
   } catch (e) {
     alert('충전 신청 중 오류가 발생했습니다: ' + e.message);
   } finally {
