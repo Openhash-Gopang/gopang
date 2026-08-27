@@ -3,8 +3,538 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>금융 — 혼디</title>
+<title>금융 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+.callout-warn { background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-warn strong { color: #92400e; }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+.status-pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.status-pill.live { background: #ecfdf5; color: #047857; }
+.status-pill.vision { background: #eff6ff; color: #185FA5; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 14px;
+  color: var(--text); background: var(--surface); border: 1.5px solid var(--border2);
+  border-radius: var(--radius);
+}
+.sim-field:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-lt); }
+.sim-card { background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px; font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px; }
+.sim-card b { color: var(--brand-dk); }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+.sim-badge.vision { background: #eff6ff; color: #185FA5; }
+
+.sim-bond-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.sim-mode-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.sim-mode-btn { padding: 8px 16px; border-radius: 99px; border: 1.5px solid var(--border2); background: #fff; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; font-family: 'Pretendard', sans-serif; }
+.sim-mode-btn.active { background: var(--brand-dk); color: #fff; border-color: var(--brand-dk); }
+.sim-risk-scale { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.sim-risk-row { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--text3); }
+.sim-risk-row .lbl { width: 74px; flex-shrink: 0; font-weight: 600; }
+.sim-risk-row .track { flex: 1; height: 8px; background: var(--bg-subtle); border-radius: 99px; overflow: hidden; }
+.sim-risk-row .fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ef4444, #f59e0b); }
+.sim-risk-row.current .lbl { color: var(--brand-dk); }
+.sim-risk-row .pct { width: 40px; text-align: right; flex-shrink: 0; }
+.sim-bond {
+  border: 2px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.sim-bond:hover { border-color: var(--brand-lt); }
+.sim-bond.selected { border-color: var(--brand); background: var(--brand-bg); }
+.sim-bond .info { flex: 1; }
+.sim-bond .issuer { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.sim-bond .purpose { font-size: 12px; color: var(--text4); margin-top: 2px; }
+.sim-bond .grade { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.sim-bond .grade.aa { background: #ecfdf5; color: #047857; }
+.sim-bond .grade.a { background: #eff6ff; color: #185FA5; }
+.sim-bond .grade.bbb { background: #fffbeb; color: #92400e; }
+.sim-bond .rate { font-size: 15px; font-weight: 700; color: var(--brand-dk); text-align: right; white-space: nowrap; }
+.sim-bond .rate span { display: block; font-size: 10.5px; font-weight: 500; color: var(--text4); }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } .sim-bond { flex-direction: column; align-items: flex-start; } .sim-bond .rate { text-align: left; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '금융 · GDC',
+  l1: '재무제표가 곧 화폐이고,',
+  l2: '그 재무제표가 곧 신용입니다',
+  sub: 'GDC(Gopang Digital Currency)는 은행·보험·증권·거래소·금융감독을 별개 기관이 아니라, 위변조 불가능한 하나의 재무제표로 묶으려는 혼디의 화폐입니다.',
+  actions: [
+    { label: '혼디넷과 GDC — 화폐 하나에 담은 은행·보험·증권', href: '../reports/hondi-gdc-currency-scenario.html', style: 'primary' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="global-race">
+  <div class="section-inner">
+    <span class="section-tag">국제 동향</span>
+    <h2 class="section-title">세계는 이미 <strong>디지털 화폐 경쟁 중</strong></h2>
+    <div class="section-body">
+      <p>중국은 2026년 1월 1일부터 디지털 위안화(e-CNY)를 단순 현금형에서 <b>이자 지급이 가능한 예금형 화폐</b>로 전환했습니다. 인증된 지갑 잔고에 상업은행이 요구불 예금 금리로 이자를 지급하며, 사용자 보유분은 상업은행의 대차대조표상 부채로 계상되어 예금자 보호 대상이 됩니다.</p>
+      <p>이는 "중앙은행 디지털화폐는 이자를 지급하지 않아야 한다"는 유럽중앙은행·연준·국제결제은행의 오랜 합의를 깬 <b>세계 최초 사례</b>입니다. 위챗페이·알리페이에 내준 결제 주도권을 되찾고, 스테이블코인 확산에 대응하려는 전략으로 풀이됩니다. 반면 유럽의 디지털 유로는 아직 준비 단계로, 2030년 이전 발행이 어려울 것이라는 전망이 나옵니다 — 국가마다 준비 속도가 크게 벌어지고 있습니다.</p>
+    </div>
+    <div class="callout-info">
+      <strong>GDC는 한국의 디지털 화폐 "준비"입니다.</strong> 은행·보험·증권·거래소·금융감독 기능을 하나의 디지털 화폐 안에 미리 융합해두고, 금융기관 임직원들을 필드 테스트에 참여시켜 실제 운영 감각을 쌓습니다. 법과 제도가 갖춰지는 순간 별도 개발 기간 없이 즉시 런칭할 수 있도록 하는 것이 목표입니다 — 중국처럼 뒤늦게 설계를 바꾸는 게 아니라, 처음부터 완성형 구조로 대기하는 방식입니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="bond-sim">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기</span>
+    <h2 class="section-title">내 예치금이 <strong>다른 이의 채권</strong>이 되기까지</h2>
+    <div class="section-body">
+      <p><span class="sim-badge vision">VISION</span> 앞서 소개한 "채권 발행이 곧 대출" 원칙을 실제로 체험해보는 시뮬레이션입니다. 내 GDC 예치금을 다른 혼디 사용자가 발행한 채권에 투자하고, 그 이자 소득을 받는 흐름입니다. 개별 채권 대신 <b>채권 POOL</b>을 선택하면 한림읍→제주시→제주도→한국→글로벌로 투자 범위를 넓혀 위험을 분산할 수도 있습니다. <b>아직 라이선스 컨소시엄 이전이라 실제로 동작하지 않으며</b>, 재무제표 기반 신용평가·분산 증인 검증 등은 특허 출원 문서(부록: FPGA 기반 금융 통합 플랫폼)에 설계된 개념을 바탕으로 한 개념 시연입니다.</p>
+    </div>
+    <div class="sim-box">
+      <div class="sim-stepper" id="simStepper"></div>
+      <div class="sim-panel" id="simPanel"></div>
+      <div class="sim-actions">
+        <button class="sim-btn outline" id="simPrev">이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="sim-btn ghost" id="simReset">처음부터</button>
+          <button class="sim-btn primary" id="simNext">다음 단계</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var LABELS = ['예치금 확인', '채권 선택', '위험 분산 확인', '투자 실행', '이자 소득'];
+  var BONDS = [
+    { id: 'b1', issuer: '판포 목공소(개인사업자)', purpose: '공방 설비 증설', grade: 'aa', gradeLabel: 'AA', rate: 6.2, term: '12개월', credit: '최근 3년 재무제표 흑자 지속, 매출 변동성 낮음' },
+    { id: 'b2', issuer: '한림 카페 협동조합', purpose: '2호점 임차보증금', grade: 'a', gradeLabel: 'A', rate: 8.5, term: '24개월', credit: '개업 2년차, 매출 성장 추세지만 변동성 있음' },
+    { id: 'b3', issuer: '개인(프리랜서 디자이너)', purpose: '장비 구입', grade: 'bbb', gradeLabel: 'BBB', rate: 11.0, term: '6개월', credit: '소득 변동 큼, 최근 6개월 현금흐름은 안정적' }
+  ];
+  var POOLS = [
+    { id: 'hallim', issuer: '한림읍 POOL', purpose: '지역 발행자 18명 분산', grade: 'bbb', gradeLabel: '위험 높음', rate: 8.8, term: '평균 12개월', issuers: 18, riskPct: 92, note: '단일 읍면동 단위라 지역 경기 변동에 발행자 대부분이 함께 노출됩니다 — 분산 효과가 제한적입니다.' },
+    { id: 'jejusi', issuer: '제주시 POOL', purpose: '지역 발행자 210명 분산', grade: 'a', gradeLabel: '위험 중상', rate: 7.5, term: '평균 12개월', issuers: 210, riskPct: 68, note: '여러 읍면동·업종이 섞이면서 개별 부도가 전체에 미치는 영향이 줄어듭니다.' },
+    { id: 'jeju', issuer: '제주도 POOL', purpose: '지역 발행자 1,900명 분산', grade: 'a', gradeLabel: '위험 중간', rate: 6.6, term: '평균 12개월', issuers: 1900, riskPct: 46, note: '도 전역으로 확장되어, 특정 지역의 경기 하강도 다른 지역 발행자로 완충됩니다.' },
+    { id: 'korea', issuer: '한국 POOL', purpose: '전국 발행자 84,000명 분산', grade: 'aa', gradeLabel: '위험 낮음', rate: 5.4, term: '평균 12개월', issuers: 84000, riskPct: 22, note: '전국 단위로 확장되면 지역별 경기 사이클이 서로 어긋나면서 위험이 크게 줄어듭니다.' },
+    { id: 'global', issuer: '글로벌 POOL', purpose: '해외 포함 발행자 230만 명 분산', grade: 'aa', gradeLabel: '위험 최소', rate: 4.1, term: '평균 12개월', issuers: 2300000, riskPct: 7, note: '국가 간 경기 사이클까지 어긋나면서 개별 발행자의 부도 위험(개별위험)은 사실상 소멸에 가까워집니다.' }
+  ];
+  var state = { balance: 320000, mode: 'single', selectedBond: null, selectedPool: null, amount: '' };
+  var cur = 0;
+
+  var stepperEl = document.getElementById('simStepper');
+  var panelEl = document.getElementById('simPanel');
+  var prevBtn = document.getElementById('simPrev');
+  var nextBtn = document.getElementById('simNext');
+  var resetBtn = document.getElementById('simReset');
+
+  function renderStepper() {
+    stepperEl.innerHTML = LABELS.map(function (label, i) {
+      var cls = i === cur ? 'active' : (i < cur ? 'done' : '');
+      return '<div class="sim-dot ' + cls + '"><span class="num">' + (i + 1) + '</span>' + label + '</div>';
+    }).join('');
+  }
+
+  function bond() { return BONDS.find(function (b) { return b.id === state.selectedBond; }) || BONDS[0]; }
+  function pool() { return POOLS.find(function (p) { return p.id === state.selectedPool; }) || POOLS[0]; }
+  function current() { return state.mode === 'pool' ? pool() : bond(); }
+  function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+  function riskScaleHtml(selectedId) {
+    return '<div class="sim-risk-scale">' + POOLS.map(function (p) {
+      var isCur = p.id === selectedId ? ' current' : '';
+      return '<div class="sim-risk-row' + isCur + '"><span class="lbl">' + p.issuer.replace(' POOL', '') + '</span>' +
+        '<div class="track"><div class="fill" style="width:' + p.riskPct + '%"></div></div>' +
+        '<span class="pct">' + p.riskPct + '%</span></div>';
+    }).join('') + '</div>' +
+      '<p style="margin-top:8px;color:var(--text4);font-size:11.5px">막대는 각 POOL 단위의 상대적 부도 위험(개별위험) 수준입니다. POOL 범위가 한림읍→제주시→제주도→한국→글로벌로 넓어질수록 발행자가 늘고 위험이 분산됩니다.</p>';
+  }
+
+  function panels() {
+    return [
+      // 0. 예치금 확인
+      function () {
+        return '<h4>1. GDC 예치금을 확인합니다</h4>' +
+          '<div class="sim-card"><b>현재 잔액</b> — ' + fmt(state.balance) + '원 상당(GDC)</div>' +
+          '<p style="margin-top:10px">이 잔액 중 일부를 다른 혼디 사용자가 발행한 채권에 투자할 수 있습니다(가상 시나리오).</p>';
+      },
+      // 1. 채권 선택 (개별 vs POOL)
+      function () {
+        var toggle = '<div class="sim-mode-toggle">' +
+          '<button class="sim-mode-btn' + (state.mode === 'single' ? ' active' : '') + '" data-mode="single">개별 채권</button>' +
+          '<button class="sim-mode-btn' + (state.mode === 'pool' ? ' active' : '') + '" data-mode="pool">채권 POOL(위험 분산)</button>' +
+          '</div>';
+        if (state.mode === 'pool') {
+          var poolRows = POOLS.map(function (p) {
+            var sel = state.selectedPool === p.id ? ' selected' : '';
+            return '<div class="sim-bond' + sel + '" data-id="' + p.id + '">' +
+              '<div class="info"><div class="issuer">' + p.issuer + ' <span class="grade ' + p.grade + '">' + p.gradeLabel + '</span></div>' +
+              '<div class="purpose">' + p.purpose + '</div></div>' +
+              '<div class="rate">연 ' + p.rate + '%<span>세전</span></div></div>';
+          }).join('');
+          return '<h4>2. 투자할 채권을 선택하세요</h4>' + toggle +
+            '<p>같은 예치금이라도 POOL 범위를 넓힐수록 발행자 수가 늘어 위험이 분산되는 대신, 평균 금리는 낮아집니다.</p>' +
+            '<div class="sim-bond-list" id="simBondList">' + poolRows + '</div>';
+        }
+        var rows = BONDS.map(function (b) {
+          var sel = state.selectedBond === b.id ? ' selected' : '';
+          return '<div class="sim-bond' + sel + '" data-id="' + b.id + '">' +
+            '<div class="info"><div class="issuer">' + b.issuer + ' <span class="grade ' + b.grade + '">' + b.gradeLabel + '</span></div>' +
+            '<div class="purpose">' + b.purpose + ' · 만기 ' + b.term + '</div></div>' +
+            '<div class="rate">연 ' + b.rate + '%<span>세전</span></div></div>';
+        }).join('');
+        return '<h4>2. 투자할 채권을 선택하세요</h4>' + toggle +
+          '<p>신용등급이 낮을수록(BBB) 금리가 높지만 그만큼 위험도 커집니다.</p>' +
+          '<div class="sim-bond-list" id="simBondList">' + rows + '</div>';
+      },
+      // 2. 위험 분산 확인 (신용도 또는 POOL 분산도)
+      function () {
+        if (state.mode === 'pool') {
+          var p = pool();
+          return '<h4>3. POOL 확장에 따른 위험 분산을 확인합니다</h4>' +
+            '<div class="sim-card"><b>' + p.issuer + '</b> · 발행자 ' + fmt(p.issuers) + '명<br>' + p.note + '</div>' +
+            riskScaleHtml(p.id) +
+            (p.id === 'global' ? '<div class="sim-card" style="margin-top:10px"><b>다만 완전히 사라지지 않는 위험</b><br>분산으로 없앨 수 있는 건 발행자 개개인의 부도 위험(개별위험)뿐입니다. 세계 경기가 동시에 침체되는 것과 같은 시장 전체 위험(체계적 위험)은 POOL을 아무리 넓혀도 분산되지 않습니다.</div>' : '');
+        }
+        var b = bond();
+        return '<h4>3. 발행자의 재무제표 기반 신용도를 확인합니다</h4>' +
+          '<div class="sim-card"><b>' + b.issuer + '</b><br>' + b.credit + '</div>' +
+          '<div class="sim-card">이 신용평가는 발행자의 실제 재무제표를 OpenHash로 자동 연동·기록한 결과입니다 — 주관적 심사가 아니라, 위변조 불가능한 거래 기록 자체가 신용도를 증명합니다.</div>' +
+          '<p style="margin-top:10px;color:var(--text4);font-size:12px">개별 발행자 하나에 집중 투자하는 대신, 여러 지역 단위로 분산된 <b>채권 POOL</b>을 선택할 수도 있습니다(이전 단계에서 "채권 POOL" 전환).</p>';
+      },
+      // 3. 투자 실행
+      function () {
+        var c = current();
+        var amt = parseInt(state.amount, 10) || 0;
+        return '<h4>4. 투자 금액을 입력하고 실행하세요</h4>' +
+          '<input class="sim-field" type="number" id="simAmountInput" placeholder="예: 100000" value="' + (state.amount || '') + '" min="1000" step="1000">' +
+          '<p style="margin-top:10px">현재 예치금: ' + fmt(state.balance) + '원 · 선택: ' + c.issuer + '(연 ' + c.rate + '%)</p>' +
+          (amt >= 100000 ? '<div class="sim-card"><b>분산 증인 검증 대상</b><br>10만원 이상 거래는 무작위 선정된 5명의 다른 사용자가 거래의 합리성을 확인하고 서명해야 원장에 기록됩니다.</div>' : '');
+      },
+      // 4. 이자 소득
+      function () {
+        var c = current();
+        var amt = parseInt(state.amount, 10) || 100000;
+        var income = Math.round(amt * (c.rate / 100));
+        return '<h4>5. 이자 소득 시뮬레이션</h4>' +
+          '<span class="sim-badge vision">VISION — 실제 소득 아님</span>' +
+          '<div class="sim-card"><b>투자 원금</b> ' + fmt(amt) + '원 · <b>만기</b> ' + c.term + ' · <b>표면금리</b> 연 ' + c.rate + '%<br><b>예상 이자 소득(세전, 만기 상환 가정)</b> 약 ' + fmt(income) + '원</div>' +
+          (state.mode === 'pool'
+            ? '<div class="sim-card">POOL 투자는 개별 발행자 하나의 부도가 전체 원금에 미치는 영향이 작습니다 — 다만 POOL 전체가 흔들리는 시장 전체 위험까지 없앨 수는 없습니다.</div>'
+            : '<div class="sim-card">발행자가 만기에 상환하지 못하면 원금 손실이 발생할 수 있습니다 — 신용등급이 낮을수록 그 위험이 큽니다.</div>') +
+          '<div class="sim-card">실제 서비스에서는 원금 보장이 없는 투자 상품입니다.</div>' +
+          '<p style="margin-top:16px;color:var(--text4);font-size:12.5px">"처음부터"를 눌러 다른 채권·POOL로 다시 체험해볼 수 있습니다.</p>';
+      }
+    ];
+  }
+
+  function render() {
+    renderStepper();
+    panelEl.innerHTML = panels()[cur]();
+    prevBtn.disabled = cur === 0;
+    nextBtn.textContent = cur === LABELS.length - 1 ? '완료' : '다음 단계';
+    var hasSelection = state.mode === 'pool' ? !!state.selectedPool : !!state.selectedBond;
+    nextBtn.disabled = (cur === 1 && !hasSelection) || (cur === 3 && !(parseInt(state.amount, 10) > 0));
+
+    if (cur === 1) {
+      document.querySelectorAll('.sim-mode-btn').forEach(function (el) {
+        el.addEventListener('click', function () {
+          state.mode = el.getAttribute('data-mode');
+          render();
+        });
+      });
+      var list = document.getElementById('simBondList');
+      list.querySelectorAll('.sim-bond').forEach(function (el) {
+        el.addEventListener('click', function () {
+          if (state.mode === 'pool') { state.selectedPool = el.getAttribute('data-id'); }
+          else { state.selectedBond = el.getAttribute('data-id'); }
+          render();
+        });
+      });
+    }
+    if (cur === 3) {
+      var input = document.getElementById('simAmountInput');
+      input.addEventListener('input', function () { state.amount = input.value; render(); });
+    }
+  }
+
+  nextBtn.addEventListener('click', function () { if (cur < LABELS.length - 1) { cur++; render(); } });
+  prevBtn.addEventListener('click', function () { if (cur > 0) { cur--; render(); } });
+  resetBtn.addEventListener('click', function () { state = { balance: 320000, mode: 'single', selectedBond: null, selectedPool: null, amount: '' }; cur = 0; render(); });
+
+  render();
+})();
+</script>
+
+<section class="section" id="principle">
+  <div class="section-inner">
+    <span class="section-tag">금융의 원칙</span>
+    <h2 class="section-title">중개자의 자리에 <strong>재무제표 그 자체</strong>를</h2>
+    <div class="section-body">
+      <p>기존 금융기관은 중개자입니다. 은행은 예금자의 돈을 모아 심사를 거쳐 빌려주고, 증권사는 발행 절차를 대행하며, 보험사는 위험을 모아 상품으로 팝니다. GDC는 그 중개자의 자리에 <b>재무제표 그 자체</b>를 놓습니다.</p>
+    </div>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>원칙</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">재무제표가 곧 화폐</td><td>OpenHash와 혼디 AI가 모든 개인·기관의 재무제표를 자동 기록·갱신하고 상호 연동시킵니다. 그 현금 계정이 GDC 잔액입니다.</td></tr>
+          <tr><td class="cmp-axis">재무제표가 곧 신용</td><td>은행 담당자의 주관적 판단이 아니라, 위변조 불가능한 재무 기록 자체가 신용도를 증명합니다.</td></tr>
+          <tr><td class="cmp-axis">채권 발행이 곧 대출</td><td>은행에서 "빌리는" 대신 본인의 재무제표 신용도로 직접 채권을 발행합니다. 다른 GDC 보유자가 사들이는 것이 대출 실행입니다.</td></tr>
+          <tr><td class="cmp-axis">거래 자체가 감독</td><td>모든 재무제표가 실시간으로 맞물려 있어, 거래가 일어나는 과정 자체가 감독 기능을 겸합니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-body" style="margin-top:16px">재무제표를 위변조하려면 그와 연동된 세상의 모든 재무제표를 동시에 위변조해야 하므로, 사실상 불가능합니다.</p>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="status">
+  <div class="section-inner">
+    <span class="section-tag">지금 되는 것</span>
+    <h2 class="section-title">LIVE와 <strong>VISION의 경계</strong></h2>
+    <div class="section-body">
+      <p>은행·보험·증권 융합은 혼디가 지향하는 목표이며, 지금 당장 전부 동작하는 것은 아닙니다. 라이선스를 가진 은행·보험사·증권사와의 컨소시엄 구성 이후에 본격적으로 열리는 범위와, 지금 바로 쓸 수 있는 범위를 구분해 안내합니다.</p>
+    </div>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>기능</th><th>상태</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>구독료·서비스 결제</td><td><span class="status-pill live">LIVE</span></td><td>혼디 월 구독료, K-Law 등 건별 서비스 이용료를 GDC 잔액에서 결제</td></tr>
+          <tr><td>가입 축하 충전</td><td><span class="status-pill live">LIVE</span></td><td>가입 직후 100원 상당(0.1 GDC) 1회 자동 충전, 실사용량만큼 차감</td></tr>
+          <tr><td>개인 간 P2P 송금</td><td><span class="status-pill live">LIVE</span></td><td>혼디 코드 스캔으로 상대를 확인하고 GDC를 즉시 이체(아래 §P2P 참고)</td></tr>
+          <tr><td>DAWN 내부 거버넌스 가중 투표</td><td><span class="status-pill live">LIVE</span></td><td>고팡 자체 규칙 개정 시 GDC 보유량이 투표권 4요소 중 하나로 반영</td></tr>
+          <tr><td>은행·보험·증권 라이선스 기반 예치·투자</td><td><span class="status-pill vision">VISION</span></td><td>라이선스를 가진 금융기관과의 컨소시엄 구성 이후 시작</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="p2p">
+  <div class="section-inner">
+    <span class="section-tag">P2P 송금</span>
+    <h2 class="section-title">코드를 스캔하면 <strong>바로 송금</strong></h2>
+    <div class="section-body">
+      <p>송금할 상대를 확인하는 실제 수단이 <b>혼디 숫자 코드</b>입니다. 전화번호를 10자리 숫자로 인코딩해 7세그먼트 방식으로 표시하는 시각 코드로, 사람이 눈으로 읽어도 바로 숫자를 알아볼 수 있습니다. 아래는 이 페이지에서 실제 코드 모듈(<code>hondi-digit-code.js</code>)을 그대로 불러와 즉석에서 생성한 예시입니다 — 목업 이미지가 아닙니다.</p>
+    </div>
+    <div id="digitCodeWrap" style="text-align:center;margin:18px 0">
+      <img id="digitCodeImg" alt="혼디 숫자 코드 예시" style="max-width:280px;width:100%;border:1px solid var(--border);border-radius:var(--radius-lg);background:#fff;padding:8px">
+      <p style="font-size:11.5px;color:var(--text4);margin-top:8px" id="digitCodeCaption">코드 생성 중...</p>
+    </div>
+    <script type="module">
+      import { generateDigitCodeDataURL } from '../src/gopang/ai/hondi-digit-code.js';
+      (async function () {
+        try {
+          var shortId = 4600010008n;
+          var url = await generateDigitCodeDataURL(shortId);
+          document.getElementById('digitCodeImg').src = url;
+          document.getElementById('digitCodeCaption').textContent = '예시 코드 — 실제 코드 모듈로 즉석 생성됨(short_id: ' + shortId.toString().padStart(10, '0') + ')';
+        } catch (e) {
+          document.getElementById('digitCodeWrap').innerHTML = '<p style="font-size:12px;color:var(--text4)">코드 생성 모듈을 이 경로에서 불러오지 못했습니다 — src/gopang/ai/hondi-digit-code.js 참고.</p>';
+        }
+      })();
+    </script>
+    <div class="dialogue-box">
+      <p class="spk"><strong>이용자</strong> "이 사람한테 점심값 8,000원만큼 GDC 보내고 싶어."</p>
+      <p class="spk"><strong>혼디</strong> 혼디 코드를 스캔해 상대를 확인했습니다. 잔액은 충분합니다. 서명 후 바로 이체하겠습니다.</p>
+      <p class="spk"><strong>혼디</strong> 이체 완료했습니다. 원장에 기록되었고, 위변조가 불가능합니다.</p>
+    </div>
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">상대 확인</div>
+        <div class="fl-desc">혼디 코드 스캔으로 수신자의 GUID를 확보합니다. 자기 자신에게는 송금할 수 없습니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">서명</div>
+        <div class="fl-desc">WebAuthn 또는 저장된 개인키로 거래를 서명합니다. 로컬에서 잔액을 1차로 확인하지만, 이건 UX용이지 최종 검증이 아닙니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">L1 원장 검증</div>
+        <div class="fl-desc">L1이 자기 블록 원장을 재생해 잔액을 직접 검증합니다(<code>STALE_STATE</code>·<code>INSUFFICIENT_BALANCE</code>·<code>INVALID_SIGNATURE</code>·<code>UNREGISTERED_KEY</code> 네 가지 실패 사유로 거부될 수 있습니다). 입력과 출력의 합이 어긋나지 않는지(BIVM, Σδ=0)도 이 단계에서 확인됩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">크로스-L1 브릿지</div>
+        <div class="fl-desc">수신자가 다른 L1 소속이어도 브릿지를 거쳐 그대로 이체됩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">기록</div>
+        <div class="fl-desc">송신자 측에는 PDV에 6하원칙으로 이체 내역이 기록되고, 수신자는 다음 접속 시 잔액이 자동 반영됩니다.</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="escrow">
+  <div class="section-inner">
+    <span class="section-tag">K-Law 연동</span>
+    <h2 class="section-title">고위험 거래는 <strong>자동으로 멈춥니다</strong></h2>
+    <div class="section-body">
+      <p>대화 중 보이스피싱 등 최고 위험(S3) 신호가 감지되면, K-Law가 관련 GDC 거래에 <b>자동 에스크로(임시 동결)</b>를 제안합니다. 돈이 실제로 넘어가기 전에 제동을 거는 장치입니다 — 최종 집행 여부는 사용자 확인을 거칩니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="governance">
+  <div class="section-inner">
+    <span class="section-tag">DAWN 연동</span>
+    <h2 class="section-title">보유량이 <strong>투표권의 일부</strong></h2>
+    <div class="section-body">
+      <p>고팡(Hondi) 생태계 자체의 내부 규칙을 개정하는 DAWN 투표에서는, GDC 보유량이 기여 코드·준법 이력·학습 이력과 함께 투표권을 구성하는 4요소 중 하나로 반영됩니다. 다만 이건 <b>고팡 자체 거버넌스에 한정</b>됩니다 — 실제 국민동의청원은 GDC 보유량과 무관한 1인 1표(실명)입니다.</p>
+    </div>
+    <a class="doc-link" href="./legislative.html">입법 페이지에서 DAWN 자세히 보기 →</a>
+  </div>
+</section>
+
+
+<section class="section" style="background:var(--bg-alt)" id="authority">
+  <div class="section-inner">
+    <span class="section-tag">사람의 권한</span>
+    <h2 class="section-title">혼디가 <strong>할 수 없는 일</strong></h2>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>혼디가 하는 일</th><th class="cmp-hondi">사람·기관이 하는 일</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">송금 실행</td><td>서명·원장 검증·기록을 자동 처리</td><td class="cmp-hondi">서명은 사용자 본인만 가능(WebAuthn·개인키)</td></tr>
+          <tr><td class="cmp-axis">에스크로 집행</td><td>고위험 감지 시 동결 제안</td><td class="cmp-hondi">최종 집행·해제는 사용자 확인 필요</td></tr>
+          <tr><td class="cmp-axis">라이선스 금융업</td><td>재무제표 자동 기록·연동까지</td><td class="cmp-hondi">예치·투자·보험 상품은 실제 라이선스 기관과의 컨소시엄 이후</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — reports/hondi-gdc-currency-scenario.html, docs/gdc_transfer_design_v0_1.md, docs/SP-GDC-CHARGE-v1_0-design.md</li>
+</ul>
+
 </body>
 </html>
