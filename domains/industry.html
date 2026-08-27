@@ -201,7 +201,7 @@ window.PAGE_HERO = {
     <h2 class="section-title">장사와 행정, <strong>두 가지 일을 하나로</strong></h2>
     <div class="section-body">
       <p>사업체를 운영해 본 사람이라면 다 아는 사실이 하나 있습니다. 가게를 여는 순간부터 "장사"와 "행정"이라는 두 가지 다른 일을 동시에 떠맡게 된다는 것입니다. 사업자등록·영업신고 같은 개업 절차부터, 산업재해 신고·특허 출원처럼 운영 중에 불쑥 발생하는 절차까지 — 어떤 인허가를, 어느 기관에서, 어떤 순서로 받아야 하는지 아무도 미리 가르쳐주지 않습니다.</p>
-      <p>혼디는 "사업자 등록해 줘", "법인 인감 두 통 발급해 줘" 같은 한 문장 지시를 관할 부서의 AI에게 전달하고, 필요한 서류·순서를 한 번에 하나씩 안내합니다. 이는 desktop.html의 <b>관제탑 원칙</b>이 산업 분야에 적용된 형태입니다 — 8월 3일 AI 정부 시범 서비스 이후, 기관 간 데이터 문호가 열리는 만큼 이 안내는 점차 대행으로 확장될 예정입니다.</p>
+      <p>혼디는 "사업자 등록해 줘", "법인 인감 두 통 발급해 줘" 같은 한 문장 지시를 관할 부서의 AI에게 전달하고, 필요한 서류·순서를 한 번에 하나씩 안내합니다. 이는 desktop.html의 <b>관제탑 원칙</b>이 산업 분야에 적용된 형태입니다. 이 안내는 <b>정부24·data.go.kr(서류 발급) → gdoc.go.kr(전자문서 제출) → dpaper.kr(진본 확인·보관)</b>로 이어지는, 이미 연동된 공공데이터·전자정부 인프라 위에서 작동합니다 — 8월 3일 AI 정부 시범 서비스 이후 기관 간 데이터 문호가 넓어지는 만큼, 안내에서 대행으로 점차 확장됩니다.</p>
     </div>
   </div>
 </section>
@@ -218,9 +218,17 @@ window.PAGE_HERO = {
       <p class="spk"><strong>혼디</strong> 국숫집(일반음식점업) 창업에 필요한 절차를 순서대로 정리해 드리겠습니다 — 사업자등록 → 위생교육 이수 → 영업신고 → (필요시) 소방시설 완비증명 → 원산지표시판 등록 순입니다. 하나씩 실제로 확인해 드리겠습니다.</p>
       <p class="spk"><strong>혼디</strong> 영업신고 관할 부서를 바로 확인하겠습니다 — 제주시 위생과입니다. 방문·전화 전 명칭만 한 번 더 확인해 주세요.</p>
     </div>
-    <div class="callout-info">
-      <strong>지금 실제로 되는 일(LIVE)과 아직인 일(ROADMAP):</strong> 시군구별 담당 부서 실시간 조회, 반경 내 상권·경쟁 밀집도 분석, 리뷰 답글 초안 작성은 오늘 기준 실제로 동작합니다. 반면 사업자등록·영업신고 서류의 자동 작성·자동 제출, 4대보험·세금 신고 기한의 자동 추적은 아직 로드맵 단계입니다.
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>인프라</th><th>역할</th><th>현재 상태</th></tr></thead>
+        <tbody>
+          <tr><td>data.go.kr(공공데이터 API)</td><td>사업자등록 관련 증명·소득 자료 등 서류 발급 요청</td><td>부분 구현 — API 개방 기관은 자동 처리</td></tr>
+          <tr><td>정부24 / gdoc.go.kr</td><td>서류 발급·제출 창구, 상시 제출·수신</td><td>부분 구현</td></tr>
+          <tr><td>dpaper.kr(정부 전자문서지갑)</td><td>제출 서류 진본 확인·위변조 방지</td><td>부분 구현 — 정식 이용 신청 접수, 승인 진행 중</td></tr>
+        </tbody>
+      </table>
     </div>
+    <p class="section-body" style="margin-top:14px">시군구별 담당 부서 실시간 조회, 반경 내 상권·경쟁 밀집도 분석, 리뷰 답글 초안 작성은 오늘 기준 실제로 동작(LIVE)합니다. 사업자등록·영업신고 서류 자체의 자동 작성, 4대보험·세금 신고 기한의 자동 추적은 아직 로드맵(ROADMAP) 단계입니다 — 서류를 발급·제출하는 통로(정부24·gdoc.go.kr·dpaper.kr)는 이미 부분적으로 연동돼 있지만, 그 통로를 활용해 서식 내용을 자동으로 채우고 기한을 추적하는 상위 기능은 아직 구현 전입니다.</p>
     <a class="doc-link" href="../reports/hondi-business-admin-automation-scenario.html" target="_blank" rel="noopener">요식업 창업 시나리오 전체 보기 →</a>
   </div>
 </section>
@@ -273,7 +281,7 @@ window.PAGE_HERO = {
 </section>
 
 <ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
-  <li>관련 문서 — reports/hondi-business-admin-automation-scenario.html(K-Business·U1 원칙), desktop.html §control-tower-principle. 산업재해·특허 절은 저장소 내 실측 근거가 없어 새로 구상함.</li>
+  <li>관련 문서 — reports/hondi-business-admin-automation-scenario.html(K-Business·U1 원칙), pages/usage-guide.html·pages/k-services.html §K-Public(정부24·data.go.kr·dpaper.kr 연동 현황), desktop.html §control-tower-principle. 산업재해·특허 절은 저장소 내 실측 근거가 없어 새로 구상함.</li>
 </ul>
 
 </body>
