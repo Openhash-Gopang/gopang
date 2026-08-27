@@ -3613,6 +3613,21 @@ export async function callAI(userText, imageFile = null, _preTab = null, modelTi
     if (_currentAbort === myAbort) {
       _currentAbort = null;
     }
+    // 2026-08-28 신설 — GDC 차감 후 UI 미반영 문제의 근본 수정.
+    // worker.js의 실제 정산(_settleAiUsage)은 SSE 스트림이 이미
+    // 클라이언트로 완전히 전달된 *이후*, res.body.tee()로 분리한
+    // 사본을 파싱하는 fire-and-forget 작업(ctx.waitUntil)으로
+    // 실행된다 — 즉 스트림 종료 시점엔 서버 정산이 아직 안 끝났을
+    // 수 있어, 응답 자체에 새 잔액을 실어 보낼 방법이 구조적으로
+    // 없다(worker.js 17172행 근처). 그래서 클라이언트가 짧게 기다린
+    // 뒤 직접 재조회하는 방식을 택한다 — 1.5초는 정산 완료를 보장하는
+    // 값은 아니지만(비동기 완료 시점을 클라이언트가 알 방법이 없다),
+    // 지금까지의 "재로그인 전까지 영원히 미반영"보다는 훨씬 낫다.
+    // 완전한 보장이 필요하면 서버에 정산-완료 알림(SSE 이벤트 등)을
+    // 추가하는 후속 작업이 필요함을 남겨둔다.
+    if (window.gopangWallet?.refreshBalanceUI) {
+      setTimeout(() => window.gopangWallet.refreshBalanceUI().catch(() => {}), 1500);
+    }
   }
 }
 
