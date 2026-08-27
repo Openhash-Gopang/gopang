@@ -3058,6 +3058,111 @@ async function handleHealthDemoConsult(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// 교통/물류 도메인 페이지 데모 매칭 — 2026-08-27 신설
+// domains/logistics.html의 이동·배송 매칭 시뮬레이션에서 호출한다.
+// handleHealthDemoConsult와 동일한 원칙 — DEEPSEEK_API_KEY는 서버(Worker)
+// 안에서만 사용, 클라이언트에 노출하지 않는다. 실제 차량 위치 데이터가
+// 연동돼 있지 않으므로, AI가 "제주도 내 혼디 앱 설치 차량"의 그럴듯한
+// 가상 동선 몇 대를 생성하고 그중 최적 매칭을 고르는 시뮬레이션이다 —
+// 실제 배차가 아니라는 점을 응답에 항상 포함시킨다.
+// ═══════════════════════════════════════════════════════════
+
+const _LOGISTICS_DEMO_PERSON_SYSTEM = `당신은 K-Traffic AI입니다. 사용자가 제공한 출발지·목적지·인원 등을
+바탕으로, 제주도 내에서 혼디 앱을 설치하고 운행 중인 자가용·택시·버스
+운전자들의 그럴듯한 가상 동선 데이터를 생성하고, 그중 사용자의 출발지·
+목적지에 가장 잘 맞는 이동 수단을 실시간으로 매칭해 추천합니다.
+
+원칙:
+- 자가용(카풀)·택시·버스 세 종류를 후보로 삼아 각각 최소 1대씩 가상
+  차량을 생성한다(현재 위치, 픽업까지 예상 소요시간, 목적지까지 총
+  소요시간, 예상 요금 포함).
+- 실제 운행 데이터가 아니라 시뮬레이션임을 항상 인지하고, 제주도의
+  실제 지리(공항·시청·읍면 등)에 맞는 현실적인 지명과 소요시간을 쓴다.
+- 요금·시간은 참고용 추정치이며, 실제 배차·요금 확정은 운송 사업자
+  소관이라는 점을 note에 명시한다.
+- 승객 수·수하물 등 특수 조건이 있으면 그에 맞는 차종을 우선한다.
+
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "candidates": [
+    {"type": "자가용|택시|버스", "driver_label": "예: 자가용 기사 A", "current_location": "현재 위치(가상)", "eta_pickup_min": 숫자, "eta_total_min": 숫자, "estimated_fare_krw": 숫자}
+  ],
+  "recommended_type": "위 후보 중 추천 유형",
+  "reasoning": "추천 이유 1~2문장",
+  "note": "이 데이터는 시뮬레이션이며 실제 배차·요금 확정은 운송 사업자 소관이라는 안내 문장"
+}`;
+
+const _LOGISTICS_DEMO_GOODS_SYSTEM = `당신은 K-Logistics AI입니다. 사용자가 제공한 출발지·목적지·물품 특성
+(냉장 필요 여부, 크기·무게, 긴급도 등)을 바탕으로, 제주도 내에서 혼디
+앱을 설치하고 운행 중인 화물차·냉동차·이동 중인 일반 차량(빈 공간
+활용)의 그럴듯한 가상 동선 데이터를 생성하고, 그중 최적의 배송 수단을
+실시간으로 매칭해 추천합니다.
+
+원칙:
+- 화물차·냉동차·이동 중 차량(빈 공간 재활용) 세 종류를 후보로 삼아
+  각각 최소 1대씩 가상 차량을 생성한다(현재 위치, 픽업까지 예상
+  소요시간, 배송 완료까지 총 소요시간, 예상 요금 포함).
+- 냉장·냉동이 필요한 물품이면 냉동차를 우선 추천하고, 그렇지 않은
+  소형 물품이면 이동 중 차량(빈 공간 재활용)을 우선 고려한다.
+- 실제 운행 데이터가 아니라 시뮬레이션임을 항상 인지하고, 제주도의
+  실제 지리에 맞는 현실적인 지명과 소요시간을 쓴다.
+- 요금·시간은 참고용 추정치이며, 실제 배차·요금 확정과 파손 등 사고
+  처리는 운송 사업자·K-Insurance 소관이라는 점을 note에 명시한다.
+
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "candidates": [
+    {"type": "화물차|냉동차|이동중 차량(빈 공간)", "driver_label": "예: 냉동차 기사 B", "current_location": "현재 위치(가상)", "eta_pickup_min": 숫자, "eta_total_min": 숫자, "estimated_fare_krw": 숫자}
+  ],
+  "recommended_type": "위 후보 중 추천 유형",
+  "reasoning": "추천 이유 1~2문장(물품 특성 반영)",
+  "note": "이 데이터는 시뮬레이션이며 실제 배차·요금 확정 및 사고 처리는 운송 사업자·K-Insurance 소관이라는 안내 문장"
+}`;
+
+// POST /logistics/demo-match  body: { mode: 'person'|'goods', origin, destination, detail }
+async function handleLogisticsDemoMatch(request, env, corsHeaders) {
+  if (request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', 'POST만 허용', corsHeaders);
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'BAD_JSON', '요청 본문 파싱 실패', corsHeaders); }
+
+  const mode = body?.mode === 'goods' ? 'goods' : 'person';
+  const origin = (body?.origin || '').trim();
+  const destination = (body?.destination || '').trim();
+  const detail = (body?.detail || '').trim();
+
+  if (!origin || !destination) return _err(400, 'MISSING_FIELDS', 'origin, destination 필드 필수', corsHeaders);
+  if (origin.length > 100 || destination.length > 100 || detail.length > 300) {
+    return _err(400, 'INPUT_TOO_LONG', '입력이 너무 깁니다(출발지·목적지 100자, 상세 300자 이내)', corsHeaders);
+  }
+
+  const systemPrompt = mode === 'goods' ? _LOGISTICS_DEMO_GOODS_SYSTEM : _LOGISTICS_DEMO_PERSON_SYSTEM;
+  const userMsg = mode === 'goods'
+    ? `출발지: ${origin}\n목적지: ${destination}\n물품 특성: ${detail || '(별도 특이사항 없음)'}`
+    : `출발지: ${origin}\n목적지: ${destination}\n인원·요청사항: ${detail || '(별도 특이사항 없음)'}`;
+
+  let match;
+  try {
+    match = await _healthDemoCallDeepseek(env, systemPrompt, userMsg, 700);
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', message: '이동 수단 매칭 생성 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  return new Response(JSON.stringify({
+    source: 'live',
+    mode,
+    origin,
+    destination,
+    match,
+  }), { headers: corsHeaders });
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 고객 리뷰 대응(Review Response) — 2026-08-11 신설
 // (사업자 티어 미비 기능 4/4, 착수 시점 기준 마지막). 이전엔 실제 리뷰
 // 저장소 자체가 없었다 — kmarket_seller_template.html의 SELLER_DATA.reviews는
@@ -11630,6 +11735,7 @@ export default {
     if (pathname === '/biz/marketing-plan') return handleMarketingPlan(request, url, env, corsHeaders);
     // ── 의료 도메인 페이지 데모 상담 (2026-08-27 신설) ──
     if (pathname === '/health/demo-consult') return handleHealthDemoConsult(request, env, corsHeaders);
+    if (pathname === '/logistics/demo-match') return handleLogisticsDemoMatch(request, env, corsHeaders);
     // ── 고객 리뷰 대응 — 사업자 티어 미비기능 4/4 (2026-08-11 신설) ──
     if (pathname === '/biz/reviews/submit' && request.method === 'POST') return handleReviewSubmit(request, env, corsHeaders);
     if (pathname === '/biz/reviews/list' && request.method === 'GET') return handleReviewList(request, url, env, corsHeaders);
