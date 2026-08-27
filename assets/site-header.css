@@ -114,7 +114,7 @@
 .site-hero-actions a.outline { background: #14356c; color: #dce1ea; border: 1px solid #435e8b; }
 
 .site-hero-domains {
-  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px;
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 60px;
   padding-top: 20px; border-top: 1px solid #223764;
 }
 .site-hero-domains a {
