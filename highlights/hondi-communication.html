@@ -3,8 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>사람 간의 업무를 혼디 간의 소통으로 — 혼디</title>
+<title>사람 간의 업무를 혼디 간의 소통으로 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+
+.sim-panel { padding: 26px 28px; min-height: 220px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text); resize: vertical; min-height: 80px;
+}
+.sim-field:focus { outline: 2px solid var(--brand-lt); border-color: var(--brand); }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-counter { font-size: 24px; font-weight: 700; color: var(--brand-dk); }
+.sim-counter span { font-size: 13px; font-weight: 500; color: var(--text4); }
+.sim-avatars { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sim-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--brand-bg); color: var(--brand-dk);
+  font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sim-vote-bar { display: flex; height: 28px; border-radius: 99px; overflow: hidden; margin-top: 10px; background: var(--border); }
+.sim-vote-bar .yes { background: var(--brand); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-vote-bar .no { background: var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 11.5px; font-weight: 700; transition: width 1s ease; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '하이라이트 · 혼디 간의 소통',
+  l1: '사람 간의 업무를',
+  l2: '혼디 간의 소통으로 보강합니다',
+  sub: '혼디는 카톡에 AI를 입힌 것이지만, 대화 상대가 사람에 그치지 않습니다. 모든 기관·부서에 할당된 AI와도 직접 대화합니다.',
+  actions: [
+    { label: '이용방법 페이지 원문', href: '../integrated-system.html', style: 'primary' },
+    { label: '관제탑 원칙', href: '../desktop.html#control-tower-principle', style: 'outline' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="claim">
+  <div class="section-inner">
+    <span class="section-tag">이 문구가 던지는 주장</span>
+    <h2 class="section-title">카톡은 <strong>사람과 사람</strong>, 혼디는 <strong>사람과 만물</strong></h2>
+    <div class="section-body">
+      <p>카카오톡은 사람과 사람이 소통하는 도구입니다. 혼디는 여기에 AI를 입혔지만, 여러분이 상상하는 방식과는 조금 다릅니다 — 카톡은 사람과 사람 사이의 대화만 오가지만, 혼디는 사람뿐 아니라 세상의 모든 기관과 부서에 할당된 AI와도 대화합니다. 혼디는 "만인(萬人)의 AI 비서"이자, 입법·사법·행정·교육·의료·문화·시장 등 사회의 모든 기관·부서를 위한 AI 비서이기도 합니다.</p>
+      <p>즉 사람 간의 업무 처리가 혼디 간의 소통으로 보강된다는 것은, 시민의 혼디가 기관의 혼디와 직접 소통해 서류 준비·제출·확인 같은 업무는 물론, 그 초기 의사 결정까지 대신 처리한다는 뜻입니다. 다만 최종 의사 결정은 언제나 사람의 몫입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="example">
+  <div class="section-inner">
+    <span class="section-tag">구체적 예시</span>
+    <h2 class="section-title">등본 발급, <strong>혼디 간의 대화로</strong></h2>
+    <div class="dialogue-box">
+      <p class="spk"><strong>주피터</strong> "혼디야, 등본 두 통 발급해 줘."</p>
+      <p class="spk"><strong>주피터의 혼디</strong> 피터님의 주소지인 한림읍 AI에게 요청하겠습니다. 잠깐요.</p>
+      <p class="spk"><strong>한림읍의 혼디</strong> 여기 있습니다. 수수료는 800원 되겠습니다.</p>
+      <p class="spk"><strong>주피터의 혼디</strong> 무려 800원씩이나. 작년보다 올랐군요. 800원 결제하였습니다.</p>
+      <p class="spk"><strong>주피터의 혼디</strong> 피터님, 등본을 발급받아 프라이빗 데이터 금고(PDV)에 저장하였습니다.</p>
+    </div>
+    <div class="section-body">
+      <p>여기서 대화는 세 단계로 나뉩니다 — 사용자와 그의 혼디, 사용자의 혼디와 한림읍(기관)의 혼디, 그리고 그 결과가 다시 사용자에게. 사람이 직접 관공서 사이트를 열어 로그인하고 서류를 찾는 절차가, 혼디 간의 소통 한 번으로 줄어듭니다.</p>
+      <p>같은 구조는 법원·병원·대학·업체 등 어디에나 적용됩니다 — 경계확정소송의 예상 판결문을 법원 AI 성격의 K-Law가 작성하거나, 병원 AI가 환자의 EMR 데이터를 분석해 이상 패턴을 보고하는 것도 결국 "사용자의 혼디가 기관의 혼디와 대화한다"는 같은 원리입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="scope">
+  <div class="section-inner">
+    <span class="section-tag">적용 범위</span>
+    <h2 class="section-title">기관마다 <strong>자기만의 혼디</strong></h2>
+    <div class="section-body">
+      <p>혼디는 의료·법률·기술 등 수백 개 분야에 특화된 AI 모듈의 집합체이기도 합니다. "나만의 AI 비서"(시민 각각의 혼디)와 "그만의 AI 비서"(기관·부서 각각의 혼디)가 짝을 이루어, 업무를 실시간으로 주고받는 구조가 혼디 전체를 관통합니다.</p>
+    </div>
+    <div class="callout-info">
+      <strong>보강이지, 대체가 아닙니다.</strong> 혼디 간의 소통은 사람이 직접 처리하던 반복적 서류·확인 업무를 줄여줄 뿐, 판사·공무원·교수·의사 등 사람의 최종 판단을 대신하지 않습니다.
+    </div>
+    <a class="doc-link" href="../reports/hondi-mine-vs-their-ai.html" target="_blank" rel="noopener">나만의 AI 비서 & 그만의 AI 비서 원문 보기 →</a>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — desktop.html §usage-guide("만인의 AI 비서"), §control-tower-principle, reports/hondi-mine-vs-their-ai.html</li>
+</ul>
+
 </body>
 </html>
