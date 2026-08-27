@@ -386,40 +386,67 @@ function closeChargeModal() {
 // 주기로 charge-status를 직접 폴링해, 확정되는 즉시 이 화면에서 바로
 // 보여주고 GDC 잔액 표시(balance-value)도 함께 새로고침한다.
 let _chargePollTimer = null;
+let _chargePollRequestId = null; // 2026-08-28 추가 — 아래 visibilitychange 핸들러가 참조
 const CHARGE_POLL_INTERVAL_MS = 5000;
 const CHARGE_POLL_MAX_TRIES = 120; // 5초 × 120 = 최대 10분간만 자동 폴링(그 이상은 수동 새로고침 안내로 충분)
 
 function _stopChargePolling() {
   if (_chargePollTimer) { clearInterval(_chargePollTimer); _chargePollTimer = null; }
+  _chargePollRequestId = null;
 }
+
+// 2026-08-28 신설 — 실사용(모바일) 재현 테스트로 발견한 문제: 사용자가
+// 은행 앱으로 전환해 실제 이체를 하는 몇십 초~몇 분 동안, 브라우저
+// 탭이 백그라운드로 밀리면 모바일 OS/브라우저가 배터리 절약을 위해
+// setInterval 타이머 자체를 멈추거나 크게 늦춘다(iOS Safari·Android
+// Chrome 공통). 그래서 실제로는 서버가 정상 확정했는데도, 사용자가
+// 은행 앱에서 브라우저로 돌아왔을 때 화면엔 아무 반응이 없는
+// 사례가 실측 확인됐다 — 이건 은행 앱을 오가는 게 정상적인 사용
+// 흐름인 만큼 테스트 환경만의 문제가 아니라 모든 실사용자가 겪을
+// 문제다. document의 visibilitychange 이벤트로 탭이 다시 보이는
+// 순간 정기 폴링과 별개로 즉시 한 번 더 확인해, 백그라운드 동안
+// 멈춰있던 시간과 무관하게 최신 상태를 곧바로 반영한다.
+async function _checkChargeStatusOnce(requestId) {
+  const guid = getGuid();
+  if (!guid || !requestId) return;
+  const statusEl = document.getElementById('cr-poll-status');
+  try {
+    const res = await fetch(`${WORKER_URL}/biz/charge-status?guid=${encodeURIComponent(guid)}&request_id=${encodeURIComponent(requestId)}`);
+    const data = await res.json();
+    const status = data?.request?.status;
+    if (status === 'matched') {
+      _stopChargePolling();
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = '✅ 입금이 확인되어 GDC가 충전됐어요!';
+      }
+      loadUsage();        // 상단 GDC 잔액 표시 즉시 갱신
+      loadChargeHistory();
+    } else if (status === 'expired' || status === 'cancelled') {
+      _stopChargePolling();
+    }
+  } catch (e) {
+    // 네트워크 일시 오류는 다음 주기에 재시도 — 폴링 자체를 멈추지 않는다.
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _chargePollRequestId) {
+    _checkChargeStatusOnce(_chargePollRequestId);
+  }
+});
 
 function _startChargePolling(requestId) {
   _stopChargePolling();
   const guid = getGuid();
   if (!guid || !requestId) return;
+  _chargePollRequestId = requestId;
   let tries = 0;
-  const statusEl = document.getElementById('cr-poll-status');
-  _chargePollTimer = setInterval(async () => {
+  _chargePollTimer = setInterval(() => {
     tries++;
     if (tries > CHARGE_POLL_MAX_TRIES) { _stopChargePolling(); return; }
-    try {
-      const res = await fetch(`${WORKER_URL}/biz/charge-status?guid=${encodeURIComponent(guid)}&request_id=${encodeURIComponent(requestId)}`);
-      const data = await res.json();
-      const status = data?.request?.status;
-      if (status === 'matched') {
-        _stopChargePolling();
-        if (statusEl) {
-          statusEl.style.display = 'block';
-          statusEl.textContent = '✅ 입금이 확인되어 GDC가 충전됐어요!';
-        }
-        loadUsage();        // 상단 GDC 잔액 표시 즉시 갱신
-        loadChargeHistory();
-      } else if (status === 'expired' || status === 'cancelled') {
-        _stopChargePolling();
-      }
-    } catch (e) {
-      // 네트워크 일시 오류는 다음 주기에 재시도 — 폴링 자체를 멈추지 않는다.
-    }
+    _checkChargeStatusOnce(requestId);
+
   }, CHARGE_POLL_INTERVAL_MS);
 }
 
