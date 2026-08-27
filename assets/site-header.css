@@ -124,6 +124,17 @@
 }
 .site-hero-domains a:hover { background: #006cc3; color: #fff; }
 
+.site-hero-personas {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px;
+  padding-top: 16px; border-top: 1px solid #223764;
+}
+.site-hero-personas a {
+  font-size: 13px; font-weight: 500; color: #b3bfd1; text-decoration: none;
+  background: #16295a; padding: 7px 14px; border-radius: 20px;
+  font-family: 'Pretendard', sans-serif; transition: background 0.15s, color 0.15s;
+}
+.site-hero-personas a:hover { background: #006cc3; color: #fff; }
+
 /* ── 돌아가기 화살표 (메인이 아닌 페이지에서만 렌더링됨) ── */
 .page-back-arrow {
   position: fixed; top: 96px; left: 16px; z-index: 1700;
