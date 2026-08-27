@@ -1561,41 +1561,25 @@ section.section[data-tab].tab-active { display: block; }
     <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;">법치 국가: K-Law</a>
   </div>
 
-  <nav class="site-hero-domains">
-    <a href="./domains/legislative.html">입법</a>
-    <a href="./domains/judicial.html">사법</a>
-    <a href="./domains/administrative.html">행정</a>
-    <a href="./domains/education.html">교육</a>
-    <a href="./domains/medical.html">의료</a>
-    <a href="./domains/logistics.html">교통/물류</a>
-    <a href="./domains/finance.html">금융</a>
-    <a href="./domains/market.html">시장</a>
-    <a href="./domains/industry.html">산업</a>
-    <a href="./domains/social.html">사교</a>
-    <a href="./domains/planning.html">계획</a>
-  </nav>
-
-  <div class="site-hero-section-label"><span>공익 K-서비스</span></div>
-  <nav class="site-hero-kservices">
-    <a href="#" onclick="window.__HONDI_SVC_TAB='ktelecom';loadPage('k-services');return false;">통신</a>
-    <a href="#" onclick="window.__HONDI_SVC_TAB='ksearch';loadPage('k-services');return false;">검색</a>
-  </nav>
-  <!-- 2026-08-27 정리 — '긴급'은 K-서비스 탭의 K-119, '신고'는 K-Cleaner에
-       이미 완전한 내용으로 존재해 중복이라 제거(콘텐츠 손실 없음).
-       '통신'·'검색'은 call-ai.js에 이미 배선된 실제 기능(SP-23/SP-18)인데
-       프론트 문서가 비어있던 상태였음 — pages/k-services.html에 실제
-       콘텐츠를 채운 탭으로 이전. -->
-
-  <div class="site-hero-section-label"><span>전문가 페르소나</span></div>
-  <nav class="site-hero-personas">
-    <a href="./personas/law.html">법률</a>
-  </nav>
-  <!-- 2026-08-27 정리 — 하위 12개 중 11개(의료~요리)는
-       pages/expert-personas.html의 HEALTH/EDU/ENG/FIN/ETC 카테고리가
-       이미 전원 커버하는 15줄짜리 빈 스텁이라 제거(콘텐츠 손실 없음).
-       '법률'(personas/law.html, 63명 서브탭 UI)은 expert-personas.html의
-       LAW 카테고리보다 UI가 더 풍부해 승격 이식 예정(Phase 5) — 그때까지
-       임시 보존. -->
+  <!-- 2026-08-27 — 헤더 하단 탭(입법~계획 11개, 공익 K-서비스 4개, 전문가
+       페르소나 12개) 전체 제거. 모든 콘텐츠는 상단 우측 3탭(K-서비스·
+       전문가 페르소나·K-정부)으로 이전 완료:
+       - 입법·사법·행정 → K-정부의 DAWN·가상판결·228기관 3섹션으로 확장 이전
+       - 교육·의료·교통물류·금융·시장 → K-서비스의 K-School·K-Health·
+         K-Traffic+K-Logistics·GDC·K-Market 탭으로 확장 이전
+         (교육·의료·교통물류·금융은 인터랙티브 시뮬레이터가 있어 원본
+         domains/*.html을 남기고 탭 안에서 링크로 연결)
+       - 산업 → K-서비스에 K-Biz 탭 신규 추가
+       - 사교·계획 → pages/ai-assistant.html에 08·09번 섹션으로 신설
+         (사교는 실시간 API 데모가 있어 원본 domains/social.html을 남기고
+         섹션 안에서 링크로 연결)
+       - 긴급·신고 → K-119·K-Cleaner에 이미 있던 중복이라 삭제
+       - 통신·검색 → 실제 가동 중인데 문서가 없던 기능이라 K-서비스에
+         K-Telecom·K-Search 탭으로 신규 문서화
+       - 전문가 페르소나 하위 12개 → 11개(의료~요리)는 expert-personas.html이
+         전원 커버해 삭제, 법률은 expert-personas.html의 LAW 카테고리에
+         인터랙티브 시뮬레이터 링크를 추가하고 personas/law.html은 보존
+       상세 커밋 이력은 feature/nav-consolidation-phase1 브랜치 참고. -->
 </section>
 
 <script>
