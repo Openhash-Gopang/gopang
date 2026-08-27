@@ -1624,9 +1624,11 @@ section.section[data-tab].tab-active { display: block; }
 
   var stages = [
     { render: function () { renderUrl('frame1'); }, duration: 5000 },
-    { render: function () { illustEl.innerHTML = blankSvg; }, duration: 3000 },
+    { render: function () { illustEl.innerHTML = blankSvg; }, duration: 1000 },
     { render: function () { illustEl.innerHTML = phraseSvg; }, duration: 5000 },
-    { render: function () { renderUrl('frame3'); }, duration: 8000 }
+    { render: function () { illustEl.innerHTML = blankSvg; }, duration: 1000 },
+    { render: function () { renderUrl('frame3'); }, duration: 8000 },
+    { render: function () { illustEl.innerHTML = blankSvg; }, duration: 1000 }
   ];
   var stageIdx = 0;
   function runStage() {
