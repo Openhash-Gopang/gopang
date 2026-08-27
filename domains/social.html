@@ -3,8 +3,378 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>사교 — 혼디</title>
+<title>사교 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+.callout-warn { background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-warn strong { color: #92400e; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 실시간 목록 데모 ── */
+.group-list-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 20px; overflow: hidden; }
+.group-list-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
+.group-list-head h4 { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.group-refresh-btn { font-size: 12px; font-weight: 600; color: var(--brand-dk); background: none; border: none; cursor: pointer; padding: 4px 8px; }
+.group-refresh-btn:hover { text-decoration: underline; }
+.group-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 20px; border-bottom: 1px solid var(--border); }
+.group-item:last-child { border-bottom: none; }
+.group-item .gi-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.group-item .gi-meta { font-size: 11.5px; color: var(--text4); margin-top: 2px; }
+.group-item .gi-count { font-size: 12px; font-weight: 700; color: var(--brand-dk); white-space: nowrap; }
+.group-list-empty { padding: 24px 20px; text-align: center; font-size: 12.5px; color: var(--text4); }
+
+/* ── 사교 매칭 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 20px; overflow: hidden; }
+.sim-panel { padding: 26px 28px; min-height: 160px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; min-height: 80px; padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 14px;
+  color: var(--text); background: var(--surface); border: 1.5px solid var(--border2);
+  border-radius: var(--radius); margin-bottom: 10px;
+}
+.sim-field:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-lt); }
+.sim-card { background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px; font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px; }
+.sim-card b { color: var(--brand-dk); }
+.sim-rec { border: 2px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-top: 8px; }
+.sim-rec.high { border-color: var(--brand); background: var(--brand-bg); }
+.sim-rec .rt { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.sim-rec .rl { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; }
+.sim-rec .rl.높음 { background: var(--brand); color: #fff; }
+.sim-rec .rl.중간 { background: #fffbeb; color: #92400e; }
+.sim-rec .rl.낮음 { background: var(--bg-subtle); color: var(--text4); }
+.sim-rec .rr { font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+.sim-actions { display: flex; justify-content: flex-end; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; background: var(--brand-dk); color: #fff; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '사교 · 모임',
+  l1: '어울릴 자리는 찾아드리되,',
+  l2: '대화까지 대신하지는 않습니다',
+  sub: '혼디의 사교 모듈은 관심사 기반 모임을 만들고 찾고 참여 의사를 표시하는 것까지 실제로 지원합니다. 다만 알고리즘이 성향을 분석해 "딱 맞는 사람"을 찾아주는 기능은 아직 없습니다 — 실제 대화는 언제나 사람 대 사람입니다.',
+  actions: []
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="principle">
+  <div class="section-inner">
+    <span class="section-tag">사교의 원칙</span>
+    <h2 class="section-title">모임은 <strong>연결하되, 관계는 만들지 않습니다</strong></h2>
+    <div class="section-body">
+      <p>"AI가 성향을 분석해서 나에게 딱 맞는 사람을 찾아준다" — 사교 영역에서 가장 먼저 떠오르는 상상이지만, 혼디는 이 방식을 택하지 않았습니다. 위치·관심사·일정을 교차분석해 사람을 짝지어주는 매칭 알고리즘은 실제로 만들지 않았고, 대신 <b>관심사 기반 모임을 실제로 만들고, 검색하고, 참여 의사를 표시하는 것</b>까지만 지원합니다. 그 모임 안에서 실제로 이야기를 나누는 건 기존 혼디 P2P 메시징으로 넘어갑니다 — 혼디가 대화 내용을 대신 만들거나 관계를 주선하지 않습니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="dialogue">
+  <div class="section-inner">
+    <span class="section-tag">대화 예시</span>
+    <h2 class="section-title">추천은 하되, <strong>선은 지킵니다</strong></h2>
+    <div class="dialogue-box">
+      <p class="spk"><strong>이용자</strong> "이번 주말에 사람들이랑 좀 어울리고 싶은데, 나한테 맞을 만한 모임 있는지 알아봐 줄래?"</p>
+      <p class="spk"><strong>혼디</strong> 피터님 성향에 맞을 만한 모임이 두 곳 보이네요. 제주 올레길·오름을 함께 걷는 "나올레"랑, 가볍게 노래와 춤을 곁들이는 "바라던 바다" — 이번 주말 일정으로 참가 신청서를 넣어드릴까요?</p>
+      <p class="spk"><strong>주피터</strong> "뚜껑열리는 나이트 어때?"</p>
+      <p class="spk"><strong>혼디</strong> 심정은 이해가지만, 권하지는 않습니다. 작년에도 와이프에게 걸려서...</p>
+      <p class="spk"><strong>주피터</strong> "아, 됐고."</p>
+    </div>
+    <p class="section-body">"성향에 맞는 모임을 골라 보여주는" 부분은 실제로는 카테고리 태그로 걸러 보여주는 수준입니다 — 혼디가 사람의 성격을 분석해 점수를 매기는 게 아니라, 이미 열려있는 모임 목록을 사용자가 관심 있어할 만한 태그로 정렬해 보여주는 것에 가깝습니다.</p>
+  </div>
+</section>
+
+<section class="section" id="live-list">
+  <div class="section-inner">
+    <span class="section-tag">지금 열려있는 모임</span>
+    <h2 class="section-title">실제 데이터를 <strong>그대로 불러옵니다</strong></h2>
+    <div class="section-body">
+      <p>아래는 실제 서비스에 등록된 모임 목록을 실시간으로 조회하는 데모입니다(읽기 전용 — 이 페이지에서 새 모임을 만들거나 참여 표시를 하지는 않습니다). 아직 등록된 모임이 없으면 빈 상태로 보일 수 있습니다 — 그 자체가 실제 현재 상태입니다.</p>
+    </div>
+    <div class="group-list-box">
+      <div class="group-list-head">
+        <h4>열려있는 모임</h4>
+        <button class="group-refresh-btn" id="groupRefreshBtn">새로고침</button>
+      </div>
+      <div id="groupListBody">
+        <div class="group-list-empty">불러오는 중...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var API_URL = 'https://hondi-proxy.tensor-city.workers.dev/community/groups/list';
+  var bodyEl = document.getElementById('groupListBody');
+  var btn = document.getElementById('groupRefreshBtn');
+
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+  }
+
+  async function loadGroups() {
+    bodyEl.innerHTML = '<div class="group-list-empty">불러오는 중...</div>';
+    try {
+      var res = await fetch(API_URL);
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.message || ('요청 실패(HTTP ' + res.status + ')'));
+      var groups = data.groups || [];
+      if (groups.length === 0) {
+        bodyEl.innerHTML = '<div class="group-list-empty">현재 열려있는 모임이 없습니다.</div>';
+        return;
+      }
+      bodyEl.innerHTML = groups.slice(0, 10).map(function (g) {
+        return '<div class="group-item">' +
+          '<div><div class="gi-title">' + escapeHtml(g.title || '(제목 없음)') + '</div>' +
+          '<div class="gi-meta">' + escapeHtml(g.category || '기타') + '</div></div>' +
+          '<div class="gi-count">참여의사 ' + (g.member_count || 0) + '명</div>' +
+          '</div>';
+      }).join('');
+    } catch (e) {
+      bodyEl.innerHTML = '<div class="group-list-empty">불러오지 못했습니다 — ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  btn.addEventListener('click', loadGroups);
+  loadGroups();
+})();
+</script>
+
+<section class="section" style="background:var(--bg-alt)" id="pdv-match-sim">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기 · PDV 기반 추천</span>
+    <h2 class="section-title">성향·취미를 <strong>실제 모임과 대조합니다</strong></h2>
+    <div class="section-body">
+      <p><span class="sim-badge">DeepSeek API 실시간 호출</span> 성향·취미를 입력하면, 지금 실제로 열려있는 모임 목록(위 섹션과 같은 실 데이터)을 AI가 대조해 관련성 높은 후보를 추천합니다. 실제 PDV 자동 조회는 아직 연결되지 않아, 입력한 텍스트가 PDV 요약을 대신합니다 — 모임 데이터는 진짜, 성향 조회는 시뮬레이션입니다.</p>
+    </div>
+    <div class="sim-box">
+      <div class="sim-panel" id="simSocialPanel">
+        <h4>성향·취미를 입력하세요</h4>
+        <textarea class="sim-field" id="simSocialInput" placeholder="예: 걷기와 자연을 좋아하고, 낯가림이 있어 소규모 모임을 선호함. 최근 술자리 모임에서 불편했던 경험이 있음">걷기와 자연을 좋아하고, 낯가림이 있어 소규모 모임을 선호함. 최근 술자리 모임에서 불편했던 경험이 있음</textarea>
+      </div>
+      <div class="sim-actions">
+        <button class="sim-btn" id="simSocialBtn">추천 요청</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var API_URL = 'https://hondi-proxy.tensor-city.workers.dev/social/demo-match';
+  var panelEl = document.getElementById('simSocialPanel');
+  var input = document.getElementById('simSocialInput');
+  var btn = document.getElementById('simSocialBtn');
+
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+  }
+
+  function renderResult(data) {
+    var m = data.match || {};
+    var recs = m.recommendations || [];
+    var html = '<h4>추천 결과</h4>';
+    html += '<p style="margin-bottom:4px;color:var(--text4);font-size:12px">현재 열려있는 모임 ' + (data.groups_count || 0) + '개 중 대조했습니다.</p>';
+    if (recs.length === 0) {
+      html += '<div class="sim-card">추천할 만한 열려있는 모임이 없습니다.</div>';
+    } else {
+      html += recs.map(function (r) {
+        var cls = r.relevance === '높음' ? ' high' : '';
+        return '<div class="sim-rec' + cls + '"><span class="rt">' + escapeHtml(r.title || '(제목 없음)') + '</span>' +
+          '<span class="rl ' + escapeHtml(r.relevance || '') + '">' + escapeHtml(r.relevance || '-') + '</span>' +
+          '<div class="rr">' + escapeHtml(r.reasoning || '') + '</div></div>';
+      }).join('');
+    }
+    html += '<p style="margin-top:14px;color:var(--text4);font-size:12px">' + escapeHtml(m.note || '') + '</p>';
+    panelEl.innerHTML = html;
+  }
+
+  btn.addEventListener('click', async function () {
+    var traits = input.value.trim();
+    if (!traits) return;
+    btn.disabled = true;
+    btn.textContent = '추천 생성 중...';
+    panelEl.innerHTML = '<h4>추천 생성 중...</h4><p>실제 열려있는 모임 목록을 조회하고, DeepSeek로 대조하는 중입니다.</p>';
+    try {
+      var res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ traits: traits }),
+      });
+      var data = await res.json();
+      if (!res.ok || data.status === 'upstream_error') {
+        throw new Error(data.message || ('요청 실패(HTTP ' + res.status + ')'));
+      }
+      renderResult(data);
+    } catch (e) {
+      panelEl.innerHTML = '<h4>오류</h4><div class="sim-card" style="background:#fef2f2;color:#b91c1c">' + escapeHtml(e.message) + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '추천 요청';
+    }
+  });
+})();
+</script>
+
+<section class="section" id="flow">
+  <div class="section-inner">
+    <span class="section-tag">실제 흐름</span>
+    <h2 class="section-title">만들고, 찾고, <strong>참여 의사를 표시합니다</strong></h2>
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">모임 만들기</div>
+        <div class="fl-desc">제목·카테고리·설명을 정해 새 모임을 엽니다. 만든 사람이 자동으로 첫 참여자(1명)가 됩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">검색·필터</div>
+        <div class="fl-desc">열려있는(<code>status=open</code>) 모임을 카테고리로 걸러 봅니다 — 서버는 원본 데이터를 그대로 줄 뿐, 알고리즘이 사용자별로 순위를 매기지 않습니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">참여 의사 표시</div>
+        <div class="fl-desc">"참여하고 싶다"를 누르면 참여자 수가 1명 늘어납니다. 이 단계는 의사 표시일 뿐, 실제 확정된 회원 가입이 아닙니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">실제 대화는 P2P로</div>
+        <div class="fl-desc">참여 의사를 표시한 이후의 실제 대화·약속 조율은 혼디의 기존 사람 대 사람 메시징으로 이어집니다. 이 흐름을 위한 별도의 새 채팅 시스템은 만들지 않았습니다.</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="honesty">
+  <div class="section-inner">
+    <span class="section-tag">정직한 한계</span>
+    <h2 class="section-title">"추천"이라는 말이 <strong>가리키는 범위</strong></h2>
+    <div class="callout-warn">
+      <strong>알고리즘 매칭은 없습니다.</strong> 위치·관심사·일정 교차분석으로 "이 사람과 잘 맞을 것"을 계산하는 기능은 만들지 않았습니다. 지금 할 수 있는 건 모임을 만들고, 검색하고, 참여 의사를 표시하는 것까지입니다. "추천"이라는 표현은 카테고리 태그로 목록을 걸러 보여주는 수준을 뜻합니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" id="authority">
+  <div class="section-inner">
+    <span class="section-tag">사람의 권한</span>
+    <h2 class="section-title">혼디가 <strong>할 수 없는 일</strong></h2>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>혼디가 하는 일</th><th class="cmp-hondi">사람이 하는 일</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">모임 개설</td><td>제목·카테고리·설명 등록, 목록 노출</td><td class="cmp-hondi">실제 모임 운영·규칙 결정은 개설자</td></tr>
+          <tr><td class="cmp-axis">추천</td><td>카테고리 태그로 목록 필터링</td><td class="cmp-hondi">성향 판단·궁합 여부는 사람이 직접</td></tr>
+          <tr><td class="cmp-axis">참여</td><td>참여 의사 표시(카운트 반영)</td><td class="cmp-hondi">실제 참석 여부, 대화, 관계 형성은 전적으로 본인</td></tr>
+          <tr><td class="cmp-axis">대화</td><td>기존 P2P 메시징 통로만 제공</td><td class="cmp-hondi">대화 내용·약속 조율은 당사자 간</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — pb_migrations/1786900019_created_community_groups.js, worker.js §사회적 활동 관리(handleGroupList·handleGroupCreate·handleGroupJoin·handleSocialDemoMatch), prompts/k-social-match_v1_0.md(설계 단계)</li>
+</ul>
+
 </body>
 </html>

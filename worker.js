@@ -3981,6 +3981,86 @@ async function handleGroupJoin(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// 사교 모임 추천 데모(k-social-match) — 2026-08-27 신설
+// domains/social.html의 PDV 기반 모임 추천 시뮬레이션에서 호출한다.
+// handleHealthDemoConsult·handleLogisticsDemoMatch와 동일한 원칙 —
+// DEEPSEEK_API_KEY는 서버(Worker) 안에서만 사용. 실제 열려있는 모임
+// 목록(handleGroupList와 동일한 실 데이터)을 조회한 뒤, 사용자가 입력한
+// 성향·취미(PDV 자동 조회 대신 시뮬레이션 입력)와 대조해 AI가 관련성
+// 높은 후보를 추천한다 — 모임 데이터는 진짜, PDV 조회는 시뮬레이션.
+// ═══════════════════════════════════════════════════════════
+
+const _SOCIAL_MATCH_SYSTEM = `당신은 k-social-match입니다. 혼디에 등록된 열려있는 모임 목록을
+사용자의 성향·취미와 대조해, 관련성이 높아 보이는 모임 후보를 추천합니다.
+
+원칙:
+- "95% 매칭" 같은 근거 없는 정밀 수치를 만들지 않는다. 관련성은
+  "높음|중간|낮음"의 정성적 등급으로만 평가한다.
+- 반드시 제공된 모임 목록 안에서만 추천한다. 목록에 없는 모임을
+  지어내지 않는다.
+- 모임 목록이 비어 있으면 recommendations를 빈 배열로 반환한다.
+- 상위 후보는 최대 3개로 제한한다.
+- 각 추천에는 어떤 성향·취미가 어떤 요소와 맞는지 근거를 함께 제시한다.
+- 확정적 궁합 판정("잘 맞습니다")을 내리지 않는다 — 참여 여부는
+  사용자의 몫이라는 점을 note에 명시한다.
+
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "recommendations": [
+    {"group_id": "...", "title": "...", "relevance": "높음|중간|낮음", "reasoning": "추천 근거 1문장"}
+  ],
+  "note": "PDV 자동 연동이 아니라 입력된 성향 정보를 바탕으로 한 시뮬레이션이며, 실제 참여 여부는 사용자 본인이 결정한다는 안내 문장"
+}`;
+
+// POST /social/demo-match  body: { traits: "..." }
+async function handleSocialDemoMatch(request, env, corsHeaders) {
+  if (request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', 'POST만 허용', corsHeaders);
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'BAD_JSON', '요청 본문 파싱 실패', corsHeaders); }
+
+  const traits = (body?.traits || '').trim();
+  if (!traits) return _err(400, 'MISSING_TRAITS', 'traits 필드 필수', corsHeaders);
+  if (traits.length > 400) return _err(400, 'TRAITS_TOO_LONG', '성향·취미 설명은 400자 이내로 입력해 주세요', corsHeaders);
+
+  // 실제 열려있는 모임 목록 조회 (handleGroupList와 동일한 실 데이터)
+  let groups = [];
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/community_groups/records?filter=${encodeURIComponent("status='open'")}&sort=-created_at&perPage=50`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({ items: [] }));
+      groups = (data.items || []).map(g => ({ id: g.id, title: g.title, category: g.category, description: g.description, member_count: g.member_count }));
+    }
+  } catch (e) {
+    // 모임 목록 조회 실패해도 빈 목록으로 계속 진행 — AI가 "추천할 모임 없음"으로 정직하게 답하게 한다
+    groups = [];
+  }
+
+  const userMsg = `[사용자 성향·취미 — PDV 요약 시뮬레이션]\n${traits}\n\n[현재 열려있는 모임 목록]\n${groups.length ? JSON.stringify(groups) : '(없음)'}`;
+
+  let match;
+  try {
+    match = await _healthDemoCallDeepseek(env, _SOCIAL_MATCH_SYSTEM, userMsg, 500);
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', message: '모임 추천 생성 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  return new Response(JSON.stringify({
+    source: 'live',
+    groups_count: groups.length,
+    match,
+  }), { headers: corsHeaders });
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 시민 신고(안전신문고식) — 시민 티어 신규 항목 (2026-08-11 신설)
 // K-Cleaner(fiil-kcleaner, 환경쓰레기)와 동일 패턴을 교통위반·바가지
 // 요금 등 다른 민원 범주로 확장한다. Hondi가 직접 관공서로 접수를
@@ -11773,6 +11853,7 @@ export default {
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
     if (pathname === '/community/groups/join' && request.method === 'POST') return handleGroupJoin(request, env, corsHeaders);
+    if (pathname === '/social/demo-match') return handleSocialDemoMatch(request, env, corsHeaders);
     // ── 시민 신고(안전신문고식) — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/citizen/reports/submit' && request.method === 'POST') return handleCitizenReportSubmit(request, env, corsHeaders);
     if (pathname === '/citizen/reports/list' && request.method === 'GET') return handleCitizenReportList(request, url, env, corsHeaders);
