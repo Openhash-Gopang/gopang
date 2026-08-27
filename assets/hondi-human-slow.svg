@@ -1,0 +1,46 @@
+<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>사람 간 직접 소통 — 대화가 서서히 오가며 많은 시간이 걸림</title>
+<desc>사람 A에서 사람 B로 화살표가 선을 긋듯 서서히 이어지고, 다시 B에서 A로도 같은 방식으로 서서히 이어지며 방향에 따라 색이 바뀌는 모습과, 시계 바늘이 도는 모습으로 많은 시간이 걸림을 표현</desc>
+<style>
+.arrAB{stroke-dasharray:152;animation:drawAB 3s ease-in-out infinite}
+.arrBA{stroke-dasharray:152;animation:drawBA 3s ease-in-out infinite}
+@keyframes drawAB{0%{stroke-dashoffset:152;opacity:1}45%{stroke-dashoffset:0;opacity:1}50%{stroke-dashoffset:0;opacity:0}99%{stroke-dashoffset:152;opacity:0}100%{stroke-dashoffset:152;opacity:1}}
+@keyframes drawBA{0%{stroke-dashoffset:152;opacity:0}50%{stroke-dashoffset:152;opacity:1}95%{stroke-dashoffset:0;opacity:1}99%{stroke-dashoffset:0;opacity:0}100%{stroke-dashoffset:152;opacity:0}}
+.hourhand{transform-box:view-box;transform-origin:340px 190px;animation:hourspin 18s linear infinite}
+.minhand{transform-box:view-box;transform-origin:340px 190px;animation:minspin 5s linear infinite}
+@keyframes hourspin{to{transform:rotate(360deg)}}
+@keyframes minspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){
+.arrAB{animation:none;stroke-dashoffset:0;opacity:1}
+.arrBA{animation:none;stroke-dashoffset:152;opacity:0}
+.hourhand,.minhand{animation:none}
+}
+</style>
+<defs>
+<marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect x="0" y="0" width="680" height="340" fill="#0E1B3A"/>
+<text x="44" y="88" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="500" fill="#B8C0D9" font-family="sans-serif">현행</text>
+
+<rect x="100" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+<text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
+<text x="180" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 100</text>
+
+<rect x="420" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+<text x="500" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 B</text>
+<text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 150</text>
+
+<line class="arrAB" x1="264" y1="88" x2="416" y2="88" stroke="#D9A360" stroke-width="1.5" marker-end="url(#arrow1)"/>
+<line class="arrBA" x1="416" y1="88" x2="264" y2="88" stroke="#8DA3C7" stroke-width="1.5" marker-end="url(#arrow1)"/>
+
+<circle cx="340" cy="190" r="30" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+<line x1="340" y1="164" x2="340" y2="170" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<line x1="340" y1="210" x2="340" y2="216" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<line x1="314" y1="190" x2="320" y2="190" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<line x1="360" y1="190" x2="366" y2="190" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<line class="hourhand" x1="340" y1="190" x2="340" y2="172" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"/>
+<line class="minhand" x1="340" y1="190" x2="358" y2="190" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round"/>
+<circle cx="340" cy="190" r="2" fill="rgba(255,255,255,0.7)"/>
+
+<text x="340" y="245" text-anchor="middle" font-size="12" fill="#8891AC" font-family="sans-serif">많은 시간이 걸립니다</text>
+</svg>

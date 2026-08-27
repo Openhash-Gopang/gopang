@@ -149,7 +149,7 @@ body {
 /* 히어로 오른쪽 여백 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
 .site-hero-illustration {
   position: absolute; top: 50%; right: 40px; transform: translateY(-50%);
-  width: 400px; height: auto; border-radius: 10px; display: block;
+  width: 500px; height: auto; border-radius: 10px; display: block;
 }
 @media (max-width: 1180px) {
   .site-hero-illustration { display: none; }
@@ -1551,7 +1551,7 @@ section.section[data-tab].tab-active { display: block; }
 </div>
 
 <section class="site-hero" id="top">
-  <img src="/assets/hondi-ai-communication.svg" alt="사람 간 직접 소통과 혼디를 통한 AI 간 소통 비교 애니메이션" class="site-hero-illustration">
+  <img id="hero-illustration" src="/assets/hondi-human-slow.svg" alt="사람 간 직접 소통(느림)과 혼디 간 소통(빛의 속도) 비교 애니메이션" class="site-hero-illustration">
   <h1 id="hero-title" style="transition:opacity .25s ease"><span class="l1">사람 간의 업무를</span><br><span class="l2">혼디 간의 소통으로 보강합니다.</span> <a class="hero-more" href="./highlights/hondi-communication.html">더보기<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></h1>
   <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
@@ -1597,6 +1597,19 @@ section.section[data-tab].tab-active { display: block; }
       heroEl.style.opacity = '1';
     }, 250);
   }, 5000);
+})();
+</script>
+
+<script>
+(function () {
+  var illustrations = ['/assets/hondi-human-slow.svg', '/assets/hondi-hondi-light-speed.svg'];
+  var illustIdx = 0;
+  var illustEl = document.getElementById('hero-illustration');
+  if (!illustEl) return;
+  setInterval(function () {
+    illustIdx = (illustIdx + 1) % illustrations.length;
+    illustEl.src = illustrations[illustIdx];
+  }, 2000);
 })();
 </script>
 
