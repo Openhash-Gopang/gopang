@@ -93,6 +93,13 @@
 }
 .site-hero h1 .l1 { color: #ffffff; }
 .site-hero h1 .l2 { color: #90c4ff; }
+.hero-more {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 500; color: #90c4ff;
+  text-decoration: none; vertical-align: middle; margin-left: 4px;
+  opacity: 0.85; transition: opacity 0.15s;
+}
+.hero-more:hover { opacity: 1; text-decoration: underline; }
 .site-hero-sub {
   color: #b3bfd1; font-size: 15px; line-height: 1.7; margin: 0 0 24px;
   max-width: 520px; font-family: 'Pretendard', sans-serif;
@@ -105,6 +112,17 @@
 .site-hero-actions a:hover { opacity: 0.85; }
 .site-hero-actions a.primary { background: #006cc3; color: #fff; font-weight: 500; }
 .site-hero-actions a.outline { background: #14356c; color: #dce1ea; border: 1px solid #435e8b; }
+
+.site-hero-domains {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px;
+  padding-top: 20px; border-top: 1px solid #223764;
+}
+.site-hero-domains a {
+  font-size: 13px; font-weight: 500; color: #b3bfd1; text-decoration: none;
+  background: #16295a; padding: 7px 14px; border-radius: 20px;
+  font-family: 'Pretendard', sans-serif; transition: background 0.15s, color 0.15s;
+}
+.site-hero-domains a:hover { background: #006cc3; color: #fff; }
 
 /* ── 돌아가기 화살표 (메인이 아닌 페이지에서만 렌더링됨) ── */
 .page-back-arrow {
