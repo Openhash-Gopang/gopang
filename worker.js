@@ -14187,6 +14187,43 @@ async function handleChargeRequest(request, env, corsHeaders) {
   const finalMatchCode = matchCode || _generateChargeMatchCode();
   const expiresAt = new Date(Date.now() + CHARGE_EXPIRE_HOURS * 3600 * 1000).toISOString();
 
+  // 2026-08-28 신설(주피터 지시) — 전화번호 기반 매칭키로 재설계하면서
+  // 새로 생긴 부작용을 여기서 막는다: 매칭키가 사용자당 항상 동일한
+  // 값이라, 같은 사용자가 신청을 여러 번(예: 실수로 두 번 눌렀거나,
+  // 이전 신청을 잊고 새로 신청) 하면 pending 상태 레코드가 여러 개
+  // 쌓인다. 확정 시점(_mintAndRecordCharge)엔 `match_code=X &&
+  // status=pending`으로 딱 1건만 골라 확정하는데, 정렬 기준이 없어
+  // 가장 오래된(먼저 생성된) 레코드가 뽑힐 수 있다 — 사용자가 방금
+  // 새로 연 충전 화면(usage.html의 5초 폴링)은 그 화면이 참조하는
+  // request_id가 아닌 완전히 다른(예전) 신청이 확정된 걸 알 도리가
+  // 없어 "입금했는데 화면엔 여전히 대기중"으로 보이는 문제가 실측
+  // 확인됨. 새 신청을 만들기 직전에 같은 guid의 기존 pending을 전부
+  // cancelled로 정리해, 항상 "가장 최근에 연 신청 = 유일한 활성
+  // pending"이 되도록 보장한다. 매칭키가 무작위 코드였을 땐 신청마다
+  // 값이 달라 이 충돌 자체가 없었다(신청당 유일 코드) — 새로 생긴
+  // 문제이므로 여기서만 필요하다.
+  try {
+    const token0 = await _l1AdminToken(env);
+    const staleFilter = encodeURIComponent(`guid='${guid.replace(/'/g, "\\'")}' && status='pending'`);
+    const staleRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${staleFilter}&perPage=50`, {
+      headers: { 'Authorization': `Bearer ${token0}` },
+    });
+    const staleData = await staleRes.json().catch(() => ({ items: [] }));
+    for (const stale of (staleData.items || [])) {
+      await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${stale.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token0}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      }).catch(() => {});
+    }
+    if ((staleData.items || []).length > 0) {
+      console.log(JSON.stringify({ tag: 'CHARGE_REQUEST_STALE_PENDING_CANCELLED', guid, count: staleData.items.length, ts: new Date().toISOString() }));
+    }
+  } catch (e) {
+    // 정리 실패해도 새 신청 자체는 막지 않는다 — 최선의 노력(best-effort).
+    console.warn('[ChargeRequest] 이전 pending 정리 실패(무시):', e.message);
+  }
+
   try {
     const token = await _l1AdminToken(env);
     const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records`, {
@@ -14523,7 +14560,10 @@ async function handleChargeConfirmNotification(request, env, corsHeaders) {
     const token = await _l1AdminToken(env);
     const headers = { 'Authorization': `Bearer ${token}` };
     const filter = encodeURIComponent(`match_code='${code}' && status='pending'`);
-    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, { headers });
+    // 2026-08-28 추가 안전장치 — sort=-created로 항상 가장 최근 pending을
+    // 고른다(전화번호 매칭키는 신청마다 값이 고정이라, 정리 로직이 실패한
+    // 극히 드문 경우에도 오래된 신청이 실수로 확정되는 걸 막는 이중 방어).
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&sort=-created&perPage=1`, { headers });
     const data = await res.json().catch(() => ({ items: [] }));
     const pendingRec = data.items && data.items[0];
     if (!pendingRec) {
@@ -14570,7 +14610,8 @@ async function _pollOpenBankingAutoConfirm(env) {
         continue; // 매칭코드 없으면 기존 수동 경로(charge-admin.html)로 폴백 — 자동 처리 대상 아님
       }
       const filter = encodeURIComponent(`match_code='${code}' && status='pending'`);
-      const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&perPage=1`, { headers });
+      // 2026-08-28 추가 안전장치 — 위 handleChargeConfirmNotification과 동일 이유.
+      const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&sort=-created&perPage=1`, { headers });
       const data = await res.json().catch(() => ({ items: [] }));
       const pendingRec = data.items && data.items[0];
       if (!pendingRec) {
