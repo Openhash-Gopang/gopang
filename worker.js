@@ -2921,6 +2921,143 @@ async function handleMarketingPlan(request, url, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
+// 의료 도메인 페이지 데모 상담 — 2026-08-27 신설
+// domains/medical.html의 증상 입력 시뮬레이션에서 호출한다. 클라이언트
+// 코드에 DEEPSEEK_API_KEY를 절대 넣지 않는다는 원칙(키는 항상 Worker
+// env를 통해 서버 사이드에서만 사용) — handleMarketingPlan과 동일한
+// 패턴을 그대로 따른다. 2단계 호출: ①일반 문진(SP_physician_v2_5.md의
+// M1~M3 경계·OLDCARTS·흔한/위험 감별진단·위험도 층화를 그대로 반영해
+// 진료과를 추천) → ②추천된 진료과로 2차 상담(세부분야 자문 호출,
+// STEP R-1v와 동일한 개념을 단순화해 구현). 공개 데모 엔드포인트라
+// 별도 인증이 없으므로, 남용 방지를 위해 입력 길이를 제한하고
+// max_tokens을 낮게 잡는다 — 본격적인 IP 레이트리밋은 후속 작업으로
+// 남겨둔다(TODO, DEVICE_LINK_IP_RATE_LIMIT과 같은 패턴 재사용 검토).
+// ═══════════════════════════════════════════════════════════
+
+const _HEALTH_DEMO_SPECIALTIES = [
+  '내과', '외과', '신경과', '소아청소년과', '산부인과', '정신건강의학과',
+  '응급의학과', '정형외과', '심장혈관흉부외과', '성형외과', '마취통증의학과',
+  '안과', '이비인후과', '피부과', '비뇨의학과', '영상의학과', '방사선종양학과',
+  '병리과', '진단검사의학과', '핵의학과', '재활의학과', '예방의학과', '직업환경의학과',
+];
+
+const _HEALTH_DEMO_TRIAGE_SYSTEM = `당신은 K-Health AI 의사 자문가(1차 문진)입니다. 실제 의료법상 진단·처방
+권한이 없습니다 — 확정 진단(M2)과 개인화된 처방(M3)을 절대 내리지 않습니다.
+
+원칙:
+- 병력청취는 OLDCARTS(발생시점·위치·양상·중증도 등) 관점으로 요약한다.
+- 감별진단은 항상 "흔한 원인"과 "놓치면 위험한 원인"을 함께 제시한다.
+- 위험도는 "경과 관찰"/"며칠 내 병원"/"오늘 중 병원"/"지금 응급실" 중 하나로 판단한다.
+- 적색신호(갑작스러운 극심한 두통·흉통, 호흡곤란, 의식변화·마비·언어장애,
+  심한 출혈·외상, 고열+경부강직, 자살·자해 의도, 알레르기성 전신반응)가
+  있으면 반드시 emergency=true로 표시하고 즉시 응급실/119를 안내한다.
+- 다음 중 가장 적합한 진료과 하나를 recommended_specialty로 고른다: ${_HEALTH_DEMO_SPECIALTIES.join('·')}.
+
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "emergency": true|false,
+  "emergency_message": "적색신호 발견 시 응급실/119 안내 문구, 없으면 빈 문자열",
+  "chief_complaint_summary": "환자 발화를 OLDCARTS 관점으로 정리한 1~2문장",
+  "common_causes": ["흔한 원인 1~3개"],
+  "danger_causes": ["놓치면 위험한 원인 1~3개"],
+  "risk_level": "경과 관찰|며칠 내 병원|오늘 중 병원|지금 응급실",
+  "recommended_specialty": "위 진료과 목록 중 하나",
+  "specialty_reason": "이 진료과를 추천하는 이유 1문장"
+}`;
+
+function _healthDemoSpecialistSystem(specialty) {
+  return `당신은 K-Health AI 의사 자문가 — ${specialty} 세부분야입니다. 부모 SP와
+동일하게 M2(확정 진단 회피)·M3(개인화 처방 제한) 경계를 그대로 유지합니다.
+"의사"라는 이름이 있다고 해서 이 경계가 완화되지 않습니다.
+
+앞선 1차 문진 결과(흔한/위험 원인, 위험도)를 이어받아, ${specialty} 관점에서
+다음을 제공합니다: ①추가로 필요한 검사·문진 항목 ②치료 방향에 대한 일반적
+원리 ③약물을 쓴다면 그 작용 기전·원칙(개인 용량은 언급하지 않음) ④실제
+확정·처방·시술은 대면 진료에서만 가능하다는 점을 명시.
+
+반드시 아래 JSON 스키마로만 답하십시오(설명 텍스트 금지):
+{
+  "additional_workup": ["필요한 검사·문진 1~3개"],
+  "treatment_plan": "치료 방향에 대한 일반 원리 설명 2~3문장",
+  "medication_principle": "약물을 쓴다면 그 작용 기전·원칙 설명(개인화 처방 아님), 해당 없으면 그 이유",
+  "final_authority_note": "확정 진단·처방·시술은 대면 진료 전속이라는 안내 문장"
+}`;
+}
+
+async function _healthDemoCallDeepseek(env, systemPrompt, userMsg, maxTokens) {
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMsg },
+      ],
+      max_tokens: maxTokens,
+      stream: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`DeepSeek 호출 실패(HTTP ${res.status})`);
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content || '{}';
+  const cleaned = raw.replace(/^```json\s*|```\s*$/g, '').trim();
+  return JSON.parse(cleaned);
+}
+
+// POST /health/demo-consult  body: { symptom: "..." }
+async function handleHealthDemoConsult(request, env, corsHeaders) {
+  if (request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', 'POST만 허용', corsHeaders);
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  let body;
+  try { body = await request.json(); } catch (e) { return _err(400, 'BAD_JSON', '요청 본문 파싱 실패', corsHeaders); }
+
+  const symptom = (body?.symptom || '').trim();
+  if (!symptom) return _err(400, 'MISSING_SYMPTOM', 'symptom 필드 필수', corsHeaders);
+  if (symptom.length > 500) return _err(400, 'SYMPTOM_TOO_LONG', '증상 설명은 500자 이내로 입력해 주세요', corsHeaders);
+
+  let triage;
+  try {
+    triage = await _healthDemoCallDeepseek(env, _HEALTH_DEMO_TRIAGE_SYSTEM, symptom, 500);
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', stage: 'triage', message: '1차 문진 생성 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  // M1 응급 트리아지 — 적색신호 발견 시 2차 세부분야 호출 없이 즉시 반환
+  if (triage.emergency) {
+    return new Response(JSON.stringify({ source: 'live', triage, specialist: null }), { headers: corsHeaders });
+  }
+
+  const specialty = _HEALTH_DEMO_SPECIALTIES.includes(triage.recommended_specialty)
+    ? triage.recommended_specialty
+    : '내과';
+
+  let specialist;
+  try {
+    const specialistUserMsg = `[환자 증상]\n${symptom}\n\n[1차 문진 요약]\n${triage.chief_complaint_summary}\n흔한 원인: ${(triage.common_causes || []).join(', ')}\n놓치면 위험한 원인: ${(triage.danger_causes || []).join(', ')}\n위험도: ${triage.risk_level}`;
+    specialist = await _healthDemoCallDeepseek(env, _healthDemoSpecialistSystem(specialty), specialistUserMsg, 500);
+  } catch (e) {
+    // 1차 문진은 성공했으므로 그것만이라도 반환 — 2차 호출 실패로 전체를 버리지 않는다
+    return new Response(
+      JSON.stringify({ source: 'live', triage, specialist: null, specialist_error: e.message }),
+      { headers: corsHeaders }
+    );
+  }
+
+  return new Response(JSON.stringify({
+    source: 'live',
+    triage,
+    specialty,
+    specialist,
+  }), { headers: corsHeaders });
+}
+
+
+// ═══════════════════════════════════════════════════════════
 // 고객 리뷰 대응(Review Response) — 2026-08-11 신설
 // (사업자 티어 미비 기능 4/4, 착수 시점 기준 마지막). 이전엔 실제 리뷰
 // 저장소 자체가 없었다 — kmarket_seller_template.html의 SELLER_DATA.reviews는
@@ -11491,6 +11628,8 @@ export default {
     if (pathname === '/biz/trade-area-analysis') return handleTradeAreaAnalysis(request, url, env, corsHeaders);
     // ── 마케팅 방안 제안 — 사업자 티어 미비기능 2/4 (2026-08-11 신설) ──
     if (pathname === '/biz/marketing-plan') return handleMarketingPlan(request, url, env, corsHeaders);
+    // ── 의료 도메인 페이지 데모 상담 (2026-08-27 신설) ──
+    if (pathname === '/health/demo-consult') return handleHealthDemoConsult(request, env, corsHeaders);
     // ── 고객 리뷰 대응 — 사업자 티어 미비기능 4/4 (2026-08-11 신설) ──
     if (pathname === '/biz/reviews/submit' && request.method === 'POST') return handleReviewSubmit(request, env, corsHeaders);
     if (pathname === '/biz/reviews/list' && request.method === 'GET') return handleReviewList(request, url, env, corsHeaders);
