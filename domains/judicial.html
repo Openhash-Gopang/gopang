@@ -3,8 +3,637 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>사법 — 혼디</title>
+<title>사법 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.2px; color: #ffffff; background: #0b57a4;
+  border: none; padding: 5px 14px; border-radius: 8px; margin-bottom: 14px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.flow-diagram {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 28px 8px; margin: 24px 0; display: flex; align-items: center;
+  justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px;
+}
+.flow-diagram .fd-box {
+  background: #fff; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 16px; font-weight: 500; color: var(--text); text-align: center;
+  min-width: 110px;
+}
+.flow-diagram .fd-box.fd-brand { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.flow-diagram .fd-box.fd-danger { border-color: #ef4444; color: #b91c1c; background: #fef2f2; }
+.flow-diagram .fd-arrow { color: var(--text4); font-size: 16px; flex-shrink: 0; }
+.flow-diagram .fd-note { flex-basis: 100%; text-align: center; font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li { counter-increment: flow; position: relative; padding: 0 0 28px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+.dialogue-box { background: var(--bg-subtle); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; font-size: 13.5px; line-height: 1.9; }
+.dialogue-box p { margin: 0 0 8px; }
+.dialogue-box p:last-child { margin-bottom: 0; }
+.dialogue-box .spk { color: var(--text2); }
+.dialogue-box .spk strong { color: var(--text); }
+
+.callout-info { background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-info strong { color: var(--brand-dk); }
+.callout-warn { background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg); padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8; }
+.callout-warn strong { color: #92400e; }
+
+.status-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+.status-pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.status-pill.high { background: #fef2f2; color: #b91c1c; }
+.status-pill.mid { background: #fffbeb; color: #92400e; }
+.status-pill.ok { background: var(--brand-bg); color: var(--brand-dk); }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.doc-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  font-size: 13px; font-weight: 600; color: var(--brand-dk); text-decoration: none;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2; list-style: none; }
+
+/* ── 시뮬레이션 ── */
+.sim-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden; }
+.sim-stepper { display: flex; overflow-x: auto; background: var(--bg-subtle); padding: 14px 16px; gap: 6px; }
+.sim-dot {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--text4);
+  padding: 6px 10px; border-radius: 99px; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sim-dot .num {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border2);
+  color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sim-dot.done { color: var(--brand-dk); }
+.sim-dot.done .num { background: var(--brand); }
+.sim-dot.active { background: var(--brand-bg); color: var(--brand-dk); }
+.sim-dot.active .num { background: var(--brand-dk); }
+.sim-dot.danger.active { background: #fef2f2; color: #b91c1c; }
+.sim-dot.danger.done .num { background: #ef4444; }
+
+.sim-panel { padding: 26px 28px; min-height: 200px; }
+.sim-panel h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.sim-panel p { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin-bottom: 10px; }
+.sim-field {
+  width: 100%; border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 14px; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text); resize: vertical; min-height: 80px;
+}
+.sim-field:focus { outline: 2px solid var(--brand-lt); border-color: var(--brand); }
+.sim-card {
+  background: var(--bg-subtle); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.75; margin-top: 10px;
+}
+.sim-card b { color: var(--brand-dk); }
+.sim-card.danger { background: #fef2f2; }
+.sim-card.danger b { color: #b91c1c; }
+.sim-score { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.sim-score .bar { width: 140px; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-score .bar-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.8s ease; }
+.sim-score .bar-fill.danger { background: #ef4444; }
+.sim-badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-dk); margin-bottom: 8px; }
+.sim-badge.danger { background: #fef2f2; color: #b91c1c; }
+
+.sim-tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+.sim-tier { border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; text-align: center; transition: border-color 0.15s, background 0.15s; }
+.sim-tier:hover { border-color: var(--brand-lt); }
+.sim-tier.selected { border-color: var(--brand); background: var(--brand-bg); }
+.sim-tier .pct { font-size: 20px; font-weight: 700; color: var(--text); }
+.sim-tier .cost { font-size: 13px; font-weight: 600; color: var(--brand-dk); margin-top: 4px; }
+.sim-tier .time { font-size: 11.5px; color: var(--text4); margin-top: 2px; }
+@media (max-width: 560px) { .sim-tier-grid { grid-template-columns: 1fr; } }
+
+.sim-pipeline { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.sim-llm { background: var(--bg-subtle); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--text2); text-align: center; }
+.sim-llm.plaintiff { background: #eff6ff; border-color: var(--brand-lt); color: var(--brand-dk); }
+.sim-llm.defendant { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.sim-llm.judge { background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
+.sim-pipe-arrow { color: var(--text4); font-size: 15px; }
+
+.sim-progress-wrap { margin: 14px 0; }
+.sim-progress-bar { height: 10px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.sim-progress-fill { height: 100%; background: var(--brand); border-radius: 99px; width: 0%; transition: width 0.1s linear; }
+.sim-progress-label { font-size: 12px; color: var(--text4); margin-top: 6px; text-align: center; }
+
+.sim-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.sim-btn { font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 99px; border: none; cursor: pointer; font-family: 'Pretendard', sans-serif; transition: opacity 0.15s; }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sim-btn.primary { background: var(--brand-dk); color: #fff; }
+.sim-btn.outline { background: #fff; color: var(--text3); border: 1px solid var(--border2); }
+.sim-btn.ghost { background: none; color: var(--text4); }
+.sim-btn:not(:disabled):hover { opacity: 0.85; }
+@media (max-width: 640px) { .sim-panel { padding: 20px 18px; } .sim-actions { padding: 14px 18px; flex-wrap: wrap; gap: 8px; } }
+</style>
 </head>
 <body>
+<script>
+window.PAGE_HERO = {
+  badge: '사법 · 예방법학',
+  l1: '일이 벌어지기 전에',
+  l2: '막는 법학, K-Law',
+  sub: '혼디의 사법 모듈은 판결을 대신하지 않습니다. 대화 중 위법 정후를 실시간으로 감지해 피해를 막고, 다툼이 생기면 증거를 정리해 사람 판사의 판단을 돕습니다.',
+  actions: [
+    { label: '입법·사법·행정 통합 체계', href: '../integrated-system.html', style: 'primary' },
+    { label: '법치 국가: K-Law', href: '../reports/hondi-rule-of-law.html', style: 'outline' }
+  ]
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<section class="section" id="sim-phishing">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기 · 1</span>
+    <h2 class="section-title">보이스피싱 <strong>실시간 감지 · 즉시 신고</strong></h2>
+    <div class="section-body">
+      <p>대화창에 위험 신호가 뜨는 순간부터 관할 기관 신고까지, K-Law가 몇 초 안에 처리하는 과정을 체험해보세요. 실제 신고는 전송되지 않는 시뮬레이션입니다.</p>
+    </div>
+    <div class="sim-box">
+      <div class="sim-stepper" id="simAStepper"></div>
+      <div class="sim-panel" id="simAPanel"></div>
+      <div class="sim-actions">
+        <button class="sim-btn outline" id="simAPrev">이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="sim-btn ghost" id="simAReset">처음부터</button>
+          <button class="sim-btn primary" id="simANext">다음 단계</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="sim-verdict">
+  <div class="section-inner">
+    <span class="section-tag">체험해보기 · 2</span>
+    <h2 class="section-title">신뢰수준별 <strong>대법원 판결문 예상</strong></h2>
+    <div class="section-body">
+      <p>사용자가 사건 개요를 입력하고, 예상 일치도 신뢰수준(90%·95%·99%)을 선택하면, 그에 따라 <b>K-Law v15.1</b>로 대법원 판결문 예상을 작성합니다.</p>
+      <p>90%는 비용 1,000원에 작성 속도 1분, 95%는 5,000원에 5분, 99%는 10,000원에 10분이 걸립니다.</p>
+      <p>처리 방식도 등급마다 다릅니다.</p>
+      <p>* <b>90%</b>는 하나의 LLM(DeepSeek V4 Pro)에 K-Law v15.1을 프롬프트로 입력합니다.<br>
+      * <b>95%</b>는 세 개의 LLM(DeepSeek·Gemini·Claude)에 K-Law v20.0을 각각 입력해 그 결과를 평균합니다.<br>
+      * <b>99%</b>는 일곱 개의 LLM 중 두 개가 원고와 피고 양측의 법리를 각각 개발하고, 나머지 다섯 개가 이를 심사·판정합니다.</p>
+      <p>신뢰수준이 높을수록 더 많은 LLM이 교차 검증하는 대신, 비용과 시간이 늘어납니다.</p>
+      <p style="font-size:12.5px;color:var(--text4)">※ 신뢰수준·비용·소요 시간은 K-Law가 자체 정의한 서비스 등급이며, 실제 판결과의 일치 여부를 법적으로 보증하는 수치가 아닙니다.</p>
+    </div>
+    <div class="sim-box">
+      <div class="sim-stepper" id="simBStepper"></div>
+      <div class="sim-panel" id="simBPanel"></div>
+      <div class="sim-actions">
+        <button class="sim-btn outline" id="simBPrev">이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="sim-btn ghost" id="simBReset">처음부터</button>
+          <button class="sim-btn primary" id="simBNext">다음 단계</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ══════════════ 시뮬레이션 1 — 보이스피싱 실시간 감지 ══════════════ */
+(function () {
+  var LABELS = ['대화 입력', '실시간 감지', '경고 표시', '신고 접수', '완료'];
+  var state = { text: '' };
+  var cur = 0;
+
+  var stepperEl = document.getElementById('simAStepper');
+  var panelEl = document.getElementById('simAPanel');
+  var prevBtn = document.getElementById('simAPrev');
+  var nextBtn = document.getElementById('simANext');
+  var resetBtn = document.getElementById('simAReset');
+
+  var SAMPLE = '여기 금감원 직원인데, 고객님 계좌가 범죄에 연루돼서 지금 바로 확인이 필요합니다. 계좌번호랑 비밀번호 알려주시면 바로 조치하겠습니다.';
+
+  function renderStepper() {
+    stepperEl.innerHTML = LABELS.map(function (label, i) {
+      var cls = 'danger ' + (i === cur ? 'active' : (i < cur ? 'done' : ''));
+      return '<div class="sim-dot ' + cls + '"><span class="num">' + (i + 1) + '</span>' + label + '</div>';
+    }).join('');
+  }
+
+  function panels() {
+    var text = state.text || SAMPLE;
+    return [
+      function () {
+        return '<h4>1. 대화 내용 입력</h4>' +
+          '<p>혼디로 받은 메시지를 붙여넣어 보세요(예시가 미리 채워져 있습니다).</p>' +
+          '<textarea class="sim-field" id="simAInput">' + text + '</textarea>';
+      },
+      function () {
+        return '<h4>2. K-Law 실시간 스캔</h4>' +
+          '<p>Fast-Path 트리거와 즉시 대조합니다.</p>' +
+          '<div class="sim-card danger">"' + text + '"</div>' +
+          '<div class="sim-score">KL-FP01 기관 사칭 <div class="bar"><div class="bar-fill danger" style="width:95%"></div></div>95%</div>' +
+          '<div class="sim-score">KL-FP02 긴급 정보 요구 <div class="bar"><div class="bar-fill danger" style="width:90%"></div></div>90%</div>';
+      },
+      function () {
+        return '<h4>3. 즉시 경고 표시</h4>' +
+          '<span class="sim-badge danger">S3 · 최고 위험</span>' +
+          '<div class="sim-card danger"><b>⚠️ 보이스피싱 의심</b><br>실제 금융감독원·검찰·경찰은 전화로 계좌번호·비밀번호·인증번호를 요구하지 않습니다. 절대 알려주지 마세요.</div>' +
+          '<p style="margin-top:10px">관할 기관에 바로 신고하시겠습니까? 다음 단계에서 진행합니다.</p>';
+      },
+      function () {
+        var caseId = 'KLAW-' + (100000 + Math.floor(Math.random() * 899999));
+        return '<h4>4. 관할 기관 신고 접수</h4>' +
+          '<p>사건번호를 발급하고, 대화 로그·발신 정보를 증거로 정리해 관할 기관에 전달합니다.</p>' +
+          '<div class="sim-card"><b>신고 대상:</b> 경찰청 사이버수사국 · 금융감독원 보이스피싱 지킴이<br><b>사건번호:</b> ' + caseId + '<br><b>첨부:</b> 대화 로그, 발신번호, 위험도 판정 근거(KL-FP01·02)</div>';
+      },
+      function () {
+        return '<h4>5. 완료</h4>' +
+          '<span class="sim-badge">신고 접수 완료</span>' +
+          '<p>실제 서비스에서는 신고 접수 후 진행 상황을 사용자에게 계속 안내합니다. 다만 <b>실제 수사 개시 여부는 관할 기관이 결정</b>합니다 — 혼디는 신고와 증거 전달까지만 수행합니다.</p>' +
+          '<p style="margin-top:16px;color:var(--text4);font-size:12.5px">"처음부터"를 눌러 다시 체험해볼 수 있습니다.</p>';
+      }
+    ];
+  }
+
+  function render() {
+    renderStepper();
+    panelEl.innerHTML = panels()[cur]();
+    prevBtn.disabled = cur === 0;
+    nextBtn.textContent = cur === LABELS.length - 1 ? '완료' : '다음 단계';
+  }
+
+  function saveInput() {
+    var input = document.getElementById('simAInput');
+    if (input) state.text = input.value.trim();
+  }
+
+  nextBtn.addEventListener('click', function () { saveInput(); if (cur < LABELS.length - 1) { cur++; render(); } });
+  prevBtn.addEventListener('click', function () { saveInput(); if (cur > 0) { cur--; render(); } });
+  resetBtn.addEventListener('click', function () { state = { text: '' }; cur = 0; render(); });
+
+  render();
+})();
+
+/* ══════════════ 시뮬레이션 2 — 신뢰수준별 판결문 예상 ══════════════ */
+(function () {
+  var LABELS = ['사건 개요', '신뢰수준 선택', 'LLM 처리', '결과'];
+  var TIERS = {
+    90: { cost: '1,000원', time: '1분', timeMs: 2200, version: 'K-Law v15.1', desc: 'DeepSeek V4 Pro 1개 모델에 K-Law v15.1을 프롬프트로 입력합니다.' },
+    95: { cost: '5,000원', time: '5분', timeMs: 3200, version: 'K-Law v20.0', desc: 'DeepSeek·Gemini·Claude 3개 모델에 K-Law v20.0을 각각 입력하고, 세 결과를 평균합니다.' },
+    99: { cost: '10,000원', time: '10분', timeMs: 4200, version: 'K-Law v20.0 대심제', desc: '7개 모델 중 2개가 원고·피고 양측 법리를 각각 개발하고, 나머지 5개 모델이 이를 심사·판정합니다.' }
+  };
+  var state = { text: '', tier: null };
+  var cur = 0;
+
+  var stepperEl = document.getElementById('simBStepper');
+  var panelEl = document.getElementById('simBPanel');
+  var prevBtn = document.getElementById('simBPrev');
+  var nextBtn = document.getElementById('simBNext');
+  var resetBtn = document.getElementById('simBReset');
+
+  var SAMPLE = '이웃과 담장 경계를 두고 다툼이 있었고, 상대가 제 땅 30cm를 침범해 담장을 쌓았습니다.';
+
+  function renderStepper() {
+    stepperEl.innerHTML = LABELS.map(function (label, i) {
+      var cls = i === cur ? 'active' : (i < cur ? 'done' : '');
+      return '<div class="sim-dot ' + cls + '"><span class="num">' + (i + 1) + '</span>' + label + '</div>';
+    }).join('');
+  }
+
+  function tierPipeline(pct) {
+    if (pct === 90) {
+      return '<div class="sim-pipeline"><div class="sim-llm">K-Law v15.1 프롬프트</div><span class="sim-pipe-arrow">→</span><div class="sim-llm judge">DeepSeek V4 Pro</div><span class="sim-pipe-arrow">→</span><div class="sim-llm">예상 판결문</div></div>';
+    }
+    if (pct === 95) {
+      return '<div class="sim-pipeline">' +
+        '<div class="sim-llm judge">DeepSeek</div><div class="sim-llm judge">Gemini</div><div class="sim-llm judge">Claude</div>' +
+        '<span class="sim-pipe-arrow">→ 평균 →</span><div class="sim-llm">예상 판결문</div></div>';
+    }
+    return '<div class="sim-pipeline">' +
+      '<div class="sim-llm plaintiff">원고측 법리<br>LLM 1개</div>' +
+      '<div class="sim-llm defendant">피고측 법리<br>LLM 1개</div>' +
+      '<span class="sim-pipe-arrow">→</span>' +
+      '<div class="sim-llm judge">심사 LLM 5개</div>' +
+      '<span class="sim-pipe-arrow">→</span><div class="sim-llm">합의 판정</div></div>';
+  }
+
+  function panels() {
+    var text = state.text || SAMPLE;
+    return [
+      function () {
+        return '<h4>1. 사건 개요를 입력하세요</h4>' +
+          '<textarea class="sim-field" id="simBInput">' + text + '</textarea>';
+      },
+      function () {
+        var rows = [90, 95, 99].map(function (pct) {
+          var t = TIERS[pct];
+          var sel = state.tier === pct ? ' selected' : '';
+          return '<div class="sim-tier' + sel + '" data-pct="' + pct + '"><div class="pct">' + pct + '%</div><div class="cost">' + t.cost + '</div><div class="time">작성 ' + t.time + '</div></div>';
+        }).join('');
+        return '<h4>2. 예상 일치도 신뢰수준을 선택하세요</h4>' +
+          '<p>신뢰수준이 높을수록 더 많은 모델이 교차 검증하지만, 비용과 시간이 늘어납니다.</p>' +
+          '<div class="sim-tier-grid" id="simBTierGrid">' + rows + '</div>' +
+          (state.tier ? '<div class="sim-card"><b>' + state.tier + '% · ' + TIERS[state.tier].version + '</b><br>' + TIERS[state.tier].desc + '</div>' : '<p style="color:var(--text4)">등급을 선택하면 처리 방식이 표시됩니다.</p>');
+      },
+      function () {
+        var t = TIERS[state.tier || 90];
+        return '<h4>3. ' + (state.tier || 90) + '% 신뢰수준으로 처리 중</h4>' +
+          tierPipeline(state.tier || 90) +
+          '<div class="sim-progress-wrap"><div class="sim-progress-bar"><div class="sim-progress-fill" id="simBProgress"></div></div>' +
+          '<div class="sim-progress-label" id="simBProgressLabel">실제 소요 시간 ' + t.time + ' · 비용 ' + t.cost + '</div></div>';
+      },
+      function () {
+        var pct = state.tier || 90;
+        var t = TIERS[pct];
+        return '<h4>4. 예상 판결문 (신뢰수준 ' + pct + '%)</h4>' +
+          '<span class="sim-badge">' + t.version + ' · ' + t.cost + ' 청구</span>' +
+          '<div class="sim-card">"' + text + '"<br><br>→ 경계확정소송 관련 판례 대조 결과, 원고(경계 침범을 주장하는 측) 승소 가능성이 높은 것으로 예상됩니다. 상대방은 침범한 부분의 담장을 철거하고 원상복구할 의무가 있다고 판단됩니다.</div>' +
+          '<p style="margin-top:10px;color:var(--text4);font-size:12.5px">참고용 예상 자료이며 법적 효력이 없습니다. 실제 소송 결과는 사람 판사의 최종 판단에 따릅니다.</p>';
+      }
+    ];
+  }
+
+  function animateProgress() {
+    var fill = document.getElementById('simBProgress');
+    var label = document.getElementById('simBProgressLabel');
+    if (!fill) return;
+    var t = TIERS[state.tier || 90];
+    var duration = t.timeMs;
+    var start = Date.now();
+    var timer = setInterval(function () {
+      var pct = Math.min(100, ((Date.now() - start) / duration) * 100);
+      fill.style.width = pct + '%';
+      if (pct >= 100) {
+        clearInterval(timer);
+        label.textContent = '처리 완료 — 실제 소요 시간 ' + t.time + ' · 비용 ' + t.cost;
+      }
+    }, 60);
+  }
+
+  function render() {
+    renderStepper();
+    panelEl.innerHTML = panels()[cur]();
+    prevBtn.disabled = cur === 0;
+    nextBtn.textContent = cur === LABELS.length - 1 ? '완료' : '다음 단계';
+    nextBtn.disabled = (cur === 1 && !state.tier);
+
+    if (cur === 1) {
+      var grid = document.getElementById('simBTierGrid');
+      grid.querySelectorAll('.sim-tier').forEach(function (el) {
+        el.addEventListener('click', function () {
+          state.tier = parseInt(el.getAttribute('data-pct'), 10);
+          render();
+        });
+      });
+    }
+    if (cur === 2) animateProgress();
+  }
+
+  function saveInput() {
+    var input = document.getElementById('simBInput');
+    if (input) state.text = input.value.trim();
+  }
+
+  nextBtn.addEventListener('click', function () { saveInput(); if (cur < LABELS.length - 1) { cur++; render(); } });
+  prevBtn.addEventListener('click', function () { saveInput(); if (cur > 0) { cur--; render(); } });
+  resetBtn.addEventListener('click', function () { state = { text: '', tier: null }; cur = 0; render(); });
+
+  render();
+})();
+</script>
+
+<section class="section" id="principle">
+  <div class="section-inner">
+    <span class="section-tag">사법의 원칙</span>
+    <h2 class="section-title">사후 구제가 아니라 <strong>사전 감지</strong></h2>
+    <div class="flow-diagram">
+      <span class="fd-box">대화 중 위법 정후 발생</span>
+      <span class="fd-arrow">→</span>
+      <span class="fd-box fd-danger">K-Law 실시간 감지</span>
+      <span class="fd-arrow">→</span>
+      <span class="fd-box fd-brand">증거 정리 + 에스크로 보호</span>
+      <span class="fd-note">최종 유·무죄, 배상 여부는 언제나 사람 판사가 결정합니다</span>
+    </div>
+    <div class="section-body">
+      <p>K-Law는 혼디 플랫폼의 <b>1호 도메인 플러그인</b>이자 "예방법학 엔진"입니다. 소송이 벌어진 뒤 증거를 모으는 게 아니라, 대화가 오가는 그 순간 사기·협박·불공정계약 같은 위법 정후를 형법·민법·근로기준법 등 실제 법령 조항에 대조해 실시간으로 잡아냅니다.</p>
+      <p>13개 법령 카테고리(형사 5·민사 4·노동 2·소비자 2)에 걸쳐 패턴을 분류하며, 그중에서도 피해가 즉각적인 유형(보이스피싱·공갈협박·전세사기 등)은 <b>Fast-Path</b>로 우선 처리합니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="detection">
+  <div class="section-inner">
+    <span class="section-tag">실시간 감지</span>
+    <h2 class="section-title">13개 법령 카테고리, <strong>실시간 대조</strong></h2>
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>구분</th><th>유형</th><th>근거 법령</th><th>위험도</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="5">형사</td><td>사기(CR-1)</td><td>형법 §347</td><td><span class="status-pill high">0.85</span></td></tr>
+          <tr><td>협박·공갈(CR-2)</td><td>형법 §283·350</td><td><span class="status-pill high">0.88</span></td></tr>
+          <tr><td>보이스피싱(CR-3)</td><td>전기통신금융사기법</td><td><span class="status-pill high">0.95</span></td></tr>
+          <tr><td>다단계·유사수신(CR-4)</td><td>방문판매법·유사수신규제법</td><td><span class="status-pill mid">0.82</span></td></tr>
+          <tr><td>명예훼손(CR-5)</td><td>형법 §307·309</td><td><span class="status-pill mid">0.70</span></td></tr>
+          <tr><td rowspan="4">민사</td><td>불공정계약(CV-1)</td><td>약관규제법 §6</td><td><span class="status-pill mid">0.65</span></td></tr>
+          <tr><td>임대차 위법(CV-2)</td><td>주택임대차보호법</td><td><span class="status-pill mid">0.72</span></td></tr>
+          <tr><td>금전 위법(CV-3)</td><td>이자제한법·대부업법</td><td><span class="status-pill mid">0.68</span></td></tr>
+          <tr><td>개인정보 침해(CV-4)</td><td>개인정보보호법 §23</td><td><span class="status-pill mid">0.75</span></td></tr>
+          <tr><td rowspan="2">노동</td><td>직장내 괴롭힘(LB-1)</td><td>근로기준법 §76조의2</td><td><span class="status-pill mid">0.78</span></td></tr>
+          <tr><td>성희롱(LB-2)</td><td>남녀고용평등법 §12</td><td><span class="status-pill high">0.82</span></td></tr>
+          <tr><td rowspan="2">소비자</td><td>허위·과장 광고(CC-1)</td><td>표시광고법 §3</td><td><span class="status-pill mid">0.60</span></td></tr>
+          <tr><td>거래 강제(CC-2)</td><td>공정거래법 §23</td><td><span class="status-pill mid">0.65</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-body" style="margin-top:16px">실증 성능(KL-S-01 §5) — 보이스피싱 탐지율 <b>≥99.7%</b>, 임대차 위법성 탐지율 <b>≥93.3%</b>.</p>
+  </div>
+</section>
+
+<section class="section" id="fastpath">
+  <div class="section-inner">
+    <span class="section-tag">Fast-Path</span>
+    <h2 class="section-title">피해가 <strong>즉각적인 유형</strong>은 먼저 처리</h2>
+    <div class="section-body">
+      <p>보이스피싱·공갈협박처럼 몇 초 안에 실제 송금·피해로 이어질 수 있는 5가지 패턴은 별도 트리거(KL-FP01~05)로 최우선 감지합니다.</p>
+    </div>
+
+    <div class="dialogue-box">
+      <p class="spk"><strong>발신자</strong> "여기 금감원 직원인데, 고객님 계좌가 범죄에 연루돼서 지금 당장 확인이 필요합니다. 계좌번호 알려주시면..."</p>
+      <p class="spk"><strong>혼디</strong> ⚠️ 기관 사칭·긴급 송금 유도 패턴이 감지되었습니다(KL-FP01, KL-FP02 — 신뢰도 95%, 90%). 실제 금융감독원·검찰은 전화로 계좌 정보나 송금을 요구하지 않습니다. 송금 전에 반드시 해당 기관 대표번호로 직접 확인하세요.</p>
+    </div>
+
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>트리거</th><th>설명</th><th>신뢰도</th></tr></thead>
+        <tbody>
+          <tr><td>KL-FP01</td><td>기관 사칭(금감원·검찰청·경찰청 등)</td><td><span class="status-pill high">0.95</span></td></tr>
+          <tr><td>KL-FP02</td><td>긴급 송금 유도</td><td><span class="status-pill high">0.90</span></td></tr>
+          <tr><td>KL-FP03</td><td>보이스피싱 직접 키워드</td><td><span class="status-pill high">0.88</span></td></tr>
+          <tr><td>KL-FP04</td><td>공갈·협박</td><td><span class="status-pill high">0.90</span></td></tr>
+          <tr><td>KL-FP05</td><td>전세 사기·보증금 편취</td><td><span class="status-pill high">0.88</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="escrow">
+  <div class="section-inner">
+    <span class="section-tag">감지 이후</span>
+    <h2 class="section-title">고위험 감지 시 <strong>GDC 자동 에스크로</strong></h2>
+    <div class="section-body">
+      <p>가장 높은 위험 단계(S3)가 감지되면, K-Law는 두 가지를 동시에 실행합니다 — 법적 분쟁(LEGAL_DISPUTE) 기록 생성과, 관련 GDC 거래의 <b>자동 에스크로(임시 동결)</b> 제안입니다. 돈이 실제로 넘어가기 전에 제동을 거는 장치입니다.</p>
+    </div>
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">위험 평가</div>
+        <div class="fl-desc">대화 내용이 분류기를 거쳐 <code>S3</code>(최고 위험) 단계로 판정됩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">법적 분쟁 이벤트 발행</div>
+        <div class="fl-desc">감지된 법령 플래그(예: CR-3 보이스피싱)와 점수가 함께 기록됩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">GDC 에스크로 생성 제안</div>
+        <div class="fl-desc">관련 결제·송금이 있다면 즉시 완료되지 않도록 임시 보류를 제안합니다 — 최종 집행 여부는 사용자 확인을 거칩니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">증거 패키지 정리</div>
+        <div class="fl-desc">대화 로그·서명·타임스탬프를 묶어 이후 분쟁 시 바로 쓸 수 있는 증거 보고서 형태로 준비합니다.</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="court-api">
+  <div class="section-inner">
+    <span class="section-tag">법원 연동</span>
+    <h2 class="section-title">법원이 직접 검증할 수 있는 <strong>API</strong></h2>
+    <div class="section-body">
+      <p>K-Law가 만든 증거는 "혼디의 주장"으로 끝나지 않습니다. 법원이나 제3자가 독립적으로 검증할 수 있도록 API를 공개합니다(GDC §14.5).</p>
+    </div>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>엔드포인트</th><th>기능</th><th class="cmp-hondi">비용</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">POST /verify/signature</td><td>발신자 디지털 서명 검증</td><td class="cmp-hondi">무료</td></tr>
+          <tr><td class="cmp-axis">GET /evidence-report/{id}</td><td>증거 일관성 보고서 생성</td><td class="cmp-hondi">무료</td></tr>
+          <tr><td class="cmp-axis">GET /openhash/verify/{hash}</td><td>OpenHash 해시 독립 검증(위변조 여부)</td><td class="cmp-hondi">무료</td></tr>
+          <tr><td class="cmp-axis">POST /verify/ownership</td><td>ZKP(영지식증명) 소유권 검증</td><td class="cmp-hondi">0.01 GDC/회</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg-alt)" id="verdict-draft">
+  <div class="section-inner">
+    <span class="section-tag">판결 지원</span>
+    <h2 class="section-title">가상 판결문은 <strong>참고 자료</strong>일 뿐</h2>
+    <div class="dialogue-box">
+      <p class="spk"><strong>이용자</strong> "혼디야, 이웃과 담장 경계 분쟁이 있었는데, 소송을 제기하면 대법원까지 갔을 때 어떤 판결이 나올지 법리를 분석해서 예상 판결문을 작성해 줘."</p>
+      <p class="spk"><strong>혼디</strong> 확인하겠습니다. 경계확정소송 관련 대법원 확정판결 342건과 대조한 결과, 99% 신뢰도로 초안을 작성했습니다. 법리상 원고 승소 가능성은 96%로 예상되며, 초등학생도 이해할 수 있도록 쉬운 문장으로 예상 판결문을 준비했습니다.</p>
+    </div>
+    <div class="callout-warn">
+      <strong>정확도의 한계.</strong> 대법원 공개 판례를 대상으로 자체 측정한 결과, K-Law 가상 판결문의 실제 판결 일치도는 약 <b>75~90%</b>입니다. 참고용 수치이며 법적 효력이 없습니다 — 개인파산·면책 절차에서도 "혼디 초안 + 인간 판사 최종 결정"이 원칙입니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" id="authority">
+  <div class="section-inner">
+    <span class="section-tag">사람의 권한</span>
+    <h2 class="section-title">혼디가 <strong>할 수 없는 일</strong></h2>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr><th>구분</th><th>혼디(K-Law)가 하는 일</th><th class="cmp-hondi">사람이 하는 일</th></tr></thead>
+        <tbody>
+          <tr><td class="cmp-axis">위법 감지</td><td>대화 실시간 스캔, 위험도 산정</td><td class="cmp-hondi">실제 신고·수사 개시 여부 판단</td></tr>
+          <tr><td class="cmp-axis">자금 보호</td><td>고위험 시 에스크로 보류 제안</td><td class="cmp-hondi">에스크로 최종 집행·해제 승인</td></tr>
+          <tr><td class="cmp-axis">증거 정리</td><td>서명·해시·타임스탬프 검증 보고서 생성</td><td class="cmp-hondi">법원 제출, 증거 채택 여부 판단</td></tr>
+          <tr><td class="cmp-axis">판결</td><td>가상 판결문 초안(참고용, 법적 효력 없음)</td><td class="cmp-hondi">유·무죄, 배상액 등 최종 판결</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-body" style="margin-top:16px">개별 판결이 아니라 그 판결을 반복해서 낳는 제도 자체에 문제가 있다고 느껴진다면, 입법 모듈(DAWN)을 통해 이의를 제기할 수 있습니다.</p>
+    <a class="doc-link" href="./legislative.html">입법 페이지에서 이의제기 절차 보기 →</a>
+  </div>
+</section>
+
+<ul class="refs" style="max-width:860px;margin:0 auto;padding:24px 8% 64px">
+  <li>관련 문서 — src/domains/k-law/(classifier.js·risk-rules.js·api.js·README.md·CHANGELOG.md), KL-M-02, KL-S-01, GDC §1.2·§14.5</li>
+</ul>
+
 </body>
 </html>
