@@ -14132,10 +14132,41 @@ async function handleBizSupply(request, env, corsHeaders) {
 // 트레이드오프다(가상계좌 자동화는 은행 API 계약이 필요해 별도 TODO).
 // ═══════════════════════════════════════════════════════════
 
-const CHARGE_MIN_KRW = 1000;    // 너무 작은 신청은 매칭 단서(코드)만으로 은행 명세서 대조가 더 번거로워짐
+// 2026-08-28 재설계(주피터 지시) — 기존 방식(_generateChargeMatchCode로
+// 무작위 HD+6자리 코드를 새로 발급해 사용자가 "보내는 분 표시"에
+// 직접 타이핑)이 실사용 테스트에서 완전히 깨졌다: 은행이 예금주
+// 실명(예: "도영민", 3자)을 그 필드 맨 앞에 강제로 붙이는데, 그
+// 필드 자체가 총 10자로 잘린다(실측 확인) — 이름 3자 + HD+6자리(8자)
+// = 11자로 항상 초과해 매칭코드 마지막 글자가 매번 잘려나갔다.
+// 한국인 이름이 대개 2~4자인 이상 이건 이 사용자 한 명의 문제가
+// 아니라 모든 실사용자에게 구조적으로 재현되는 설계 결함이었다.
+//
+// 새 방식: 무작위 코드를 새로 만들어 사용자에게 "발급"하는 대신,
+// 사용자가 가입 시 이미 인증한 본인 전화번호(e164)의 뒤 8자리를
+// 그대로 매칭키로 쓴다. 장점:
+//   1. 사용자가 코드를 복사/기억할 필요가 없다 — 이미 아는 자기
+//      번호만 입력하면 된다(UX 개선)
+//   2. 숫자 8자리는 이름 3~4자를 더해도 10자 안에 넉넉히 들어간다
+//   3. 대한민국 휴대폰 번호는 사실상 유일하므로 무작위 코드의
+//      "낮은 충돌 확률" 가정을 그대로 유지하면서 발급 단계 자체가
+//      사라진다
+// 완벽한 자동 대사가 아니라 관리자가 금액까지 함께 대조하는 1차
+// 단서라는 원 설계 전제는 그대로 유지한다(_findPendingByMatchKey
+// 참고) — 극히 드문 뒷 8자리 충돌은 관리자 수동 확인으로 감수한다.
+async function _phoneMatchKey(env, guid) {
+  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  const e164 = profile?.e164 || '';
+  const digits = e164.replace(/\D/g, '');
+  if (digits.length < 8) return null; // 전화번호 미인증/미보유 — 폴백 필요
+  return digits.slice(-8);
+}
+
+const CHARGE_MIN_KRW = 1000;    // 너무 작은 신청은 매칭 단서(전화번호 뒷자리)만으로 은행 명세서 대조가 더 번거로워짐
 const CHARGE_EXPIRE_HOURS = 48; // 이 시간 안에 입금 안 되면 UI/관리자 화면에서 만료로 표시(레코드 자체는 감사 보존을 위해 삭제하지 않음)
 
-// POST /biz/charge-request — 사용자가 충전 의사를 밝히고 매칭 코드를 발급받는다.
+// POST /biz/charge-request — 사용자가 충전 의사를 밝히고 본인 전화번호
+// 뒷 8자리를 매칭키로 등록한다(2026-08-28 이전엔 "매칭 코드를 발급"
+// 했으나, 위 주석 참고해 전화번호 기반으로 재설계).
 async function handleChargeRequest(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -14146,7 +14177,14 @@ async function handleChargeRequest(request, env, corsHeaders) {
     return _err(400, 'INVALID_AMOUNT', `최소 충전 금액은 ${CHARGE_MIN_KRW}원입니다`, corsHeaders);
   }
 
-  const matchCode = _generateChargeMatchCode();
+  const matchCode = await _phoneMatchKey(env, guid);
+  if (!matchCode) {
+    // 전화번호 인증 이력이 없는 사용자용 폴백 — 기존 무작위 코드 방식
+    // 그대로 유지(이 경우는 애초에 흔치 않을 것으로 예상: 가입 시
+    // 전화 인증이 기본 흐름이므로).
+    console.warn(JSON.stringify({ tag: 'CHARGE_REQUEST_NO_PHONE_FALLBACK', guid, ts: new Date().toISOString() }));
+  }
+  const finalMatchCode = matchCode || _generateChargeMatchCode();
   const expiresAt = new Date(Date.now() + CHARGE_EXPIRE_HOURS * 3600 * 1000).toISOString();
 
   try {
@@ -14155,7 +14193,7 @@ async function handleChargeRequest(request, env, corsHeaders) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        guid, match_code: matchCode, requested_krw: krwAmount,
+        guid, match_code: finalMatchCode, requested_krw: krwAmount,
         status: 'pending', expires_at: expiresAt,
       }),
     });
@@ -14165,14 +14203,18 @@ async function handleChargeRequest(request, env, corsHeaders) {
       console.warn('[ChargeRequest] 생성 실패:', errText);
       return _err(502, 'L1_ERROR', '충전 신청 기록 실패: ' + errText.slice(0, 200), corsHeaders);
     }
+    const guideText = matchCode
+      ? `위 계좌로 ${krwAmount.toLocaleString('ko-KR')}원을 입금하시되, "보내는 분 표시"에 본인 휴대폰 번호 뒷 8자리(${finalMatchCode})를 반드시 포함해 주세요. 관리자가 입금을 확인하면 자동으로 GDC가 지급됩니다.`
+      : `위 계좌로 ${krwAmount.toLocaleString('ko-KR')}원을 입금하시되, "보내는 분 표시"에 ${finalMatchCode} 코드를 반드시 포함해 주세요(예: 홍길동${finalMatchCode}). 관리자가 입금을 확인하면 자동으로 GDC가 지급됩니다.`;
     return new Response(JSON.stringify({
       ok: true,
       request_id: data.id,
-      match_code: matchCode,
+      match_code: finalMatchCode,
+      match_code_is_phone: !!matchCode,
       requested_krw: krwAmount,
       bank_account_info: _chargeBankAccountInfo(env),
       expires_at: expiresAt,
-      guide: `위 계좌로 ${krwAmount.toLocaleString('ko-KR')}원을 입금하시되, "보내는 분 표시"에 ${matchCode} 코드를 반드시 포함해 주세요(예: 홍길동${matchCode}). 관리자가 입금을 확인하면 자동으로 GDC가 지급됩니다.`,
+      guide: guideText,
     }), { status: 200, headers: corsHeaders });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
@@ -14399,9 +14441,20 @@ async function _openBankingFetchRecentDeposits(env) {
 
 function _extractChargeMatchCodeFromText(text) {
   if (!text) return null;
-  // 입금자명/적요 어디에 있든(예: "홍길동HD482910") HDxxxxxx 6자리 패턴만 뽑는다.
-  const m = String(text).match(/HD\d{6}/);
-  return m ? m[0] : null;
+  const s = String(text);
+  // 2026-08-28 재설계(주피터 지시) — 우선순위 1: 전화번호 뒷 8자리
+  // 매칭키(신규 방식). 독립된 숫자 8자리만 찾는다 — 날짜(2026/08/28)는
+  // 슬래시로, 금액(132,650원)은 쉼표로 끊겨 있어 8연속 숫자로 뭉치지
+  // 않으므로 오탐 위험이 낮다(실제 은행 SMS 포맷으로 검증됨). 앞뒤가
+  // 숫자가 아닌 경계에서만 매칭해 9자리 이상 숫자열의 일부를 잘라
+  // 오매칭하는 것도 방지한다.
+  const phoneMatch = s.match(/(?<!\d)\d{8}(?!\d)/);
+  if (phoneMatch) return phoneMatch[0];
+  // 우선순위 2(하위호환): 2026-08-28 이전에 발급된 무작위 코드
+  // (HD+6자리) — 그 시점 이전 pending으로 남아있던 신청 건을 위해
+  // 계속 인식한다. 신규 신청은 더 이상 이 형식을 쓰지 않는다.
+  const legacyMatch = s.match(/HD\d{6}/);
+  return legacyMatch ? legacyMatch[0] : null;
 }
 
 // ═══════════════════════════════════════════════════════════
