@@ -148,7 +148,9 @@ body {
 
 /* 히어로 오른쪽 공간 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
 .site-hero-illustration {
-  position: absolute; top: calc(50% - 114px); right: 40px; transform: translateY(-50%);
+  /* 2026-08-28 — 상단 우측 3탭(K-서비스·전문가 페르소나·K-정부)과 겹쳐서
+     2.3cm(≈87px, 96dpi 기준) 아래로 이동 */
+  position: absolute; top: calc(50% - 114px + 87px); right: 40px; transform: translateY(-50%);
   width: 500px; height: auto; border-radius: 10px; display: block; overflow: hidden;
 }
 .site-hero-illustration svg { display: block; width: 100%; height: auto; }
