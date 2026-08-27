@@ -1,33 +1,48 @@
 <svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img">
-<title>혼디 간 소통 — 지시, 빛의 속도 교환, 보고 순서로 진행</title>
-<desc>사람 A와 사람 B가 동시에 각자의 혼디에게 지시하면, 혼디 A와 혼디 B가 빛의 속도로 정보를 교환한 뒤, 그 결과를 각자의 사람에게 동시에 보고하는 3단계가 순서대로 나타났다 사라지기를 반복</desc>
+<title>혼디는 지시를 신속 정확하게 수행합니다</title>
+<desc>사람 A와 사람 B가 동시에 각자의 혼디에게 지시하면, 혼디 A와 혼디 B가 빛의 속도로 정보를 교환한 뒤, 그 결과를 각자의 사람에게 동시에 보고하는 3단계가 화살촉이 화살대와 함께 움직이며 순서대로 나타났다 사라지기를 반복(8초 주기)</desc>
 <style>
-.phase1{animation:showPhase1 6s ease-in-out infinite}
-.phase3{animation:showPhase3 6s ease-in-out infinite}
-.hondiAB{animation:showHondiAB 6s ease-in-out infinite}
-.hondiBA{animation:showHondiBA 6s ease-in-out infinite}
+.phase1{animation:showPhase1 8s ease-in-out infinite}
+.phase3{animation:showPhase3 8s ease-in-out infinite}
+.hondiAB{animation:showHondiAB 8s ease-in-out infinite}
+.hondiBA{animation:showHondiBA 8s ease-in-out infinite}
 @keyframes showPhase1{0%{opacity:1}28%{opacity:1}33%{opacity:0}97%{opacity:0}100%{opacity:1}}
 @keyframes showHondiAB{0%{opacity:0}33%{opacity:0}35%{opacity:1}45%{opacity:1}48%{opacity:0}100%{opacity:0}}
 @keyframes showHondiBA{0%{opacity:0}48%{opacity:0}50%{opacity:1}60%{opacity:1}63%{opacity:0}100%{opacity:0}}
 @keyframes showPhase3{0%{opacity:0}65%{opacity:0}70%{opacity:1}93%{opacity:1}97%{opacity:0}100%{opacity:0}}
-.hourhand2{transform-box:view-box;transform-origin:340px 295px;animation:hourspin2 1.2s linear infinite}
-.minhand2{transform-box:view-box;transform-origin:340px 295px;animation:minspin2 0.4s linear infinite}
-@keyframes hourspin2{to{transform:rotate(360deg)}}
-@keyframes minspin2{to{transform:rotate(360deg)}}
+
+.drawInstruct{stroke-dasharray:84;animation:drawInstructY 8s ease-in-out infinite}
+@keyframes drawInstructY{0%{stroke-dashoffset:84}25%{stroke-dashoffset:0}33%{stroke-dashoffset:0}34%{stroke-dashoffset:84}100%{stroke-dashoffset:84}}
+.moveInstructY{transform-box:view-box;transform-origin:0 0;animation:moveInstructY 8s ease-in-out infinite}
+@keyframes moveInstructY{0%{transform:translateY(116px)}25%{transform:translateY(200px)}33%{transform:translateY(200px)}34%{transform:translateY(116px)}100%{transform:translateY(116px)}}
+
+.drawReport{stroke-dasharray:84;animation:drawReportY 8s ease-in-out infinite}
+@keyframes drawReportY{0%{stroke-dashoffset:84}70%{stroke-dashoffset:84}90%{stroke-dashoffset:0}97%{stroke-dashoffset:0}98%{stroke-dashoffset:84}100%{stroke-dashoffset:84}}
+.moveReportY{transform-box:view-box;transform-origin:0 0;animation:moveReportY 8s ease-in-out infinite}
+@keyframes moveReportY{0%{transform:translateY(200px)}70%{transform:translateY(200px)}90%{transform:translateY(116px)}97%{transform:translateY(116px)}98%{transform:translateY(200px)}100%{transform:translateY(200px)}}
+
+.drawHondiAB{stroke-dasharray:152;animation:drawHondiAB 8s ease-in-out infinite}
+@keyframes drawHondiAB{0%{stroke-dashoffset:152}33%{stroke-dashoffset:152}35%{stroke-dashoffset:152}45%{stroke-dashoffset:0}48%{stroke-dashoffset:0}49%{stroke-dashoffset:152}100%{stroke-dashoffset:152}}
+.moveHondiAB{transform-box:view-box;transform-origin:0 0;animation:moveHondiAB 8s ease-in-out infinite}
+@keyframes moveHondiAB{0%{transform:translate(264px,228px)}33%{transform:translate(264px,228px)}35%{transform:translate(264px,228px)}45%{transform:translate(416px,228px)}48%{transform:translate(416px,228px)}49%{transform:translate(264px,228px)}100%{transform:translate(264px,228px)}}
+
+.drawHondiBA{stroke-dasharray:152;animation:drawHondiBA 8s ease-in-out infinite}
+@keyframes drawHondiBA{0%{stroke-dashoffset:152}50%{stroke-dashoffset:152}58%{stroke-dashoffset:0}63%{stroke-dashoffset:0}64%{stroke-dashoffset:152}100%{stroke-dashoffset:152}}
+.moveHondiBA{transform-box:view-box;transform-origin:0 0;animation:moveHondiBA 8s ease-in-out infinite}
+@keyframes moveHondiBA{0%{transform:translate(416px,228px)}50%{transform:translate(416px,228px)}58%{transform:translate(264px,228px)}63%{transform:translate(264px,228px)}64%{transform:translate(416px,228px)}100%{transform:translate(416px,228px)}}
+
 @media (prefers-reduced-motion: reduce){
 .phase1{animation:none;opacity:1}
 .phase3{animation:none;opacity:0}
 .hondiAB{animation:none;opacity:0}
 .hondiBA{animation:none;opacity:0}
-.hourhand2,.minhand2{animation:none}
+.drawInstruct{animation:none;stroke-dashoffset:0}
+.moveInstructY{animation:none;transform:translateY(200px)}
+.drawReport,.moveReportY,.drawHondiAB,.moveHondiAB,.drawHondiBA,.moveHondiBA{animation:none}
 }
 </style>
-<defs>
-<marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
 <rect x="0" y="0" width="680" height="340" fill="#0E1B3A"/>
-<text x="44" y="88" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="500" fill="#B8C0D9" font-family="sans-serif">현행</text>
-<text x="44" y="228" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="500" fill="#7C93FF" font-family="sans-serif">혼디</text>
+<text x="340" y="30" text-anchor="middle" font-size="17" font-weight="600" fill="#E7EAF5" font-family="sans-serif">혼디는 지시를 신속 정확하게 수행합니다.</text>
 
 <rect x="100" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
 <text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
@@ -38,10 +53,12 @@
 <text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 150</text>
 
 <g class="phase1">
-<line x1="165" y1="116" x2="165" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" marker-end="url(#arrow2)"/>
-<text x="140" y="158" text-anchor="end" font-size="12" fill="#B8C0D9" font-family="sans-serif">지시</text>
-<line x1="485" y1="116" x2="485" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" marker-end="url(#arrow2)"/>
-<text x="460" y="158" text-anchor="end" font-size="12" fill="#B8C0D9" font-family="sans-serif">지시</text>
+<line class="drawInstruct" x1="165" y1="116" x2="165" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+<g transform="translate(165,0)"><path class="moveInstructY" d="M-4.5,-9 L0,0 L4.5,-9 Z" fill="rgba(255,255,255,0.65)"/></g>
+<text x="140" y="158" text-anchor="end" font-size="14" fill="#B8C0D9" font-family="sans-serif">지시</text>
+<line class="drawInstruct" x1="485" y1="116" x2="485" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+<g transform="translate(485,0)"><path class="moveInstructY" d="M-4.5,-9 L0,0 L4.5,-9 Z" fill="rgba(255,255,255,0.65)"/></g>
+<text x="460" y="158" text-anchor="end" font-size="14" fill="#B8C0D9" font-family="sans-serif">지시</text>
 </g>
 
 <rect x="100" y="200" width="160" height="56" rx="8" fill="#2F55D4" stroke="#7C93FF" stroke-width="0.5"/>
@@ -53,24 +70,19 @@
 <text x="500" y="238" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#C7D2FE" font-family="sans-serif">IQ &gt;300</text>
 
 <path d="M338,142 L346,142 L340,156 L348,156 L336,172 L340,158 L332,158 Z" fill="#C7D2FE"/>
-<text x="340" y="132" text-anchor="middle" font-size="12" fill="#C7D2FE" font-family="sans-serif">빛의 속도</text>
+<text x="340" y="132" text-anchor="middle" font-size="14" fill="#C7D2FE" font-family="sans-serif">빛의 속도</text>
 
-<line class="hondiAB" x1="264" y1="228" x2="416" y2="228" stroke="#D9A360" stroke-width="1.5" marker-end="url(#arrow2)"/>
-<line class="hondiBA" x1="416" y1="228" x2="264" y2="228" stroke="#8DA3C7" stroke-width="1.5" marker-end="url(#arrow2)"/>
+<line class="drawHondiAB" x1="264" y1="228" x2="416" y2="228" stroke="#D9A360" stroke-width="1.5"/>
+<path class="moveHondiAB" d="M-9,-4.5 L0,0 L-9,4.5 Z" fill="#D9A360"/>
+<line class="drawHondiBA" x1="416" y1="228" x2="264" y2="228" stroke="#8DA3C7" stroke-width="1.5"/>
+<path class="moveHondiBA" d="M9,-4.5 L0,0 L9,4.5 Z" fill="#8DA3C7"/>
 
 <g class="phase3">
-<line x1="195" y1="200" x2="195" y2="116" stroke="#7C93FF" stroke-width="1.5" marker-end="url(#arrow2)"/>
-<text x="220" y="158" text-anchor="start" font-size="12" fill="#7C93FF" font-family="sans-serif">보고</text>
-<line x1="515" y1="200" x2="515" y2="116" stroke="#7C93FF" stroke-width="1.5" marker-end="url(#arrow2)"/>
-<text x="540" y="158" text-anchor="start" font-size="12" fill="#7C93FF" font-family="sans-serif">보고</text>
+<line class="drawReport" x1="195" y1="200" x2="195" y2="116" stroke="#7C93FF" stroke-width="1.5"/>
+<g transform="translate(195,0)"><path class="moveReportY" d="M-4.5,9 L0,0 L4.5,9 Z" fill="#7C93FF"/></g>
+<text x="220" y="158" text-anchor="start" font-size="14" fill="#7C93FF" font-family="sans-serif">보고</text>
+<line class="drawReport" x1="515" y1="200" x2="515" y2="116" stroke="#7C93FF" stroke-width="1.5"/>
+<g transform="translate(515,0)"><path class="moveReportY" d="M-4.5,9 L0,0 L4.5,9 Z" fill="#7C93FF"/></g>
+<text x="540" y="158" text-anchor="start" font-size="14" fill="#7C93FF" font-family="sans-serif">보고</text>
 </g>
-
-<circle cx="340" cy="295" r="24" fill="none" stroke="rgba(199,210,254,0.6)" stroke-width="1.5"/>
-<line x1="340" y1="273" x2="340" y2="279" stroke="rgba(199,210,254,0.4)" stroke-width="1.5"/>
-<line x1="340" y1="311" x2="340" y2="317" stroke="rgba(199,210,254,0.4)" stroke-width="1.5"/>
-<line x1="318" y1="295" x2="324" y2="295" stroke="rgba(199,210,254,0.4)" stroke-width="1.5"/>
-<line x1="356" y1="295" x2="362" y2="295" stroke="rgba(199,210,254,0.4)" stroke-width="1.5"/>
-<line class="hourhand2" x1="340" y1="295" x2="340" y2="280" stroke="#C7D2FE" stroke-width="2" stroke-linecap="round"/>
-<line class="minhand2" x1="340" y1="295" x2="355" y2="295" stroke="#A5B4FF" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="340" cy="295" r="2" fill="#C7D2FE"/>
 </svg>
