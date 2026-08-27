@@ -203,10 +203,10 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
       <div class="charge-result-box">
         <div class="cr-row"><span>입금 은행/계좌</span><span id="cr-account"></span></div>
         <div class="cr-row"><span>충전 금액</span><span id="cr-amount"></span></div>
-        <div style="margin-top:10px">보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요</div>
+        <div style="margin-top:10px" id="cr-code-label">보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요</div>
         <div class="cr-code" id="cr-code"></div>
       </div>
-      <div class="charge-warn">
+      <div class="charge-warn" id="cr-warn-text">
         관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통
         수 시간 정도 걸릴 수 있어요). 코드를 빠뜨리면 확인이 늦어질 수 있어요.
       </div>
@@ -448,6 +448,21 @@ async function submitChargeRequest() {
     document.getElementById('cr-account').textContent = data.bank_account_info;
     document.getElementById('cr-amount').textContent = fmt(data.requested_krw) + '원';
     document.getElementById('cr-code').textContent = data.match_code;
+    // 2026-08-28 신설 — 서버가 전화번호 기반 매칭키를 발급했는지
+    // (match_code_is_phone)에 따라 안내 문구를 다르게 보여준다.
+    // 전화번호 방식이면 "코드 발급받았으니 그대로 입력"이 아니라
+    // "본인 번호 뒷 8자리를 직접 입력"이라고 정확히 안내해야, 사용자가
+    // 기존 습관대로 예금주 실명까지 같이 적어 다시 10자 제한을
+    // 넘기는 실수를 막을 수 있다.
+    const codeLabelEl = document.getElementById('cr-code-label');
+    const warnEl = document.getElementById('cr-warn-text');
+    if (data.match_code_is_phone) {
+      codeLabelEl.textContent = '보내는 분 표시에 본인 휴대폰 번호 뒷 8자리를 입력해 주세요 (예금주 이름은 지우고 숫자만)';
+      warnEl.textContent = '관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통 수 시간 정도 걸릴 수 있어요). 예금주 이름이 함께 표시되면 글자 수 제한 때문에 번호가 잘릴 수 있으니, 이름은 지우고 숫자 8자리만 남겨주세요.';
+    } else {
+      codeLabelEl.textContent = '보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요';
+      warnEl.textContent = '관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통 수 시간 정도 걸릴 수 있어요). 코드를 빠뜨리면 확인이 늦어질 수 있어요.';
+    }
     document.getElementById('charge-step-input').style.display = 'none';
     document.getElementById('charge-step-result').style.display = 'block';
     document.getElementById('cr-poll-status').style.display = 'none';
