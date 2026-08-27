@@ -1577,27 +1577,25 @@ section.section[data-tab].tab-active { display: block; }
 
   <div class="site-hero-section-label"><span>공익 K-서비스</span></div>
   <nav class="site-hero-kservices">
-    <a href="./k-services/kemergency.html">긴급</a>
-    <a href="./k-services/ktelecom.html">통신</a>
-    <a href="./k-services/ksearch.html">검색</a>
-    <a href="./k-services/fiil-kcleaner.html">신고</a>
+    <a href="#" onclick="window.__HONDI_SVC_TAB='ktelecom';loadPage('k-services');return false;">통신</a>
+    <a href="#" onclick="window.__HONDI_SVC_TAB='ksearch';loadPage('k-services');return false;">검색</a>
   </nav>
+  <!-- 2026-08-27 정리 — '긴급'은 K-서비스 탭의 K-119, '신고'는 K-Cleaner에
+       이미 완전한 내용으로 존재해 중복이라 제거(콘텐츠 손실 없음).
+       '통신'·'검색'은 call-ai.js에 이미 배선된 실제 기능(SP-23/SP-18)인데
+       프론트 문서가 비어있던 상태였음 — pages/k-services.html에 실제
+       콘텐츠를 채운 탭으로 이전. -->
 
   <div class="site-hero-section-label"><span>전문가 페르소나</span></div>
   <nav class="site-hero-personas">
     <a href="./personas/law.html">법률</a>
-    <a href="./personas/health.html">의료</a>
-    <a href="./personas/edu.html">교육</a>
-    <a href="./personas/eng.html">공학</a>
-    <a href="./personas/fin.html">금융</a>
-    <a href="./personas/real-estate.html">부동산</a>
-    <a href="./personas/it.html">IT</a>
-    <a href="./personas/translation.html">번역</a>
-    <a href="./personas/tourism.html">관광</a>
-    <a href="./personas/sports.html">스포츠</a>
-    <a href="./personas/beauty.html">미용</a>
-    <a href="./personas/culinary.html">요리</a>
   </nav>
+  <!-- 2026-08-27 정리 — 하위 12개 중 11개(의료~요리)는
+       pages/expert-personas.html의 HEALTH/EDU/ENG/FIN/ETC 카테고리가
+       이미 전원 커버하는 15줄짜리 빈 스텁이라 제거(콘텐츠 손실 없음).
+       '법률'(personas/law.html, 63명 서브탭 UI)은 expert-personas.html의
+       LAW 카테고리보다 UI가 더 풍부해 승격 이식 예정(Phase 5) — 그때까지
+       임시 보존. -->
 </section>
 
 <script>
