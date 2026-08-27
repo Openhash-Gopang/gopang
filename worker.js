@@ -14416,6 +14416,26 @@ async function _mintAndRecordCharge(env, {
   }
 
   console.log(JSON.stringify({ tag: 'CHARGE_CONFIRM_OK', requestId: finalRequestId, guid: finalGuid, krwAmount: finalKrw, contentHash: mintData.content_hash, channel, confirmedBy, ts: new Date().toISOString() }));
+
+  // 2026-08-28 신설(주피터 지시) — "브라우저를 열든 닫았든 사용자가
+  // 입금한 사실 및 GDC 잔액 갱신이 폰에 알림으로 전달돼야 한다".
+  // 지금까지는 usage.html을 열어두고 폴링해야만(그마저 모바일
+  // 백그라운드 타이머 문제로 놓치기도 함) 확정 여부를 알 수 있었다
+  // — 브라우저가 아예 꺼져 있으면 방법이 없었다. 이미 저잔액 알림
+  // (_checkLowBalanceAndNotify)이 쓰고 있는 것과 동일한 VAPID Web
+  // Push 채널(_sendPushToGuid)을 그대로 재사용한다. 이 함수(
+  // _mintAndRecordCharge)는 확정 채널 4종(관리자 수동·오픈뱅킹·PG
+  // 웹훅·알림캡처) 전부가 공유하는 단일 코어라, 여기 한 곳에만
+  // 추가하면 어떤 경로로 확정되든 항상 푸시가 나간다. 실패해도(구독
+  // 없음, VAPID 미설정 등) _sendPushToGuid 내부에서 조용히 무시하므로
+  // 발행 자체(이미 완료된 mint)를 막지 않는다.
+  _sendPushToGuid(env, finalGuid, {
+    title: 'GDC 충전 완료',
+    body:  `${finalKrw.toLocaleString('ko-KR')}원 입금이 확인되어 GDC가 충전됐어요.`,
+    tag:   'gdc-charge-confirmed',
+    url:   'https://hondi.net/usage.html',
+  }).catch(e => console.warn('[ChargeConfirm] 푸시 발송 실패(무시):', e.message));
+
   return {
     ok: true, guid: finalGuid, charged_krw: finalKrw, request_id: finalRequestId,
     gdc_amount: mintData.amount, mint_content_hash: mintData.content_hash,
