@@ -11701,7 +11701,7 @@ export default {
     // 2026-08-10 신설 — 방식A(오픈뱅킹) 자동 확정 폴링. 기존 10분 주기
     // 크론에 편승 — 별도 wrangler.toml 트리거 불필요. env.AUTO_CONFIRM_
     // OPENBANKING_ENABLED=true 아니면 함수 내부에서 즉시 반환(no-op).
-    ctx.waitUntil(_pollOpenBankingAutoConfirm(env).catch(e => console.error('[OpenBanking] 폴링 전체 실패:', e.message)));
+    ctx.waitUntil(_pollOpenBankingAutoConfirm(env, ctx).catch(e => console.error('[OpenBanking] 폴링 전체 실패:', e.message)));
     // 2026-08-11 신설 — 구독 월정기 결제 스윕. 같은 10분 주기 크론에 편승
     // (openbanking 자동확정과 동일 관례) — 별도 wrangler.toml 트리거 불필요.
     // 함수 자체가 멱등이라(처리된 건은 next_billing_at이 미래로 밀림)
@@ -12131,11 +12131,11 @@ export default {
     if (pathname === '/biz/charge-request' && request.method === 'POST') return handleChargeRequest(request, env, corsHeaders);
     if (pathname === '/biz/charge-status'  && request.method === 'GET')  return handleChargeStatus(request, env, corsHeaders);
     if (pathname === '/biz/charge-list'    && request.method === 'GET')  return handleChargeList(request, env, corsHeaders);
-    if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
+    if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders, ctx);
     // 2026-08-10 신설 — 방식B(PG 가상계좌) 자동 확정 웹훅.
-    if (pathname === '/biz/charge-webhook-pg' && request.method === 'POST') return handleChargeWebhookPG(request, env, corsHeaders);
+    if (pathname === '/biz/charge-webhook-pg' && request.method === 'POST') return handleChargeWebhookPG(request, env, corsHeaders, ctx);
     // 2026-08-12 신설 — 방식C(관리자 폰 알림 캡처) 자동 확정.
-    if (pathname === '/biz/charge-confirm-notification' && request.method === 'POST') return handleChargeConfirmNotification(request, env, corsHeaders);
+    if (pathname === '/biz/charge-confirm-notification' && request.method === 'POST') return handleChargeConfirmNotification(request, env, corsHeaders, ctx);
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
@@ -14328,6 +14328,9 @@ async function _mintAndRecordCharge(env, {
   // 만드는 경로(방식B 가상계좌 웹훅, 신규: 전화번호 역조회 자동발행) 중
   // 실제 매칭에 쓰인 코드를 감사기록에 남기고 싶을 때 지정. 없으면 기존
   // 방식B 문구로 폴백(하위호환).
+  ctx = null, // 2026-08-28 추가(주피터 지시로 실사 재현 — 폰에 푸시가 전혀
+  // 안 옴) — 아래 _sendPushToGuid 호출을 ctx.waitUntil()로 감싸기 위해
+  // 필요. 자세한 배경은 그 호출부 주석 참고.
 }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -14433,12 +14436,25 @@ async function _mintAndRecordCharge(env, {
   // 추가하면 어떤 경로로 확정되든 항상 푸시가 나간다. 실패해도(구독
   // 없음, VAPID 미설정 등) _sendPushToGuid 내부에서 조용히 무시하므로
   // 발행 자체(이미 완료된 mint)를 막지 않는다.
-  _sendPushToGuid(env, finalGuid, {
+  //
+  // ⚠️ 2026-08-28 근본 수정(주피터 실사로 재현 — 폰에 푸시가 전혀
+  // 안 옴, wrangler tail에 [Push] 로그 자체가 안 찍힘) — 처음엔 이
+  // 호출을 await 없이 fire-and-forget으로 발사했다. Cloudflare
+  // Workers는 fetch 핸들러가 Response를 반환하는 즉시 실행 컨텍스트를
+  // 종료할 수 있는데, ctx.waitUntil()로 명시적으로 수명을 연장하지
+  // 않은 promise는 그 안의 L1 프로필 조회·FCM 발송 fetch가 채 끝나기도
+  // 전에 통째로 잘려나간다 — 이 파일 1388번 줄 근처에 이미 같은
+  // 클래스의 버그가 "43건 중 8건 유실"로 기록돼 있던 것과 동일 원인.
+  // ctx가 있으면 waitUntil로 수명을 보장하고, 없으면(예: ctx를 못
+  // 받는 극히 드문 호출 경로) 최후 수단으로 직접 await해 최소한
+  // 응답이 나가기 전까지는 완료를 보장한다.
+  const pushPromise = _sendPushToGuid(env, finalGuid, {
     title: 'GDC 충전 완료',
     body:  `${finalKrw.toLocaleString('ko-KR')}원 입금이 확인되어 GDC가 충전됐어요.`,
     tag:   'gdc-charge-confirmed',
     url:   'https://hondi.net/usage.html',
   }).catch(e => console.warn('[ChargeConfirm] 푸시 발송 실패(무시):', e.message));
+  if (ctx?.waitUntil) ctx.waitUntil(pushPromise); else await pushPromise;
 
   return {
     ok: true, guid: finalGuid, charged_krw: finalKrw, request_id: finalRequestId,
@@ -14455,7 +14471,7 @@ function _chargeCoreResultToResponse(result, corsHeaders) {
 // 확인한 뒤 호출 → GDC 발행(L1 /api/mint) + charge_requests 확정 갱신.
 // (2026-08-10: 코어 로직을 _mintAndRecordCharge로 이관 — 이 함수는 이제
 //  "관리자 인증 + 파라미터 정리" 얇은 래퍼다.)
-async function handleChargeConfirm(request, env, corsHeaders) {
+async function handleChargeConfirm(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const { secret, request_id, matched_krw, depositor_name, memo } = body;
@@ -14464,7 +14480,7 @@ async function handleChargeConfirm(request, env, corsHeaders) {
 
   const result = await _mintAndRecordCharge(env, {
     existingRequestId: request_id, krwAmount: matched_krw,
-    depositorName: depositor_name, memo,
+    depositorName: depositor_name, memo, ctx,
     channel: 'manual_admin', confirmedBy: 'admin',
   });
   return _chargeCoreResultToResponse(result, corsHeaders);
@@ -14592,7 +14608,7 @@ async function _findGuidByPhoneMatchKey(env, code) {
   return (exact.length === 1) ? exact[0].guid : null;
 }
 
-async function handleChargeConfirmNotification(request, env, corsHeaders) {
+async function handleChargeConfirmNotification(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const { secret, raw_text, notification_key, source, app_package, krw_amount, depositor_name } = body;
@@ -14650,7 +14666,7 @@ async function handleChargeConfirmNotification(request, env, corsHeaders) {
     }
 
     const result = await _mintAndRecordCharge(env, {
-      existingRequestId, guid: targetGuid,
+      existingRequestId, guid: targetGuid, ctx,
       krwAmount: amount, depositorName: depositor_name || '',
       memo: `알림캡처(${source || 'unknown'}${app_package ? ':' + app_package : ''})${memoSuffix}`,
       channel: 'auto_notification_capture', confirmedBy: 'system:notification_capture',
@@ -14666,7 +14682,7 @@ async function handleChargeConfirmNotification(request, env, corsHeaders) {
   }
 }
 
-async function _pollOpenBankingAutoConfirm(env) {
+async function _pollOpenBankingAutoConfirm(env, ctx) {
   if (env.AUTO_CONFIRM_OPENBANKING_ENABLED !== 'true') return; // 기본 비활성 — 계약 전 안전한 no-op
 
   let deposits;
@@ -14698,7 +14714,7 @@ async function _pollOpenBankingAutoConfirm(env) {
         continue;
       }
       const result = await _mintAndRecordCharge(env, {
-        existingRequestId: pendingRec.id, guid: pendingRec.guid,
+        existingRequestId: pendingRec.id, guid: pendingRec.guid, ctx,
         krwAmount: dep.krwAmount, depositorName: dep.depositorName, memo: dep.memo,
         channel: 'auto_openbanking', confirmedBy: 'system:openbanking',
         externalTxId: dep.externalTxId,
@@ -14747,7 +14763,7 @@ async function _verifyPgWebhookSignature(env, rawBody, signatureHeader) {
   }
 }
 
-async function handleChargeWebhookPG(request, env, corsHeaders) {
+async function handleChargeWebhookPG(request, env, corsHeaders, ctx) {
   if (env.AUTO_CONFIRM_PG_WEBHOOK_ENABLED !== 'true') {
     return _err(501, 'NOT_ENABLED', 'PG 가상계좌 자동확정이 아직 활성화되지 않았습니다(가맹계약 체결 대기)', corsHeaders);
   }
@@ -14775,7 +14791,7 @@ async function handleChargeWebhookPG(request, env, corsHeaders) {
   if (!va) return _err(404, 'VIRTUAL_ACCOUNT_NOT_FOUND', '이 계좌번호에 매핑된 활성 가상계좌가 없습니다', corsHeaders);
 
   const result = await _mintAndRecordCharge(env, {
-    guid: va.guid, krwAmount: deposited_krw, depositorName: depositor_name || '',
+    guid: va.guid, krwAmount: deposited_krw, depositorName: depositor_name || '', ctx,
     memo: `PG웹훅(${provider || va.pg_provider})`,
     channel: 'auto_pg_webhook', confirmedBy: 'system:pg_webhook',
     externalTxId: tx_id, virtualAccountNo: account_no,
