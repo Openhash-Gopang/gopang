@@ -148,8 +148,11 @@ body {
 
 /* 히어로 오른쪽 공간 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
 .site-hero-illustration {
-  /* 2026-08-28 — 상단 탭과 재차 겹쳐 1cm(≈38px, 96dpi 기준) 추가로 아래 이동 */
-  position: absolute; top: calc(50% + 7px); right: 40px; transform: translateY(-50%);
+  /* 2026-08-28 근본 수정 — top:50%+transform 방식은 .site-hero의 높이·
+     뷰포트 크기에 따라 매번 어긋났음. .site-hero는 이미 position:relative
+     (site-header.css)이므로, bottom:0으로 고정해 화면 크기와 무관하게
+     프레임 하단이 항상 헤더(.site-hero) 하단과 정확히 일치하도록 변경. */
+  position: absolute; right: 40px; bottom: 0;
   width: 500px; height: auto; border-radius: 10px; display: block; overflow: hidden;
 }
 .site-hero-illustration svg { display: block; width: 100%; height: auto; }
