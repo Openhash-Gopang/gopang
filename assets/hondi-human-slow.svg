@@ -23,15 +23,15 @@
 }
 </style>
 <rect x="0" y="0" width="680" height="340" fill="#0E1B3A"/>
-<text x="340" y="30" text-anchor="middle" font-size="17" font-weight="600" fill="#E7EAF5" font-family="sans-serif">사람과 사람 간에 반복되는 일상적 업무</text>
+<text x="340" y="30" text-anchor="middle" font-size="18" font-weight="600" fill="#E7EAF5" font-family="sans-serif">사람과 사람 간에 반복되는 일상적 업무</text>
 
 <rect x="100" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
-<text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
-<text x="180" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 100</text>
+<text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
+<text x="180" y="98" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#8891AC" font-family="sans-serif">IQ 100</text>
 
 <rect x="420" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
-<text x="500" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 B</text>
-<text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 150</text>
+<text x="500" y="80" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 B</text>
+<text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#8891AC" font-family="sans-serif">IQ 150</text>
 
 <line class="arrAB" x1="264" y1="88" x2="416" y2="88" stroke="#D9A360" stroke-width="1.5"/>
 <line class="arrBA" x1="416" y1="88" x2="264" y2="88" stroke="#8DA3C7" stroke-width="1.5"/>
@@ -47,5 +47,5 @@
 <line class="minhand" x1="340" y1="190" x2="358" y2="190" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round"/>
 <circle cx="340" cy="190" r="2" fill="rgba(255,255,255,0.7)"/>
 
-<text x="340" y="245" text-anchor="middle" font-size="14" fill="#8891AC" font-family="sans-serif">시간과 노력이 많이 듭니다.</text>
+<text x="340" y="245" text-anchor="middle" font-size="15" fill="#8891AC" font-family="sans-serif">시간과 노력이 많이 듭니다.</text>
 </svg>

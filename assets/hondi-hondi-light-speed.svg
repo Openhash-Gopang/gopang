@@ -42,35 +42,35 @@
 }
 </style>
 <rect x="0" y="0" width="680" height="340" fill="#0E1B3A"/>
-<text x="340" y="30" text-anchor="middle" font-size="17" font-weight="600" fill="#E7EAF5" font-family="sans-serif">혼디는 지시를 신속 정확하게 수행합니다.</text>
+<text x="340" y="30" text-anchor="middle" font-size="18" font-weight="600" fill="#E7EAF5" font-family="sans-serif">혼디는 지시를 신속 정확하게 수행합니다.</text>
 
 <rect x="100" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
-<text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
-<text x="180" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 100</text>
+<text x="180" y="80" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 A</text>
+<text x="180" y="98" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#8891AC" font-family="sans-serif">IQ 100</text>
 
 <rect x="420" y="60" width="160" height="56" rx="8" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
-<text x="500" y="80" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 B</text>
-<text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#8891AC" font-family="sans-serif">IQ 150</text>
+<text x="500" y="80" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#E7EAF5" font-family="sans-serif">사람 B</text>
+<text x="500" y="98" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#8891AC" font-family="sans-serif">IQ 150</text>
 
 <g class="phase1">
 <line class="drawInstruct" x1="165" y1="116" x2="165" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
 <g transform="translate(165,0)"><path class="moveInstructY" d="M-4.5,-9 L0,0 L4.5,-9 Z" fill="rgba(255,255,255,0.65)"/></g>
-<text x="140" y="158" text-anchor="end" font-size="14" fill="#B8C0D9" font-family="sans-serif">지시</text>
+<text x="140" y="158" text-anchor="end" font-size="15" fill="#B8C0D9" font-family="sans-serif">지시</text>
 <line class="drawInstruct" x1="485" y1="116" x2="485" y2="200" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
 <g transform="translate(485,0)"><path class="moveInstructY" d="M-4.5,-9 L0,0 L4.5,-9 Z" fill="rgba(255,255,255,0.65)"/></g>
-<text x="460" y="158" text-anchor="end" font-size="14" fill="#B8C0D9" font-family="sans-serif">지시</text>
+<text x="460" y="158" text-anchor="end" font-size="15" fill="#B8C0D9" font-family="sans-serif">지시</text>
 </g>
 
 <rect x="100" y="200" width="160" height="56" rx="8" fill="#2F55D4" stroke="#7C93FF" stroke-width="0.5"/>
-<text x="180" y="220" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#FFFFFF" font-family="sans-serif">혼디 A</text>
-<text x="180" y="238" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#C7D2FE" font-family="sans-serif">IQ &gt;300</text>
+<text x="180" y="220" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#FFFFFF" font-family="sans-serif">혼디 A</text>
+<text x="180" y="238" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#C7D2FE" font-family="sans-serif">IQ &gt;300</text>
 
 <rect x="420" y="200" width="160" height="56" rx="8" fill="#2F55D4" stroke="#7C93FF" stroke-width="0.5"/>
-<text x="500" y="220" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#FFFFFF" font-family="sans-serif">혼디 B</text>
-<text x="500" y="238" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#C7D2FE" font-family="sans-serif">IQ &gt;300</text>
+<text x="500" y="220" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="500" fill="#FFFFFF" font-family="sans-serif">혼디 B</text>
+<text x="500" y="238" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#C7D2FE" font-family="sans-serif">IQ &gt;300</text>
 
 <path d="M338,142 L346,142 L340,156 L348,156 L336,172 L340,158 L332,158 Z" fill="#C7D2FE"/>
-<text x="340" y="132" text-anchor="middle" font-size="14" fill="#C7D2FE" font-family="sans-serif">빛의 속도</text>
+<text x="340" y="132" text-anchor="middle" font-size="15" fill="#C7D2FE" font-family="sans-serif">빛의 속도</text>
 
 <line class="drawHondiAB" x1="264" y1="228" x2="416" y2="228" stroke="#D9A360" stroke-width="1.5"/>
 <path class="moveHondiAB" d="M-9,-4.5 L0,0 L-9,4.5 Z" fill="#D9A360"/>
@@ -80,9 +80,9 @@
 <g class="phase3">
 <line class="drawReport" x1="195" y1="200" x2="195" y2="116" stroke="#7C93FF" stroke-width="1.5"/>
 <g transform="translate(195,0)"><path class="moveReportY" d="M-4.5,9 L0,0 L4.5,9 Z" fill="#7C93FF"/></g>
-<text x="220" y="158" text-anchor="start" font-size="14" fill="#7C93FF" font-family="sans-serif">보고</text>
+<text x="220" y="158" text-anchor="start" font-size="15" fill="#7C93FF" font-family="sans-serif">보고</text>
 <line class="drawReport" x1="515" y1="200" x2="515" y2="116" stroke="#7C93FF" stroke-width="1.5"/>
 <g transform="translate(515,0)"><path class="moveReportY" d="M-4.5,9 L0,0 L4.5,9 Z" fill="#7C93FF"/></g>
-<text x="540" y="158" text-anchor="start" font-size="14" fill="#7C93FF" font-family="sans-serif">보고</text>
+<text x="540" y="158" text-anchor="start" font-size="15" fill="#7C93FF" font-family="sans-serif">보고</text>
 </g>
 </svg>
