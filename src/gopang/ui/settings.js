@@ -770,6 +770,23 @@ export async function openGopangWallet() {
       })
     }).catch(() => null);
 
+    // 2026-08-28 신설(주피터 지시: "거래 내역이 표시되지 않습니다 —
+    // 누가 언제 얼마를 입금했는지 기록") — 아래 last_tx_id 기반 섹션은
+    // 전체 저장소를 뒤져도 실제로 값을 쓰는 코드가 단 한 군데도 없는
+    // 죽은 필드였다(gopang-app.js 등 어디서도 setFinancialState로
+    // last_tx_id를 채운 적이 없음, auth.js 가입 시 null 초기화만 있고
+    // 그 후 갱신 없음) — 그래서 실제로 얼마를 충전했든 이 섹션은 항상
+    // "거래 내역이 없습니다"만 보여줄 수밖에 없었다. GDC 충전(입금)
+    // 이력은 서버의 charge_requests 컬렉션에 이미 정확히 쌓이고 있으므로
+    // (usage.html의 loadChargeHistory()가 쓰는 것과 동일한 사용자
+    // 본인 전용 엔드포인트 — secret 불필요, guid로만 조회) 그걸 그대로
+    // 가져와 보여준다.
+    const chargeHistory = await fetch(`${PROXY}/biz/charge-status?guid=${encodeURIComponent(guid)}`)
+      .then(r => r.json()).catch(() => null);
+    const chargeRequests = (chargeHistory?.ok && chargeHistory.requests) ? chargeHistory.requests : [];
+    const chargeStatusLabel = { pending: '입금 대기', matched: '충전 완료', expired: '만료', cancelled: '취소' };
+    const chargeStatusColor = { pending: '#B45309', matched: '#0F9D58', expired: '#9ca3af', cancelled: '#9ca3af' };
+
     const html = `
       <div style="padding:20px 16px;border-bottom:1px solid #f2f2f7;text-align:center">
         <div style="font-size:32px;font-weight:700;color:#111827">₮${balance.toLocaleString()}</div>
@@ -786,18 +803,19 @@ export async function openGopangWallet() {
           </div>
         </div>
       </div>
-      ${fs['last_tx_id'] ? `
+      ${chargeRequests.length > 0 ? `
       <div style="padding:0">
-        <div style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600">최근 거래</div>
-        <div onclick="_openWalletTxDetail()" style="padding:14px 16px;border-bottom:1px solid #f2f2f7;cursor:pointer;display:flex;align-items:center;gap:12px">
-          <div style="width:40px;height:40px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:18px">💸</div>
+        <div style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600">충전 내역</div>
+        ${chargeRequests.map(r => `
+        <div style="padding:14px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:#e7f7ee;display:flex;align-items:center;justify-content:center;font-size:18px">💰</div>
           <div style="flex:1">
-            <div style="font-size:14px;color:#111827">${fs['last_tx_id']?.slice(0,20)}...</div>
-            <div style="font-size:12px;color:#9ca3af">${fs['last_updated_at'] ? new Date(fs['last_updated_at']).toLocaleString('ko-KR') : ''}</div>
+            <div style="font-size:14px;color:#111827">${(r.requested_krw || 0).toLocaleString()}원 입금 신청</div>
+            <div style="font-size:12px;color:#9ca3af">${r.created ? new Date(r.created).toLocaleString('ko-KR') : ''}</div>
           </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>` : '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:13px">거래 내역이 없습니다.</div>'}`;
+          <span style="font-size:12px;font-weight:600;color:${chargeStatusColor[r.status] || '#9ca3af'}">${chargeStatusLabel[r.status] || r.status}</span>
+        </div>`).join('')}
+      </div>` : '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:13px">충전 내역이 없습니다.</div>'}`;
 
     document.getElementById('_gopang-sheet-body').innerHTML = html;
   } catch(e) {

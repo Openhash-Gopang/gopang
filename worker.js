@@ -27305,7 +27305,15 @@ async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
 
   try {
     console.info('[Push] 발송 시도:', guid, `${devices.length}개 기기`);
-    await Promise.allSettled(devices.map(d => _sendWebPush(env, d.subscription, payload)));
+    // 2026-08-28 신설(주피터 지시: PWA에서 잔액 반영까지 3~5분 지연
+    // 관찰) — urgency 인자를 안 넘겨 기본값 'normal'로 발송되고
+    // 있었다. Android는 앱이 백그라운드/Doze 상태일 때 'normal'
+    // 우선순위 FCM 메시지를 배터리 절약을 위해 몇 분씩 배칭·지연시킨다
+    // — 정확히 관찰된 증상과 일치한다. 이미 2026-07-28에 device-link
+    // 승인 요청에서 동일한 원인·수정 이력이 있음(위 주석 참고). GDC
+    // 충전 확정도 "지금 당장 반영돼야 하는" 상황이므로 동일하게
+    // 'high'로 발송해 즉시 깨우기를 요청한다.
+    await Promise.allSettled(devices.map(d => _sendWebPush(env, d.subscription, payload, 'high')));
   } catch(e) {
     console.warn('[Push] _sendPushToGuid 실패:', e.message);
   }
