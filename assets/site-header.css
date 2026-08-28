@@ -24,6 +24,11 @@
   margin-left: 76px;
 }
 .site-strip-support-btn:hover { background: #24356b; }
+.site-strip-support-btn { animation: siteStripBlink 1.2s ease-in-out infinite; }
+@keyframes siteStripBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .site-strip-support-btn { animation: none; }
+}
 .site-nav {
   background: #12234f; padding: 0 20px; display: flex; align-items: center;
   height: 54px; gap: 16px; border-bottom: 1px solid #1f3568; position: relative;
@@ -75,7 +80,9 @@
 }
 
 .site-hero {
-  background: #0e1c3f; padding: 48px 40px 40px; position: relative;
+  /* 2026-08-29 — 세로 패딩(top/bottom) 20% 증가로 히어로 전체 높이 확대
+     (48px→58px, 40px→48px). 좌우 패딩은 레이아웃 폭에 영향을 주므로 유지. */
+  background: #0e1c3f; padding: 58px 40px 48px; position: relative;
 }
 .site-hero-badge {
   display: inline-flex; align-items: center; gap: 6px; background: #16295a;
