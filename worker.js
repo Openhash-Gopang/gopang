@@ -605,15 +605,25 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
       // 그 사이 몇 밀리초 차이를 위해 요청을 하나 더 쓸 이유가 없었다
       // — "가입 후 시작하기까지 10~15초" 지연의 상당 부분이 이 중복
       // 왕복이었다(사용자 지시로 실사·발견). profile을 그대로 재사용한다.
+      // ★ 2026-08-29 근본 수정 (주피터 지시 — 실사로 재현: PC 자신이 이
+      // 계정으로 예전에 구독해둔 적이 있으면, 서버가 등록된 기기 종류를
+      // 안 가리고 전부에 푸시를 보내 PC가 자기 요청 알림을 스스로 받는
+      // 현상이 실제로 발생했다. device-link의 존재 이유 자체가 "요청한
+      // 기기가 아닌 다른(신뢰하는) 기기에서 승인"이므로, 애초에 PC 등
+      // 데스크톱 기기로는 이 알림을 보낼 이유가 없다 — mobile 기기에만
+      // 발송하도록 원천 차단한다(사후에 pushSentToMobile로만 구분하던
+      // 기존 방식은 "일단 다 보내고 나중에 알려주기"였을 뿐 발송 자체를
+      // 막지는 못했다).
       const devices = _parseDeviceSubscriptions(profile?.push_subscription);
-      hasMobileDevice = devices.some(d => d.deviceType === 'mobile');
-      if (devices.length) {
+      const mobileDevices = devices.filter(d => d.deviceType === 'mobile');
+      hasMobileDevice = mobileDevices.length > 0;
+      if (mobileDevices.length) {
         const payload = JSON.stringify({
           title: purpose === 'sign_request' ? '서명 요청' : '새 기기에서 로그인 요청',
           body:  purpose === 'sign_request'
             ? `${record.pcLabel}에서 서명을 요청했습니다. 확인하려면 누르세요.`
             : `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
-          sound: devices[0].sound || profile.push_sound || 'ping',
+          sound: mobileDevices[0].sound || profile.push_sound || 'ping',
           url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
           tag:   `gopang-device-link-${sessionId}`,
         });
@@ -626,16 +636,16 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
         // 가능성이 큼). 배포 알림 등 다른 발송 경로는 urgency 인자를
         // 안 넘기므로 기존 기본값(normal)을 그대로 유지한다.
         const results = await Promise.allSettled(
-          devices.map(d => _sendWebPush(env, d.subscription, payload, 'high'))
+          mobileDevices.map(d => _sendWebPush(env, d.subscription, payload, 'high'))
         );
 
         const deadDeviceIds = [];
         results.forEach((r, i) => {
-          const d = devices[i];
+          const d = mobileDevices[i];
           const succeeded = r.status === 'fulfilled' && r.value?.ok === true;
           if (succeeded) {
             pushSent = true;
-            if (d.deviceType === 'mobile') pushSentToMobile = true;
+            pushSentToMobile = true;
           }
           if (r.status === 'fulfilled' && r.value?.status === 410) {
             deadDeviceIds.push(d.deviceId);
@@ -644,6 +654,8 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
 
         if (deadDeviceIds.length) {
           try {
+            // pruning은 전체 devices 목록(데스크톱 포함) 기준으로 해야
+            // 필터링 과정에서 데스크톱 구독이 실수로 함께 사라지지 않는다.
             const pruned = devices.filter(d => !deadDeviceIds.includes(d.deviceId));
             await _l1PatchProfile(env, profile.id, {
               push_subscription: _serializeDeviceSubscriptions(pruned),
