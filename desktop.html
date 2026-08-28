@@ -146,9 +146,18 @@ body {
   .site-hero h1 { font-size: 24px; }
 }
 
-/* 히어로 오른쪽 공간 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
+/* 히어로 오른쪽 공간 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트
+   2026-08-28 — top:calc(50%-31px)+translateY(-50%)로 "히어로 전체 높이의
+   중앙"에 상대 위치시키던 방식을 폐기했다. 이 방식은 히어로 높이가
+   바뀔 때마다(예: 하단 탭 블록 제거로 높이가 줄어든 f1469898) 매번
+   다시 어긋나 그때그때 매직넘버(1cm/2cm/2.2cm 등)로 땜질해왔다.
+   대신 프레임 바닥선을 히어로의 실제 바닥선에 직접 고정(bottom:0)한다
+   — .site-hero는 position:relative이고 테두리가 없어, 절대위치 자식의
+   bottom:0은 곧 히어로의 시각적 바닥 경계선과 정확히 일치한다. 이후
+   히어로 상단 콘텐츠(제목·버튼 등)의 높이가 바뀌어도 바닥선 정렬은
+   깨지지 않는다. */
 .site-hero-illustration {
-  position: absolute; top: calc(50% - 31px); right: 40px; transform: translateY(-50%);
+  position: absolute; bottom: 0; right: 40px;
   width: 500px; height: auto; border-radius: 10px; display: block; overflow: hidden;
 }
 .site-hero-illustration svg { display: block; width: 100%; height: auto; }
