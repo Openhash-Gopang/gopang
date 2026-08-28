@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>혼디 — 이전 소개 페이지 (보관본)</title>
+<title>혼디의 기능 — 혼디 이전 소개 페이지</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -721,75 +721,90 @@ section.section[data-tab] { display: block !important; }
 .archive-doc-bar .archive-doc-title { color: #1e293b; font-weight: 600; }
 .archive-doc-bar .archive-doc-links { display: flex; gap: 16px; }
 
-
-/* ── 보관본 목록(탭) 페이지 전용 (2026-08-28 재편) ── */
-.legacy-index-hero {
-  padding: 40px 24px 8px; max-width: 980px; margin: 0 auto;
-}
-.legacy-index-hero h1 { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
-.legacy-index-hero p { font-size: 14px; color: var(--text3); line-height: 1.7; max-width: 720px; }
-.tab-group { max-width: 980px; margin: 0 auto; padding: 20px 24px 8px; }
-.tab-group h2 { font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 12px; }
-.tab-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.tab-pill {
-  display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 999px;
-  background: #fff; border: 1px solid var(--border2); color: var(--text2);
-  font-size: 13.5px; font-weight: 500; text-decoration: none; transition: all 0.15s;
-}
-.tab-pill:hover { background: var(--brand-bg); border-color: var(--brand-lt); color: var(--brand-dk); }
-.legacy-index-footer { max-width: 980px; margin: 24px auto 60px; padding: 0 24px; font-size: 12.5px; color: var(--text4); }
 </style>
 </head>
 <body>
-<div class="archive-banner">
-  📦 이 페이지는 예전 desktop.html 소개 본문의 보관본입니다 — 최신 페이지는
-  <a href="../desktop.html">hondi.net 메인 페이지</a>를 참고하세요.
-</div>
-
-<div class="legacy-index-hero">
-  <h1>혼디 이전 소개 페이지 (보관본)</h1>
-  <p>2026년 8월 21일 이전 desktop.html의 소개 본문을 주제별로 재편했습니다. 아래 탭에서 원하는 주제를 선택하면 해당 문서로 이동합니다.</p>
-</div>
-
-<div class="tab-group">
-  <h2>소개 자료</h2>
-  <div class="tab-grid">
-      <a class="tab-pill" href="legacy/pamphlet.html">한눈에 보기</a>
-      <a class="tab-pill" href="legacy/overview.html">오픈해시 기반 데이터 진실성</a>
-      <a class="tab-pill" href="legacy/parallel-world.html">AI 평행세계</a>
-      <a class="tab-pill" href="legacy/features.html">혼디의 기능</a>
-      <a class="tab-pill" href="legacy/pdv-ac.html">PDV와 Agent Common</a>
-      <a class="tab-pill" href="legacy/usage-scenarios-by-role.html">역할별·생애주기별 활용 시나리오</a>
-      <a class="tab-pill" href="legacy/structure.html">혼디의 구조</a>
-      <a class="tab-pill" href="legacy/billing.html">과금 원칙</a>
+<div class="archive-doc-bar">
+  <span class="archive-doc-title">📄 혼디의 기능</span>
+  <div class="archive-doc-links">
+    <a href="../legacy_overview_20260821.html">← 전체 목록으로</a>
+    <a href="../../desktop.html">최신 hondi.net 메인 페이지</a>
   </div>
 </div>
+<section class="section" id="features" style="background:var(--bg-alt)">
+  <div class="section-inner">
+    <div class="section-tag reveal">Core Features</div>
+    <h2 class="section-title reveal"><strong>혼디</strong>의 기능</h2>
 
-<div class="tab-group">
-  <h2>체험 리포트</h2>
-  <div class="tab-grid">
-      <a class="tab-pill" href="../reports/hondi-example.html">혼디 예시</a>
-      <a class="tab-pill" href="../reports/hondi-mine-vs-their-ai.html">AI 비서</a>
-      <a class="tab-pill" href="../reports/hondi-mine-ai-secretary.html">나만의 AI 비서</a>
-      <a class="tab-pill" href="../reports/hondi-vs-kakao-ai-blockchain.html">카톡·AI·블록체인 비교</a>
-      <a class="tab-pill" href="../reports/hondi-professor-teacher-complement.html">평생 교수</a>
-      <a class="tab-pill" href="../reports/hondi-rule-of-law.html">법치 사회</a>
-      <a class="tab-pill" href="../reports/hondi-superconserve-ai.html">초절전 AI</a>
-      <a class="tab-pill" href="../reports/hondi-mote-openhash.html">MoTE와 Openhash</a>
-      <a class="tab-pill" href="../reports/hondi-gdc-currency-scenario-bw.html">GDC</a>
-      <a class="tab-pill" href="../reports/hondi-prepare-today-finance.html">금융권 대비</a>
-      <a class="tab-pill" href="../reports/hondi-legal-arbitration-scenario.html">K-Law</a>
-      <a class="tab-pill" href="../reports/hondi-business-admin-scenario.html">행정 서비스 사례</a>
-      <a class="tab-pill" href="../reports/hondi-ai-town-office.html">AI 정부</a>
-      <a class="tab-pill" href="../reports/hondi-4day-week-estimate.html">주 4일(또는 월 3주) 근무</a>
-      <a class="tab-pill" href="../reports/hondi-usage-scenarios.html">이용 시나리오</a>
-      <a class="tab-pill" href="../reports/hondi-public-service.html">공공 서비스</a>
+    <div class="reveal" style="display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px">
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">1</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">모든 대화와 주고받은 문서는 오직 내 로컬에만 저장되고(<strong>PDV, Private Data Vault</strong>), 서버에 저장되지 않습니다(<strong>P2P, Person To Person</strong>).</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">2</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">서버의 역할은 <strong>Openhash</strong>와 주소록입니다. Openhash는 내가 주고받은 대화나 문서가 위조·변조되지 않았음을 기술적으로 입증하는 일종의 블록체인 기술입니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">3</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">PDV는 암호화되어, 오직 <strong>나만의 AI 비서</strong>만 접근 및 열람할 수 있습니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">4</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">내가 주고받는 대화나 문서의 <strong>합법성과 공정성</strong>을 평가하고, 불법·편법·탈법이 있으면, 조용히 나에게 알립니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">5</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">모든 거래를 나의 <strong>장부(재무제표)</strong>에 기록하고, 소비와 투자 계획을 제안합니다. 사업자라면, 주기적으로 경영 진단 및 향상을 위한 보고서를 제출합니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">6</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">세금 신고를 대행하면, <strong>단 1원의 세금도 더 내거나, 덜 내지 않습니다.</strong></p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">7</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">내 신체와 건강에 관한 모든 정보를 기록하고, 필요 시, 병원 진료 시점에 제출하여 <strong>진단의 정확성</strong>을 높입니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">8</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">도청, 시청, 읍면동사무소 등의 각종 <strong>행정 업무</strong>를 처리합니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">9</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">시장에서 상품을 구매할 때, <strong>가격과 품질이 공정한지</strong> 판단하고, 보다 나은 제품을 추천합니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">10</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">거의 모든 상품 및 생산자(또는 서비스 공급자)를 <strong>공정하게 평가</strong>합니다.</p>
+      </div>
+
+      <div style="background:#fff;padding:22px 24px;display:flex;gap:16px;align-items:flex-start">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--brand-bg);border:1px solid #bfdbfe;color:var(--brand-dk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:'Pretendard', sans-serif">11</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0">혼디의 결제 통화인 <strong>GDC</strong>는 지금은 무이자 예치·보관과 사용자 간 환전 매칭을 제공합니다. 인덱스 투자·예금 이자처럼 인허가가 필요한 기능은 은행·보험사·증권사 컨소시엄을 통해 제공할 목표이며, 수익 배분(90%/10%) 구조는 그 컨소시엄이 구성된 이후에 확정됩니다.</p>
+      </div>
+      <div style="padding:0 24px 20px 66px">
+        <a href="reports/hondi-usage-scenarios.html#gdc" target="_blank" rel="noopener" style="font-size:13px;color:var(--brand-dk);text-decoration:none;font-weight:600">→ 지금 뭐가 되고 뭐가 목표인지, GDC 사례 전체 보기</a>
+      </div>
+
+    </div>
+
+    <p class="reveal" style="font-size:14px;color:var(--text2);line-height:1.8;margin-top:24px">혼디의 가장 큰 강점은 완전한 <strong>'오픈소스'</strong>입니다. 누구나 소스 코드를 보고, 수정과 갱신에 참여할 수 있습니다.</p>
   </div>
-</div>
+</section>
 
-<div class="legacy-index-footer">
-  총 24개 문서 · 소개 자료 8개, 체험 리포트 16개
-</div>
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ── PDV & AC: 나만의 데이터 금고, 나만의 AI 비서 ── -->
+<!-- ══════════════════════════════════════════════════════════ -->
 
 </body>
 </html>
