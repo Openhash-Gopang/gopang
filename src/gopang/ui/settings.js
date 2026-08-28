@@ -776,38 +776,70 @@ export async function openGopangWallet() {
     // 죽은 필드였다(gopang-app.js 등 어디서도 setFinancialState로
     // last_tx_id를 채운 적이 없음, auth.js 가입 시 null 초기화만 있고
     // 그 후 갱신 없음) — 그래서 실제로 얼마를 충전했든 이 섹션은 항상
-    // "거래 내역이 없습니다"만 보여줄 수밖에 없었다. GDC 충전(입금)
-    // 이력은 서버의 charge_requests 컬렉션에 이미 정확히 쌓이고 있으므로
-    // (usage.html의 loadChargeHistory()가 쓰는 것과 동일한 사용자
-    // 본인 전용 엔드포인트 — secret 불필요, guid로만 조회) 그걸 그대로
-    // 가져와 보여준다.
-    const chargeHistory = await fetch(`${PROXY}/biz/charge-status?guid=${encodeURIComponent(guid)}`)
-      .then(r => r.json()).catch(() => null);
-    const chargeRequests = (chargeHistory?.ok && chargeHistory.requests) ? chargeHistory.requests : [];
-    const chargeStatusLabel = { pending: '입금 대기', matched: '충전 완료', expired: '만료', cancelled: '취소' };
-    const chargeStatusColor = { pending: '#B45309', matched: '#0F9D58', expired: '#9ca3af', cancelled: '#9ca3af' };
+    // "거래 내역이 없습니다"만 보여줄 수밖에 없었다.
+    //
+    // 2026-08-28 추가 확장(주피터 지시: "GDC는 충전 용도만이 아니라
+    // 사용자 간 결제 수단으로도 이용됩니다 — 상품 구매 등") — 처음엔
+    // charge_requests(입금/충전 신청)만 가져왔는데, 이건 "충전"
+    // 이벤트만 담고 있어 마켓 구매·P2P 이체·AI 사용료 차감은 전혀
+    // 안 보였다. 실제 회계 원장인 ledger_entries가 이 4종
+    // (mint=충전·market=구매·gdc_transfer=이체·ai_usage=AI사용료)을
+    // 전부 기록하고 있으므로(pb_hooks/main.pb.js 확인) 새 엔드포인트
+    // (/wallet/ledger-history — 이번에 신설, /biz/charge-status와
+    // 동일하게 secret 불필요·guid 본인 것만 조회)로 가져와 합친다.
+    // charge_requests는 "입금 대기" 상태(아직 ledger_entries에 안 올라간
+    // pending 신청)를 보여주는 용도로만 남기고, 확정된 모든 거래는
+    // ledger_entries 쪽을 신뢰 가능한 단일 소스로 삼는다 — 매칭된
+    // 충전 건이 양쪽에 중복으로 안 뜨도록, charge_requests에서는
+    // status==='pending'인 것만 걸러 쓴다.
+    const [chargeHistory, ledgerHistory] = await Promise.all([
+      fetch(`${PROXY}/biz/charge-status?guid=${encodeURIComponent(guid)}`).then(r => r.json()).catch(() => null),
+      fetch(`${PROXY}/wallet/ledger-history?guid=${encodeURIComponent(guid)}`).then(r => r.json()).catch(() => null),
+    ]);
+    const pendingCharges = ((chargeHistory?.ok && chargeHistory.requests) ? chargeHistory.requests : [])
+      .filter(r => r.status === 'pending');
+    const ledgerEntries = (ledgerHistory?.ok && ledgerHistory.entries) ? ledgerHistory.entries : [];
 
-    // 2026-08-28 신설(주피터 지시) — 상세 슬라이드아웃 패널(_openChargeDetail)이
-    // 인덱스만으로 원본 레코드 전체(matched_krw·depositor_name·memo·
-    // mint_content_hash·matched_at·channel·confirmed_by·external_tx_id 등)를
-    // 다시 조회 없이 바로 꺼내 쓸 수 있도록 window에 보관해둔다. 시트를 새로
-    // 열 때마다 최신 배열로 덮어쓰므로 오래된 참조가 남을 걱정은 없다.
-    window._gopangWalletChargeRequests = chargeRequests;
+    const _SOURCE_LABEL  = { mint: 'GDC 충전', market: '상품 구매', gdc_transfer: 'GDC 이체', ai_usage: 'AI 사용료' };
+    const _SOURCE_ICON   = { mint: '💰', market: '🛍️', gdc_transfer: '↔️', ai_usage: '🤖' };
+
+    // 두 소스를 하나의 타임라인으로 정규화(공통 필드: kind/label/icon/
+    // amount/direction/timestamp/raw) — 상세 패널(_openTxDetail)이
+    // kind로 원본 레코드 종류를 구분해 알맞은 6하원칙 문구를 만든다.
+    const timeline = [
+      ...pendingCharges.map(r => ({
+        kind: 'charge_pending', raw: r,
+        label: `${(r.requested_krw || 0).toLocaleString()}원 입금 신청`,
+        icon: '💰', direction: 'pending', amount: r.requested_krw || 0,
+        timestamp: r.created,
+      })),
+      ...ledgerEntries.map(r => ({
+        kind: 'ledger', raw: r,
+        label: _SOURCE_LABEL[r.source] || r.source || '거래',
+        icon: _SOURCE_ICON[r.source] || '📄',
+        direction: r.direction === 'credit' ? 'income' : 'expense',
+        amount: r.amount || 0,
+        timestamp: r.created,
+      })),
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // 2026-08-28 신설(주피터 지시) — 상세 슬라이드아웃 패널(_openTxDetail)이
+    // 인덱스만으로 원본 레코드 전체를 다시 조회 없이 바로 꺼내 쓸 수
+    // 있도록 window에 보관해둔다. 시트를 새로 열 때마다 최신 배열로
+    // 덮어쓰므로 오래된 참조가 남을 걱정은 없다.
+    window._gopangWalletTimeline = timeline;
 
     // 2026-08-28 신설(주피터 지시: "지출/수입 상단 박스 용도가 애매하다 —
     // 모든 항목을 지출/수입으로 분류해 보여주는 게 낫겠다") — 기존
-    // fs['pl-purchase']/fs['pl-revenue']는 last_tx_id와 마찬가지로 마켓
-    // 구매 전용으로 설계됐다가 실제로 값을 쓰는 코드가 없는 죽은 필드였다
-    // (같은 이유로 항상 0만 보여줬음). 지금 실제로 존재하는 거래 기록은
-    // charge_requests(전부 "입금"=수입 성격)뿐이므로, 확정된(matched) 건의
-    // 금액 합계를 수입으로 정직하게 집계한다. 지출에 해당하는 거래 유형
-    // (예: AI 사용량 차감)은 현재 시스템에 건별 기록으로 남지 않아 0으로
-    // 둔다 — 없는 데이터를 지어내는 대신, 나중에 지출성 거래 기록이
-    // 추가되면 같은 집계 로직에 자연스럽게 편입되도록 구조만 마련해둔다.
-    const incomeTotal = chargeRequests
-      .filter(r => r.status === 'matched')
-      .reduce((sum, r) => sum + (Number(r.matched_krw) || Number(r.requested_krw) || 0), 0);
-    const expenseTotal = 0; // 지출성 거래 기록이 아직 시스템에 없음(정직한 0)
+    // fs['pl-purchase']/fs['pl-revenue']는 last_tx_id와 마찬가지로 실제
+    // 값을 쓰는 코드가 없는 죽은 필드였다(항상 0만 표시). 이제
+    // ledger_entries의 실제 direction(credit=수입/debit=지출)으로
+    // 정직하게 집계한다 — 충전은 수입, 마켓 구매·AI 사용료는 지출,
+    // P2P 이체는 방향에 따라 자연스럽게 어느 한쪽으로 갈린다(내가 보낸
+    // 이체는 debit, 받은 이체는 credit으로 ledger_entries에 각자
+    // 기록되므로 별도 분기 불필요).
+    const incomeTotal = ledgerEntries.filter(r => r.direction === 'credit').reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const expenseTotal = ledgerEntries.filter(r => r.direction === 'debit').reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
     const html = `
       <div style="padding:20px 16px;border-bottom:1px solid #f2f2f7;text-align:center">
@@ -825,20 +857,25 @@ export async function openGopangWallet() {
           </div>
         </div>
       </div>
-      ${chargeRequests.length > 0 ? `
+      ${timeline.length > 0 ? `
       <div style="padding:0">
-        <div style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600">충전 내역</div>
-        ${chargeRequests.map((r, idx) => `
-        <div onclick="_openChargeDetail(${idx})" style="padding:14px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:12px;cursor:pointer">
-          <div style="width:40px;height:40px;border-radius:50%;background:#e7f7ee;display:flex;align-items:center;justify-content:center;font-size:18px">💰</div>
+        <div style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600">거래 내역</div>
+        ${timeline.map((t, idx) => {
+          const amountColor = t.direction === 'income' ? '#0F9D58' : (t.direction === 'expense' ? '#dc2626' : '#B45309');
+          const amountPrefix = t.direction === 'income' ? '+' : (t.direction === 'expense' ? '-' : '');
+          const statusText = t.direction === 'pending' ? '입금 대기' : '';
+          return `
+        <div onclick="_openTxDetail(${idx})" style="padding:14px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="width:40px;height:40px;border-radius:50%;background:#f2f2f7;display:flex;align-items:center;justify-content:center;font-size:18px">${t.icon}</div>
           <div style="flex:1">
-            <div style="font-size:14px;color:#111827">${(r.requested_krw || 0).toLocaleString()}원 입금 신청</div>
-            <div style="font-size:12px;color:#9ca3af">${r.created ? new Date(r.created).toLocaleString('ko-KR') : ''}</div>
+            <div style="font-size:14px;color:#111827">${t.label}</div>
+            <div style="font-size:12px;color:#9ca3af">${t.timestamp ? new Date(t.timestamp).toLocaleString('ko-KR') : ''}</div>
           </div>
-          <span style="font-size:12px;font-weight:600;color:${chargeStatusColor[r.status] || '#9ca3af'}">${chargeStatusLabel[r.status] || r.status}</span>
+          <span style="font-size:13px;font-weight:600;color:${amountColor}">${statusText || `${amountPrefix}₮${t.amount.toLocaleString()}`}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>`).join('')}
-      </div>` : '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:13px">충전 내역이 없습니다.</div>'}`;
+        </div>`;
+        }).join('')}
+      </div>` : '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:13px">거래 내역이 없습니다.</div>'}`;
 
     document.getElementById('_gopang-sheet-body').innerHTML = html;
   } catch(e) {
@@ -847,49 +884,70 @@ export async function openGopangWallet() {
   }
 }
 
-// 2026-08-28 신설(주피터 지시) — 충전 내역 항목을 탭하면 열리는 6하원칙
+// 2026-08-28 신설(주피터 지시) — 거래 내역 항목을 탭하면 열리는 6하원칙
 // 상세 슬라이드아웃 패널. webapp.html의 #charge-detail-overlay(계정삭제와
 // 동일한 backdrop+drawer 슬라이드아웃 패턴)를 채운다. 서버 재조회 없이
-// openGopangWallet()이 이미 window._gopangWalletChargeRequests에 저장해둔
-// 원본 레코드를 그대로 쓴다.
+// openGopangWallet()이 이미 window._gopangWalletTimeline에 저장해둔
+// 정규화된 항목(charge_pending 또는 ledger 두 종류)을 그대로 쓴다.
 const _CHARGE_CHANNEL_LABEL = {
   manual_admin: '관리자가 은행 명세서를 직접 확인',
   auto_openbanking: '오픈뱅킹 자동 조회',
   auto_pg_webhook: 'PG 가상계좌 웹훅 자동 확정',
   auto_notification_capture: '관리자 폰의 입금 알림을 자동 캡처',
 };
+const _LEDGER_SOURCE_WHAT = {
+  mint: 'GDC 충전(원화 입금 → GDC 발행)',
+  market: '마켓에서 상품 구매',
+  gdc_transfer: 'GDC 개인 간 이체',
+  ai_usage: 'AI 비서 사용료 차감',
+};
+const _LEDGER_SOURCE_WHY = {
+  mint: 'GDC 잔액 충전을 위한 본인 입금',
+  market: '마켓 상품 결제',
+  gdc_transfer: '개인 간 GDC 송금',
+  ai_usage: '무료 한도 초과분 AI 사용료 정산',
+};
 
-window._openChargeDetail = function(idx) {
-  const r = (window._gopangWalletChargeRequests || [])[idx];
+window._openTxDetail = function(idx) {
+  const t = (window._gopangWalletTimeline || [])[idx];
   const overlay = document.getElementById('charge-detail-overlay');
   const body = document.getElementById('charge-detail-drawer-body');
-  if (!r || !overlay || !body) return;
+  if (!t || !overlay || !body) return;
 
-  const isPhoneKey = /^\d{8}$/.test(r.match_code || '');
-  const whoLine = isPhoneKey
-    ? `본인 계정 (전화번호 뒷 8자리 ${r.match_code}로 확인)`
-    : (r.depositor_name || '본인 계정');
-  const whenLine = r.matched_at
-    ? `신청 ${new Date(r.created).toLocaleString('ko-KR')} → 확정 ${new Date(r.matched_at).toLocaleString('ko-KR')}`
-    : `신청 ${r.created ? new Date(r.created).toLocaleString('ko-KR') : '-'} (아직 미확정)`;
-  const whereLine = _CHARGE_CHANNEL_LABEL[r.channel] || '경로 미상';
-  const whatLine = `${(r.matched_krw || r.requested_krw || 0).toLocaleString()}원 입금 → GDC 충전`;
-  const howLine = r.confirmed_by ? `확인 주체: ${r.confirmed_by}` : '-';
-  const whyLine = 'GDC 잔액 충전을 위한 본인 입금' + (r.memo ? ` (${r.memo})` : '');
+  const r = t.raw;
+  let rows, hashLine = '';
 
-  const rows = [
-    ['누가', whoLine],
-    ['언제', whenLine],
-    ['어디서', whereLine],
-    ['무엇을', whatLine],
-    ['어떻게', howLine],
-    ['왜', whyLine],
-  ];
+  if (t.kind === 'charge_pending') {
+    const isPhoneKey = /^\d{8}$/.test(r.match_code || '');
+    rows = [
+      ['누가', isPhoneKey ? `본인 계정 (전화번호 뒷 8자리 ${r.match_code}로 확인)` : '본인 계정'],
+      ['언제', `신청 ${r.created ? new Date(r.created).toLocaleString('ko-KR') : '-'} (아직 미확정)`],
+      ['어디서', '은행 계좌 입금 대기 중'],
+      ['무엇을', `${(r.requested_krw || 0).toLocaleString()}원 입금 신청`],
+      ['어떻게', '관리자 확인 대기 중'],
+      ['왜', 'GDC 잔액 충전을 위한 본인 입금'],
+    ];
+  } else {
+    // ledger_entries 레코드 — counterpart(상대방 guid)가 있으면 그걸
+    // "누가"에 반영한다(P2P 이체·마켓 구매는 상대가 있는 거래이므로).
+    const whoLine = r.counterpart
+      ? `본인 ↔ ${r.counterpart}`
+      : '본인 계정';
+    rows = [
+      ['누가', whoLine],
+      ['언제', r.created ? new Date(r.created).toLocaleString('ko-KR') : '-'],
+      ['어디서', r.l1_node ? `${r.l1_node} 원장에 기록` : '-'],
+      ['무엇을', _LEDGER_SOURCE_WHAT[r.source] || r.source || '-'],
+      ['어떻게', `${r.direction === 'credit' ? '입금(credit)' : '출금(debit)'} · ${(r.amount || 0).toLocaleString()}원 · 계정과목: ${r.fs_account || '-'}`],
+      ['왜', _LEDGER_SOURCE_WHY[r.source] || '-'],
+    ];
+    if (r.tx_id) hashLine = r.tx_id;
+  }
 
   body.innerHTML = `
     <div style="padding:0 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f2f2f7;padding-bottom:14px">
       <button onclick="closeChargeDetail()" style="border:none;background:none;color:#007b8b;font-size:15px;cursor:pointer;padding:0">← 뒤로</button>
-      <span style="font-size:15px;font-weight:600">입금 상세</span>
+      <span style="font-size:15px;font-weight:600">거래 상세</span>
     </div>
     <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
       ${rows.map(([label, value]) => `
@@ -898,10 +956,10 @@ window._openChargeDetail = function(idx) {
           <div style="font-size:14px;color:#111827;line-height:1.5">${value}</div>
         </div>
       `).join('')}
-      ${r.mint_content_hash ? `
+      ${hashLine ? `
         <div>
-          <div style="font-size:11px;color:#9ca3af;font-weight:600;margin-bottom:3px">발행 해시</div>
-          <div style="font-size:12px;color:#9ca3af;word-break:break-all;font-family:monospace">${r.mint_content_hash}</div>
+          <div style="font-size:11px;color:#9ca3af;font-weight:600;margin-bottom:3px">거래 ID</div>
+          <div style="font-size:12px;color:#9ca3af;word-break:break-all;font-family:monospace">${hashLine}</div>
         </div>` : ''}
     </div>`;
   overlay.classList.add('open');
