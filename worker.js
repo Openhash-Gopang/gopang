@@ -14324,6 +14324,10 @@ async function handleChargeList(request, env, corsHeaders) {
 async function _mintAndRecordCharge(env, {
   existingRequestId = null, guid, krwAmount, depositorName = '', memo = '',
   channel, confirmedBy, externalTxId = null, virtualAccountNo = null,
+  matchCodeForNewRecord = null, // 2026-08-28 추가 — existingRequestId 없이 새 레코드를
+  // 만드는 경로(방식B 가상계좌 웹훅, 신규: 전화번호 역조회 자동발행) 중
+  // 실제 매칭에 쓰인 코드를 감사기록에 남기고 싶을 때 지정. 없으면 기존
+  // 방식B 문구로 폴백(하위호환).
 }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -14402,7 +14406,7 @@ async function _mintAndRecordCharge(env, {
     const createRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        guid: finalGuid, match_code: '(가상계좌 자동입금 — 매칭코드 없음)',
+        guid: finalGuid, match_code: matchCodeForNewRecord || '(가상계좌 자동입금 — 매칭코드 없음)',
         requested_krw: finalKrw, expires_at: new Date().toISOString(),
         ...patchBody,
       }),
@@ -14561,6 +14565,33 @@ function _extractKrwAmountFromText(text) {
 // body: { secret, raw_text, notification_key, source: 'app_push'|'sms',
 //         app_package, krw_amount(선택 — 없으면 raw_text에서 자동 추출),
 //         depositor_name(선택) }
+// 2026-08-28 신설(주피터 지시: "전화번호 매칭키 사용자는 사전 신청
+// 생략 가능") — 전화번호 뒷 8자리 매칭키는 사용자마다 항상 같은
+// 값이라, 무작위 코드와 달리 "이 코드=이 전화번호=이 계정"을 사전
+// 신청(pending 레코드) 없이도 즉시 역추적할 수 있다. code가 순수
+// 8자리 숫자일 때만 시도한다(레거시 HD+6자리 코드는 애초에 무작위
+// 발급값이라 역조회 대상이 아님). e164 저장 형식이 국가마다 자릿수가
+// 달라 '~'(LIKE, 부분포함) 필터로 1차 후보를 넓게 뽑은 뒤, 실제 뒤
+// 8자리가 정확히 일치하는지 애플리케이션 레벨에서 재확인한다 — 코드가
+// 번호 중간에 우연히 낀 경우까지 오매칭하는 걸 막기 위함. 결과가
+// 정확히 1건이 아니면(0건 또는 충돌 2건 이상) 자동 처리를 포기하고
+// 관리자 수동 확인으로 넘긴다 — 자동 오발행보다 훨씬 안전하다.
+async function _findGuidByPhoneMatchKey(env, code) {
+  if (!/^\d{8}$/.test(code)) return null;
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`e164~'${code}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=5`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({ items: [] }));
+  const exact = (data.items || []).filter(p => {
+    const digits = String(p.e164 || '').replace(/\D/g, '');
+    return digits.slice(-8) === code;
+  });
+  return (exact.length === 1) ? exact[0].guid : null;
+}
+
 async function handleChargeConfirmNotification(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -14595,17 +14626,36 @@ async function handleChargeConfirmNotification(request, env, corsHeaders) {
     const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&sort=-created&perPage=1`, { headers });
     const data = await res.json().catch(() => ({ items: [] }));
     const pendingRec = data.items && data.items[0];
-    if (!pendingRec) {
+
+    let existingRequestId = null;
+    let targetGuid = null;
+    let memoSuffix = '';
+
+    if (pendingRec) {
+      existingRequestId = pendingRec.id;
+      targetGuid = pendingRec.guid;
+    } else {
+      // pending 기록이 없다 — 사전 신청(usage.html "충전하기") 없이
+      // 바로 입금한 경우. 전화번호 매칭키라면 역조회로 바로 발행한다.
+      targetGuid = await _findGuidByPhoneMatchKey(env, code).catch(() => null);
+      if (targetGuid) {
+        memoSuffix = ' [사전신청없음-전화번호역조회]';
+        console.info(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_REVERSE_PHONE_MATCH', code, guid: targetGuid, ts: new Date().toISOString() }));
+      }
+    }
+
+    if (!targetGuid) {
       console.warn(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CODE_NO_PENDING', code, ts: new Date().toISOString() }));
       return new Response(JSON.stringify({ ok: true, matched: false, reason: 'NO_PENDING_REQUEST', match_code: code }), { status: 200, headers: corsHeaders });
     }
 
     const result = await _mintAndRecordCharge(env, {
-      existingRequestId: pendingRec.id, guid: pendingRec.guid,
+      existingRequestId, guid: targetGuid,
       krwAmount: amount, depositorName: depositor_name || '',
-      memo: `알림캡처(${source || 'unknown'}${app_package ? ':' + app_package : ''})`,
+      memo: `알림캡처(${source || 'unknown'}${app_package ? ':' + app_package : ''})${memoSuffix}`,
       channel: 'auto_notification_capture', confirmedBy: 'system:notification_capture',
       externalTxId: notification_key,
+      matchCodeForNewRecord: existingRequestId ? null : code, // 역조회 경로(existingRequestId 없음)일 때만 실제 매칭코드를 감사기록에 남김
     });
     if (!result.ok) {
       console.error(JSON.stringify({ tag: 'NOTIFICATION_CAPTURE_CONFIRM_FAILED', code, result, ts: new Date().toISOString() }));
