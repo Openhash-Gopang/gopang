@@ -210,6 +210,13 @@ self.addEventListener('push', (event) => {
   // 않아도(채팅창이든 다른 화면이든) 즉시 PC 설정이 자동 적용된다.
   const isAiSetupSync   = tag.startsWith('gopang-ai-setup-');
   const isVersionUpdate = tag === 'gopang-version-update';
+  // 2026-08-28 신설(주피터 지시: "GDC wallet은 언제나 최신 정보를
+  // 반영해야 합니다") — GDC 충전 확정 푸시(worker.js
+  // _mintAndRecordCharge, tag: 'gdc-charge-confirmed')가 오면 열려있는
+  // 모든 탭에 즉시 잔액 재대사 신호를 보낸다. 위 AI 설정 동기화와
+  // 완전히 동일한 패턴 — 알림을 클릭하기 전이라도, 지갑 시트를 열어둔
+  // 채 다른 화면을 보고 있어도 잔액 숫자가 그 즉시 최신으로 갱신된다.
+  const isGdcChargeConfirmed = tag === 'gdc-charge-confirmed';
 
   // ── TEST: push 도착 즉시(클릭 대기 없이) 열려있는 모든 탭에 강제
   // 사운드 신호를 브로드캐스트한다 — 클릭 시점까지 기다리지 않고 도착
@@ -237,6 +244,14 @@ self.addEventListener('push', (event) => {
         ? clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
             for (const client of list) {
               client.postMessage({ type: isVersionUpdate ? 'CHECK_FOR_UPDATE' : 'SYNC_AI_SETTING' });
+            }
+          })
+        : Promise.resolve(),
+      // 2026-08-28 신설 — GDC 충전 확정 브로드캐스트(위 주석 참조).
+      isGdcChargeConfirmed
+        ? clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+            for (const client of list) {
+              client.postMessage({ type: 'REFRESH_GDC_BALANCE' });
             }
           })
         : Promise.resolve(),

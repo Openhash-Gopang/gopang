@@ -723,6 +723,44 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── GDC 잔액 실시간 갱신 (2026-08-28 신설, 주피터 지시: "GDC wallet은
+// 언제나 최신 정보를 반영해야 합니다") ─────────────────────────────
+// 지금까지는 지갑 시트(openGopangWallet)를 열 때, 설정 패널을 열 때,
+// AI 응답 완료 1.5초 후에만 서버와 재대사했다 — 전부 "그 화면을 방금
+// 열었거나 방금 뭔가 했을 때"에 한정된 시점이었다. 그런데 예를 들어
+// 지갑 시트를 이미 열어둔 채로 가만히 있는 동안 다른 경로(관리자
+// 알림캡처로 충전 확정 등)로 잔액이 바뀌면, 화면을 다시 열지 않는 한
+// 절대 반영되지 않았다.
+// 위 SYNC_AI_SETTING·PLAY_SOUND와 동일한 패턴을 그대로 재사용한다 —
+// sw.js가 GDC 충전 확정 푸시(tag: 'gdc-charge-confirmed', worker.js
+// _mintAndRecordCharge에서 발송)를 받는 즉시 열려있는 모든 탭에
+// REFRESH_GDC_BALANCE를 브로드캐스트하고, 여기서 그 신호를 받아
+// window.gopangWallet.refreshBalanceUI()를 호출한다. 이 함수(
+// gopang-wallet.js)는 이미 헤더(#gdc-balance)·설정 화면(#gdc-balance
+// -display) DOM을 갱신하므로, 지갑 시트가 지금 열려있든 닫혀있든
+// 화면 어디를 보고 있든 항상 최신값이 즉시 반영된다. 지갑 시트
+// 내부의 상세 렌더링(거래 내역 등)까지 실시간 갱신하려면
+// openGopangWallet() 쪽에 별도 재렌더 로직이 필요하지만, 최소한
+// "잔액 숫자 자체는 항상 최신"이라는 이번 요구사항은 이걸로 충족된다.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'REFRESH_GDC_BALANCE' && window.gopangWallet?.refreshBalanceUI) {
+      console.info('[GDC] 충전 확정 푸시 수신 — 잔액 즉시 재대사');
+      window.gopangWallet.refreshBalanceUI().catch(() => {});
+      // 2026-08-28 추가 — 헤더 숫자뿐 아니라, 지갑 시트(Gopang Wallet)를
+      // 지금 열어보고 있는 중이라면 지출/수입/거래내역까지 포함해 통째로
+      // 다시 그린다. 시트 타이틀로 판별하는 이유: _openSheet()가 여러
+      // 화면(설정/지갑/거래상세 등)이 같은 DOM(#_gopang-sheet-body)을
+      // 공유해서 덮어쓰는 구조라, 지갑이 아닌 다른 화면을 보고 있을 때
+      // 무턱대고 openGopangWallet()을 부르면 엉뚱한 화면을 덮어써버린다.
+      const sheetTitleEl = document.getElementById('_gopang-sheet-title');
+      if (sheetTitleEl && sheetTitleEl.textContent === 'Gopang Wallet' && typeof window.openGopangWallet === 'function') {
+        window.openGopangWallet();
+      }
+    }
+  });
+}
+
 // ── 새 탭 딥링크(?panel=settings|search) — 2026-07-07 신설 ──────────
 // AGENT-COMMON의 [OPEN_SETTINGS_TAB]/[OPEN_SEARCH_TAB: query=...] 태그가
 // window.open('/webapp.html?panel=...')로 여는 새 탭에서, 이 앱의 나머지
