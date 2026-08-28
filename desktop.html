@@ -148,7 +148,8 @@ body {
 
 /* 히어로 오른쪽 공간 — 사람 간 소통 vs 혼디 간 소통 비교 일러스트 */
 .site-hero-illustration {
-  position: absolute; top: calc(50% - 31px); right: 40px; transform: translateY(-50%);
+  /* 2026-08-28 — 상단 탭과 재차 겹쳐 1cm(≈38px, 96dpi 기준) 추가로 아래 이동 */
+  position: absolute; top: calc(50% + 7px); right: 40px; transform: translateY(-50%);
   width: 500px; height: auto; border-radius: 10px; display: block; overflow: hidden;
 }
 .site-hero-illustration svg { display: block; width: 100%; height: auto; }
