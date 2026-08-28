@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>혼디 — 이전 소개 페이지 (보관본)</title>
+<title>혼디 시스템 개요</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -721,8 +721,7 @@ section.section[data-tab] { display: block !important; }
 .archive-doc-bar .archive-doc-title { color: #1e293b; font-weight: 600; }
 .archive-doc-bar .archive-doc-links { display: flex; gap: 16px; }
 
-
-/* ── 보관본 목록(탭) 페이지 전용 (2026-08-28 재편) ── */
+/* ── 보관본 목록 페이지 전용 — Material 카드 + 슬라이드 아코디언 (2026-08-28) ── */
 .legacy-index-hero {
   padding: 40px 24px 8px; max-width: 980px; margin: 0 auto;
 }
@@ -730,66 +729,344 @@ section.section[data-tab] { display: block !important; }
 .legacy-index-hero p { font-size: 14px; color: var(--text3); line-height: 1.7; max-width: 720px; }
 .tab-group { max-width: 980px; margin: 0 auto; padding: 20px 24px 8px; }
 .tab-group h2 { font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 12px; }
-.tab-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.tab-pill {
-  display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 999px;
-  background: #fff; border: 1px solid var(--border2); color: var(--text2);
-  font-size: 13.5px; font-weight: 500; text-decoration: none; transition: all 0.15s;
+.legacy-card-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.legacy-card {
+  background: #fff; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+  transition: box-shadow 0.2s ease;
 }
-.tab-pill:hover { background: var(--brand-bg); border-color: var(--brand-lt); color: var(--brand-dk); }
+.legacy-card:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.10);
+}
+.legacy-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 20px; cursor: pointer; user-select: none;
+}
+.legacy-card-head:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.legacy-card-text { min-width: 0; }
+.legacy-card-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.legacy-card-desc { font-size: 12.5px; color: var(--text3); line-height: 1.6; }
+.legacy-card-chevron {
+  flex-shrink: 0; width: 20px; height: 20px; color: var(--text4);
+  transition: transform 0.25s ease;
+}
+.legacy-card.open .legacy-card-chevron { transform: rotate(180deg); color: var(--brand-dk); }
+.legacy-card-panel {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+.legacy-card.open .legacy-card-panel { max-height: 720px; }
+.legacy-card-panel-inner { border-top: 1px solid var(--border); background: var(--bg-subtle); }
+.legacy-card-panel iframe {
+  display: block; width: 100%; height: 680px; border: none; background: #fff;
+}
 .legacy-index-footer { max-width: 980px; margin: 24px auto 60px; padding: 0 24px; font-size: 12.5px; color: var(--text4); }
 </style>
 </head>
 <body>
-<div class="archive-banner">
-  📦 이 페이지는 예전 desktop.html 소개 본문의 보관본입니다 — 최신 페이지는
-  <a href="../desktop.html">hondi.net 메인 페이지</a>를 참고하세요.
-</div>
 
 <div class="legacy-index-hero">
-  <h1>혼디 이전 소개 페이지 (보관본)</h1>
-  <p>2026년 8월 21일 이전 desktop.html의 소개 본문을 주제별로 재편했습니다. 아래 탭에서 원하는 주제를 선택하면 해당 문서로 이동합니다.</p>
+  <h1>혼디 시스템 개요</h1>
+  <p>2026년 8월 21일 이전 desktop.html의 소개 본문을 주제별로 재편했습니다. 카드를 클릭하면 아래로 해당 문서가 펼쳐집니다.</p>
 </div>
 
 <div class="tab-group">
   <h2>소개 자료</h2>
-  <div class="tab-grid">
-      <a class="tab-pill" href="legacy/pamphlet.html">한눈에 보기</a>
-      <a class="tab-pill" href="legacy/overview.html">오픈해시 기반 데이터 진실성</a>
-      <a class="tab-pill" href="legacy/parallel-world.html">AI 평행세계</a>
-      <a class="tab-pill" href="legacy/features.html">혼디의 기능</a>
-      <a class="tab-pill" href="legacy/pdv-ac.html">PDV와 Agent Common</a>
-      <a class="tab-pill" href="legacy/usage-scenarios-by-role.html">역할별·생애주기별 활용 시나리오</a>
-      <a class="tab-pill" href="legacy/structure.html">혼디의 구조</a>
-      <a class="tab-pill" href="legacy/billing.html">과금 원칙</a>
+  <div class="legacy-card-list" id="group-intro">
+    <div class="legacy-card" data-href="legacy/pamphlet.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">한눈에 보기</div>
+          <div class="legacy-card-desc">행정안전부의 AI 기반 공공데이터포털 시범서비스와 연계해, 혼디의 공공 AI 에이전트가 수행하는 행정 자동화를 소개합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/pamphlet.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/overview.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">오픈해시 기반 데이터 진실성</div>
+          <div class="legacy-card-desc">혼디를 AI 메신저 플랫폼으로 소개하며, 사람·사물·기관·개념이 서로 대화하는 구조를 설명합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/overview.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/parallel-world.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">AI 평행세계</div>
+          <div class="legacy-card-desc">입법·사법·행정·금융·의료·교육 등 현실 제도를 AI 기반으로 재구성하려는 혼디의 지향점을 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/parallel-world.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/features.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">혼디의 기능</div>
+          <div class="legacy-card-desc">모든 대화·문서가 서버가 아닌 내 로컬(PDV)에만 저장되는 P2P 구조를 설명합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/features.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/pdv-ac.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">PDV와 Agent Common</div>
+          <div class="legacy-card-desc">내 데이터는 오직 내 것, 내 AI 비서는 나만을 위해 똑똑해진다는 혼디의 두 기둥을 소개합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/pdv-ac.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/usage-scenarios-by-role.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">역할별·생애주기별 활용 시나리오</div>
+          <div class="legacy-card-desc">같은 이용자의 일상 시나리오 3가지와 다양한 직업군의 전문 업무 시나리오를 보여줍니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/usage-scenarios-by-role.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/structure.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">혼디의 구조</div>
+          <div class="legacy-card-desc">메인 AI 비서(백설공주)와 수백 종 전문 Agent(일곱 난쟁이)의 협업 구조를 비유로 설명합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/structure.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="legacy/billing.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">과금 원칙</div>
+          <div class="legacy-card-desc">혼디 요금 체계를 구성하는 네 가지 요소를 정리합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="legacy/billing.html" loading="lazy"></iframe></div></div>
+    </div>
   </div>
 </div>
 
 <div class="tab-group">
   <h2>체험 리포트</h2>
-  <div class="tab-grid">
-      <a class="tab-pill" href="../reports/hondi-example.html">혼디 예시</a>
-      <a class="tab-pill" href="../reports/hondi-mine-vs-their-ai.html">AI 비서</a>
-      <a class="tab-pill" href="../reports/hondi-mine-ai-secretary.html">나만의 AI 비서</a>
-      <a class="tab-pill" href="../reports/hondi-vs-kakao-ai-blockchain.html">카톡·AI·블록체인 비교</a>
-      <a class="tab-pill" href="../reports/hondi-professor-teacher-complement.html">평생 교수</a>
-      <a class="tab-pill" href="../reports/hondi-rule-of-law.html">법치 사회</a>
-      <a class="tab-pill" href="../reports/hondi-superconserve-ai.html">초절전 AI</a>
-      <a class="tab-pill" href="../reports/hondi-mote-openhash.html">MoTE와 Openhash</a>
-      <a class="tab-pill" href="../reports/hondi-gdc-currency-scenario-bw.html">GDC</a>
-      <a class="tab-pill" href="../reports/hondi-prepare-today-finance.html">금융권 대비</a>
-      <a class="tab-pill" href="../reports/hondi-legal-arbitration-scenario.html">K-Law</a>
-      <a class="tab-pill" href="../reports/hondi-business-admin-scenario.html">행정 서비스 사례</a>
-      <a class="tab-pill" href="../reports/hondi-ai-town-office.html">AI 정부</a>
-      <a class="tab-pill" href="../reports/hondi-4day-week-estimate.html">주 4일(또는 월 3주) 근무</a>
-      <a class="tab-pill" href="../reports/hondi-usage-scenarios.html">이용 시나리오</a>
-      <a class="tab-pill" href="../reports/hondi-public-service.html">공공 서비스</a>
+  <div class="legacy-card-list" id="group-reports">
+    <div class="legacy-card" data-href="../reports/hondi-example.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">혼디 예시</div>
+          <div class="legacy-card-desc">사람 간 서류 왕래를 혼디와 혼디 간의 대화로 대체하는 예시를 보여줍니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-example.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-mine-vs-their-ai.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">AI 비서</div>
+          <div class="legacy-card-desc">요청하는 쪽의 "나만의 AI 비서"와 처리하는 쪽의 "그만의 AI 비서"가 직접 대화해 업무를 처리하는 구조를 설명합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-mine-vs-their-ai.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-mine-ai-secretary.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">나만의 AI 비서</div>
+          <div class="legacy-card-desc">내 일상과 업무를 기록하고 의사결정을 돕는 나만의 AI 비서, 그 기록은 내 기기에만 저장됩니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-mine-ai-secretary.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-vs-kakao-ai-blockchain.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">카톡·AI·블록체인 비교</div>
+          <div class="legacy-card-desc">정부의 AI 정부 정책에 호응하는 민간 프로젝트로서 혼디의 위치를 카카오톡·일반 AI·블록체인과 비교합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-vs-kakao-ai-blockchain.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-professor-teacher-complement.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">평생 교수</div>
+          <div class="legacy-card-desc">학교 제도를 대체하지 않으면서 학습자 개인별 맞춤 교육을 보완하는 교수·교사 페르소나를 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-professor-teacher-complement.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-rule-of-law.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">법치 사회</div>
+          <div class="legacy-card-desc">기관·부서별 임무·규정을 근거로 만들어지는 "그만의 AI 비서"와 법치 기반 대화 구조를 설명합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-rule-of-law.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-superconserve-ai.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">초절전 AI</div>
+          <div class="legacy-card-desc">혼디가 같은 작업을 훨씬 적은 전력·비용으로 처리하는 기술과 국가 경제적 효과를 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-superconserve-ai.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-mote-openhash.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">MoTE와 Openhash</div>
+          <div class="legacy-card-desc">혼디를 움직이는 두 핵심 기술 — 최소 전력으로 최적해를 찾는 MoTE와 위변조 방지 기록 기술 Openhash를 소개합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-mote-openhash.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-gdc-currency-scenario-bw.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">GDC</div>
+          <div class="legacy-card-desc">혼디의 금융 서비스 GDC(Global Digital Currency)가 구독료·거버넌스 투표에 실제로 쓰이는 방식을 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-gdc-currency-scenario-bw.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-prepare-today-finance.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">금융권 대비</div>
+          <div class="legacy-card-desc">은행·보험·증권 기능을 융합하려는 GDC의 현재 기능 테스트 단계 현황을 정리합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-prepare-today-finance.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-legal-arbitration-scenario.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">K-Law</div>
+          <div class="legacy-card-desc">다투지 않는 사실관계와 판례를 근거로 짧은 시간 안에 법리를 정리하는 K-Law의 실제 작동을 보여줍니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-legal-arbitration-scenario.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-business-admin-scenario.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">행정 서비스 사례</div>
+          <div class="legacy-card-desc">공공데이터포털의 LLM 기반 시범서비스보다 한 걸음 더 나아간 혼디의 행정 자동화 사례를 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-business-admin-scenario.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-ai-town-office.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">AI 정부</div>
+          <div class="legacy-card-desc">추가 본인인증 없이 민원 신청·결정을 수 초 내 완료하는 흐름을 보여줍니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-ai-town-office.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-4day-week-estimate.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">주 4일(또는 월 3주) 근무</div>
+          <div class="legacy-card-desc">혼디가 여러 분야의 업무를 직접 대행할 때 절감 가능한 연간 인간 노동시간을 추산합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-4day-week-estimate.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-usage-scenarios.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">이용 시나리오</div>
+          <div class="legacy-card-desc">개인파산·면책 신청을 예시로, 공공데이터포털 고도화가 혼디에 갖는 의미를 다룹니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-usage-scenarios.html" loading="lazy"></iframe></div></div>
+    </div>
+    <div class="legacy-card" data-href="../reports/hondi-public-service.html">
+      <div class="legacy-card-head" role="button" tabindex="0" aria-expanded="false">
+        <div class="legacy-card-text">
+          <div class="legacy-card-title">공공 서비스</div>
+          <div class="legacy-card-desc">정부 민원 접수 시 요금 산정 방식과 사용자 승인 절차를 정리합니다.</div>
+        </div>
+        <svg class="legacy-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="legacy-card-panel"><div class="legacy-card-panel-inner"><iframe data-src="../reports/hondi-public-service.html" loading="lazy"></iframe></div></div>
+    </div>
   </div>
 </div>
 
 <div class="legacy-index-footer">
   총 24개 문서 · 소개 자료 8개, 체험 리포트 16개
 </div>
+
+<script>
+(function () {
+  var openCardEl = null;
+
+  function closeCard(cardEl) {
+    cardEl.classList.remove('open');
+    cardEl.querySelector('.legacy-card-head').setAttribute('aria-expanded', 'false');
+  }
+  function openCard(cardEl) {
+    var iframe = cardEl.querySelector('iframe');
+    if (iframe && !iframe.src) iframe.src = iframe.getAttribute('data-src');
+    cardEl.classList.add('open');
+    cardEl.querySelector('.legacy-card-head').setAttribute('aria-expanded', 'true');
+  }
+  function toggleCard(cardEl) {
+    var isOpen = cardEl.classList.contains('open');
+    if (openCardEl && openCardEl !== cardEl) {
+      closeCard(openCardEl);
+    }
+    if (isOpen) {
+      closeCard(cardEl);
+      openCardEl = null;
+    } else {
+      openCard(cardEl);
+      openCardEl = cardEl;
+    }
+  }
+
+  document.querySelectorAll('.legacy-card-head').forEach(function (head) {
+    head.addEventListener('click', function () {
+      toggleCard(head.closest('.legacy-card'));
+    });
+    head.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleCard(head.closest('.legacy-card'));
+      }
+    });
+  });
+})();
+</script>
 
 </body>
 </html>
