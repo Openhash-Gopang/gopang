@@ -1429,16 +1429,17 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
      느낌은 여전함). 좌/우 메뉴(.left-menu-overlay/.right-menu-drawer)와
      동일한 우측 슬라이드아웃 패널 구조(backdrop+drawer 분리, translateX)로
      바꿔 명확히 별도 레이어로 보이게 한다. -->
-<!-- 2026-08-28 신설(주피터 지시) — GDC 충전 내역 항목을 탭하면 6하원칙
+<!-- 2026-08-28 신설(주피터 지시) — GDC 거래 내역 항목을 탭하면 6하원칙
      (누가/언제/어디서/무엇을/어떻게/왜) 상세를 이 슬라이드아웃 패널로 보여준다.
-     내용은 _openChargeDetail()이 채운다(charge_requests 레코드는 이미
-     matched_krw/depositor_name/memo/mint_content_hash/matched_at/channel/
-     confirmed_by/external_tx_id까지 전부 저장하고 있어 추가 서버 호출 없이
-     구성 가능). -->
+     내용은 settings.js의 _openTxDetail()이 채운다. GDC는 충전뿐 아니라
+     사용자 간 결제(마켓 구매·P2P 이체)·AI 사용료 차감에도 쓰이므로,
+     charge_requests(입금 대기)와 ledger_entries(확정된 충전·구매·이체·
+     사용료 전부)를 합친 통합 타임라인을 다룬다 — 추가 서버 호출 없이
+     구성 가능. -->
 <div class="charge-detail-overlay" id="charge-detail-overlay">
   <div class="charge-detail-backdrop" onclick="closeChargeDetail()"></div>
   <div class="charge-detail-drawer" id="charge-detail-drawer-body">
-    <!-- _openChargeDetail()이 매번 이 안쪽 내용을 새로 렌더링 -->
+    <!-- _openTxDetail()이 매번 이 안쪽 내용을 새로 렌더링 -->
   </div>
 </div>
 

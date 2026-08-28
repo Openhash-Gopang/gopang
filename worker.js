@@ -12094,6 +12094,16 @@ export default {
     if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
     // 2026-07-18 신설 — 재무제표 대사. 설계문서 Phase 4.
     if (pathname === '/ledger/reconcile' && request.method === 'GET') return handleLedgerReconcile(request, env, corsHeaders);
+    // 2026-08-28 신설(주피터 지시) — "GDC는 충전 용도만이 아니라 사용자
+    // 간 결제 수단(상품 구매 등)으로도 쓰인다"는 지적에 따라, Gopang
+    // Wallet의 거래 내역을 charge_requests(입금/충전)만이 아니라
+    // 실제 회계 원장인 ledger_entries(충전 mint·마켓 구매 market·P2P
+    // 이체 gdc_transfer·AI 사용료 ai_usage 4종을 전부 포괄)까지 합쳐
+    // 보여주기 위한 본인 전용 조회 엔드포인트. /ledger/reconcile은
+    // 대사용 요약 통계만 반환하고 개별 원본 행은 노출하지 않으므로
+    // 별도로 신설. secret 불필요 — /biz/charge-status와 동일하게
+    // guid 본인 것만 조회 가능.
+    if (pathname === '/wallet/ledger-history' && request.method === 'GET') return handleWalletLedgerHistory(request, env, corsHeaders);
     // 2026-07-18 신설 — 발행잔액 집계. 설계문서 Phase 5.
     if (pathname === '/ledger/issuance-summary' && request.method === 'GET') return handleLedgerIssuanceSummary(request, env, corsHeaders);
     // 2026-07-18 신설 — 판매자 자격 확인(사업자등록증 첨부, 정부24 발급).
@@ -12929,6 +12939,31 @@ async function handleLedgerIssuanceSummary(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 2026-08-28 신설(주피터 지시) — Gopang Wallet 통합 거래 내역용. 본인
+// guid의 ledger_entries를 최신순으로 반환한다. source 필드로 4가지
+// 거래 유형을 구분한다: 'mint'(GDC 충전), 'market'(마켓 상품 구매),
+// 'gdc_transfer'(사용자 간 P2P 이체), 'ai_usage'(AI 사용료 차감).
+// direction은 'credit'(입금/수입) 또는 'debit'(출금/지출).
+async function handleWalletLedgerHistory(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 쿼리 파라미터 필수', corsHeaders);
+  const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${guid.replace(/'/g, "\\'")}'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/ledger_entries/records?filter=${filter}&sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) return _err(502, 'L1_ERROR', '거래 내역 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, entries: data.items || [] }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+}
+
 // 2026-07-18 신설 — 재무제표 대사(/ledger/reconcile)
 // GDC 상거래 완성 계획서 Phase 4. ledger_entries(회계 부기, 이번에 신설)
 // 로부터 역산한 bs-cash와 L1 blocks 원장(정산의 정본)에서 재생한 실제
