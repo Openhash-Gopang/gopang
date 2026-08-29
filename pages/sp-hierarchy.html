@@ -86,6 +86,17 @@
   .tree-leaf .badge.editable{color:var(--blue-dk);background:var(--blue-bg)}
 
   .sh-loading{text-align:center;padding:60px 20px;color:var(--text4);font-size:13.5px}
+
+  .sh-illust-band{background:var(--surface);border-bottom:1px solid var(--border);padding:22px 24px}
+  .sh-illust{max-width:1040px;margin:0 auto}
+  .sh-illust svg{width:100%;height:auto;display:block}
+  .sh-illust-cap{text-align:center;font-size:11.5px;color:var(--text4);margin-top:10px}  .sh-core-group{border:1px solid #fde68a}
+  .sh-core-title{
+    display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#92400e;
+    letter-spacing:.3px;margin-bottom:10px;text-transform:uppercase;
+  }
+  .sh-core-tier{font-size:11px;font-weight:700;color:#a16207;background:#fffbeb;
+    border-radius:6px;padding:2px 8px;margin:10px 0 6px;display:inline-block}
 </style>
 </head>
 <body>
@@ -100,6 +111,89 @@
     <a class="active" href="sp-hierarchy.html">SP의 계층 구조</a>
     <a href="core-prompts.html">핵심 프롬프트</a>
   </nav>
+</div>
+
+<div class="sh-illust-band">
+  <div class="sh-illust">
+    <svg viewBox="0 0 1040 260" xmlns="http://www.w3.org/2000/svg">
+      <!-- 연결선: 루트 -> 7개 그룹(핵심 SP 포함) -->
+      <g stroke="#93a3c4" stroke-width="1.4" fill="none">
+        <path d="M506,50 V70 H80 V90"/>
+        <path d="M506,50 V70 H222 V90"/>
+        <path d="M506,50 V70 H364 V90"/>
+        <path d="M506,50 V70 H506 V90"/>
+        <path d="M506,50 V70 H648 V90"/>
+        <path d="M506,50 V70 H790 V90"/>
+        <path d="M506,50 V70 H932 V90"/>
+      </g>
+      <!-- 루트 -->
+      <rect x="406" y="10" width="200" height="40" rx="9" fill="#0e1c3f"/>
+      <text x="506" y="26" text-anchor="middle" fill="#93a3c4" font-size="9" font-family="Pretendard,sans-serif">혼디 SP 전체</text>
+      <text x="506" y="42" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="Pretendard,sans-serif">2,011개</text>
+
+      <!-- 7개 그룹(핵심 SP + 기존 6개) -->
+      <g font-family="Pretendard,sans-serif">
+        <rect x="15"  y="90" width="130" height="52" rx="8" fill="#fffbeb" stroke="#d97706"/>
+        <text x="80" y="110" text-anchor="middle" fill="#92400e" font-size="10.5" font-weight="700">⭐ 핵심 SP</text>
+        <text x="80" y="126" text-anchor="middle" fill="#a16207" font-size="9">14개(교차분류)</text>
+
+        <rect x="157" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="222" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">정부기관 라우팅</text>
+        <text x="222" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 12개</text>
+
+        <rect x="299" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="364" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">민원·서비스</text>
+        <text x="364" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 3개</text>
+
+        <rect x="441" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="506" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">경제·산업</text>
+        <text x="506" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 2개</text>
+
+        <rect x="583" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="648" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">시스템</text>
+        <text x="648" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 1개</text>
+
+        <rect x="725" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="790" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">전문직 페르소나</text>
+        <text x="790" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 60개</text>
+
+        <rect x="867" y="90" width="130" height="52" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+        <text x="932" y="110" text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="700">K-서비스</text>
+        <text x="932" y="126" text-anchor="middle" fill="#64748b" font-size="9">카테고리 20개</text>
+      </g>
+
+      <!-- 공통 하위 패턴(범례): 나머지 6개 그룹이 이 아래로 동일한 규칙을 따른다 -->
+      <g stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3,4" fill="none">
+        <path d="M506,142 V165"/>
+      </g>
+      <text x="506" y="180" text-anchor="middle" fill="#94a3b8" font-size="9.5" font-family="Pretendard,sans-serif">나머지 6개 그룹은 아래 패턴이 그대로 반복됩니다 (핵심 SP는 그 안에서 뽑아온 것)</text>
+
+      <g font-family="Pretendard,sans-serif" stroke="#3b82f6" stroke-width="1.4" fill="none">
+        <path d="M300,220 H340"/>
+        <path d="M500,220 H540" stroke-dasharray="3,4"/>
+        <path d="M700,220 H740"/>
+      </g>
+      <g font-family="Pretendard,sans-serif">
+        <rect x="180" y="196" width="120" height="48" rx="8" fill="#fff" stroke="#3b82f6"/>
+        <text x="240" y="215" text-anchor="middle" fill="#94a3b8" font-size="8.5">📁</text>
+        <text x="240" y="230" text-anchor="middle" fill="#0e1c3f" font-size="10.5" font-weight="700">카테고리</text>
+
+        <rect x="340" y="196" width="160" height="48" rx="8" fill="#fff" stroke="#94a3b8" stroke-dasharray="3,3"/>
+
+        <text x="420" y="212" text-anchor="middle" fill="#94a3b8" font-size="8.5">📁 (있는 경우만)</text>
+        <text x="420" y="230" text-anchor="middle" fill="#0e1c3f" font-size="10.5" font-weight="700">하위분류</text>
+
+        <rect x="540" y="196" width="160" height="48" rx="8" fill="#fff" stroke="#94a3b8" stroke-dasharray="3,3"/>
+        <text x="620" y="212" text-anchor="middle" fill="#94a3b8" font-size="8.5">📁 (있는 경우만)</text>
+        <text x="620" y="230" text-anchor="middle" fill="#0e1c3f" font-size="10.5" font-weight="700">하위분류 2단계</text>
+
+        <rect x="740" y="196" width="120" height="48" rx="8" fill="#0e1c3f"/>
+        <text x="800" y="215" text-anchor="middle" fill="#93a3c4" font-size="8.5">📄</text>
+        <text x="800" y="230" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">SP (파일)</text>
+      </g>
+    </svg>
+    <div class="sh-illust-cap">전체 구조: 혼디 SP 전체 → 7개 그룹(핵심 SP 포함) → 카테고리 → (있으면) 하위분류 → 실제 SP 순서로 접혀 있습니다</div>
+  </div>
 </div>
 
 <div class="sh-hero">
@@ -183,6 +277,42 @@
     `;
   }
 
+  function renderCoreGroup(manifest){
+    const byFile = {};
+    manifest.items.forEach(it => { byFile[it.file] = it; });
+
+    function findItem(needle){
+      const key = Object.keys(byFile).find(f => f.includes(needle));
+      return key ? byFile[key] : null;
+    }
+
+    const TIERS = [
+      { label: '0단계 · 서버가 예외 없이 강제 주입', needles: ['UNIVERSAL-INTEGRITY', 'TASK-DELEGATION-GUIDE', 'CONTROL-TOWER-PRINCIPLE'] },
+      { label: '1단계 · 유일 정본 오케스트레이터', needles: ['AC-PRO-CORE', 'hondi_visitor_sp', 'AC-FLASH-EXECUTOR'] },
+      { label: '2단계 · 조건부 실행 파이프라인', needles: ['SP-19_kintent', 'SP-18_ksearch', 'SP-20_kcompose', 'SP-22_kexecute', 'SP-21_kdeliver', 'SP-23_kreport', 'SP-23_ktelecom', 'SP-24_kestate'] },
+    ];
+
+    const tiersHtml = TIERS.map(tier => {
+      const items = tier.needles.map(findItem).filter(Boolean);
+      if (!items.length) return '';
+      return `
+        <div class="sh-core-tier">${esc(tier.label)}</div>
+        <div class="tree-leaflist" style="max-height:none;overflow:visible">${items.map(leafLink).join('')}</div>
+      `;
+    }).join('');
+    const totalCount = TIERS.reduce((n, t) => n + t.needles.map(findItem).filter(Boolean).length, 0);
+
+    return `
+      <div class="sh-group">
+        <div class="sh-core-title">⭐ 핵심 SP <span style="font-weight:500;color:#a16207;text-transform:none;font-size:11px">(다른 그룹에도 있는 항목을 한데 모은 것 — "핵심 프롬프트" 탭 참고)</span></div>
+        <details class="tree-node sh-core-group" open>
+          <summary><span class="ico">⭐</span><span>핵심 SP 전체 보기</span><span class="cnt">${totalCount}</span></summary>
+          <div class="tree-children">${tiersHtml}</div>
+        </details>
+      </div>
+    `;
+  }
+
   async function init(){
     try {
       const res = await fetch(CATALOG_URL);
@@ -204,7 +334,7 @@
         byGroup[c.group].push(c);
       });
 
-      const html = groupOrder.map(group => `
+      const html = renderCoreGroup(manifest) + groupOrder.map(group => `
         <div class="sh-group">
           <div class="sh-group-title">${esc(group)}</div>
           ${byGroup[group].map(c => renderCategoryNode(c, catById, itemsByCat)).join('')}

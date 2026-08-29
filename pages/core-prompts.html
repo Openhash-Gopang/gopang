@@ -44,6 +44,11 @@
   }
   .cp-card:last-child{margin-bottom:0}
   .cp-card-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap}
+  .cp-card-role{
+    font-size:12px;font-weight:700;color:var(--blue-dk);background:var(--blue-bg);
+    border-radius:7px;padding:6px 10px;margin-bottom:8px;line-height:1.5;
+  }
+  .cp-card-role b{font-weight:800}
   .cp-card-name{font-size:13.5px;font-weight:700;color:var(--text)}
   .cp-card-name a{color:var(--blue-dk);text-decoration:none}
   .cp-card-name a:hover{text-decoration:underline}
@@ -101,6 +106,7 @@
         <span class="cp-card-name">UNIVERSAL-INTEGRITY (U0)</span>
         <span class="cp-card-badge always">서버 강제 주입</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 모든 SP가 지켜야 할 최우선 원칙 — 안내만 하고 끝내지 않기</div>
       <div class="cp-card-desc">"안내로 끝내지 않는다"는 혼디의 제1공리. 세 강제 문서 중 하나.</div>
     </div>
     <div class="cp-card">
@@ -108,6 +114,7 @@
         <span class="cp-card-name">TASK-DELEGATION-GUIDE</span>
         <span class="cp-card-badge always">서버 강제 주입</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 정보 제공이 아니라 실제 업무 대행을 하도록 강제하는 지침</div>
       <div class="cp-card-desc">"혼디의 본래 용도는 업무 대행이지 문의 응답이 아니다"를 명시.</div>
     </div>
     <div class="cp-card">
@@ -115,6 +122,7 @@
         <span class="cp-card-name">CONTROL-TOWER-PRINCIPLE</span>
         <span class="cp-card-badge always">서버 강제 주입</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 여러 SP가 이어지는 오케스트레이션을 하나의 지휘 체계로 통제</div>
       <div class="cp-card-desc">K-Intent→Compose→Execute→Deliver→Report 오케스트레이션 체인이 "정보 나열"로 새지 않게 잡는 관제탑 원칙. 2026-08-06 신설 당시엔 이 체인에 전혀 안 걸려 있던 게 실제 버그(응답이 문서형으로 새는 원인)로 확인돼 강제 상속 대상에 추가됨.</div>
       <div class="cp-card-evidence">worker.js:18204 — "CONTROL-TOWER-PRINCIPLE — 모든 SP 제1원칙"</div>
     </div>
@@ -132,6 +140,7 @@
         <span class="cp-card-name"><a href="prompt-editor.html?file=prompts%2FAC-PRO-CORE_v1_7.txt">AC-PRO-CORE</a></span>
         <span class="cp-card-badge always">유일 정본</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 사용자와 대화하는 개인 AI 비서(AC)의 인격·판단 기준 본체</div>
       <div class="cp-card-desc">개인 AI 비서(AC) 본체. call-ai.js의 <code>_loadAgentCommonSP()</code>가 세션당 1회 로드해 캐시하고, 실패 시 폴백 없이 명확한 오류로 중단하도록 설계돼 있습니다(과거에 있던 742자짜리 축약 폴백은 안전장치가 없어 완전히 제거됨).</div>
       <div class="cp-card-evidence">call-ai.js:98 — "AC-PRO-CORE는 유일한 정본이며, 그 대체물은 존재하지 않는다."</div>
     </div>
@@ -140,6 +149,7 @@
         <span class="cp-card-name"><a href="prompt-editor.html?file=prompts%2Fhondi_visitor_sp_v1_2.txt">hondi_visitor_sp</a></span>
         <span class="cp-card-badge always">기본 진입점</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 로그인·페르소나 결정 전, 첫 방문자를 맞는 기본 인격</div>
       <div class="cp-card-desc">아직 페르소나가 정해지기 전, desktop.html "물어보세요" 위젯이 로드하는 방문자 기본 인격. worker.js 조사에서 이 경로(<code>_loadVisitorSP</code>)가 한동안 관제탑 원칙을 한 번도 못 받고 있었다는 게 발견되어 2026-08-09에 강제 주입 대상으로 편입됨.</div>
     </div>
     <div class="cp-card">
@@ -147,6 +157,7 @@
         <span class="cp-card-name">AC-FLASH-EXECUTOR</span>
         <span class="cp-card-badge conditional">위임 시에만</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 가벼운 작업을 빠른 모델(Flash)에 위임할 때 쓰는 실행 지침</div>
       <div class="cp-card-desc">가벼운 실행을 hondi-flash 모델에 위임할 때만 로드되는 실행보조 SP. AC-PRO-CORE의 하위 실행기 역할.</div>
     </div>
   </div>
@@ -163,6 +174,7 @@
         <span class="cp-card-name">K-Intent (SP-19)</span>
         <span class="cp-card-badge conditional">[CALL_KINTENT] 태그</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 사용자의 말에서 어떤 서비스가 필요한지 의도를 분석</div>
       <div class="cp-card-desc">사용자 의도를 분석해 어떤 서비스로 라우팅할지 결정하는 파이프라인의 입구.</div>
       <div class="cp-card-evidence">call-ai.js:1422 — _forwardSwitchSP(_loadKIntentSP, 'K-Intent')</div>
     </div>
@@ -171,6 +183,7 @@
         <span class="cp-card-name">K-Search (SP-18)</span>
         <span class="cp-card-badge conditional">전담 검색 에이전트</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 혼디 전체에서 실제 웹·정보 검색을 수행하는 유일한 창구</div>
       <div class="cp-card-desc">gwp-registry.js에 "혼디 생태계 전체의 유일한 검색 실행 에이전트"로 명시. 다른 SP가 위임하는 검색까지 전부 이곳으로 모입니다.</div>
     </div>
     <div class="cp-card">
@@ -178,6 +191,7 @@
         <span class="cp-card-name">K-Compose (SP-20) → K-Execute (SP-22) → K-Deliver (SP-21) → K-Report (SP-23)</span>
         <span class="cp-card-badge conditional">순차 오케스트레이션</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 의도 파악 이후 응답을 조합→실행→전달→보고하는 4단계 실행 라인</div>
       <div class="cp-card-desc">의도 파악 다음 단계로 응답을 조합·실행·전달·보고하는 4단계. 이 체인에 CONTROL-TOWER-PRINCIPLE이 안 걸렸을 때 "한 번에 하나씩 지시" 대신 정보 나열로 새는 버그가 실제로 있었습니다.</div>
     </div>
     <div class="cp-card">
@@ -185,6 +199,7 @@
         <span class="cp-card-name">K-Bank · K-Telecom · K-Estate (switch형)</span>
         <span class="cp-card-badge conditional">GWP 전환 태그</span>
       </div>
+      <div class="cp-card-role"><b>용도:</b> 금융·통신·부동산처럼 별도 저장소 없이 현재 세션을 해당 도메인 SP로 전환</div>
       <div class="cp-card-desc">별도 저장소 없이, 현재 세션의 system을 그대로 바꿔치기(switch)하는 방식으로 전환되는 도메인 SP. SWITCH_SP_LOADERS 테이블에 등록돼 있습니다.</div>
     </div>
   </div>
