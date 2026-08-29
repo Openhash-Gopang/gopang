@@ -70,6 +70,11 @@ body {
 </style>
 <link rel="stylesheet" href="/assets/site-header.css">
 <style>
+/* desktop.html 전용 헤더 높이 조정 — site-header.css 기본값(54px)의 1.5배.
+   공용 스타일시트(site-header.css)는 다른 모든 페이지가 함께 참조하므로
+   거기는 그대로 두고, desktop.html에서만 이 규칙으로 덮어쓴다. */
+.site-nav { height: 81px; }
+
 .site-stats {
   background: #eef1f6; padding: 28px 20px; display: grid;
   grid-template-columns: repeat(5, 1fr); gap: 18px;
