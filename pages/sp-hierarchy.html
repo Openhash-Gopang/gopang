@@ -279,35 +279,27 @@
   }
 
   function renderCoreGroup(manifest){
-    const byFile = {};
-    manifest.items.forEach(it => { byFile[it.file] = it; });
+    const coreItems = manifest.items.filter(it => it.core_tier !== undefined && it.core_tier !== null);
+    if (!coreItems.length) return '';
 
-    function findItem(needle){
-      const key = Object.keys(byFile).find(f => f.includes(needle));
-      return key ? byFile[key] : null;
-    }
+    const byTier = {};
+    coreItems.forEach(it => { (byTier[it.core_tier] = byTier[it.core_tier] || []).push(it); });
 
-    const TIERS = [
-      { label: '0단계 · 서버가 예외 없이 강제 주입', needles: ['UNIVERSAL-INTEGRITY', 'TASK-DELEGATION-GUIDE', 'CONTROL-TOWER-PRINCIPLE'] },
-      { label: '1단계 · 유일 정본 오케스트레이터', needles: ['AC-PRO-CORE', 'hondi_visitor_sp', 'AC-FLASH-EXECUTOR'] },
-      { label: '2단계 · 조건부 실행 파이프라인', needles: ['SP-19_kintent', 'SP-18_ksearch', 'SP-20_kcompose', 'SP-22_kexecute', 'SP-21_kdeliver', 'SP-23_kreport', 'SP-23_ktelecom', 'SP-24_kestate'] },
-    ];
-
-    const tiersHtml = TIERS.map(tier => {
-      const items = tier.needles.map(findItem).filter(Boolean);
-      if (!items.length) return '';
+    const tierDefs = (manifest.core_tiers || []).slice().sort((a, b) => a.tier - b.tier);
+    const tiersHtml = tierDefs.map(td => {
+      const items = byTier[td.tier];
+      if (!items || !items.length) return '';
       return `
-        <div class="sh-core-tier">${esc(tier.label)}</div>
+        <div class="sh-core-tier">${esc(td.label)}</div>
         <div class="tree-leaflist" style="max-height:none;overflow:visible">${items.map(leafLink).join('')}</div>
       `;
     }).join('');
-    const totalCount = TIERS.reduce((n, t) => n + t.needles.map(findItem).filter(Boolean).length, 0);
 
     return `
       <div class="sh-group">
         <div class="sh-core-title">⭐ 핵심 SP <span style="font-weight:500;color:#a16207;text-transform:none;font-size:11px">(다른 그룹에도 있는 항목을 한데 모은 것 — "핵심 프롬프트" 탭 참고)</span></div>
         <details class="tree-node sh-core-group" open>
-          <summary><span class="ico">⭐</span><span>핵심 SP 전체 보기</span><span class="cnt">${totalCount}</span></summary>
+          <summary><span class="ico">⭐</span><span>핵심 SP 전체 보기</span><span class="cnt">${coreItems.length}</span></summary>
           <div class="tree-children">${tiersHtml}</div>
         </details>
       </div>
