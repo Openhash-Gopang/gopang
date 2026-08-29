@@ -70,57 +70,19 @@ body {
 </style>
 <link rel="stylesheet" href="/assets/site-header.css">
 <style>
-/* desktop.html 전용 헤더 높이 조정 — site-header.css 기본값(54px)의 1.5배.
-   공용 스타일시트(site-header.css)는 다른 모든 페이지가 함께 참조하므로
-   거기는 그대로 두고, desktop.html에서만 이 규칙으로 덮어쓴다. */
-.site-nav { height: 81px; }
+/* desktop.html 전용 헤더 높이 조정 — 2026-08-29, 탭(.site-nav-links a,
+   padding: 17px 10px)의 실제 높이에 맞춰 site-header.css 기본값(54px)
+   그대로 사용하도록 1.5배 확대(81px) 오버라이드를 제거. 공용
+   스타일시트(site-header.css)는 다른 모든 페이지가 함께 참조하므로
+   거기는 그대로 두고, desktop.html 쪽 규칙만 되돌린다. */
 
-.site-stats {
-  background: #eef1f6; padding: 28px 20px; display: grid;
-  grid-template-columns: repeat(5, 1fr); gap: 18px;
-}
-.stat-card {
-  background: #fff; border: none; border-radius: 14px;
-  padding: 20px 18px; cursor: pointer; position: relative;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.08);
-  transition: box-shadow 0.22s ease, transform 0.22s ease;
-}
-.stat-card:hover {
-  box-shadow: 0 12px 28px rgba(15,23,42,0.16), 0 4px 10px rgba(15,23,42,0.08);
-  transform: translateY(-4px);
-}
-.stat-card:active { transform: translateY(-2px); transition-duration: 0.08s; }
-.stat-card.open {
-  box-shadow: 0 12px 28px rgba(15,23,42,0.16), 0 4px 10px rgba(15,23,42,0.08);
-}
-.site-stats .num { font-size: 26px; font-weight: 500; margin-bottom: 6px; }
-.site-stats .title { color: var(--text); font-size: 14px; font-weight: 500; margin-bottom: 6px; }
-.site-stats .desc {
-  color: var(--text4); font-size: 12px; line-height: 1.6; margin: 0 0 8px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.site-stats .cap { font-size: 12px; font-weight: 500; }
-.stat-card-chevron {
-  display: flex; justify-content: center; margin-top: 12px; color: var(--text4);
-  transition: transform 0.25s ease;
-}
-.stat-card.open .stat-card-chevron { transform: rotate(180deg); }
-.stat-panel { display: none; } /* 콘텐츠 원본 저장용 — 화면에는 직접 표시하지 않고 공유 패널로 복사해 사용 */
-
-/* ── 공유 전체폭 상세 패널 — 카드 폭이 아니라 페이지 폭을 사용 ── */
-.stat-detail-panel {
-  max-height: 0; opacity: 0; overflow: hidden;
-  margin: 0 20px; background: #fff; border-radius: 14px;
-  transition: max-height 0.36s cubic-bezier(0.4,0,0.2,1), opacity 0.26s ease, margin-bottom 0.36s ease;
-}
-.stat-detail-panel.open {
-  max-height: 620px; opacity: 1; margin: -6px 20px 28px;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.08);
-  overflow-y: auto;
-}
-.stat-detail-inner { padding: 26px 30px; font-size: 13px; color: var(--text3); line-height: 1.75; }
-.stat-detail-inner .pw-svc-list {
+/* ── pw-* 클래스: 원래 통계 카드 5개(2026-08-29 본문 융합 후 삭제)의
+   펼침 패널에서 쓰던 스타일. 카드는 사라졌지만 같은 클래스를 본문
+   섹션(cost-comparison·feature-summary·pricing)에서 그대로 재사용하므로
+   규칙은 남겨둔다. ── */
+.pw-svc-list {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2px 32px;
+  margin-bottom: 14px;
 }
 .pw-svc-note { font-size: 13px; color: var(--text3); line-height: 1.7; margin-bottom: 14px; }
 .pw-compare-item { margin-bottom: 12px; }
@@ -140,9 +102,7 @@ body {
 .pw-svc-link { font-size: 12px; color: #0c6cc3; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
 .pw-svc-link:hover { text-decoration: underline; }
 @media (max-width: 900px) {
-  .site-stats { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .stat-detail-inner { padding: 20px; }
-  .stat-detail-inner .pw-svc-list { grid-template-columns: 1fr; }
+  .pw-svc-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 680px) {
   .site-nav { padding: 0 12px; }
@@ -1143,126 +1103,11 @@ document.addEventListener('keydown', function (e) {
   <a class="site-strip-support-btn" href="/pages/project-support.html">혼디 프로젝트를 지원하는 방법</a>
 </div>
 
-<div class="site-stats">
-  <div class="stat-card" onclick="toggleStatCard(this)">
-    <div class="num" style="color:#BA7517">99%</div>
-    <div class="title">처리 시간 절감 목표</div>
-    <p class="desc">업무 처리 시간과 행정 비용을 기존 대비 최대 99%까지 단축</p>
-    <span class="cap" style="color:#0C447C">2027년 목표 기준</span>
-    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner">
-      <div class="pw-compare-item"><b>등본 발급</b><span><span class="before">방문·대기 며칠</span><span class="arrow">→</span><span class="after">혼디로 수 초</span></span></div>
-      <div class="pw-compare-item"><b>자영업 개업 준비</b><span><span class="before">인허가별 개별 방문·서류 준비 수 주</span><span class="arrow">→</span><span class="after">혼디가 요건 확인·서류 자동 준비</span></span></div>
-      <div class="pw-compare-item"><b>소비자 상품 선택</b><span><span class="before">후기 검색·비교에 수 시간</span><span class="arrow">→</span><span class="after">혼디가 내 상황 맞춰 즉시 추천</span></span></div>
-      <div class="pw-compare-item"><b>기업 거래처 선택</b><span><span class="before">신용조사·미팅에 수 주</span><span class="arrow">→</span><span class="after">혼디가 재무 데이터로 즉시 진단</span></span></div>
-      <div class="pw-compare-item"><b>재무제표·세금 신고</b><span><span class="before">회계사·세무사 의뢰, 수일~수주</span><span class="arrow">→</span><span class="after">혼디가 자동 생성·신고 대행</span></span></div>
-    </div></div>
-  </div>
-  <div class="stat-card" onclick="toggleStatCard(this)">
-    <div class="num" style="color:#185FA5">16개</div>
-    <div class="title">K-서비스</div>
-    <p class="desc">법률·세무·의료·교육 등 16개 공공 서비스를 한 곳에서</p>
-    <span class="cap" style="color:#0C447C">klaw·tax·school 등</span>
-    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner">
-      <p class="pw-svc-note"><b>K-서비스는 공익을 위한 인프라입니다.</b> 사용자 개인의 사적 이익을 위해 복무하는 전문가 페르소나와 달리, K-서비스는 특정 개인의 편이 아니라 사회 전체를 향한 공적 기능을 수행합니다.</p>
-      <div class="pw-svc-list">
-        <div class="pw-svc-item"><span class="pw-svc-name">K-119</span><span class="pw-svc-desc">응급 신고·구조 자동화</span><a class="pw-svc-link" href="https://911.hondi.net" target="_blank" rel="noopener">911.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Law</span><span class="pw-svc-desc">사법, 가상 판결 시뮬레이션</span><a class="pw-svc-link" href="https://klaw.hondi.net" target="_blank" rel="noopener">klaw.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Police</span><span class="pw-svc-desc">치안 신고·접수 자동화</span><a class="pw-svc-link" href="https://police.hondi.net" target="_blank" rel="noopener">police.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Security</span><span class="pw-svc-desc">보안 위협 대응</span><a class="pw-svc-link" href="https://security.hondi.net" target="_blank" rel="noopener">security.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Health</span><span class="pw-svc-desc">의료 분야 전문 진단 보조</span><a class="pw-svc-link" href="https://health.hondi.net" target="_blank" rel="noopener">health.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-School</span><span class="pw-svc-desc">초중고·대학 교육 자동화</span><a class="pw-svc-link" href="https://school.hondi.net" target="_blank" rel="noopener">school.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">GDC</span><span class="pw-svc-desc">혼디 결제·디지털 통화</span><a class="pw-svc-link" href="https://gdc.hondi.net" target="_blank" rel="noopener">gdc.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Stock</span><span class="pw-svc-desc">투자·자산관리 지원</span><a class="pw-svc-link" href="https://stock.hondi.net" target="_blank" rel="noopener">stock.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Insurance</span><span class="pw-svc-desc">보험 심사·보상 처리</span><a class="pw-svc-link" href="https://insurance.hondi.net" target="_blank" rel="noopener">insurance.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Tax</span><span class="pw-svc-desc">세무 신고·납부 지원</span><a class="pw-svc-link" href="https://tax.hondi.net" target="_blank" rel="noopener">tax.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Market</span><span class="pw-svc-desc">AI 기반 상거래 마켓</span><a class="pw-svc-link" href="https://market.hondi.net" target="_blank" rel="noopener">market.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Traffic</span><span class="pw-svc-desc">교통 관제·사고 처리</span><a class="pw-svc-link" href="https://traffic.hondi.net" target="_blank" rel="noopener">traffic.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Logistics</span><span class="pw-svc-desc">물류·배송 경로 최적화</span><a class="pw-svc-link" href="https://logistics.hondi.net" target="_blank" rel="noopener">logistics.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Cleaner</span><span class="pw-svc-desc">환경 신고·현장 사진 분석</span><a class="pw-svc-link" href="https://fiil.kr" target="_blank" rel="noopener">fiil.kr</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Public</span><span class="pw-svc-desc">행정 민원 처리</span><a class="pw-svc-link" href="https://public.hondi.net" target="_blank" rel="noopener">public.hondi.net</a></div>
-        <div class="pw-svc-item"><span class="pw-svc-name">K-Democracy</span><span class="pw-svc-desc">국민동의청원 확산 허브</span><a class="pw-svc-link" href="https://democracy.hondi.net" target="_blank" rel="noopener">democracy.hondi.net</a></div>
-      </div>
-    </div></div>
-  </div>
-  <div class="stat-card" onclick="toggleStatCard(this)">
-    <div class="num" style="color:#0C447C">1,000원</div>
-    <div class="title">월 기본료</div>
-    <p class="desc">사람 간 소통은 무제한 무료. AI 비서는 월 1,000원 수준</p>
-    <span class="cap" style="color:#0C447C">혼디 요금 기준</span>
-    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner">
-      <p class="pw-svc-note"><b>GDC(Global Digital Currency)</b>는 혼디 이용료의 결제 수단입니다. 하나의 화폐 안에 은행·보험·증권·거래소·금융감독 기능을 통합하는 것을 목표로 하며, 현재는 그 기능을 검증하기 위해 법적 테두리 안에서 제한된 형태로 제공됩니다.</p>
-      <div class="pw-compare-item"><b>환율</b><span>테스트 기간 동안 GDC 1T = KRW 1원(1:1)</span></div>
-      <div class="pw-compare-item"><b>과금 방식</b><span>종량제 — 기본료 1,000원 소진 시 추가 충전 필요</span></div>
-      <div class="pw-compare-item"><b>사람 간 대화</b><span class="after">무제한 무료</span></div>
-      <div class="pw-compare-item"><b>AI 비서 이용</b><span>유료 — 하루 10분 기준 월 1,000원 안팎</span></div>
-      <div class="pw-compare-item"><b>최소 충전 금액</b><span>1만 원</span></div>
-      <div class="pw-compare-item"><b>결제 대상</b><span>혼디 이용료 + K-Law·K-School·K-Tax 등 유료 서비스</span></div>
-      <div class="pw-compare-item"><b>혼디마켓 결제</b><span>2026년 하반기부터 시험 운용 예정 — <a class="pw-svc-link" href="#" onclick="loadPage('hondi-market');return false;">혼디마켓 바로가기</a></span></div>
-    </div></div>
-  </div>
-  <div class="stat-card" onclick="toggleStatCard(this)">
-    <div class="num" style="color:#185FA5">100%</div>
-    <div class="title">내 데이터 소유권</div>
-    <p class="desc">내 데이터와 이용 흔적은 내 기기에만 저장</p>
-    <span class="cap" style="color:#0C447C">OpenHash 원칙</span>
-    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner">
-      <p class="pw-svc-note">Openhash Network는 오직 사용자 데이터의 <b>해시(Hash) 값</b>만 보존합니다. 실제 데이터는 전부 사용자 각자의 <b>PDV(Private Data Vault, 프라이빗 데이터 금고)</b>에 저장되며, 오직 데이터 소유자 본인만 접근할 수 있습니다.</p>
-      <div class="pw-compare-item"><b>진위 증명</b><span>Openhash에 기록된 해시로 증명 가능 — 증명 여부는 본인 선택</span></div>
-      <div class="pw-compare-item"><b>암호화</b><span>타인의 PDV를 우연히·의도적으로 얻어도 본인 외엔 열람 불가</span></div>
-      <div class="pw-compare-item"><b>서버 저장 여부</b><span class="after">서버엔 데이터 없음 — 해킹·대규모 유출 위험 자체가 없음</span></div>
-    </div></div>
-  </div>
-  <div class="stat-card" onclick="toggleStatCard(this)">
-    <div class="num" style="color:#1d4ed8">500여</div>
-    <div class="title">전문가 페르소나</div>
-    <p class="desc">의사, 변호사, 회계사, 교수 등 500여 분야별 전문가 AI</p>
-    <span class="cap" style="color:#1d4ed8">전문 분야 AI 기준</span>
-    <div class="stat-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-    <div class="stat-panel"><div class="stat-panel-inner">
-      <p class="pw-svc-note"><b>페르소나란</b> 전문직 종사자 개인의 지적 역량과 경험 격차를 상향 평준화하려는 의도로 설계된 전문가 AI입니다. 변호사마다 실제 지식·경험은 천차만별이지만, 변호사 페르소나의 도움을 받으면 어떤 변호사든 세상의 모든 법률 지식에 통달한 것과 다름없는 조력을 받을 수 있습니다.</p>
-      <p class="pw-svc-note">K-서비스가 공익을 우선하는 것과 달리, 전문가 페르소나는 <b>사용자의 사익</b>을 우선합니다. K-서비스와 변호사 페르소나의 관계는 <b>법원과 변호사의 관계</b>와 같습니다 — K-Law가 중립적으로 판단을 시뮬레이션한다면, 변호사 페르소나는 의뢰인 편에서 유리한 논리를 만듭니다.</p>
-      <div class="pw-compare-item"><b>교육 — 366명</b><span>교수(반도체공학·법학·수학물리·화학생명과학·인문학·사회과학 등 전공별), 1:1 맞춤교육 등</span></div>
-      <div class="pw-compare-item"><b>법률 — 63명</b><span>변호사(형사·민사·기업법무·가사·상속·부동산·교통사고 등 세부분야별), 법무사</span></div>
-      <div class="pw-compare-item"><b>의료 — 43명</b><span>의사(내과·외과·신경과·소아청소년과·산부인과·정신건강의학과·응급의학과 등 전문과목별)</span></div>
-      <div class="pw-compare-item"><b>금융·세무 — 13명</b><span>세무사, 공인회계사(외부감사·기업가치평가·IFRS·M&A실사·포렌식회계 등)</span></div>
-      <div class="pw-compare-item"><b>공학·기술 — 13명</b><span>건축사, 기술사, 도선사, 조선사, 항해사, 기관사 등</span></div>
-      <div class="pw-compare-item"><b>기타 전문직 — 6명</b><span>정보보안전문가, 통역사·번역사, 관광통역안내사, 생활스포츠지도사, 미용사, 조리사</span></div>
-      <div class="pw-compare-item"><b>합계</b><span class="after">약 504명 (2026-08 기준, 계속 확장 중)</span></div>
-    </div></div>
-  </div>
-</div>
-<div class="stat-detail-panel" id="statDetailPanel">
-  <div class="stat-detail-inner" id="statDetailInner"></div>
-</div>
-
-<script>
-function toggleStatCard(card) {
-  var wasOpen = card.classList.contains('open');
-  var detailPanel = document.getElementById('statDetailPanel');
-  var detailInner = document.getElementById('statDetailInner');
-
-  document.querySelectorAll('.stat-card.open').forEach(function (c) {
-    c.classList.remove('open');
-  });
-
-  if (wasOpen) {
-    detailPanel.classList.remove('open');
-    return;
-  }
-
-  card.classList.add('open');
-  var source = card.querySelector('.stat-panel-inner');
-  detailInner.innerHTML = source ? source.innerHTML : '';
-  detailPanel.classList.add('open');
-}
-document.addEventListener('click', function (e) {
-  if (e.target.closest('.pw-svc-link')) e.stopPropagation();
-}, true);
-</script>
+<!-- 2026-08-29 — 상단 통계 카드 5개(99%·16개·1,000원·100%·500여)를
+     삭제하고, 각 카드의 본문(펼침 패널)을 주제가 겹치는 하단 본문
+     섹션으로 융합했다: 99%→#cost-comparison, 16개 K-서비스와
+     500여 전문가 페르소나→#feature-summary, 1,000원 월기본료→#pricing,
+     100% 내 데이터 소유권→#feature-summary의 PDV 카드. -->
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -1430,6 +1275,9 @@ document.addEventListener("DOMContentLoaded", function () {
   <div class="section-inner">
     <span class="section-tag">비용 비교</span>
     <h2 class="section-title">시간과 <strong>비용 비교</strong></h2>
+    <div class="section-body">
+      <p>혼디의 목표는 업무 처리 시간과 행정 비용을 기존 대비 <strong>최대 99%까지</strong> 단축하는 것입니다(2027년 목표 기준). 아래는 그 처리 기간·비용 비교의 실제 사례들입니다.</p>
+    </div>
     <div class="cmp-table-wrap">
       <table class="cmp-table">
         <thead><tr><th>구분</th><th>기존 방식</th><th class="cmp-hondi">혼디 방식</th></tr></thead>
@@ -1438,6 +1286,11 @@ document.addEventListener("DOMContentLoaded", function () {
           <tr><td class="cmp-axis">비용</td><td>심급당 착수금+성공보수(3심 합계 수백~수천만 원)</td><td class="cmp-hondi">혼디 이용료 수천 원 + 변호사 중재 수수료 일정액</td></tr>
           <tr><td class="cmp-axis">반복 부담</td><td>기관마다 사연·서류 반복 설명</td><td class="cmp-hondi">혼디가 맥락을 기억, 사연은 한 번만</td></tr>
           <tr><td class="cmp-axis">건축 인허가 기간</td><td>접수~허가 평균 20일 내외</td><td class="cmp-hondi">평균 1~3일, 완전 서류는 10초 내외</td></tr>
+          <tr><td class="cmp-axis">등본 발급</td><td>방문·대기 며칠</td><td class="cmp-hondi">혼디로 수 초</td></tr>
+          <tr><td class="cmp-axis">자영업 개업 준비</td><td>인허가별 개별 방문·서류 준비 수 주</td><td class="cmp-hondi">혼디가 요건 확인·서류 자동 준비</td></tr>
+          <tr><td class="cmp-axis">소비자 상품 선택</td><td>후기 검색·비교에 수 시간</td><td class="cmp-hondi">혼디가 내 상황 맞춰 즉시 추천</td></tr>
+          <tr><td class="cmp-axis">기업 거래처 선택</td><td>신용조사·미팅에 수 주</td><td class="cmp-hondi">혼디가 재무 데이터로 즉시 진단</td></tr>
+          <tr><td class="cmp-axis">재무제표·세금 신고</td><td>회계사·세무사 의뢰, 수일~수주</td><td class="cmp-hondi">혼디가 자동 생성·신고 대행</td></tr>
         </tbody>
       </table>
     </div>
@@ -1453,6 +1306,40 @@ document.addEventListener("DOMContentLoaded", function () {
   <div class="section-inner">
     <span class="section-tag">기능 요약</span>
     <h2 class="section-title">혼디의 <strong>기능과 적용 범위</strong></h2>
+
+    <h3 style="font-size:15px;font-weight:600;margin:24px 0 10px">K-서비스 — 16개 공익 인프라</h3>
+    <p class="pw-svc-note"><b>K-서비스는 공익을 위한 인프라입니다.</b> 사용자 개인의 사적 이익을 위해 복무하는 전문가 페르소나와 달리, K-서비스는 특정 개인의 편이 아니라 사회 전체를 향한 공적 기능을 수행합니다. 법률·세무·의료·교육 등 16개 공공 서비스를 한 곳에서 제공합니다.</p>
+    <div class="pw-svc-list">
+      <div class="pw-svc-item"><span class="pw-svc-name">K-119</span><span class="pw-svc-desc">응급 신고·구조 자동화</span><a class="pw-svc-link" href="https://911.hondi.net" target="_blank" rel="noopener">911.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Law</span><span class="pw-svc-desc">사법, 가상 판결 시뮬레이션</span><a class="pw-svc-link" href="https://klaw.hondi.net" target="_blank" rel="noopener">klaw.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Police</span><span class="pw-svc-desc">치안 신고·접수 자동화</span><a class="pw-svc-link" href="https://police.hondi.net" target="_blank" rel="noopener">police.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Security</span><span class="pw-svc-desc">보안 위협 대응</span><a class="pw-svc-link" href="https://security.hondi.net" target="_blank" rel="noopener">security.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Health</span><span class="pw-svc-desc">의료 분야 전문 진단 보조</span><a class="pw-svc-link" href="https://health.hondi.net" target="_blank" rel="noopener">health.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-School</span><span class="pw-svc-desc">초중고·대학 교육 자동화</span><a class="pw-svc-link" href="https://school.hondi.net" target="_blank" rel="noopener">school.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">GDC</span><span class="pw-svc-desc">혼디 결제·디지털 통화</span><a class="pw-svc-link" href="https://gdc.hondi.net" target="_blank" rel="noopener">gdc.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Stock</span><span class="pw-svc-desc">투자·자산관리 지원</span><a class="pw-svc-link" href="https://stock.hondi.net" target="_blank" rel="noopener">stock.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Insurance</span><span class="pw-svc-desc">보험 심사·보상 처리</span><a class="pw-svc-link" href="https://insurance.hondi.net" target="_blank" rel="noopener">insurance.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Tax</span><span class="pw-svc-desc">세무 신고·납부 지원</span><a class="pw-svc-link" href="https://tax.hondi.net" target="_blank" rel="noopener">tax.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Market</span><span class="pw-svc-desc">AI 기반 상거래 마켓</span><a class="pw-svc-link" href="https://market.hondi.net" target="_blank" rel="noopener">market.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Traffic</span><span class="pw-svc-desc">교통 관제·사고 처리</span><a class="pw-svc-link" href="https://traffic.hondi.net" target="_blank" rel="noopener">traffic.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Logistics</span><span class="pw-svc-desc">물류·배송 경로 최적화</span><a class="pw-svc-link" href="https://logistics.hondi.net" target="_blank" rel="noopener">logistics.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Cleaner</span><span class="pw-svc-desc">환경 신고·현장 사진 분석</span><a class="pw-svc-link" href="https://fiil.kr" target="_blank" rel="noopener">fiil.kr</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Public</span><span class="pw-svc-desc">행정 민원 처리</span><a class="pw-svc-link" href="https://public.hondi.net" target="_blank" rel="noopener">public.hondi.net</a></div>
+      <div class="pw-svc-item"><span class="pw-svc-name">K-Democracy</span><span class="pw-svc-desc">국민동의청원 확산 허브</span><a class="pw-svc-link" href="https://democracy.hondi.net" target="_blank" rel="noopener">democracy.hondi.net</a></div>
+    </div>
+
+    <h3 style="font-size:15px;font-weight:600;margin:24px 0 10px">전문가 페르소나 — 500여 분야별 전문가 AI</h3>
+    <p class="pw-svc-note"><b>페르소나란</b> 전문직 종사자 개인의 지적 역량과 경험 격차를 상향 평준화하려는 의도로 설계된 전문가 AI입니다. 변호사마다 실제 지식·경험은 천차만별이지만, 변호사 페르소나의 도움을 받으면 어떤 변호사든 세상의 모든 법률 지식에 통달한 것과 다름없는 조력을 받을 수 있습니다.</p>
+    <p class="pw-svc-note">K-서비스가 공익을 우선하는 것과 달리, 전문가 페르소나는 <b>사용자의 사익</b>을 우선합니다. K-서비스와 변호사 페르소나의 관계는 <b>법원과 변호사의 관계</b>와 같습니다 — K-Law가 중립적으로 판단을 시뮬레이션한다면, 변호사 페르소나는 의뢰인 편에서 유리한 논리를 만듭니다. 의사, 변호사, 회계사, 교수 등 500여 분야별 전문가 AI로 구성됩니다.</p>
+    <div class="pw-compare-item"><b>교육 — 366명</b><span>교수(반도체공학·법학·수학물리·화학생명과학·인문학·사회과학 등 전공별), 1:1 맞춤교육 등</span></div>
+    <div class="pw-compare-item"><b>법률 — 63명</b><span>변호사(형사·민사·기업법무·가사·상속·부동산·교통사고 등 세부분야별), 법무사</span></div>
+    <div class="pw-compare-item"><b>의료 — 43명</b><span>의사(내과·외과·신경과·소아청소년과·산부인과·정신건강의학과·응급의학과 등 전문과목별)</span></div>
+    <div class="pw-compare-item"><b>금융·세무 — 13명</b><span>세무사, 공인회계사(외부감사·기업가치평가·IFRS·M&A실사·포렌식회계 등)</span></div>
+    <div class="pw-compare-item"><b>공학·기술 — 13명</b><span>건축사, 기술사, 도선사, 조선사, 항해사, 기관사 등</span></div>
+    <div class="pw-compare-item"><b>기타 전문직 — 6명</b><span>정보보안전문가, 통역사·번역사, 관광통역안내사, 생활스포츠지도사, 미용사, 조리사</span></div>
+    <div class="pw-compare-item"><b>합계</b><span class="after">약 504명 (2026-08 기준, 계속 확장 중)</span></div>
+
+    <h3 style="font-size:15px;font-weight:600;margin:28px 0 10px">기능 카드</h3>
     <div class="steps-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="step-card">
         <h3 class="has-doc-link">AI 도청·시청·읍면동사무소</h3>
@@ -1480,8 +1367,11 @@ document.addEventListener("DOMContentLoaded", function () {
         <a class="doc-link" href="./reports/hondi-mine-vs-their-ai.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
-        <h3 class="has-doc-link">PDV — 프라이빗 데이터 금고</h3>
-        <p>출생부터 평생을 기록하는 나만의 데이터 금고. 오직 내 단말기에만 저장되어 나 외에는 누구도 접근할 수 없습니다.</p>
+        <h3 class="has-doc-link">PDV — 프라이빗 데이터 금고 (내 데이터 소유권 100%)</h3>
+        <p>출생부터 평생을 기록하는 나만의 데이터 금고. 오직 내 단말기에만 저장되어 나 외에는 누구도 접근할 수 없습니다. Openhash Network는 오직 사용자 데이터의 <b>해시(Hash) 값</b>만 보존하며, 실제 데이터는 전부 사용자 각자의 PDV에 저장되어 오직 데이터 소유자 본인만 접근할 수 있습니다.</p>
+        <div class="pw-compare-item"><b>진위 증명</b><span>Openhash에 기록된 해시로 증명 가능 — 증명 여부는 본인 선택</span></div>
+        <div class="pw-compare-item"><b>암호화</b><span>타인의 PDV를 우연히·의도적으로 얻어도 본인 외엔 열람 불가</span></div>
+        <div class="pw-compare-item"><b>서버 저장 여부</b><span class="after">서버엔 데이터 없음 — 해킹·대규모 유출 위험 자체가 없음</span></div>
         <a class="doc-link" href="./reports/hondi-mine-ai-secretary.html" target="_blank" rel="noopener">원문 보기<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </div>
       <div class="step-card">
@@ -1510,6 +1400,17 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="section-body">
       <p>사람과 사람 간의 대화(카카오톡 대체 용도)는 <strong>무제한 무료</strong>입니다. AI 비서 혼디를 단순 지시에 하루 10분씩 이용할 경우 월 3,000원 안팎이 추가될 뿐입니다. 이처럼 비용이 저렴한 이유는 혼디가 개발한 AI 최적화 기술 MoTE(Mixture of Tiny Experts)와 Openhash 데이터 저장 기술 덕분입니다.</p>
       <p>하루 1시간 이상 이용할 경우, 월 1만원 정액제를 추천합니다. 1년치 선납은 10만원으로 20% 할인 혜택이 있습니다.</p>
+      <p><b>GDC(Global Digital Currency)</b>는 혼디 이용료의 결제 수단입니다. 하나의 화폐 안에 은행·보험·증권·거래소·금융감독 기능을 통합하는 것을 목표로 하며, 현재는 그 기능을 검증하기 위해 법적 테두리 안에서 제한된 형태로 제공됩니다.</p>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="pw-compare-item"><b>환율</b><span>테스트 기간 동안 GDC 1T = KRW 1원(1:1)</span></div>
+      <div class="pw-compare-item"><b>과금 방식</b><span>종량제 — 기본료 1,000원 소진 시 추가 충전 필요</span></div>
+      <div class="pw-compare-item"><b>사람 간 대화</b><span class="after">무제한 무료</span></div>
+      <div class="pw-compare-item"><b>AI 비서 이용</b><span>유료 — 하루 10분 기준 월 1,000원 안팎</span></div>
+      <div class="pw-compare-item"><b>최소 충전 금액</b><span>1만 원</span></div>
+      <div class="pw-compare-item"><b>결제 대상</b><span>혼디 이용료 + K-Law·K-School·K-Tax 등 유료 서비스</span></div>
+      <div class="pw-compare-item"><b>혼디마켓 결제</b><span>2026년 하반기부터 시험 운용 예정 — <a class="pw-svc-link" href="#" onclick="loadPage('hondi-market');return false;">혼디마켓 바로가기</a></span></div>
     </div>
 
     <p style="font-size:13px;color:var(--text2);margin-top:20px">혼디 요금제 종류는 셋이며, 베타 테스트 기간(<strong>2026.9.1~12.31</strong>)에 한합니다.</p>
