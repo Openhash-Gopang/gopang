@@ -1028,6 +1028,10 @@ document.addEventListener('keydown', function (e) {
     <a href="#" onclick="loadPage('k-services');return false;"><span class="dot"></span><span class="label-text">K-서비스</span></a>
     <a href="#" onclick="loadPage('expert-personas');return false;"><span class="dot"></span><span class="label-text">전문가 페르소나</span></a>
     <a href="#" onclick="loadPage('k-government');return false;"><span class="dot"></span><span class="label-text">K-정부</span></a>
+    <!-- 2026-08-29 신설 — 소속 기관·부서·직업의 System Prompt(SP)를 검색해
+         조회하고(관리자는 수정 PR까지) 넘어가는 pages/prompts.html 진입점.
+         SPA loadPage()가 아니라 독립 페이지라 일반 href로 연결한다. -->
+    <a href="pages/prompts.html"><span class="dot"></span><span class="label-text">프롬프트</span></a>
   </div>
 </div>
 

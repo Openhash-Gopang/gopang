@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프롬프트(SP) 검색 — 혼디</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/assets/site-header.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f5f7fb;color:#0f172a;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.6}
+
+  :root{
+    --navy:     #0e1c3f;
+    --navy-2:   #12234f;
+    --pill:     #1a2e5c;
+    --pill-hv:  #24356b;
+    --blue:     #3b82f6;
+    --blue-dk:  #1d4ed8;
+    --blue-bg:  #eff6ff;
+    --border:   #e2e8f0;
+    --text:     #0f172a;
+    --text2:    #475569;
+    --text3:    #64748b;
+    --text4:    #94a3b8;
+    --surface:  #ffffff;
+  }
+
+  a{color:inherit}
+
+  .pp-hero{
+    background:var(--navy); color:#fff; padding:36px 24px 30px;
+  }
+  .pp-hero-inner{max-width:980px;margin:0 auto}
+  .pp-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .pp-hero p{font-size:13.5px;color:#c9d6ee;line-height:1.7;max-width:720px}
+
+  .pp-search-wrap{max-width:980px;margin:-20px auto 0;padding:0 24px;position:relative;z-index:2}
+  .pp-search-box{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 8px 24px rgba(15,23,42,.10);padding:14px 16px;display:flex;gap:10px;align-items:center;
+  }
+  .pp-search-box svg{flex-shrink:0;color:var(--text4)}
+  .pp-search-box input{
+    flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:var(--text);background:transparent;
+  }
+  .pp-search-box input::placeholder{color:var(--text4)}
+  .pp-search-hint{font-size:11.5px;color:var(--text4);margin-top:8px;padding:0 4px}
+
+  .pp-wrap{max-width:980px;margin:0 auto;padding:22px 24px 80px}
+
+  .pp-groups{display:flex;flex-direction:column;gap:22px}
+  .pp-group-title{font-size:12.5px;font-weight:700;color:var(--text3);letter-spacing:.3px;margin-bottom:10px;text-transform:uppercase}
+  .pp-chip-row{display:flex;flex-wrap:wrap;gap:8px}
+  .pp-chip{
+    display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+    border:1px solid var(--border);border-radius:20px;padding:8px 14px;cursor:pointer;
+    font-size:13px;font-weight:600;color:var(--text2);transition:all .12s;user-select:none;
+  }
+  .pp-chip:hover{border-color:var(--blue);color:var(--blue-dk)}
+  .pp-chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .pp-chip .cnt{font-weight:500;color:var(--text4);font-size:11.5px}
+  .pp-chip.active .cnt{color:#dbe8ff}
+
+  .pp-results{margin-top:26px}
+  .pp-results-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .pp-results-head h2{font-size:14px;font-weight:700;color:var(--text)}
+  .pp-results-head span{font-size:12px;color:var(--text4)}
+
+  .pp-list{display:flex;flex-direction:column;gap:6px}
+  .pp-item{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;text-decoration:none;transition:border-color .12s,background .12s;
+  }
+  .pp-item:hover{border-color:var(--blue);background:var(--blue-bg)}
+  .pp-item-main{min-width:0}
+  .pp-item-name{font-size:13.5px;font-weight:600;color:var(--text);font-family:'SF Mono',Consolas,monospace;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pp-item-path{font-size:11.5px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pp-item-badge{
+    flex-shrink:0;font-size:10.5px;font-weight:700;color:var(--text3);background:#f1f5f9;
+    border-radius:6px;padding:3px 8px;white-space:nowrap;
+  }
+  .pp-item-badge.editable{color:var(--blue-dk);background:var(--blue-bg)}
+  .pp-more{text-align:center;font-size:12.5px;color:var(--text4);padding:14px 0}
+
+  .pp-empty{text-align:center;padding:50px 20px;color:var(--text4);font-size:13.5px}
+  .pp-note{
+    margin-top:18px;font-size:12px;color:var(--text3);background:#fffbeb;border:1px solid #fde68a;
+    border-radius:10px;padding:12px 14px;line-height:1.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="site-strip">
+  <a class="site-strip-text" href="../desktop.html">← 혼디 홈으로</a>
+</div>
+<div class="site-nav">
+  <a class="site-nav-logo" href="../desktop.html">
+    <img src="../icons/icon-192.png" alt="혼디">
+    <span>혼디</span>
+  </a>
+  <nav class="site-nav-links"><a class="active" href="#">프롬프트(SP) 검색</a></nav>
+</div>
+
+<div class="pp-hero">
+  <div class="pp-hero-inner">
+    <h1>프롬프트(System Prompt) 검색</h1>
+    <p>혼디를 구성하는 2,294개 System Prompt를 종류별로 찾아볼 수 있습니다. 소속 기관·부서·직업 이름으로 검색해 자신의 SP를 찾은 뒤, 내용을 확인하고(관리자 권한이 있으면) 수정 요청(PR)을 보낼 수 있습니다.</p>
+  </div>
+</div>
+
+<div class="pp-search-wrap">
+  <div class="pp-search-box">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="ppSearch" type="text" placeholder="기관·부서·직업·파일명으로 검색 (예: 제주도청, 세무, 변호사, 한림읍)" autocomplete="off">
+  </div>
+  <div class="pp-search-hint" id="ppHint">불러오는 중…</div>
+</div>
+
+<div class="pp-wrap">
+
+  <div class="pp-groups" id="ppGroups"></div>
+
+  <div class="pp-results" id="ppResults" style="display:none">
+    <div class="pp-results-head">
+      <h2 id="ppResultsTitle">검색 결과</h2>
+      <span id="ppResultsCount"></span>
+    </div>
+    <div class="pp-list" id="ppList"></div>
+    <div class="pp-more" id="ppMore" style="display:none"></div>
+  </div>
+
+  <div class="pp-note">
+    조회는 누구나 가능합니다. 수정은 관리자 로그인 후 GitHub Pull Request로 생성되며, 검토·머지 전까지는 실제 서비스에 반영되지 않습니다. 일부 오래된 SP 파일은 아직 조회 전용 시스템에 등록되지 않았을 수 있습니다 — 그런 경우 "GitHub에서 보기" 링크를 이용해 주세요.
+  </div>
+
+</div>
+
+<script>
+  const CATALOG_URL = '../prompts/sp-catalog-categories.json';
+  const MAX_RENDER = 200;
+
+  let MANIFEST = null;
+  let activeCat = null; // null = 전체(검색 전에는 카테고리 카드만 노출)
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // 현재 prompt-editor.html(및 백엔드 /prompt, /admin/prompt)이 열람 가능한
+  // 경로인지 대략적으로 표시만 해 주는 용도 — 실제 허용 여부는 백엔드가 최종 판단.
+  function looksEditable(file){
+    return /^prompts\/[^/]+\.(md|txt)$/.test(file) ||
+           /^prompts\/gov-tree\//.test(file) ||
+           /^온라인 민원 SP\//.test(file) ||
+           /^klaw\/prompts\//.test(file);
+  }
+
+  function githubUrl(file){
+    return 'https://github.com/Openhash-Gopang/gopang/blob/main/' + file.split('/').map(encodeURIComponent).join('/');
+  }
+
+  function renderGroups(){
+    const byGroup = {};
+    MANIFEST.categories.forEach(c => {
+      (byGroup[c.group] = byGroup[c.group] || []).push(c);
+    });
+    const html = Object.entries(byGroup).map(([group, cats]) => `
+      <div>
+        <div class="pp-group-title">${esc(group)}</div>
+        <div class="pp-chip-row">
+          ${cats.map(c => `
+            <div class="pp-chip" data-cat="${esc(c.id)}">
+              <span>${esc(c.label)}</span><span class="cnt">${c.count.toLocaleString()}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+    $('ppGroups').innerHTML = html;
+    $('ppGroups').querySelectorAll('.pp-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        const cat = el.getAttribute('data-cat');
+        activeCat = (activeCat === cat) ? null : cat;
+        $('ppGroups').querySelectorAll('.pp-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-cat') === activeCat));
+        runFilter();
+      });
+    });
+  }
+
+  function itemRow(it){
+    const editable = looksEditable(it.file);
+    const href = editable
+      ? `prompt-editor.html?file=${encodeURIComponent(it.file)}`
+      : githubUrl(it.file);
+    const target = editable ? '' : ' target="_blank" rel="noopener"';
+    return `
+      <a class="pp-item" href="${href}"${target}>
+        <div class="pp-item-main">
+          <div class="pp-item-name">${esc(it.name)}</div>
+          <div class="pp-item-path">${esc(it.file)}</div>
+        </div>
+        <div class="pp-item-badge${editable ? ' editable' : ''}">${editable ? '조회·수정' : 'GitHub에서 보기'}</div>
+      </a>
+    `;
+  }
+
+  function runFilter(){
+    const q = $('ppSearch').value.trim().toLowerCase();
+    if (!q && !activeCat) {
+      $('ppResults').style.display = 'none';
+      return;
+    }
+    let items = MANIFEST.items;
+    if (activeCat) items = items.filter(it => it.cat === activeCat);
+    if (q) items = items.filter(it =>
+      it.name.toLowerCase().includes(q) ||
+      it.file.toLowerCase().includes(q) ||
+      (it.region && it.region.toLowerCase().includes(q))
+    );
+
+    $('ppResults').style.display = 'block';
+    const catLabel = activeCat ? (MANIFEST.categories.find(c => c.id === activeCat) || {}).label : null;
+    $('ppResultsTitle').textContent = catLabel ? `"${catLabel}" 검색 결과` : '검색 결과';
+    $('ppResultsCount').textContent = `${items.length.toLocaleString()}건`;
+
+    if (!items.length) {
+      $('ppList').innerHTML = '<div class="pp-empty">일치하는 SP가 없습니다. 검색어를 바꾸거나 카테고리를 다시 선택해 보세요.</div>';
+      $('ppMore').style.display = 'none';
+      return;
+    }
+
+    const shown = items.slice(0, MAX_RENDER);
+    $('ppList').innerHTML = shown.map(itemRow).join('');
+    if (items.length > MAX_RENDER) {
+      $('ppMore').style.display = 'block';
+      $('ppMore').textContent = `${(items.length - MAX_RENDER).toLocaleString()}건 더 있습니다 — 검색어를 좁혀 주세요.`;
+    } else {
+      $('ppMore').style.display = 'none';
+    }
+  }
+
+  async function init(){
+    try {
+      const res = await fetch(CATALOG_URL);
+      MANIFEST = await res.json();
+      $('ppHint').textContent = `총 ${MANIFEST.total.toLocaleString()}개 SP · 카테고리를 선택하거나 검색어를 입력하세요`;
+      renderGroups();
+    } catch (e) {
+      $('ppHint').textContent = '카탈로그를 불러오지 못했습니다: ' + e.message;
+    }
+  }
+
+  $('ppSearch').addEventListener('input', runFilter);
+  init();
+</script>
+
+</body>
+</html>
