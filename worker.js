@@ -27670,8 +27670,9 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
 //   불일치로 폐기한다. prompt-editor.html은 새 탭에서 열리는 독립 단일 페이지라
 //   세션을 메모리에만 들고 있으면 충분하다(새로고침 시 재로그인 — 의도된 동작).
 //
-// 저장 대상 제한: prompts/ 디렉터리의 .txt 파일만 — 그 외 경로는 일괄 거부
-// (worker.js 자체나 다른 파일을 덮어쓸 수 없도록 화이트리스트로 강제).
+// 저장 대상 제한: prompts/(archive/ 제외, .md·.txt), "온라인 민원 SP/"(.md),
+// klaw/prompts/(.txt)만 — 그 외 경로는 일괄 거부(worker.js 자체나 다른
+// 파일을 덮어쓸 수 없도록 화이트리스트로 강제, 2026-08-29 gov-tree 등으로 확장).
 //
 // 반영 방식: main 직접 커밋이 아니라 새 브랜치 + PR — 머지는 GitHub에서
 // 사람이 검토 후 수동으로 진행한다(요청하신 "PR 생성 후 검토·머지" 워크플로).
@@ -27688,10 +27689,29 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
 //   admin마다 레코드 1개씩 생성(email + password). 로그인 ID는 이메일 주소.
 // ═══════════════════════════════════════════════════════════
 
+// 2026-08-29 확장 — pages/prompts.html(SP 검색) 신설로 조회 대상이
+// prompts/ 최상위 .txt 평면 파일 몇 개에서 gov-tree 전체(도청·부서·
+// 산하기관·시군구·읍면동·국가기관 등, .md 포함)와 온라인 민원 SP,
+// klaw/prompts까지 넓어졌다. archive/ 하위는 계속 제외(폐기된 SP).
+// 각 규칙은 '..' 상위 경로 탈출을 이미 공통 가드로 막은 뒤 검사한다.
+const _ALLOWED_PROMPT_PATTERNS = [
+  /^prompts\/(?!archive\/)[A-Za-z0-9 _.\/-]+\.(md|txt)$/,      // prompts/ 전체(하위 gov-tree 포함), archive 제외
+  /^온라인 민원 SP\/[A-Za-z0-9 _.-]+\.md$/,                      // 온라인 민원 처리 SP
+  /^klaw\/prompts\/[A-Za-z0-9_.-]+\.txt$/,                       // K-Law 운영 프롬프트
+];
+
 function _isAllowedPromptPath(path) {
   if (typeof path !== 'string') return false;
-  if (path.includes('..')) return false;
-  return /^prompts\/[A-Za-z0-9_.-]+\.txt$/.test(path);
+  if (path.includes('..')) return false;   // 경로 탈출 방지
+  if (path.includes('\\')) return false;   // 역슬래시 우회 방지
+  return _ALLOWED_PROMPT_PATTERNS.some(re => re.test(path));
+}
+
+// GitHub Contents API는 경로의 각 세그먼트(공백·한글 포함)를 URL 인코딩해야
+// 한다 — 기존 코드는 prompts/*.txt(ASCII만)만 다뤄 문제가 없었지만, 위 확장으로
+// "온라인 민원 SP/..." 같은 공백·한글 경로도 다루게 되어 반드시 필요해졌다.
+function _ghApiPath(path) {
+  return path.split('/').map(encodeURIComponent).join('/');
 }
 
 async function buildAdminToken(env, username) {
@@ -27779,7 +27799,7 @@ function _b64EncodeUtf8(str) {
 
 async function _ghGetFile(env, path, ref = GITHUB_DEFAULT_BRANCH) {
   if (!env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN secret 미설정');
-  const url = `${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}/contents/${path}?ref=${encodeURIComponent(ref)}`;
+  const url = `${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}/contents/${_ghApiPath(path)}?ref=${encodeURIComponent(ref)}`;
   const res = await fetch(url, { headers: _ghHeaders(env) });
   if (!res.ok) throw new Error(`GitHub 조회 실패 (HTTP ${res.status})`);
   const data = await res.json();
@@ -27804,7 +27824,7 @@ async function _ghCommitViaPR(env, path, newContent, baseSha, adminName, message
   });
   if (!createRefRes.ok) throw new Error(`브랜치 생성 실패 (HTTP ${createRefRes.status})`);
 
-  const putRes = await fetch(`${repoBase}/contents/${path}`, {
+  const putRes = await fetch(`${repoBase}/contents/${_ghApiPath(path)}`, {
     method: 'PUT', headers,
     body: JSON.stringify({
       message: (message && message.trim()) || `prompt-editor: ${adminName}님이 ${path} 수정`,
@@ -27836,7 +27856,7 @@ async function _ghCommitViaPR(env, path, newContent, baseSha, adminName, message
 }
 
 // GET /prompt?file=prompts/SP-01_klaw_v1.0.txt — 공개. 누구나 System Prompt 원문을
-// 조회할 수 있어야 한다(요청사항). 화이트리스트(prompts/*.txt)는 그대로 유지 —
+// 조회할 수 있어야 한다(요청사항). _isAllowedPromptPath 화이트리스트는 그대로 유지 —
 // 어차피 GitHub repo 자체가 public이라 정보 노출 위험은 없고, 의도한 파일 범위만
 // 이 엔드포인트로 받게 하기 위한 것. 수정(POST /admin/prompt)만 관리자 인증 필요.
 async function handlePromptGet(request, env, corsHeaders) {
