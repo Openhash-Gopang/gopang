@@ -756,17 +756,23 @@ body { padding-left: 0 !important; }
 
 /* ── MEGA MENU (2026-08-29 — 좌측 사이드바를 햄버거+오버레이로 교체) ── */
 #menuToggleBtn {
-  position: fixed; top: 12px; left: 12px; z-index: 1300;
-  width: 38px; height: 38px; border-radius: 8px;
-  background: var(--surface); border: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  position: fixed; top: 14px; left: 14px; z-index: 1300;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface); border: none;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 1px 3px 1px rgba(15,23,42,0.08);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 0;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
-#menuToggleBtn svg { width: 18px; height: 18px; color: var(--text2); }
-#menuToggleBtn .mm-icon-close { display: none; }
-#menuToggleBtn.is-open .mm-icon-hamburger { display: none; }
-#menuToggleBtn.is-open .mm-icon-close { display: block; }
+#menuToggleBtn:hover { background: var(--bg-subtle); box-shadow: 0 1px 2px rgba(15,23,42,0.08), 0 2px 6px 2px rgba(15,23,42,0.10); }
+#menuToggleBtn:active { box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
+#menuToggleBtn svg {
+  position: absolute; width: 20px; height: 20px; color: var(--brand, #0c6cc3);
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1), opacity 0.2s ease;
+}
+#menuToggleBtn .mm-icon-close { opacity: 0; transform: rotate(-90deg) scale(0.4); display: block; }
+#menuToggleBtn.is-open .mm-icon-hamburger { opacity: 0; transform: rotate(90deg) scale(0.4); }
+#menuToggleBtn.is-open .mm-icon-close { opacity: 1; transform: rotate(0) scale(1); }
 
 #megaMenuOverlay {
   position: fixed; inset: 0; z-index: 1250;
@@ -1034,6 +1040,7 @@ document.addEventListener('keydown', function (e) {
   <div class="site-hero-actions">
     <a href="./integrated-system.html" class="primary">입법.사법.행정 통합 체계</a>
     <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;">법치 국가: K-Law</a>
+    <a href="./docs/hondi_interactive_manual.html" class="outline">사용법</a>
   </div>
 
   <!-- 2026-08-27 — 헤더 하단 탭(입법~계획 11개, 공익 K-서비스 4개, 전문가
