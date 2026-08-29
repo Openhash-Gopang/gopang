@@ -52,6 +52,19 @@
   .ps-method-links .main{font-size:13px;font-weight:700;color:#fff}
   .ps-method-links .sub{font-size:11px;color:#c9d6ee;line-height:1.5}
 
+  /* search box — overlaps hero bottom edge like prompts.html */
+  .ps-search-wrap{max-width:980px;margin:-20px auto 0;padding:0 24px;position:relative;z-index:2}
+  .ps-search-box{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 8px 24px rgba(15,23,42,.10);padding:14px 16px;display:flex;gap:10px;align-items:center;
+  }
+  .ps-search-box svg{flex-shrink:0;color:var(--text4)}
+  .ps-search-box input{
+    flex:1;border:none;outline:none;font-size:15px;font-family:inherit;color:var(--text);background:transparent;
+  }
+  .ps-search-box input::placeholder{color:var(--text4)}
+  .ps-search-hint{font-size:11.5px;color:var(--text4);margin-top:8px;padding:0 4px}
+
   .ps-wrap{max-width:980px;margin:0 auto;padding:22px 24px 80px}
 
   .ps-section{margin-bottom:26px}
@@ -84,21 +97,65 @@
   .ps-crit-card .label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
   .ps-crit-card .desc{font-size:11.5px;color:var(--text3);line-height:1.6}
 
-  /* category grid (reused from catalog) */
+  /* category chips — clickable, drill-down trigger */
   .ps-cat-groups{display:flex;flex-direction:column;gap:18px}
   .ps-cat-group-title{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.3px;
     text-transform:uppercase;margin-bottom:8px}
   .ps-cat-row{display:flex;flex-wrap:wrap;gap:8px}
   .ps-cat-chip{
     display:inline-flex;align-items:center;gap:8px;background:var(--surface);
-    border:1px solid var(--border);border-radius:20px;padding:7px 13px;
-    font-size:12.5px;font-weight:600;color:var(--text2);
+    border:1px solid var(--border);border-radius:20px;padding:7px 13px;cursor:pointer;
+    font-size:12.5px;font-weight:600;color:var(--text2);transition:all .12s;user-select:none;
   }
+  .ps-cat-chip:hover{border-color:var(--blue);color:var(--blue-dk)}
+  .ps-cat-chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .ps-cat-chip.active .progress{color:#dbe8ff}
   .ps-cat-chip .progress{font-size:11px;font-weight:700;color:var(--text4)}
   .ps-cat-chip.has-eval{border-color:var(--blue);color:var(--blue-dk)}
   .ps-cat-chip.has-eval .progress{color:var(--blue-dk)}
 
-  /* demo entry card */
+  /* sub-category chip row (for categories with children, e.g. 변호사 세부전공) */
+  .ps-sub-row{display:none;flex-wrap:wrap;gap:6px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--border)}
+  .ps-chip-sub{
+    display:inline-flex;align-items:center;background:#f1f5f9;border:1px solid var(--border);
+    border-radius:16px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:600;
+    color:var(--text2);transition:all .12s;user-select:none;
+  }
+  .ps-chip-sub:hover{border-color:var(--blue);color:var(--blue-dk)}
+  .ps-chip-sub.active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .ps-select-hint{text-align:center;padding:24px 20px;color:var(--text4);font-size:13px}
+
+  /* slide panel (drill-down results) */
+  .ps-slide-panel{
+    max-height:0; opacity:0; overflow:hidden;
+    transition:max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s ease, margin .32s cubic-bezier(.4,0,.2,1);
+    margin-top:0;
+  }
+  .ps-slide-panel.open{ opacity:1; margin-top:14px; }
+  .ps-slide-inner{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px 16px 8px;
+  }
+  .ps-results-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px}
+  .ps-results-head h3{font-size:14px;font-weight:700;color:var(--text)}
+  .ps-results-head span{font-size:12px;color:var(--text4);white-space:nowrap}
+
+  .ps-list{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;max-height:420px;overflow-y:auto}
+  .ps-list-item{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:11px 14px;cursor:pointer;transition:border-color .12s,background .12s;
+  }
+  .ps-list-item:hover{border-color:var(--blue);background:var(--blue-bg)}
+  .ps-list-item.selected{border-color:var(--blue);background:var(--blue-bg)}
+  .ps-list-item-name{font-size:13.5px;font-weight:600;color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ps-list-badge{flex-shrink:0;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap}
+  .ps-list-badge.unevaluated{color:var(--text4);background:#f1f5f9}
+  .ps-more{text-align:center;font-size:12.5px;color:var(--text4);padding:10px 0 4px}
+  .ps-empty{text-align:center;padding:30px 20px;color:var(--text4);font-size:13.5px}
+
+  /* selected-item detail card */
   .ps-demo-flag{
     display:flex;align-items:center;gap:8px;margin:22px 0 12px;
     font-size:12px;font-weight:700;color:var(--blue-dk);
@@ -107,7 +164,7 @@
 
   .ps-item-card{
     background:var(--surface);border:1px solid var(--border);border-radius:16px;
-    padding:20px 22px;box-shadow:0 4px 16px rgba(15,23,42,.06);
+    padding:20px 22px;box-shadow:0 4px 16px rgba(15,23,42,.06);scroll-margin-top:20px;
   }
   .ps-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
     flex-wrap:wrap;margin-bottom:14px}
@@ -127,7 +184,7 @@
   .ps-meta-row .m-label{color:var(--text4);font-weight:600;margin-right:5px}
 
   .ps-body-block{margin-bottom:14px}
-  .ps-body-block h3{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;
+  .ps-body-block h4{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;
     letter-spacing:.3px;margin-bottom:5px}
   .ps-body-block p{font-size:13.5px;color:var(--text2);line-height:1.7}
 
@@ -139,6 +196,12 @@
   .ps-bd-score{font-size:12px;font-weight:700;color:var(--text3);text-align:right}
   .ps-bd-note{grid-column:1 / -1;font-size:11.5px;color:var(--text4);line-height:1.6;
     margin:-2px 0 4px}
+
+  .ps-gh-link{
+    display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+    color:var(--blue-dk);text-decoration:none;margin-top:4px;
+  }
+  .ps-gh-link:hover{text-decoration:underline}
 
   .ps-note{
     margin-top:22px;font-size:12px;color:var(--text3);background:#fffbeb;border:1px solid #fde68a;
@@ -166,7 +229,7 @@
   <div class="ps-hero-inner">
     <div class="pilot-badge">🧪 시범 단계 — 예시 1건</div>
     <h1>프롬프트(SP) 작성 상황</h1>
-    <p>전체 System Prompt를 카테고리별로 나열하고, 각 SP가 자신의 목적을 얼마나 완전하고 견고하게 수행하는지를 정량적으로 평가합니다. K-Law · SP-01 · v15.1을 완성도 100%의 기준점으로 두고, 다른 SP를 K-Law와 같은 복잡도로 요구하는 것이 아니라 <b>"자신의 목적을 K-Law가 자신의 목적을 수행하는 것과 같은 수준의 엄밀함·근거·자기검증으로 수행하는가"</b>를 기준으로 채점합니다. 아직 전체 2,011개 중 1건만 시범 평가되었으며, 아래는 그 표시 방식의 예시입니다.</p>
+    <p>전체 System Prompt를 카테고리별로 나열하고, 각 SP가 자신의 목적을 얼마나 완전하고 견고하게 수행하는지를 정량적으로 평가합니다. K-Law · SP-01 · v15.1을 완성도 100%의 기준점으로 두고, 다른 SP를 K-Law와 같은 복잡도로 요구하는 것이 아니라 <b>"자신의 목적을 K-Law가 자신의 목적을 수행하는 것과 같은 수준의 엄밀함·근거·자기검증으로 수행하는가"</b>를 기준으로 채점합니다. 아직 전체 2,011개 중 1건만 시범 평가되었으며, 카테고리를 눌러 세부 항목을 펼치거나 검색해서 살펴볼 수 있습니다.</p>
     <div class="ps-method-links">
       <a href="sp-evaluation-methodology.html">
         <span class="ico">📐</span>
@@ -178,6 +241,14 @@
       </a>
     </div>
   </div>
+</div>
+
+<div class="ps-search-wrap" id="psSearchAnchor">
+  <div class="ps-search-box">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="psSearch" type="text" placeholder="프롬프트 이름·파일명으로 검색 (예: 변호사, STEPI, 세무)" autocomplete="off">
+  </div>
+  <div class="ps-search-hint" id="psHint">불러오는 중…</div>
 </div>
 
 <div class="ps-wrap">
@@ -199,11 +270,11 @@
   </div>
 
   <div class="ps-section">
-    <div class="ps-section-title">카테고리별 평가 현황 (2,011건 중 1건 평가됨)</div>
+    <div class="ps-section-title" id="catSectionTitle">카테고리별 평가 현황</div>
     <div class="ps-cat-groups" id="catGroups">불러오는 중…</div>
   </div>
 
-  <div class="ps-demo-flag">시범 평가 예시 — 무작위로 선택된 SP 1건</div>
+  <div class="ps-demo-flag" id="detailFlag">시범 평가 예시 — 무작위로 선택된 SP 1건</div>
   <div class="ps-item-card" id="itemCard"></div>
 
   <div class="ps-note">
@@ -217,6 +288,17 @@
 <script>
   const STATUS_URL = '../prompts/sp-status.json';
   const CATALOG_URL = '../prompts/sp-catalog-categories.json';
+  const MAX_RENDER = 200;
+
+  let CATALOG = null;
+  let STATUS = null;
+  let CAT_BY_ID = {};
+  let STATUS_BY_FILE = {};
+  let ITEM_BY_FILE = {};
+
+  let activeKey = null;     // 패널이 붙어 있는 트리거: 'search' | <topCatId> | null
+  let activeLeaf = null;    // 실제 목록을 채우는 leaf 카테고리 id
+  let selectedFile = null;  // 상세 카드에 표시 중인 SP 파일
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -228,6 +310,23 @@
     return '#dc2626';
   }
 
+  function looksSourceViewable(file){
+    return /^prompts\/[^/]+\.(md|txt)$/.test(file) ||
+           /^prompts\/gov-tree\//.test(file) ||
+           /^klaw\/prompts\//.test(file);
+  }
+  function githubUrl(file){
+    return 'https://github.com/Openhash-Gopang/gopang/blob/main/' + file.split('/').map(encodeURIComponent).join('/');
+  }
+
+  function catLabelChain(catId){
+    const cat = CAT_BY_ID[catId];
+    if (!cat) return catId;
+    // 하위분류 라벨(예: "변호사 · 이민법")은 이미 상위 이름을 포함하고 있으므로 그대로 쓴다.
+    return cat.label;
+  }
+
+  // ---- criteria ----
   function renderCriteria(criteria){
     $('critGrid').innerHTML = criteria.map(c => `
       <div class="ps-crit-card">
@@ -237,13 +336,99 @@
     `).join('');
   }
 
-  function renderCategoryGroups(catalog, statusItems){
-    const evalCatCounts = {};
-    statusItems.forEach(it => { evalCatCounts[it.cat] = (evalCatCounts[it.cat] || 0) + 1; });
+  // ---- slide panel (shared, reused across triggers) ----
+  const panelEl = document.createElement('div');
+  panelEl.className = 'ps-slide-panel';
+  panelEl.id = 'psPanel';
+  panelEl.innerHTML = `
+    <div class="ps-slide-inner">
+      <div class="ps-sub-row" id="psSubRow"></div>
+      <div class="ps-results-head">
+        <h3 id="psResultsTitle">검색 결과</h3>
+        <span id="psResultsCount"></span>
+      </div>
+      <div class="ps-list" id="psList"></div>
+      <div class="ps-more" id="psMore" style="display:none"></div>
+    </div>
+  `;
 
-    const topCats = catalog.categories.filter(c => !c.parent);
+  function panelInnerEl(){ return panelEl.querySelector('.ps-slide-inner'); }
+
+  function setPanelHeight(){
+    if (panelEl.classList.contains('open')) {
+      panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+    }
+  }
+
+  function slideOpenAt(anchorEl){
+    anchorEl.insertAdjacentElement('afterend', panelEl);
+    renderResultsContent();
+    panelEl.style.maxHeight = '0px';
+    panelEl.classList.add('open');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+      });
+    });
+  }
+
+  function slideClose(onDone){
+    if (!panelEl.classList.contains('open')) { if (onDone) onDone(); return; }
+    panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panelEl.classList.remove('open');
+        panelEl.style.maxHeight = '0px';
+      });
+    });
+    setTimeout(() => { if (onDone) onDone(); }, 340);
+  }
+
+  function moveOrOpen(anchorEl, key){
+    if (activeKey === key && panelEl.classList.contains('open')) {
+      slideClose();
+      activeKey = null;
+      activeLeaf = null;
+      return;
+    }
+    const reopen = () => { activeKey = key; slideOpenAt(anchorEl); };
+    if (activeKey !== null) {
+      slideClose(reopen);
+    } else {
+      reopen();
+    }
+  }
+
+  function clearTopChipHighlight(){
+    document.querySelectorAll('[data-topcat]').forEach(c => c.classList.remove('active'));
+  }
+
+  function wireTopChipClick(el, topId){
+    el.addEventListener('click', () => {
+      const turningOn = activeKey !== topId;
+      clearTopChipHighlight();
+      if (!turningOn) {
+        if (activeKey !== null) { slideClose(); activeKey = null; activeLeaf = null; }
+        return;
+      }
+      el.classList.add('active');
+      $('psSearch').value = ''; // 카테고리 선택 시 검색어 초기화
+
+      const cat = CAT_BY_ID[topId];
+      activeLeaf = cat.children ? null : topId;
+
+      const row = el.closest('.ps-cat-row');
+      moveOrOpen(row, topId);
+    });
+  }
+
+  function renderCategoryGroups(){
+    const topCats = CATALOG.categories.filter(c => !c.parent);
     const byGroup = {};
     topCats.forEach(c => { (byGroup[c.group] = byGroup[c.group] || []).push(c); });
+
+    const evalCatCounts = {};
+    STATUS.items.forEach(it => { evalCatCounts[it.cat] = (evalCatCounts[it.cat] || 0) + 1; });
 
     const html = Object.entries(byGroup).map(([group, cats]) => `
       <div>
@@ -253,7 +438,7 @@
             const evaluated = evalCatCounts[c.id] || 0;
             const hasEval = evaluated > 0;
             return `
-              <div class="ps-cat-chip${hasEval ? ' has-eval' : ''}">
+              <div class="ps-cat-chip${hasEval ? ' has-eval' : ''}" data-topcat="${esc(c.id)}">
                 <span>${esc(c.label)}</span>
                 <span class="progress">${evaluated.toLocaleString()} / ${c.count.toLocaleString()} 평가됨</span>
               </div>
@@ -263,9 +448,164 @@
       </div>
     `).join('');
     $('catGroups').innerHTML = html;
+
+    document.querySelectorAll('#catGroups .ps-cat-chip[data-topcat]').forEach(el => {
+      wireTopChipClick(el, el.getAttribute('data-topcat'));
+    });
+
+    const totalEval = STATUS.items.length;
+    $('catSectionTitle').textContent = `카테고리별 평가 현황 (${CATALOG.total.toLocaleString()}건 중 ${totalEval.toLocaleString()}건 평가됨)`;
   }
 
-  function renderItem(item, criteria){
+  // ---- item list rendering ----
+  function listItemRow(it){
+    const status = STATUS_BY_FILE[it.file];
+    const selected = it.file === selectedFile ? ' selected' : '';
+    const badge = status
+      ? `<span class="ps-list-badge" style="color:${scoreColor(status.completeness)};background:${scoreColor(status.completeness)}1a">${status.completeness}% 평가됨</span>`
+      : `<span class="ps-list-badge unevaluated">미평가</span>`;
+    return `
+      <div class="ps-list-item${selected}" data-file="${esc(it.file)}">
+        <div class="ps-list-item-name">${esc(it.name)}</div>
+        ${badge}
+      </div>
+    `;
+  }
+
+  function wireItemListClicks(){
+    $('psList').querySelectorAll('.ps-list-item[data-file]').forEach(el => {
+      el.addEventListener('click', () => {
+        const file = el.getAttribute('data-file');
+        selectItem(file);
+        $('psList').querySelectorAll('.ps-list-item').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+  }
+
+  function renderItemList(items){
+    if (!items.length) {
+      $('psList').innerHTML = '<div class="ps-empty">일치하는 SP가 없습니다. 검색어를 바꾸거나 카테고리를 다시 선택해 보세요.</div>';
+      $('psMore').style.display = 'none';
+      $('psResultsCount').textContent = '0건';
+      return;
+    }
+    const shown = items.slice(0, MAX_RENDER);
+    $('psList').innerHTML = shown.map(listItemRow).join('');
+    wireItemListClicks();
+    $('psResultsCount').textContent = `${items.length.toLocaleString()}건`;
+    if (items.length > MAX_RENDER) {
+      $('psMore').style.display = 'block';
+      $('psMore').textContent = `${(items.length - MAX_RENDER).toLocaleString()}건 더 있습니다 — 검색어를 좁혀 주세요.`;
+    } else {
+      $('psMore').style.display = 'none';
+    }
+  }
+
+  function childShortLabel(childLabel){
+    const parts = childLabel.split(' · ');
+    return parts.length > 1 ? parts[1] : childLabel;
+  }
+
+  function renderChildRow(cat){
+    const sub = $('psSubRow');
+    sub.style.display = 'flex';
+    sub.innerHTML = cat.children.map(cid => {
+      const c = CAT_BY_ID[cid];
+      const active = activeLeaf === cid ? ' active' : '';
+      return `<div class="ps-chip-sub${active}" data-leaf="${esc(cid)}">${esc(childShortLabel(c.label))}</div>`;
+    }).join('');
+    sub.querySelectorAll('.ps-chip-sub').forEach(el => {
+      el.addEventListener('click', () => {
+        const leaf = el.getAttribute('data-leaf');
+        activeLeaf = (activeLeaf === leaf) ? null : leaf;
+        renderResultsContent();
+        setPanelHeight();
+      });
+    });
+  }
+
+  function hideChildRow(){
+    $('psSubRow').style.display = 'none';
+    $('psSubRow').innerHTML = '';
+  }
+
+  function renderResultsContent(){
+    if (activeKey === 'search') {
+      hideChildRow();
+      const q = $('psSearch').value.trim().toLowerCase();
+      const items = CATALOG.items.filter(it =>
+        it.name.toLowerCase().includes(q) ||
+        it.file.toLowerCase().includes(q) ||
+        (it.region && it.region.toLowerCase().includes(q))
+      );
+      $('psResultsTitle').textContent = '검색 결과';
+      renderItemList(items);
+      return;
+    }
+
+    const cat = CAT_BY_ID[activeKey];
+    if (!cat) return;
+
+    if (cat.children) {
+      renderChildRow(cat);
+      if (activeLeaf) {
+        const leafCat = CAT_BY_ID[activeLeaf];
+        $('psResultsTitle').textContent = `"${leafCat.label}" 검색 결과`;
+        renderItemList(CATALOG.items.filter(it => it.cat === activeLeaf));
+      } else {
+        $('psResultsTitle').textContent = `"${cat.label}" 하위 분류`;
+        $('psList').innerHTML = '<div class="ps-select-hint">위에서 세부 분야를 선택하세요.</div>';
+        $('psResultsCount').textContent = `${cat.count.toLocaleString()}건`;
+        $('psMore').style.display = 'none';
+      }
+      return;
+    }
+
+    hideChildRow();
+    $('psResultsTitle').textContent = `"${cat.label}" 검색 결과`;
+    renderItemList(CATALOG.items.filter(it => it.cat === activeKey));
+  }
+
+  function onSearchInput(){
+    const q = $('psSearch').value.trim();
+    if (!q) {
+      if (activeKey === 'search') {
+        slideClose();
+        activeKey = null;
+        activeLeaf = null;
+      }
+      return;
+    }
+    if (activeKey === 'search') {
+      renderResultsContent();
+      setPanelHeight();
+      return;
+    }
+    clearTopChipHighlight();
+    activeLeaf = null;
+    moveOrOpen($('psSearchAnchor'), 'search');
+  }
+
+  // ---- detail card ----
+  function scrollToDetail(){
+    $('itemCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function selectItem(file){
+    selectedFile = file;
+    const status = STATUS_BY_FILE[file];
+    if (status) {
+      $('detailFlag').textContent = '선택한 SP 상세 평가';
+      renderEvaluatedDetail(status, STATUS.criteria);
+    } else {
+      $('detailFlag').textContent = '선택한 SP — 아직 평가되지 않음';
+      renderUnevaluatedDetail(file);
+    }
+    scrollToDetail();
+  }
+
+  function renderEvaluatedDetail(item, criteria){
     const critById = {};
     criteria.forEach(c => { critById[c.id] = c; });
 
@@ -283,6 +623,9 @@
     }).join('');
 
     const color = scoreColor(item.completeness);
+    const ghLink = looksSourceViewable(item.file)
+      ? `<a class="ps-gh-link" href="${githubUrl(item.file)}" target="_blank" rel="noopener">GitHub에서 원문 보기 →</a>`
+      : '';
 
     $('itemCard').innerHTML = `
       <div class="ps-item-head">
@@ -305,36 +648,78 @@
       </div>
 
       <div class="ps-body-block">
-        <h3>용도</h3>
+        <h4>용도</h4>
         <p>${esc(item.purpose)}</p>
       </div>
       <div class="ps-body-block">
-        <h3>목적</h3>
+        <h4>목적</h4>
         <p>${esc(item.goal)}</p>
       </div>
       <div class="ps-body-block">
-        <h3>세부 평가 (K-Law v15.1 = 100 기준)</h3>
+        <h4>세부 평가 (K-Law v15.1 = 100 기준)</h4>
         <div class="ps-breakdown">${bdRows}</div>
       </div>
+      ${ghLink}
+    `;
+  }
+
+  function renderUnevaluatedDetail(file){
+    const it = ITEM_BY_FILE[file];
+    if (!it) {
+      $('itemCard').innerHTML = '<div class="ps-empty">항목을 찾을 수 없습니다.</div>';
+      return;
+    }
+    const catLabel = catLabelChain(it.cat);
+    const ghLink = looksSourceViewable(it.file)
+      ? `<a class="ps-gh-link" href="${githubUrl(it.file)}" target="_blank" rel="noopener">GitHub에서 원문 보기 →</a>`
+      : '';
+
+    $('itemCard').innerHTML = `
+      <div class="ps-item-head">
+        <div>
+          <div class="name">${esc(it.name)}</div>
+          <div class="cat">${esc(catLabel)}</div>
+          <div class="file">${esc(it.file)}</div>
+        </div>
+        <div class="ps-score-badge" style="background:conic-gradient(#e2e8f0 360deg, #e2e8f0 0deg)">
+          <div style="width:58px;height:58px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <span class="pct" style="color:#94a3b8;font-size:12px">미평가</span>
+          </div>
+        </div>
+      </div>
+      <div class="ps-body-block">
+        <p>이 SP는 아직 <a href="sp-evaluation-methodology.html">SP 평가 방법론</a>에 따른 정량 평가가 진행되지 않았습니다.
+        전체 2,011개 중 평가된 항목이 채워지는 대로 이 자리에 완성도·세부 배점이 표시됩니다.</p>
+      </div>
+      ${ghLink}
     `;
   }
 
   async function init(){
     try {
       const [statusRes, catalogRes] = await Promise.all([fetch(STATUS_URL), fetch(CATALOG_URL)]);
-      const status = await statusRes.json();
-      const catalog = await catalogRes.json();
+      STATUS = await statusRes.json();
+      CATALOG = await catalogRes.json();
 
-      renderCriteria(status.criteria);
-      renderCategoryGroups(catalog, status.items);
-      if (status.items && status.items.length) {
-        renderItem(status.items[0], status.criteria);
+      CATALOG.categories.forEach(c => { CAT_BY_ID[c.id] = c; });
+      CATALOG.items.forEach(it => { ITEM_BY_FILE[it.file] = it; });
+      STATUS.items.forEach(it => { STATUS_BY_FILE[it.file] = it; });
+
+      $('psHint').textContent = `총 ${CATALOG.total.toLocaleString()}개 SP · 카테고리를 선택하거나 검색어를 입력하세요`;
+
+      renderCriteria(STATUS.criteria);
+      renderCategoryGroups();
+
+      if (STATUS.items && STATUS.items.length) {
+        selectedFile = STATUS.items[0].file;
+        renderEvaluatedDetail(STATUS.items[0], STATUS.criteria);
       }
     } catch (e) {
       $('itemCard').innerHTML = `<div class="ps-empty">데이터를 불러오지 못했습니다: ${esc(e.message)}</div>`;
     }
   }
 
+  $('psSearch').addEventListener('input', onSearchInput);
   init();
 </script>
 
