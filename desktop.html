@@ -756,18 +756,17 @@ body { padding-left: 0 !important; }
 
 /* ── MEGA MENU (2026-08-29 — 좌측 사이드바를 햄버거+오버레이로 교체) ── */
 #menuToggleBtn {
-  position: fixed; top: 14px; left: 14px; z-index: 1300;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--surface); border: none;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 1px 3px 1px rgba(15,23,42,0.08);
+  flex-shrink: 0; position: relative;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: none;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 0;
-  transition: box-shadow 0.2s ease, background 0.2s ease;
+  transition: background 0.2s ease;
 }
-#menuToggleBtn:hover { background: var(--bg-subtle); box-shadow: 0 1px 2px rgba(15,23,42,0.08), 0 2px 6px 2px rgba(15,23,42,0.10); }
-#menuToggleBtn:active { box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
+#menuToggleBtn:hover { background: rgba(255,255,255,0.18); }
+#menuToggleBtn:active { background: rgba(255,255,255,0.24); }
 #menuToggleBtn svg {
-  position: absolute; width: 20px; height: 20px; color: var(--brand, #0c6cc3);
+  position: absolute; width: 19px; height: 19px; color: #fff;
   transition: transform 0.25s cubic-bezier(.4,0,.2,1), opacity 0.2s ease;
 }
 #menuToggleBtn .mm-icon-close { opacity: 0; transform: rotate(-90deg) scale(0.4); display: block; }
@@ -868,17 +867,6 @@ body.mm-lock-scroll { overflow: hidden; }
 <body>
 
 <!-- ── SIDEBAR ── -->
-<!-- 2026-08-29 — 좌측 사이드바를 햄버거 버튼 + 상단 메가메뉴 오버레이로
-     교체. 항목 추가/삭제는 이 마크업이 아니라 아래 <script>의
-     MEGA_MENU_PINNED / MEGA_MENU_SECTIONS 데이터 배열만 고치면 된다
-     (buildMegaMenu()가 그 데이터를 그대로 그려준다). 82개 항목 중
-     개발자 문서(46)·주의(12)는 접힌 아코디언(<details>)으로 시작하고,
-     나머지 7개 섹션(24개 항목)은 펼친 채로 "한눈에" 보이게 한다. -->
-<button type="button" id="menuToggleBtn" aria-label="전체 메뉴" aria-expanded="false">
-  <svg class="mm-icon-hamburger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  <svg class="mm-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-</button>
-
 <div id="megaMenuOverlay">
   <div id="megaMenuScrim"></div>
   <div id="megaMenuPanel">
@@ -1006,6 +994,17 @@ document.addEventListener('keydown', function (e) {
      배지·헤드라인·서브텍스트·CTA 3개) + 통계 5칸 구성.
      ══════════════════════════════════════════════════════════════ -->
 <div class="site-nav">
+  <!-- 2026-08-29 신설, 2026-08-29 재배치 — 좌측 사이드바를 햄버거 버튼 +
+       상단 메가메뉴 오버레이(아래 #megaMenuOverlay)로 교체. 이 버튼은
+       처음엔 페이지 위에 독립적으로 뜬(position:fixed) 원형 버튼이었으나,
+       이미 있던 이 상단 내비게이션 바(로고+탭+K-서비스 배지)와 같은
+       자리를 다퉈 서로 겹쳤다 — 그래서 로고 왼쪽 자리로 정식 편입시켰다.
+       메뉴 항목 추가/삭제는 이 마크업이 아니라 뒤쪽 <script>의
+       MEGA_MENU_PINNED / MEGA_MENU_SECTIONS 데이터 배열만 고치면 된다. -->
+  <button type="button" id="menuToggleBtn" aria-label="전체 메뉴" aria-expanded="false">
+    <svg class="mm-icon-hamburger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <svg class="mm-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
   <a class="site-nav-logo" href="#" onclick="loadPage('overview');return false;">
     <img src="./icons/icon-192.png" alt="혼디">
     <span>혼디</span>
@@ -1038,9 +1037,9 @@ document.addEventListener('keydown', function (e) {
   <p class="site-hero-sub">혼디의 목표는 국가의 체제 비용과 업무의 처리 시간을 최대 <strong>99%</strong> 줄이는 것입니다.</p>
 
   <div class="site-hero-actions">
-    <a href="./integrated-system.html" class="primary">입법.사법.행정 통합 체계</a>
-    <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;">법치 국가: K-Law</a>
-    <a href="./docs/hondi_interactive_manual.html" class="outline">사용법</a>
+    <a href="./integrated-system.html" class="primary"><span class="dot"></span><span class="label-text">입법.사법.행정 통합 체계</span></a>
+    <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;"><span class="dot"></span><span class="label-text">법치 국가: K-Law</span></a>
+    <a href="./docs/hondi_interactive_manual.html" class="outline"><span class="dot"></span><span class="label-text">사용법</span></a>
   </div>
 
   <!-- 2026-08-27 — 헤더 하단 탭(입법~계획 11개, 공익 K-서비스 4개, 전문가

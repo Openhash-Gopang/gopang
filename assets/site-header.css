@@ -31,7 +31,8 @@
 }
 .site-nav {
   background: #12234f; padding: 0 20px; display: flex; align-items: center;
-  height: 54px; gap: 16px; border-bottom: 1px solid #1f3568; position: relative;
+  height: 54px; gap: 16px; border-bottom: 1px solid #1f3568;
+  position: sticky; top: 0; z-index: 1100;
 }
 .site-nav-logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; text-decoration: none; }
 .site-nav-logo img { width: 26px; height: 26px; border-radius: 6px; }
@@ -114,16 +115,22 @@
 }
 .site-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .site-hero-actions a {
-  font-size: 13.5px; font-weight: 600; padding: 11px 20px; border-radius: 10px; text-decoration: none;
-  font-family: 'Pretendard', sans-serif;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.07);
-  transition: box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+  display: flex; align-items: center; gap: 5px;
+  background: #1a2e5c;
+  border: 1px solid rgba(255,255,255,0.45); color: #fff; font-size: 13.5px; font-weight: 600;
+  padding: 11px 20px; border-radius: 20px; white-space: nowrap;
+  text-decoration: none; font-family: 'Pretendard', sans-serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.site-hero-actions a:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.08); }
-.site-hero-actions a.primary { background: #0c6cc3; color: #fff; box-shadow: 0 6px 16px rgba(12,108,195,0.35), 0 2px 6px rgba(12,108,195,0.2); }
+.site-hero-actions a:hover {
+  background: #24356b;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+.site-hero-actions a.primary { background: #0c6cc3; border-color: #0c6cc3; }
 .site-hero-actions a.primary:hover { background: #0958a3; }
-.site-hero-actions a.outline { background: #ffffff; color: #334155; }
-.site-hero-actions a.outline:hover { color: #0c6cc3; }
+.site-hero-actions a .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; flex-shrink: 0; }
 
 .site-hero-domains {
   display: flex; flex-wrap: wrap; gap: 8px; margin-top: 60px;
