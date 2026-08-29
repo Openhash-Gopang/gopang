@@ -66,12 +66,23 @@
   .pp-chip .cnt{font-weight:500;color:var(--text4);font-size:11.5px}
   .pp-chip.active .cnt{color:#dbe8ff}
 
-  .pp-results{margin-top:26px}
-  .pp-results-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
-  .pp-results-head h2{font-size:14px;font-weight:700;color:var(--text)}
-  .pp-results-head span{font-size:12px;color:var(--text4)}
+  /* ---- slide panel (results) ---- */
+  .pp-slide-panel{
+    max-height:0; opacity:0; overflow:hidden;
+    transition:max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s ease, margin .32s cubic-bezier(.4,0,.2,1);
+    margin-top:0;
+  }
+  .pp-slide-panel.open{ opacity:1; margin-top:14px; }
+  .pp-slide-inner{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px 16px 8px;
+  }
 
-  .pp-list{display:flex;flex-direction:column;gap:6px}
+  .pp-results-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px}
+  .pp-results-head h2{font-size:14px;font-weight:700;color:var(--text)}
+  .pp-results-head span{font-size:12px;color:var(--text4);white-space:nowrap}
+
+  .pp-list{display:flex;flex-direction:column;gap:6px;padding-bottom:8px}
   .pp-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     background:var(--surface);border:1px solid var(--border);border-radius:10px;
@@ -87,9 +98,10 @@
     border-radius:6px;padding:3px 8px;white-space:nowrap;
   }
   .pp-item-badge.editable{color:var(--blue-dk);background:var(--blue-bg)}
-  .pp-more{text-align:center;font-size:12.5px;color:var(--text4);padding:14px 0}
+  .pp-more{text-align:center;font-size:12.5px;color:var(--text4);padding:14px 0 6px}
 
-  .pp-empty{text-align:center;padding:50px 20px;color:var(--text4);font-size:13.5px}
+  .pp-empty{text-align:center;padding:36px 20px;color:var(--text4);font-size:13.5px}
+
   .pp-note{
     margin-top:18px;font-size:12px;color:var(--text3);background:#fffbeb;border:1px solid #fde68a;
     border-radius:10px;padding:12px 14px;line-height:1.7;
@@ -98,9 +110,6 @@
 </head>
 <body>
 
-<div class="site-strip">
-  <a class="site-strip-text" href="../desktop.html">← 혼디 홈으로</a>
-</div>
 <div class="site-nav">
   <a class="site-nav-logo" href="../desktop.html">
     <img src="../icons/icon-192.png" alt="혼디">
@@ -116,7 +125,7 @@
   </div>
 </div>
 
-<div class="pp-search-wrap">
+<div class="pp-search-wrap" id="ppSearchAnchor">
   <div class="pp-search-box">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input id="ppSearch" type="text" placeholder="기관·부서·직업·파일명으로 검색 (예: 제주도청, 세무, 변호사, 한림읍)" autocomplete="off">
@@ -127,15 +136,6 @@
 <div class="pp-wrap">
 
   <div class="pp-groups" id="ppGroups"></div>
-
-  <div class="pp-results" id="ppResults" style="display:none">
-    <div class="pp-results-head">
-      <h2 id="ppResultsTitle">검색 결과</h2>
-      <span id="ppResultsCount"></span>
-    </div>
-    <div class="pp-list" id="ppList"></div>
-    <div class="pp-more" id="ppMore" style="display:none"></div>
-  </div>
 
   <div class="pp-note">
     조회는 누구나 가능합니다. 수정은 관리자 로그인 후 GitHub Pull Request로 생성되며, 검토·머지 전까지는 실제 서비스에 반영되지 않습니다. 일부 오래된 SP 파일은 아직 조회 전용 시스템에 등록되지 않았을 수 있습니다 — 그런 경우 "GitHub에서 보기" 링크를 이용해 주세요.
@@ -148,7 +148,8 @@
   const MAX_RENDER = 200;
 
   let MANIFEST = null;
-  let activeCat = null; // null = 전체(검색 전에는 카테고리 카드만 노출)
+  let activeCat = null;      // 현재 선택된 카테고리 chip (null이면 미선택)
+  let activeKey = null;      // 패널이 현재 어디에 붙어 있는지: 'search' | <catId> | null
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -166,13 +167,85 @@
     return 'https://github.com/Openhash-Gopang/gopang/blob/main/' + file.split('/').map(encodeURIComponent).join('/');
   }
 
+  // ---- 슬라이드 패널: 하나의 노드를 트리거 위치로 옮겨가며 재사용한다 ----
+  const panelEl = document.createElement('div');
+  panelEl.className = 'pp-slide-panel';
+  panelEl.id = 'ppPanel';
+  panelEl.innerHTML = `
+    <div class="pp-slide-inner">
+      <div class="pp-results-head">
+        <h2 id="ppResultsTitle">검색 결과</h2>
+        <span id="ppResultsCount"></span>
+      </div>
+      <div class="pp-list" id="ppList"></div>
+      <div class="pp-more" id="ppMore" style="display:none"></div>
+    </div>
+  `;
+
+  function panelInnerEl(){ return panelEl.querySelector('.pp-slide-inner'); }
+
+  function setPanelHeight(){
+    // 콘텐츠가 바뀌었을 때도 부드럽게 높이를 맞춰준다.
+    if (panelEl.classList.contains('open')) {
+      panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+    }
+  }
+
+  function slideOpenAt(anchorEl){
+    anchorEl.insertAdjacentElement('afterend', panelEl);
+    renderResultsContent();
+    panelEl.style.maxHeight = '0px';
+    panelEl.classList.add('open');
+    // 리플로우 이후 실제 높이로 트랜지션
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+      });
+    });
+  }
+
+  function slideClose(onDone){
+    if (!panelEl.classList.contains('open')) { if (onDone) onDone(); return; }
+    panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panelEl.classList.remove('open');
+        panelEl.style.maxHeight = '0px';
+      });
+    });
+    setTimeout(() => { if (onDone) onDone(); }, 340);
+  }
+
+  function moveOrOpen(anchorEl, key){
+    if (activeKey === key && panelEl.classList.contains('open')) {
+      // 같은 트리거를 다시 클릭 → slide in(닫기)
+      slideClose();
+      activeKey = null;
+      return;
+    }
+    const reopen = () => { slideOpenAt(anchorEl); activeKey = key; };
+    if (activeKey !== null) {
+      // 다른 트리거였던 패널을 slide in으로 먼저 접고, 새 위치에서 slide out
+      slideClose(reopen);
+    } else {
+      reopen();
+    }
+  }
+
+  function closeAll(){
+    if (activeKey !== null) {
+      slideClose();
+      activeKey = null;
+    }
+  }
+
   function renderGroups(){
     const byGroup = {};
     MANIFEST.categories.forEach(c => {
       (byGroup[c.group] = byGroup[c.group] || []).push(c);
     });
     const html = Object.entries(byGroup).map(([group, cats]) => `
-      <div>
+      <div class="pp-group">
         <div class="pp-group-title">${esc(group)}</div>
         <div class="pp-chip-row">
           ${cats.map(c => `
@@ -187,9 +260,19 @@
     $('ppGroups').querySelectorAll('.pp-chip').forEach(el => {
       el.addEventListener('click', () => {
         const cat = el.getAttribute('data-cat');
-        activeCat = (activeCat === cat) ? null : cat;
+        const turningOn = activeCat !== cat;
+        activeCat = turningOn ? cat : null;
         $('ppGroups').querySelectorAll('.pp-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-cat') === activeCat));
-        runFilter();
+
+        if (!turningOn && !$('ppSearch').value.trim()) {
+          // 선택 해제 + 검색어도 없음 → 그냥 닫기
+          closeAll();
+          return;
+        }
+        const row = el.closest('.pp-group').querySelector('.pp-chip-row');
+        const key = turningOn ? cat : 'search';
+        const anchor = turningOn ? row : $('ppSearchAnchor');
+        moveOrOpen(anchor, key);
       });
     });
   }
@@ -211,12 +294,8 @@
     `;
   }
 
-  function runFilter(){
+  function currentItems(){
     const q = $('ppSearch').value.trim().toLowerCase();
-    if (!q && !activeCat) {
-      $('ppResults').style.display = 'none';
-      return;
-    }
     let items = MANIFEST.items;
     if (activeCat) items = items.filter(it => it.cat === activeCat);
     if (q) items = items.filter(it =>
@@ -224,8 +303,11 @@
       it.file.toLowerCase().includes(q) ||
       (it.region && it.region.toLowerCase().includes(q))
     );
+    return items;
+  }
 
-    $('ppResults').style.display = 'block';
+  function renderResultsContent(){
+    const items = currentItems();
     const catLabel = activeCat ? (MANIFEST.categories.find(c => c.id === activeCat) || {}).label : null;
     $('ppResultsTitle').textContent = catLabel ? `"${catLabel}" 검색 결과` : '검색 결과';
     $('ppResultsCount').textContent = `${items.length.toLocaleString()}건`;
@@ -246,6 +328,25 @@
     }
   }
 
+  function onSearchInput(){
+    const q = $('ppSearch').value.trim();
+
+    if (activeCat) {
+      // 카테고리 패널이 이미 열려 있는 상태 — 그 자리에서 내용만 갱신
+      if (activeKey === activeCat) { renderResultsContent(); setPanelHeight(); }
+      return;
+    }
+
+    if (!q) { closeAll(); return; }
+
+    if (activeKey === 'search') {
+      renderResultsContent();
+      setPanelHeight();
+    } else {
+      moveOrOpen($('ppSearchAnchor'), 'search');
+    }
+  }
+
   async function init(){
     try {
       const res = await fetch(CATALOG_URL);
@@ -257,7 +358,7 @@
     }
   }
 
-  $('ppSearch').addEventListener('input', runFilter);
+  $('ppSearch').addEventListener('input', onSearchInput);
   init();
 </script>
 
