@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프롬프트 작성 상황 — 혼디</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/assets/site-header.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f5f7fb;color:#0f172a;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.6}
+
+  :root{
+    --navy:     #0e1c3f;
+    --blue:     #3b82f6;
+    --blue-dk:  #1d4ed8;
+    --blue-bg:  #eff6ff;
+    --border:   #e2e8f0;
+    --text:     #0f172a;
+    --text2:    #475569;
+    --text3:    #64748b;
+    --text4:    #94a3b8;
+    --surface:  #ffffff;
+    --green:    #16a34a;
+    --amber:    #d97706;
+    --red:      #dc2626;
+  }
+
+  a{color:inherit}
+
+  .ps-hero{background:var(--navy); color:#fff; padding:36px 24px 30px}
+  .ps-hero-inner{max-width:980px;margin:0 auto}
+  .ps-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .ps-hero p{font-size:13.5px;color:#c9d6ee;line-height:1.7;max-width:760px}
+  .ps-hero .pilot-badge{
+    display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;
+    font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:12px;
+  }
+
+  .ps-wrap{max-width:980px;margin:0 auto;padding:22px 24px 80px}
+
+  .ps-section{margin-bottom:26px}
+  .ps-section-title{font-size:13px;font-weight:700;color:var(--text3);letter-spacing:.3px;
+    text-transform:uppercase;margin-bottom:10px}
+
+  /* baseline card */
+  .ps-baseline{
+    background:#0e1c3f;color:#fff;border-radius:14px;padding:18px 20px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .ps-baseline .score-ring{
+    flex-shrink:0;width:64px;height:64px;border-radius:50%;
+    background:conic-gradient(#3b82f6 360deg, #1a2e5c 0deg);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ps-baseline .score-ring .inner{
+    width:52px;height:52px;border-radius:50%;background:#0e1c3f;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  }
+  .ps-baseline .info{flex:1;min-width:220px}
+  .ps-baseline .info .name{font-size:15px;font-weight:700;margin-bottom:4px}
+  .ps-baseline .info .note{font-size:12.5px;color:#c9d6ee;line-height:1.7}
+
+  /* criteria grid */
+  .ps-criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .ps-crit-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  }
+  .ps-crit-card .label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .ps-crit-card .desc{font-size:11.5px;color:var(--text3);line-height:1.6}
+
+  /* category grid (reused from catalog) */
+  .ps-cat-groups{display:flex;flex-direction:column;gap:18px}
+  .ps-cat-group-title{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.3px;
+    text-transform:uppercase;margin-bottom:8px}
+  .ps-cat-row{display:flex;flex-wrap:wrap;gap:8px}
+  .ps-cat-chip{
+    display:inline-flex;align-items:center;gap:8px;background:var(--surface);
+    border:1px solid var(--border);border-radius:20px;padding:7px 13px;
+    font-size:12.5px;font-weight:600;color:var(--text2);
+  }
+  .ps-cat-chip .progress{font-size:11px;font-weight:700;color:var(--text4)}
+  .ps-cat-chip.has-eval{border-color:var(--blue);color:var(--blue-dk)}
+  .ps-cat-chip.has-eval .progress{color:var(--blue-dk)}
+
+  /* demo entry card */
+  .ps-demo-flag{
+    display:flex;align-items:center;gap:8px;margin:22px 0 12px;
+    font-size:12px;font-weight:700;color:var(--blue-dk);
+  }
+  .ps-demo-flag::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
+
+  .ps-item-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:20px 22px;box-shadow:0 4px 16px rgba(15,23,42,.06);
+  }
+  .ps-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+    flex-wrap:wrap;margin-bottom:14px}
+  .ps-item-head .name{font-size:17px;font-weight:700;color:var(--text)}
+  .ps-item-head .cat{font-size:12px;color:var(--text3);margin-top:3px}
+  .ps-item-head .file{font-size:11px;color:var(--text4);margin-top:2px;font-family:monospace}
+
+  .ps-score-badge{
+    flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:74px;height:74px;border-radius:50%;position:relative;
+  }
+  .ps-score-badge .pct{font-size:19px;font-weight:800}
+  .ps-score-badge .lbl{font-size:9.5px;color:var(--text4);font-weight:700;margin-top:-2px}
+
+  .ps-meta-row{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 16px;
+    padding:12px 14px;background:#f8fafc;border-radius:10px;font-size:12.5px}
+  .ps-meta-row .m-label{color:var(--text4);font-weight:600;margin-right:5px}
+
+  .ps-body-block{margin-bottom:14px}
+  .ps-body-block h3{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;
+    letter-spacing:.3px;margin-bottom:5px}
+  .ps-body-block p{font-size:13.5px;color:var(--text2);line-height:1.7}
+
+  .ps-breakdown{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .ps-bd-row{display:grid;grid-template-columns:120px 1fr 40px;gap:10px;align-items:center}
+  .ps-bd-label{font-size:12.5px;font-weight:600;color:var(--text2)}
+  .ps-bd-bar-wrap{background:#eef1f6;border-radius:8px;height:8px;overflow:hidden;position:relative}
+  .ps-bd-bar{height:100%;border-radius:8px;background:var(--blue)}
+  .ps-bd-score{font-size:12px;font-weight:700;color:var(--text3);text-align:right}
+  .ps-bd-note{grid-column:1 / -1;font-size:11.5px;color:var(--text4);line-height:1.6;
+    margin:-2px 0 4px}
+
+  .ps-note{
+    margin-top:22px;font-size:12px;color:var(--text3);background:#fffbeb;border:1px solid #fde68a;
+    border-radius:10px;padding:12px 14px;line-height:1.75;
+  }
+  .ps-note b{color:#92400e}
+</style>
+</head>
+<body>
+
+<div class="site-nav">
+  <a class="site-nav-logo" href="../desktop.html">
+    <img src="../icons/icon-192.png" alt="혼디">
+    <span>혼디</span>
+  </a>
+  <nav class="site-nav-links">
+    <a href="prompts.html">프롬프트</a>
+    <a href="sp-hierarchy.html">SP의 계층 구조</a>
+    <a href="core-prompts.html">핵심 프롬프트</a>
+    <a class="active" href="prompt-status.html">프롬프트 작성 상황</a>
+  </nav>
+</div>
+
+<div class="ps-hero">
+  <div class="ps-hero-inner">
+    <div class="pilot-badge">🧪 시범 단계 — 예시 1건</div>
+    <h1>프롬프트(SP) 작성 상황</h1>
+    <p>전체 System Prompt를 카테고리별로 나열하고, 각 SP가 자신의 목적을 얼마나 완전하고 견고하게 수행하는지를 정량적으로 평가합니다. K-Law · SP-01 · v15.1을 완성도 100%의 기준점으로 두고, 다른 SP를 K-Law와 같은 복잡도로 요구하는 것이 아니라 <b>"자신의 목적을 K-Law가 자신의 목적을 수행하는 것과 같은 수준의 엄밀함·근거·자기검증으로 수행하는가"</b>를 기준으로 채점합니다. 아직 전체 2,011개 중 1건만 시범 평가되었으며, 아래는 그 표시 방식의 예시입니다.</p>
+  </div>
+</div>
+
+<div class="ps-wrap">
+
+  <div class="ps-section">
+    <div class="ps-section-title">완성도 100% 기준점</div>
+    <div class="ps-baseline">
+      <div class="score-ring"><div class="inner">100%</div></div>
+      <div class="info">
+        <div class="name">K-Law · SP-01 · v15.1</div>
+        <div class="note">가상판결 시뮬레이션 방법론의 1차 구현체. 공리 계층(원칙→의미해석→해석→집행), 25개 강제규칙, 게이트웨이, 확신도·자기검증 출력 의무를 갖춘 현재 시스템에서 가장 엄밀하게 완성된 SP다. 다른 모든 SP의 완성도는 이 SP가 보여주는 근거·검증·정직성의 수준에 얼마나 근접했는지로 환산한다.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ps-section">
+    <div class="ps-section-title">평가 기준 (7개 항목 · 균등가중)</div>
+    <div class="ps-criteria-grid" id="critGrid"></div>
+  </div>
+
+  <div class="ps-section">
+    <div class="ps-section-title">카테고리별 평가 현황 (2,011건 중 1건 평가됨)</div>
+    <div class="ps-cat-groups" id="catGroups">불러오는 중…</div>
+  </div>
+
+  <div class="ps-demo-flag">시범 평가 예시 — 무작위로 선택된 SP 1건</div>
+  <div class="ps-item-card" id="itemCard"></div>
+
+  <div class="ps-note">
+    <b>표시 방법에 대하여</b> — 이 페이지는 "프롬프트 작성 상황" 탭이 어떤 형태로 정보를 보여줄지 검증하기 위한 시범입니다.
+    실제 전체 반영 시에는 <code>prompts/sp-status.json</code>에 항목을 추가하는 방식으로 카테고리(550개)·SP(2,011개) 전체를 순차적으로 채울 예정이며,
+    평가 기준의 가중치·세부 문구는 검토 후 조정될 수 있습니다. 조회는 누구나 가능하며, 평가 기준이나 배점에 대한 이견은 GitHub Issue로 남겨 주세요.
+  </div>
+
+</div>
+
+<script>
+  const STATUS_URL = '../prompts/sp-status.json';
+  const CATALOG_URL = '../prompts/sp-catalog-categories.json';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function scoreColor(pct){
+    if (pct >= 85) return '#16a34a';
+    if (pct >= 60) return '#3b82f6';
+    if (pct >= 35) return '#d97706';
+    return '#dc2626';
+  }
+
+  function renderCriteria(criteria){
+    $('critGrid').innerHTML = criteria.map(c => `
+      <div class="ps-crit-card">
+        <div class="label">${esc(c.label)}</div>
+        <div class="desc">${esc(c.description)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderCategoryGroups(catalog, statusItems){
+    const evalCatCounts = {};
+    statusItems.forEach(it => { evalCatCounts[it.cat] = (evalCatCounts[it.cat] || 0) + 1; });
+
+    const topCats = catalog.categories.filter(c => !c.parent);
+    const byGroup = {};
+    topCats.forEach(c => { (byGroup[c.group] = byGroup[c.group] || []).push(c); });
+
+    const html = Object.entries(byGroup).map(([group, cats]) => `
+      <div>
+        <div class="ps-cat-group-title">${esc(group)}</div>
+        <div class="ps-cat-row">
+          ${cats.map(c => {
+            const evaluated = evalCatCounts[c.id] || 0;
+            const hasEval = evaluated > 0;
+            return `
+              <div class="ps-cat-chip${hasEval ? ' has-eval' : ''}">
+                <span>${esc(c.label)}</span>
+                <span class="progress">${evaluated.toLocaleString()} / ${c.count.toLocaleString()} 평가됨</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `).join('');
+    $('catGroups').innerHTML = html;
+  }
+
+  function renderItem(item, criteria){
+    const critById = {};
+    criteria.forEach(c => { critById[c.id] = c; });
+
+    const bdRows = item.breakdown.map(b => {
+      const crit = critById[b.id] || { label: b.id };
+      const color = scoreColor(b.score);
+      return `
+        <div class="ps-bd-row">
+          <div class="ps-bd-label">${esc(crit.label)}</div>
+          <div class="ps-bd-bar-wrap"><div class="ps-bd-bar" style="width:${b.score}%;background:${color}"></div></div>
+          <div class="ps-bd-score">${b.score}</div>
+        </div>
+        <div class="ps-bd-note">${esc(b.note)}</div>
+      `;
+    }).join('');
+
+    const color = scoreColor(item.completeness);
+
+    $('itemCard').innerHTML = `
+      <div class="ps-item-head">
+        <div>
+          <div class="name">${esc(item.name)}</div>
+          <div class="cat">${esc(item.cat_label)}</div>
+          <div class="file">${esc(item.file)}</div>
+        </div>
+        <div class="ps-score-badge" style="background:conic-gradient(${color} ${item.completeness * 3.6}deg, #eef1f6 0deg)">
+          <div style="width:58px;height:58px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <span class="pct" style="color:${color}">${item.completeness}%</span>
+            <span class="lbl">완성도</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ps-meta-row">
+        <div><span class="m-label">버전</span>${esc(item.version)}</div>
+        <div><span class="m-label">최근 개정</span>${esc(item.version_date)}</div>
+      </div>
+
+      <div class="ps-body-block">
+        <h3>용도</h3>
+        <p>${esc(item.purpose)}</p>
+      </div>
+      <div class="ps-body-block">
+        <h3>목적</h3>
+        <p>${esc(item.goal)}</p>
+      </div>
+      <div class="ps-body-block">
+        <h3>세부 평가 (K-Law v15.1 = 100 기준)</h3>
+        <div class="ps-breakdown">${bdRows}</div>
+      </div>
+    `;
+  }
+
+  async function init(){
+    try {
+      const [statusRes, catalogRes] = await Promise.all([fetch(STATUS_URL), fetch(CATALOG_URL)]);
+      const status = await statusRes.json();
+      const catalog = await catalogRes.json();
+
+      renderCriteria(status.criteria);
+      renderCategoryGroups(catalog, status.items);
+      if (status.items && status.items.length) {
+        renderItem(status.items[0], status.criteria);
+      }
+    } catch (e) {
+      $('itemCard').innerHTML = `<div class="ps-empty">데이터를 불러오지 못했습니다: ${esc(e.message)}</div>`;
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>
