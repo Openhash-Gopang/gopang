@@ -40,6 +40,17 @@
     display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;
     font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:12px;
   }
+  .ps-method-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .ps-method-links a{
+    display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:10px 14px;
+    text-decoration:none;transition:background .15s;max-width:340px;
+  }
+  .ps-method-links a:hover{background:rgba(255,255,255,.16)}
+  .ps-method-links .ico{font-size:18px;flex-shrink:0}
+  .ps-method-links .t{display:flex;flex-direction:column;gap:2px}
+  .ps-method-links .main{font-size:13px;font-weight:700;color:#fff}
+  .ps-method-links .sub{font-size:11px;color:#c9d6ee;line-height:1.5}
 
   .ps-wrap{max-width:980px;margin:0 auto;padding:22px 24px 80px}
 
@@ -156,6 +167,16 @@
     <div class="pilot-badge">🧪 시범 단계 — 예시 1건</div>
     <h1>프롬프트(SP) 작성 상황</h1>
     <p>전체 System Prompt를 카테고리별로 나열하고, 각 SP가 자신의 목적을 얼마나 완전하고 견고하게 수행하는지를 정량적으로 평가합니다. K-Law · SP-01 · v15.1을 완성도 100%의 기준점으로 두고, 다른 SP를 K-Law와 같은 복잡도로 요구하는 것이 아니라 <b>"자신의 목적을 K-Law가 자신의 목적을 수행하는 것과 같은 수준의 엄밀함·근거·자기검증으로 수행하는가"</b>를 기준으로 채점합니다. 아직 전체 2,011개 중 1건만 시범 평가되었으며, 아래는 그 표시 방식의 예시입니다.</p>
+    <div class="ps-method-links">
+      <a href="sp-evaluation-methodology.html">
+        <span class="ico">📐</span>
+        <span class="t"><span class="main">SP 평가 방법론</span><span class="sub">각 SP가 자신의 목적을 얼마나 잘 수행하는지 채점하는 기준</span></span>
+      </a>
+      <a href="sp-writing-methodology.html">
+        <span class="ico">✍️</span>
+        <span class="t"><span class="main">SP 작성 방법론</span><span class="sub">계층 구조·SP 간 소통을 반영해 SP를 쓸 때 따라야 할 규칙</span></span>
+      </a>
+    </div>
   </div>
 </div>
 

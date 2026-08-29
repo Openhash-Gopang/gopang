@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SP 작성 방법론 — 혼디</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/assets/site-header.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f5f7fb;color:#0f172a;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.7}
+  :root{
+    --navy:#0e1c3f; --blue:#3b82f6; --blue-dk:#1d4ed8; --blue-bg:#eff6ff;
+    --border:#e2e8f0; --text:#0f172a; --text2:#475569; --text3:#64748b; --text4:#94a3b8;
+    --surface:#ffffff;
+  }
+  a{color:var(--blue-dk)}
+
+  .doc-hero{background:var(--navy);color:#fff;padding:32px 24px 26px}
+  .doc-hero-inner{max-width:860px;margin:0 auto}
+  .doc-hero .kicker{font-size:11.5px;font-weight:700;color:#90c4ff;letter-spacing:.4px;
+    text-transform:uppercase;margin-bottom:8px}
+  .doc-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .doc-hero .meta{font-size:12px;color:#c9d6ee}
+  .doc-hero .back{display:inline-block;margin-bottom:14px;font-size:12.5px;color:#c9d6ee;text-decoration:none}
+  .doc-hero .back:hover{color:#fff}
+
+  .doc-wrap{max-width:860px;margin:0 auto;padding:28px 24px 90px}
+  .doc-wrap h2{font-size:17px;font-weight:700;color:var(--text);margin:34px 0 12px;
+    padding-top:6px;border-top:1px solid var(--border)}
+  .doc-wrap h2:first-child{border-top:none;margin-top:0;padding-top:0}
+  .doc-wrap h3{font-size:14.5px;font-weight:700;color:var(--text);margin:20px 0 8px}
+  .doc-wrap p{font-size:14px;color:var(--text2);margin-bottom:12px}
+  .doc-wrap ul, .doc-wrap ol{margin:0 0 14px 20px;color:var(--text2);font-size:14px}
+  .doc-wrap li{margin-bottom:6px}
+  .doc-wrap b{color:var(--text)}
+  .doc-wrap code{background:#eef1f6;border-radius:4px;padding:1px 6px;font-size:12.5px;font-family:monospace}
+  .doc-wrap pre{background:#0e1c3f;color:#dbe4f5;border-radius:10px;padding:14px 16px;
+    font-size:12.5px;font-family:monospace;overflow-x:auto;margin:10px 0 16px;line-height:1.6}
+
+  .doc-callout{
+    background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+    padding:14px 16px;font-size:13px;color:var(--text3);line-height:1.75;margin:14px 0;
+  }
+  .doc-callout b{color:#92400e}
+  .doc-callout.ok{background:#f0fdf4;border-color:#bbf7d0}
+  .doc-callout.ok b{color:#166534}
+
+  table.doc-table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:13px}
+  table.doc-table th, table.doc-table td{
+    border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;
+  }
+  table.doc-table th{background:#f8fafc;color:var(--text3);font-weight:700;font-size:12px}
+  table.doc-table td{color:var(--text2)}
+
+  .rule-num{
+    display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+    border-radius:50%;background:var(--blue-bg);color:var(--blue-dk);font-size:11px;font-weight:700;
+    margin-right:6px;flex-shrink:0;
+  }
+
+  .doc-toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 18px;margin-bottom:22px}
+  .doc-toc .t{font-size:11.5px;font-weight:700;color:var(--text4);text-transform:uppercase;
+    letter-spacing:.3px;margin-bottom:8px}
+  .doc-toc ol{margin:0 0 0 18px;font-size:13px}
+  .doc-toc a{text-decoration:none}
+  .doc-toc a:hover{text-decoration:underline}
+
+  .checklist{list-style:none;margin:10px 0 16px 0}
+  .checklist li{position:relative;padding-left:26px;margin-bottom:8px;font-size:13.5px;color:var(--text2)}
+  .checklist li::before{content:'☐';position:absolute;left:0;top:0;color:var(--text4);font-size:15px}
+
+  .changelog-item{font-size:12.5px;color:var(--text3);margin-bottom:6px}
+  .changelog-item b{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="doc-hero">
+  <div class="doc-hero-inner">
+    <a class="back" href="prompt-status.html">← 프롬프트 작성 상황으로 돌아가기</a>
+    <div class="kicker">방법론 문서 · v1.0</div>
+    <h1>SP 작성 방법론</h1>
+    <div class="meta">SP의 계층 구조(상위-하위 상속)와 SP 간 소통 메커니즘을 반영해, 새 SP를 쓰거나 기존 SP를 고칠 때 지켜야 할 규칙. 작성일 2026-08-30.</div>
+  </div>
+</div>
+
+<div class="doc-wrap">
+
+  <div class="doc-toc">
+    <div class="t">목차</div>
+    <ol>
+      <li><a href="#purpose">이 문서의 목적</a></li>
+      <li><a href="#hierarchy">계층 원칙 — 상위 SP를 상속하는 법</a></li>
+      <li><a href="#comm">SP 간 소통 메커니즘을 반영하는 법</a></li>
+      <li><a href="#discipline">실행 규율 — 위험도에 맞춘 강제절차</a></li>
+      <li><a href="#versioning">버전 관리·정직성 규율</a></li>
+      <li><a href="#ci">CI가 기계적으로 강제하는 것들</a></li>
+      <li><a href="#checklist">작성 전 체크리스트</a></li>
+      <li><a href="#changelog">변경 이력</a></li>
+    </ol>
+  </div>
+
+  <h2 id="purpose">1. 이 문서의 목적</h2>
+  <p>
+    <a href="sp-evaluation-methodology.html">SP 평가 방법론</a>이 "이미 쓰인 SP가 얼마나 잘
+    되어 있는가"를 재는 잣대라면, 이 문서는 <b>"새 SP를 쓸 때 무엇을 지켜야 그 잣대에서 높은
+    점수를 받을 수 있는가"</b>를 규정한다. 혼디의 SP는 한 장짜리 독립 문서가 아니라, 2,011개가
+    상속·참조·데이터 공백 로그로 서로 얽혀 있는 하나의 트리다. 이 문서는 그 트리 구조와 SP끼리
+    주고받는 실제 메커니즘(<code>SP-TREE-REGISTRY</code>, <code>GOV-TREE-PROTOCOL</code>,
+    GWP 레지스트리 등)을 근거로, SP 작성자가 지켜야 할 규칙을 정리한 것이지 새로운 원칙을
+    발명한 것이 아니다.
+  </p>
+
+  <h2 id="hierarchy">2. 계층 원칙 — 상위 SP를 상속하는 법</h2>
+
+  <h3>2-1. 단일출처원칙 — 같은 규정을 두 곳에 쓰지 않는다</h3>
+  <p>
+    상위 SP가 이미 정의한 원칙·기준·절차를 하위 SP가 다시 풀어쓰지 않는다. 동일 내용이 두 곳에
+    있으면 더 상위·일반적인 위치가 단일 출처가 되고, 나머지는 참조로 대체한다. 실제로 도(道) 트리는
+    "정직성·능동적 역량·요청처리 파이프라인" 같은 원칙을 독자 정의했다가, kgov(K-Public)가 이미
+    같은 개념을 공리 체계로 더 정교하게 정의해두었다는 것이 드러나 폐기되고 다시 쓰인 전례가 있다.
+    <b>새 SP를 쓰기 전에 상위 SP(들)를 먼저 읽고, 이미 정의된 개념을 다시 정의하고 있지 않은지
+    확인한다.</b>
+  </p>
+
+  <h3>2-2. 상위 원칙을 재정의·완화하지 않는다</h3>
+  <p>
+    하위 SP는 상위 SP의 원칙에 <b>추가</b>할 수는 있어도, 그것을 약화시키거나 다시 정의할 수 없다.
+    도 트리 계열 문서들은 "정체성·활성화조건·법적지위고지·정직성·요청처리절차·PDV동의·위험등급
+    에스컬레이션의 원칙 그 자체는 kgov의 서문·공리·STEP을 그대로 따른다. 이 문서와 하위 트리
+    전체는 이를 재정의하거나 완화하지 않는다"라고 스스로 명시한다. 새 SP도 이 원칙을 따른다 —
+    상위가 이미 강하게 규정한 것을 하위에서 느슨하게 다시 쓰면 안 된다.
+  </p>
+
+  <h3>2-3. 상속 선언 헤더를 명시하고, 이름만 쓰고 버전은 쓰지 않는다</h3>
+  <p>
+    모든 SP는 헤더에 <code># 상위 상속</code> 항목으로 자신이 무엇을 상속하는지 선언한다. 다른
+    SP를 본문에서 언급할 때는 <b>이름만 쓰고 버전 번호는 절대 적지 않는다</b>(예:
+    <code>K-Public_common(SP-TREE-REGISTRY 참조)</code>). 버전이 바뀔 때마다 참조하는 쪽 전부를
+    손으로 찾아 고쳐야 하는 문제가 2026-07-29 감사에서 16개 파일·33건 발견된 바 있다. 최신 버전이
+    필요하면 사람은 <code>SP-TREE-REGISTRY_v1_0.md</code>(관계 정보)를, 코드/런타임은
+    <code>prompts/sp-catalog.json</code>(이름→최신 파일명 매핑)을 본다.
+  </p>
+  <pre>kgov(SP-10_kpublic, 전국 공통) → &lt;PROVINCE&gt;-GOV-COMMON-OVERLAY(도별 사실)
+  → GOV-TREE-PROTOCOL(다단 체인 기술 프로토콜) → DO-SP → { L2 | L3 | L4 }</pre>
+  <p>
+    새로운 상속 관계가 생기면 <code>SP-TREE-REGISTRY_v1_0.md</code>의 F 섹션(<code>CHILD_PATTERN
+    -&gt; PARENT_NAME</code> 형식의 edges 블록)에 반드시 줄을 추가한다 — 이 파일을 갱신하지
+    않으면 CI(<code>check_no_undeclared_inheritance.py</code>)가 관계를 인식하지 못한다.
+  </p>
+
+  <h3>2-4. 형제 관계와 부모-자식 관계를 구분해서 선언한다</h3>
+  <p>
+    같은 부모를 상속한다고 해서 자동으로 서로 부모-자식은 아니다. 예를 들어 국세청·관세청 등
+    7개 기관은 <code>SP-NAT-POLICY-{CODE}</code>(전국 단일 본청)와
+    <code>SP-NAT-{NAME}-TEMPLATE</code>(도별 지사)가 둘 다 kgov를 직접 상속하는
+    <b>형제 관계</b>이며, 어느 쪽이 응답할지는 발화 성격(정책 문의 vs 접수·처리)으로 갈린다.
+    이런 관계를 만들 때는 "A가 B를 상속한다"인지 "A와 B가 같은 부모의 형제다"인지를
+    SP 헤더와 SP-TREE-REGISTRY 양쪽에 명확히 구분해서 적는다.
+  </p>
+
+  <h3>2-5. 자동검증이 가능하도록 필수 공통 섹션을 유지한다</h3>
+  <p>
+    kgov를 상속하는 기관 SP는 최소한 다음 섹션을 갖춰야 CI(<code>check_sp_inheritance.py</code>)의
+    자동 검증을 통과한다. 이 섹션 이름과 순서를 임의로 바꾸지 않는다.
+  </p>
+  <table class="doc-table">
+    <tr><th>섹션</th><th>내용</th></tr>
+    <tr><td><code>§LEGAL-BASIS</code></td><td>페르소나 유형, 설립·운영 근거 법령, 출처와 검증일</td></tr>
+    <tr><td><code>§1</code></td><td>기관 정체성 및 조직 개요, disclaimer</td></tr>
+    <tr><td><code>§CAPABILITIES</code></td><td>할 수 있는 일과 수행 방식(직접 수행 / 안내만 수행)</td></tr>
+    <tr><td><code>§5</code></td><td>유의사항 — 미검증 항목·초안 여부 등 한계 고지</td></tr>
+  </table>
+
+  <h2 id="comm">3. SP 간 소통 메커니즘을 반영하는 법</h2>
+
+  <h3>3-1. 데이터 공백은 구조화된 로그로 남긴다 (DATA_REQUIREMENT / GAP_LOG)</h3>
+  <p>
+    SP가 다수로 쪼개져 서로 데이터를 주고받는 구조(도 트리 등)에서는, "이 정보가 왜 없는지"를
+    사람이 읽는 산문이 아니라 다른 SP·라우터가 기계적으로 읽을 수 있는 표로 선언한다. 원인은
+    두 가지로 나뉜다.
+  </p>
+  <table class="doc-table">
+    <tr><th>Type</th><th>의미</th></tr>
+    <tr><td><code>no_internal_data</code></td><td>애초에 이 기관 소관이 아니어서 데이터가 없음</td></tr>
+    <tr><td><code>no_interagency_access</code></td><td>데이터는 있지만 기관 간 연동이 안 되어 있음</td></tr>
+  </table>
+  <p>
+    STEPI SP의 <code>§3. DATA_REQUIREMENT 선언</code>이 이 형식을 따른 실제 사례다 —
+    <code>field / owner_agency / connected / unavailable_reason / fallback</code> 열로
+    데이터 공백을 구조화했다. 새 SP도 "모른다"고 말할 때 이 표 형식을 따른다.
+  </p>
+
+  <h3>3-2. 다단 체인은 라우터가 읽을 수 있는 태그 문법으로 조립한다</h3>
+  <p>
+    SP가 여러 단계(도 → 부서 → 세부기관 등)로 이어질 때는 사람이 산문으로 설명하는 대신, 라우터가
+    파싱 가능한 태그로 체인 순서를 명시한다(예: <code>[JEJU_CHAIN: SP-DO-000 &gt; {L2코드} &gt;
+    {L3코드}? &gt; {L4코드}?]</code>). 이 태그는 어떤 단계가 고정이고 어떤 단계가 가변인지도
+    함께 규정해야, 라우터 코드와 SP 문서가 서로 다른 이해를 갖지 않는다.
+  </p>
+
+  <h3>3-3. 실행형 서비스는 GWP 레지스트리에 등록하고, URL을 하드코딩하지 않는다</h3>
+  <p>
+    사용자가 실제로 호출하는 SP(긴급신고, 전문가 상담 등)는 <code>gwp-registry.js</code>에
+    <code>type</code>(inline/tab/tool), <code>sp_key</code>, <code>threshold</code>(매칭 임계값)로
+    등록한다. SP 파일의 실제 경로(<code>sp_url</code>)는 직접 적지 않고, 빌드 시 자동 생성되는
+    <code>prompts/sp-catalog.json</code>을 런타임에 조회해 채운다(<code>resolveSpUrls()</code>) —
+    파일명이 바뀔 때마다 등록 코드를 손으로 고치다 깨지는 사고(SP-16_kinsurance 사례)를 막기
+    위해서다.
+  </p>
+
+  <h3>3-4. 개인정보가 SP 경계를 넘을 때는 PDV 프로토콜을 그대로 따른다</h3>
+  <p>
+    개인정보(PDV)가 한 SP에서 다른 SP·다른 origin(탭)으로 이동해야 하는 경우, 그 SP가 새로
+    동의 절차를 발명하지 않는다. 같은 origin 안이면 kgov의 <code>STEP 0-γ</code> PDV 동의로
+    충분하고, 별도 origin(예: jeju.hondi.net처럼 새 탭으로 뜨는 서비스)이면
+    <code>PDV-TRANSFER-PROTOCOL</code>이 정의하는 <code>window.opener</code> 기반 탭 간 중개를
+    그대로 참조한다.
+  </p>
+
+  <h3>3-5. 안전장치는 재발명하지 않고 공통 게이트를 상속한다</h3>
+  <p>
+    민감정보 감지, 사용자 등급 분기, 위험 신호 태깅 같은 안전 로직은 각 SP가 새로 설계하지 않는다.
+    <code>SP_common_guardrails</code>(사용자 등급 분기 C30~C34)와 <code>SP_red_flag_registry</code>
+    (민감정보 태깅 정책)를 참조하기만 한다. 전문가 페르소나 SP 60개 전원이 이 원칙을 따른다.
+  </p>
+
+  <h2 id="discipline">4. 실행 규율 — 위험도에 맞춘 강제절차</h2>
+  <p>
+    K-Law류의 강제규칙·게이트웨이·확신도 출력 의무는 사법·의료·세무처럼 판단 오류의 대가가 큰
+    고위험 SP에 요구되는 수준이다. STEPI 같은 단순 안내형 SP까지 25개 강제규칙을 전부 이식할
+    필요는 없다. 그러나 <b>SP의 위험도와 무관하게 다음 최소선은 모든 SP가 지킨다</b> — 이는
+    <a href="sp-evaluation-methodology.html">SP 평가 방법론</a>의 "예외·경계상황 처리"·
+    "자기검증 장치" 기준에서 낮은 SP일수록 확인해야 할 항목이다.
+  </p>
+  <ul>
+    <li>확신할 수 없는 사실은 확정적으로 말하지 않고 "미확인"으로 남긴다.</li>
+    <li>유사 기관·유사 SP와 혼동될 수 있는 지점을 최소 한 줄로 구분해 둔다.</li>
+    <li>범위 밖 요청이 들어왔을 때 침묵하거나 임의로 답하지 않고, 어디로 안내할지 명시한다.</li>
+  </ul>
+
+  <h2 id="versioning">5. 버전 관리·정직성 규율</h2>
+  <ul>
+    <li><b>버전 표기</b> — 파일명과 헤더에 <code>v메이저.마이너</code>를 일치시킨다.</li>
+    <li><b>개정이력</b> — 무엇이·왜 바뀌었는지 최소 한 줄을 남긴다. 폐기된 이전 버전은 사유를
+      명시하고 <code>prompts/archive/</code>로 옮긴다(K-Law v1.0의 처리 방식을 따른다).</li>
+    <li><b>정직성</b> — 초안이거나 미검증 항목이 있으면 숨기지 않고 §5(유의사항)에 명시한다.
+      "TBD"로 남기는 것이 틀린 정보를 확정적으로 적는 것보다 낫다.</li>
+  </ul>
+
+  <h2 id="ci">6. CI가 기계적으로 강제하는 것들</h2>
+  <p>아래 도구들은 사람이 매번 검사하지 않아도 위반을 잡아낸다. 새 SP를 작성했다면 이 검증을 통과하는지 미리 확인한다.</p>
+  <table class="doc-table">
+    <tr><th>도구</th><th>강제하는 것</th></tr>
+    <tr><td><code>check_no_hardcoded_sp_refs.py</code></td><td>다른 SP를 "이름_버전" 형태로 하드코딩하면 빌드 실패(변경이력 섹션 제외)</td></tr>
+    <tr><td><code>check_sp_inheritance.py</code></td><td>AGENT-SUPPLIER·SP-INDUSTRY-TRANSFORM·kgov 3개 공식 패밀리의 상속 선언·필수 섹션·복붙 여부 검증</td></tr>
+    <tr><td><code>check_no_undeclared_inheritance.py</code></td><td>SP-TREE-REGISTRY의 edges 블록에 없는 상속 관계를 "관습적으로" 만들지 못하게 차단</td></tr>
+    <tr><td><code>build_manifest.py</code></td><td>새 SP가 <code>sp-catalog.json</code>에서 누락되지 않도록 자기검증</td></tr>
+  </table>
+  <p>
+    <code>prompts/gov-tree/</code> 하위(도청·부서 등)는 아직 <code>informational</code> 등급으로만
+    검증된다 — 헤더 형식이 파일마다 제각각이라 strict 적용 시 오탐이 나기 때문이다. 이 구간에
+    새 SP를 쓸 때는 특히 헤더 형식(<code># 상위 상속</code> 문구)을 기존 파일과 통일해서 향후
+    strict 전환에 방해가 되지 않게 한다.
+  </p>
+
+  <h2 id="checklist">7. 작성 전 체크리스트</h2>
+  <ul class="checklist">
+    <li>상위 SP(들)를 읽고, 이미 정의된 원칙을 다시 쓰고 있지 않은가?</li>
+    <li>헤더에 <code># 상위 상속</code> 체인을 명시했는가?</li>
+    <li>다른 SP를 언급할 때 이름만 쓰고 버전 번호를 적지 않았는가?</li>
+    <li>새 상속/참조 관계를 <code>SP-TREE-REGISTRY_v1_0.md</code>의 edges 블록에 추가했는가?</li>
+    <li>형제 관계와 부모-자식 관계를 헷갈리지 않고 구분해 선언했는가?</li>
+    <li>§LEGAL-BASIS·§1·§CAPABILITIES·§5 필수 섹션을 갖췄는가(kgov 계열인 경우)?</li>
+    <li>데이터 공백이 있다면 <code>owner_agency / connected / unavailable_reason / fallback</code> 표로 선언했는가?</li>
+    <li>실행형 서비스라면 GWP 레지스트리에 <code>sp_key</code>로 등록하고 URL을 하드코딩하지 않았는가?</li>
+    <li>안전 로직을 새로 만들지 않고 <code>SP_common_guardrails</code>/<code>SP_red_flag_registry</code>를 참조했는가?</li>
+    <li>미확인 사실을 확정적으로 적지 않고 정직하게 표시했는가?</li>
+    <li>버전과 개정이력을 기록했는가?</li>
+  </ul>
+
+  <div class="doc-callout ok">
+    <b>체크리스트를 모두 통과한 SP</b>는 <a href="sp-evaluation-methodology.html">SP 평가 방법론</a>의
+    7개 기준에서 대부분 60점(양호) 이상을 받을 가능성이 높다 — 두 문서는 같은 구조를 앞(작성)과
+    뒤(평가)에서 바라본 것이다.
+  </div>
+
+  <h2 id="changelog">8. 변경 이력</h2>
+  <div class="changelog-item"><b>v1.0 (2026-08-30)</b> — 신설. SP-TREE-REGISTRY, GOV-TREE-PROTOCOL, gwp-registry, SP_hierarchy_inheritance 등 기존 저장소 문서에 실제로 구현되어 있는 계층·소통 규칙을 근거로 최초 작성.</div>
+
+</div>
+
+</body>
+</html>

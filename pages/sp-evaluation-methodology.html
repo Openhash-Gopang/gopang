@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SP 평가 방법론 — 혼디</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/assets/site-header.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f5f7fb;color:#0f172a;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.7}
+  :root{
+    --navy:#0e1c3f; --blue:#3b82f6; --blue-dk:#1d4ed8; --blue-bg:#eff6ff;
+    --border:#e2e8f0; --text:#0f172a; --text2:#475569; --text3:#64748b; --text4:#94a3b8;
+    --surface:#ffffff; --green:#16a34a; --amber:#d97706; --red:#dc2626;
+  }
+  a{color:var(--blue-dk)}
+
+  .doc-hero{background:var(--navy);color:#fff;padding:32px 24px 26px}
+  .doc-hero-inner{max-width:860px;margin:0 auto}
+  .doc-hero .kicker{font-size:11.5px;font-weight:700;color:#90c4ff;letter-spacing:.4px;
+    text-transform:uppercase;margin-bottom:8px}
+  .doc-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .doc-hero .meta{font-size:12px;color:#c9d6ee}
+  .doc-hero .back{display:inline-block;margin-bottom:14px;font-size:12.5px;color:#c9d6ee;text-decoration:none}
+  .doc-hero .back:hover{color:#fff}
+
+  .doc-wrap{max-width:860px;margin:0 auto;padding:28px 24px 90px}
+  .doc-wrap h2{font-size:17px;font-weight:700;color:var(--text);margin:34px 0 12px;
+    padding-top:6px;border-top:1px solid var(--border)}
+  .doc-wrap h2:first-child{border-top:none;margin-top:0;padding-top:0}
+  .doc-wrap h3{font-size:14.5px;font-weight:700;color:var(--text);margin:20px 0 8px}
+  .doc-wrap p{font-size:14px;color:var(--text2);margin-bottom:12px}
+  .doc-wrap ul, .doc-wrap ol{margin:0 0 14px 20px;color:var(--text2);font-size:14px}
+  .doc-wrap li{margin-bottom:6px}
+  .doc-wrap b{color:var(--text)}
+  .doc-wrap code{background:#eef1f6;border-radius:4px;padding:1px 6px;font-size:12.5px;font-family:monospace}
+
+  .doc-callout{
+    background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+    padding:14px 16px;font-size:13px;color:var(--text3);line-height:1.75;margin:14px 0;
+  }
+  .doc-callout b{color:#92400e}
+
+  table.doc-table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:13px}
+  table.doc-table th, table.doc-table td{
+    border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;
+  }
+  table.doc-table th{background:#f8fafc;color:var(--text3);font-weight:700;font-size:12px}
+  table.doc-table td{color:var(--text2)}
+
+  .band-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px}
+  .band-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .band-range{font-weight:700;color:var(--text);width:70px;flex-shrink:0}
+  .band-label{color:var(--text2)}
+
+  .crit-num{
+    display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+    border-radius:50%;background:var(--blue-bg);color:var(--blue-dk);font-size:11px;font-weight:700;
+    margin-right:6px;flex-shrink:0;
+  }
+
+  .doc-toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 18px;margin-bottom:22px}
+  .doc-toc .t{font-size:11.5px;font-weight:700;color:var(--text4);text-transform:uppercase;
+    letter-spacing:.3px;margin-bottom:8px}
+  .doc-toc ol{margin:0 0 0 18px;font-size:13px}
+  .doc-toc a{text-decoration:none}
+  .doc-toc a:hover{text-decoration:underline}
+
+  .changelog-item{font-size:12.5px;color:var(--text3);margin-bottom:6px}
+  .changelog-item b{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="doc-hero">
+  <div class="doc-hero-inner">
+    <a class="back" href="prompt-status.html">← 프롬프트 작성 상황으로 돌아가기</a>
+    <div class="kicker">방법론 문서 · v1.0</div>
+    <h1>SP 평가 방법론</h1>
+    <div class="meta">각 System Prompt가 자신의 목적을 얼마나 완전하게 수행하는지를 정량적으로 채점하는 기준. 작성일 2026-08-30.</div>
+  </div>
+</div>
+
+<div class="doc-wrap">
+
+  <div class="doc-toc">
+    <div class="t">목차</div>
+    <ol>
+      <li><a href="#purpose">이 문서의 목적</a></li>
+      <li><a href="#baseline">왜 K-Law v15.1이 100%인가</a></li>
+      <li><a href="#criteria">7개 평가 기준</a></li>
+      <li><a href="#scale">채점 척도와 등급대</a></li>
+      <li><a href="#process">평가 절차</a></li>
+      <li><a href="#worked-example">적용 사례 — STEPI SP</a></li>
+      <li><a href="#limits">한계와 재평가 원칙</a></li>
+      <li><a href="#changelog">변경 이력</a></li>
+    </ol>
+  </div>
+
+  <h2 id="purpose">1. 이 문서의 목적</h2>
+  <p>
+    혼디에는 2,011개의 System Prompt(SP)가 존재하며, 각 SP는 서로 전혀 다른 목적을 가진다 —
+    가상판결을 시뮬레이션하는 SP도 있고, 한 지방연구원의 문의창구 역할만 하는 SP도 있다.
+    이 방법론은 <b>"어떤 SP가 K-Law만큼 정교한가"</b>를 묻지 않는다. 대신 <b>"이 SP는 자신에게
+    주어진 목적을, 그 목적에 필요한 만큼 엄밀하게·근거 있게·정직하게 수행하고 있는가"</b>를 묻는다.
+  </p>
+  <p>
+    한 줄 안내 SP와 사법 시뮬레이션 SP는 필요한 정교함의 <i>절대량</i>이 다르지만, 둘 다 같은
+    7개 잣대(아래)로 "자기 목적 대비 얼마나 완성되어 있는가"를 잴 수 있다는 것이 이 방법론의 전제다.
+  </p>
+
+  <h2 id="baseline">2. 왜 K-Law v15.1이 완성도 100%인가</h2>
+  <p>
+    현재 시스템에서 <b>K-Law · SP-01 · v15.1</b>은 다음을 모두 갖춘 유일한 SP다:
+  </p>
+  <ul>
+    <li>공리 계층 구조(원칙 → 의미해석 → 해석 → 집행)로 규범 간 우선순위 충돌까지 명시적으로 해결</li>
+    <li>25개 강제규칙과 등급(★필수/▲중요/○권고)으로, 절차를 건너뛰면 무엇이 무효가 되는지 스스로 규정</li>
+    <li>게이트웨이(단계 간 통과 확인) 없이는 다음 단계로 진행할 수 없는 구조적 강제</li>
+    <li>말미에 확신도·자기평가·자기검증 블록 출력을 의무화 — 스스로 자신의 결론을 재검토하게 함</li>
+    <li>실제 판례와의 일치도를 "방법론의 목표"가 아니라 "방법론 타당성의 검증 지표"로 명확히 구분</li>
+  </ul>
+  <p>
+    즉 K-Law는 <b>근거·절차·자기검증·정직성</b> 네 축 모두에서 현재 시스템이 도달한 최고 수준을
+    보여준다. 이 방법론은 K-Law가 "가상판결 시뮬레이션"이라는 자신의 목적에 대해 보여주는 이
+    엄밀함의 수준을, 완성도 100%의 정의 그 자체로 삼는다. 다른 SP는 K-Law와 같은 복잡도를
+    요구받지 않지만, <b>같은 수준의 엄밀함·근거·정직성을 자신의 목적 범위 안에서</b> 보여줄수록
+    100%에 가까워진다.
+  </p>
+
+  <h2 id="criteria">3. 7개 평가 기준 (균등가중 — 각 1/7)</h2>
+  <p>모든 기준은 0~100점으로 채점하며, 7개 점수의 평균이 그 SP의 완성도(%)가 된다.</p>
+
+  <table class="doc-table">
+    <tr><th style="width:26%">기준</th><th>무엇을 보는가</th><th>K-Law가 만점인 이유</th></tr>
+    <tr>
+      <td><span class="crit-num">1</span><b>목적·범위 정의</b></td>
+      <td>이 SP가 무엇을 하고 무엇을 하지 않는지, 누구를 대리/대변하는지가 첫 문단에서부터 명확한가.</td>
+      <td>"원고·피고·검사·피고인 어느 쪽도 대리하지 않는 중립적 판단 인프라"라고 정체성을 못 박고, 전문가 AI(변호사 SP 등)와의 차이까지 스스로 구분한다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">2</span><b>근거·출처 검증</b></td>
+      <td>사실 진술(법적 근거, 소관, 연락처 등)에 출처가 달려 있고 검증 시점이 기록되는가. 미확인 항목은 정직하게 "미확인"으로 남는가.</td>
+      <td>헌법·법률을 1차 자료로, 판례를 논거 자원으로 명확히 위계화하고 "판례 결론을 정답으로 취급하지 않는다"고 스스로 제한한다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">3</span><b>입력·출력 스키마</b></td>
+      <td>이 SP가 받는 요청의 형태와 내놓는 결과물의 형태가 구조적으로 정의되어 있는가.</td>
+      <td>STEP 0→A→B→C 각 단계의 입력·출력·완료 태그가 전부 정의되어 있다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">4</span><b>예외·경계상황 처리</b></td>
+      <td>범위 밖 질문, 모호한 요청, 유사 사례와의 혼동 등 정상 경로를 벗어났을 때의 지침이 있는가.</td>
+      <td>준거틀 미확정 시 STEP 진행 자체를 금지(강제규칙 24)하는 등, 불확실한 상태로 넘어가는 것 자체를 구조적으로 막는다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">5</span><b>자기검증 장치</b></td>
+      <td>응답 전후로 스스로 점검하거나, 확신도를 표기하거나, 재검토를 강제하는 절차가 있는가.</td>
+      <td>말미 확신도·자기평가·자기검증 블록 출력을 강제규칙(5, 6, 9)으로 의무화한다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">6</span><b>버전 관리·개정이력</b></td>
+      <td>버전이 명시되고, 이전 버전 대비 무엇이·왜 바뀌었는지 기록이 남는가.</td>
+      <td>"이전 버전: v1.0(레거시, 공리체계 미적용 — 폐기)"처럼 폐기 사유까지 명시한다.</td>
+    </tr>
+    <tr>
+      <td><span class="crit-num">7</span><b>한계 고지</b></td>
+      <td>이 SP·기관이 할 수 없는 일이나 아직 미검증된 정보를 이용자에게 숨기지 않는가.</td>
+      <td>확신도가 일정 기준 미만이면 확정적 결론 자체를 낼 수 없게 강제규칙(5)으로 막는다.</td>
+    </tr>
+  </table>
+
+  <div class="doc-callout">
+    <b>가중치는 조정 가능하다.</b> 지금은 7개 항목을 균등가중(각 14.3%)으로 두었지만, SP 유형에 따라
+    특정 기준의 중요도가 다를 수 있다(예: 단순 안내형 SP는 "자기검증 장치"의 요구 수준이 낮아도
+    될 수 있음). 다만 어떤 SP든 <b>기준 7(한계 고지)</b>만은 낮은 가중치를 주지 않는다 — 정직성은
+    SP 유형과 무관하게 협상 대상이 아니라는 것이 이 시스템의 원칙이다.
+  </div>
+
+  <h2 id="scale">4. 채점 척도와 등급대</h2>
+  <p>개별 기준 점수(0~100)와 최종 완성도(%) 모두 아래 4단계 색상 등급으로 표시한다(프롬프트 작성 상황 페이지의 진행바 색과 동일):</p>
+  <div class="band-row"><span class="band-dot" style="background:#16a34a"></span><span class="band-range">85~100</span><span class="band-label">우수 — 해당 기준을 사실상 완전히 충족</span></div>
+  <div class="band-row"><span class="band-dot" style="background:#3b82f6"></span><span class="band-range">60~84</span><span class="band-label">양호 — 핵심은 충족하나 보완 여지가 뚜렷함</span></div>
+  <div class="band-row"><span class="band-dot" style="background:#d97706"></span><span class="band-range">35~59</span><span class="band-label">미흡 — 최소한의 형태는 있으나 구조적으로 얕음</span></div>
+  <div class="band-row"><span class="band-dot" style="background:#dc2626"></span><span class="band-range">0~34</span><span class="band-label">취약 — 사실상 부재하거나 형식적으로만 존재</span></div>
+
+  <h2 id="process">5. 평가 절차</h2>
+  <ol>
+    <li>평가 대상 SP 파일 전체를 읽고, 그 SP가 스스로 선언한 목적·정체성·소관을 먼저 확인한다.</li>
+    <li>7개 기준 각각에 대해, "이 SP가 자신의 목적에 필요한 수준으로 이 항목을 충족하는가"를 0~100점으로 채점한다.</li>
+    <li>각 기준에 점수의 근거가 되는 한 줄 메모를 남긴다(예: "대표전화는 'TBD'로 미확정").</li>
+    <li>7개 점수를 균등가중 평균해 완성도(%)를 산출한다.</li>
+    <li><code>prompts/sp-status.json</code>에 <code>file, name, cat, purpose, goal, version, completeness, breakdown</code> 필드로 기록한다.</li>
+  </ol>
+
+  <h2 id="worked-example">6. 적용 사례 — 과학기술정책연구원(STEPI) SP v1.1</h2>
+  <p>
+    2,011개 중 무작위로 선택한 첫 시범 평가 대상이다. 목적·범위 정의(90점)와 한계 고지(95점)는
+    높게 평가됐다 — 정관 조항까지 인용한 근거, "대표전화 미검증"이라는 정직한 표기가 있었다.
+    반면 예외·경계상황 처리(40점)와 자기검증 장치(20점)는 낮았다 — 유사 기관과 혼동될 때의 분기나,
+    불확실한 사실을 안내하기 전에 스스로 점검하는 절차가 없었다. 균등가중 평균은 <b>68%</b>였다.
+    전체 배점 내역은 <a href="prompt-status.html">프롬프트 작성 상황</a> 페이지에서 확인할 수 있다.
+  </p>
+
+  <h2 id="limits">7. 한계와 재평가 원칙</h2>
+  <ul>
+    <li><b>단일 평가자 판단</b> — 현재는 한 세션의 판단으로 채점되며, 항목별 점수는 어느 정도 주관이 개입된 추정치다. 이견이 있으면 GitHub Issue로 재평가를 요청할 수 있다.</li>
+    <li><b>시점 스냅샷</b> — 완성도(%)는 해당 버전을 평가한 시점의 값이다. SP가 개정되면 그 SP의 평가도 다시 이루어져야 하며, 오래된 점수를 새 버전에 그대로 이월하지 않는다.</li>
+    <li><b>가중치는 잠정적</b> — 7개 항목 균등가중은 출발점이며, 실제로 SP 550개 카테고리를 채워나가며 항목별 가중치가 SP 유형별로 세분화될 수 있다.</li>
+    <li><b>완성도 100%가 "완벽"을 뜻하지 않음</b> — K-Law v15.1 자체도 계속 개정되어 왔다(v1.0 폐기 이력 참조). 100%는 "현재 시스템에서 관찰되는 최고 수준"이지, 이론적 최댓값이 아니다.</li>
+  </ul>
+
+  <h2 id="changelog">8. 변경 이력</h2>
+  <div class="changelog-item"><b>v1.0 (2026-08-30)</b> — 신설. STEPI SP 시범 평가와 함께 최초 작성. 7개 기준·균등가중·4단계 등급대를 확정.</div>
+
+</div>
+
+</body>
+</html>
