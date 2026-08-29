@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>핵심 프롬프트 — 혼디</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/assets/site-header.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f5f7fb;color:#0f172a;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.6}
+  :root{
+    --navy:#0e1c3f;--blue:#3b82f6;--blue-dk:#1d4ed8;--blue-bg:#eff6ff;
+    --border:#e2e8f0;--text:#0f172a;--text2:#475569;--text3:#64748b;--text4:#94a3b8;--surface:#fff;
+    --amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;
+  }
+  a{color:inherit}
+
+  .cp-hero{background:var(--navy);color:#fff;padding:32px 24px 26px}
+  .cp-hero-inner{max-width:1040px;margin:0 auto}
+  .cp-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .cp-hero p{font-size:13.5px;color:#c9d6ee;line-height:1.7;max-width:760px}
+
+  .cp-wrap{max-width:1040px;margin:0 auto;padding:22px 24px 80px}
+
+  .cp-tier{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px 22px;margin-bottom:18px;
+  }
+  .cp-tier-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .cp-tier-num{
+    font-size:11px;font-weight:800;color:#fff;background:var(--blue);border-radius:6px;
+    padding:3px 8px;flex-shrink:0;
+  }
+  .cp-tier-title{font-size:15.5px;font-weight:700;color:var(--text)}
+  .cp-tier-desc{font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:14px}
+
+  .cp-card{
+    border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:10px;
+  }
+  .cp-card:last-child{margin-bottom:0}
+  .cp-card-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap}
+  .cp-card-name{font-size:13.5px;font-weight:700;color:var(--text)}
+  .cp-card-name a{color:var(--blue-dk);text-decoration:none}
+  .cp-card-name a:hover{text-decoration:underline}
+  .cp-card-badge{
+    font-size:10px;font-weight:700;color:var(--text3);background:#f1f5f9;border-radius:5px;
+    padding:2px 7px;white-space:nowrap;
+  }
+  .cp-card-badge.always{color:#fff;background:var(--blue-dk)}
+  .cp-card-badge.conditional{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-border)}
+  .cp-card-desc{font-size:12.5px;color:var(--text2);line-height:1.7}
+  .cp-card-evidence{
+    margin-top:8px;font-size:11.5px;color:var(--text4);background:#f8fafc;
+    border-left:3px solid var(--border);padding:7px 10px;line-height:1.6;font-family:'SF Mono',Consolas,monospace;
+  }
+
+  .cp-note{
+    margin-top:6px;font-size:12px;color:var(--text3);background:var(--amber-bg);
+    border:1px solid var(--amber-border);border-radius:10px;padding:12px 14px;line-height:1.7;
+  }
+  .cp-note b{color:#92400e}
+</style>
+</head>
+<body>
+
+<div class="site-nav">
+  <a class="site-nav-logo" href="../desktop.html">
+    <img src="../icons/icon-192.png" alt="혼디">
+    <span>혼디</span>
+  </a>
+  <nav class="site-nav-links">
+    <a href="prompts.html">프롬프트</a>
+    <a href="sp-hierarchy.html">SP의 계층 구조</a>
+    <a class="active" href="core-prompts.html">핵심 프롬프트</a>
+  </nav>
+</div>
+
+<div class="cp-hero">
+  <div class="cp-hero-inner">
+    <h1>핵심 프롬프트</h1>
+    <p>call-ai.js·manifest-loader.js·worker.js를 직접 훑어, 어떤 SP가 실제로 얼마나 자주·무조건적으로 로드되는지를 근거로 정리했습니다. "중요해 보이는 것"이 아니라 코드가 실제로 그렇게 짜여 있는 것들입니다.</p>
+  </div>
+</div>
+
+<div class="cp-wrap">
+
+  <div class="cp-tier">
+    <div class="cp-tier-head">
+      <span class="cp-tier-num">0단계</span>
+      <span class="cp-tier-title">서버가 예외 없이 강제 주입 (worker.js)</span>
+    </div>
+    <p class="cp-tier-desc">클라이언트가 무슨 system 프롬프트를 보내든, 서버 쪽 <code>_fetchUniversalLayers()</code>가 요청 앞에 강제로 덧붙입니다. <code>handleAIChat</code> 경로는 화이트리스트 없이 100% 적용되고, <code>handleLLMRelay</code>/<code>handleKlawRelay</code>는 <code>service_id</code>가 <code>UNIVERSAL_FORCED_K_SERVICES</code>(K-119·K-경찰·K-헬스·K-서치 등 20개 서비스) 목록에 있을 때 적용됩니다.</p>
+
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">UNIVERSAL-INTEGRITY (U0)</span>
+        <span class="cp-card-badge always">서버 강제 주입</span>
+      </div>
+      <div class="cp-card-desc">"안내로 끝내지 않는다"는 혼디의 제1공리. 세 강제 문서 중 하나.</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">TASK-DELEGATION-GUIDE</span>
+        <span class="cp-card-badge always">서버 강제 주입</span>
+      </div>
+      <div class="cp-card-desc">"혼디의 본래 용도는 업무 대행이지 문의 응답이 아니다"를 명시.</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">CONTROL-TOWER-PRINCIPLE</span>
+        <span class="cp-card-badge always">서버 강제 주입</span>
+      </div>
+      <div class="cp-card-desc">K-Intent→Compose→Execute→Deliver→Report 오케스트레이션 체인이 "정보 나열"로 새지 않게 잡는 관제탑 원칙. 2026-08-06 신설 당시엔 이 체인에 전혀 안 걸려 있던 게 실제 버그(응답이 문서형으로 새는 원인)로 확인돼 강제 상속 대상에 추가됨.</div>
+      <div class="cp-card-evidence">worker.js:18204 — "CONTROL-TOWER-PRINCIPLE — 모든 SP 제1원칙"</div>
+    </div>
+  </div>
+
+  <div class="cp-tier">
+    <div class="cp-tier-head">
+      <span class="cp-tier-num">1단계</span>
+      <span class="cp-tier-title">유일 정본 오케스트레이터 (대체물 없음)</span>
+    </div>
+    <p class="cp-tier-desc">코드 주석에 직접 "대체물은 존재하지 않는다"고 못박혀 있거나, 사실상 유일한 진입점 역할을 하는 SP입니다.</p>
+
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name"><a href="prompt-editor.html?file=prompts%2FAC-PRO-CORE_v1_7.txt">AC-PRO-CORE</a></span>
+        <span class="cp-card-badge always">유일 정본</span>
+      </div>
+      <div class="cp-card-desc">개인 AI 비서(AC) 본체. call-ai.js의 <code>_loadAgentCommonSP()</code>가 세션당 1회 로드해 캐시하고, 실패 시 폴백 없이 명확한 오류로 중단하도록 설계돼 있습니다(과거에 있던 742자짜리 축약 폴백은 안전장치가 없어 완전히 제거됨).</div>
+      <div class="cp-card-evidence">call-ai.js:98 — "AC-PRO-CORE는 유일한 정본이며, 그 대체물은 존재하지 않는다."</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name"><a href="prompt-editor.html?file=prompts%2Fhondi_visitor_sp_v1_2.txt">hondi_visitor_sp</a></span>
+        <span class="cp-card-badge always">기본 진입점</span>
+      </div>
+      <div class="cp-card-desc">아직 페르소나가 정해지기 전, desktop.html "물어보세요" 위젯이 로드하는 방문자 기본 인격. worker.js 조사에서 이 경로(<code>_loadVisitorSP</code>)가 한동안 관제탑 원칙을 한 번도 못 받고 있었다는 게 발견되어 2026-08-09에 강제 주입 대상으로 편입됨.</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">AC-FLASH-EXECUTOR</span>
+        <span class="cp-card-badge conditional">위임 시에만</span>
+      </div>
+      <div class="cp-card-desc">가벼운 실행을 hondi-flash 모델에 위임할 때만 로드되는 실행보조 SP. AC-PRO-CORE의 하위 실행기 역할.</div>
+    </div>
+  </div>
+
+  <div class="cp-tier">
+    <div class="cp-tier-head">
+      <span class="cp-tier-num">2단계</span>
+      <span class="cp-tier-title">업무 실행 파이프라인 (모델이 태그를 낼 때 조건부 호출)</span>
+    </div>
+    <p class="cp-tier-desc">AC-PRO-CORE가 실제 업무 처리가 필요하다고 판단하면 <code>[CALL_KINTENT]</code> 같은 태그를 출력하고, call-ai.js의 <code>_parseAgentTags()</code>가 이를 감지해 <code>_forwardSwitchSP()</code>로 아래 SP들에 순서대로 넘깁니다. 매 턴 무조건 도는 건 아니지만, "업무 대행"이라는 혼디의 핵심 가치가 실제로 구현되는 자리입니다.</p>
+
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">K-Intent (SP-19)</span>
+        <span class="cp-card-badge conditional">[CALL_KINTENT] 태그</span>
+      </div>
+      <div class="cp-card-desc">사용자 의도를 분석해 어떤 서비스로 라우팅할지 결정하는 파이프라인의 입구.</div>
+      <div class="cp-card-evidence">call-ai.js:1422 — _forwardSwitchSP(_loadKIntentSP, 'K-Intent')</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">K-Search (SP-18)</span>
+        <span class="cp-card-badge conditional">전담 검색 에이전트</span>
+      </div>
+      <div class="cp-card-desc">gwp-registry.js에 "혼디 생태계 전체의 유일한 검색 실행 에이전트"로 명시. 다른 SP가 위임하는 검색까지 전부 이곳으로 모입니다.</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">K-Compose (SP-20) → K-Execute (SP-22) → K-Deliver (SP-21) → K-Report (SP-23)</span>
+        <span class="cp-card-badge conditional">순차 오케스트레이션</span>
+      </div>
+      <div class="cp-card-desc">의도 파악 다음 단계로 응답을 조합·실행·전달·보고하는 4단계. 이 체인에 CONTROL-TOWER-PRINCIPLE이 안 걸렸을 때 "한 번에 하나씩 지시" 대신 정보 나열로 새는 버그가 실제로 있었습니다.</div>
+    </div>
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <span class="cp-card-name">K-Bank · K-Telecom · K-Estate (switch형)</span>
+        <span class="cp-card-badge conditional">GWP 전환 태그</span>
+      </div>
+      <div class="cp-card-desc">별도 저장소 없이, 현재 세션의 system을 그대로 바꿔치기(switch)하는 방식으로 전환되는 도메인 SP. SWITCH_SP_LOADERS 테이블에 등록돼 있습니다.</div>
+    </div>
+  </div>
+
+  <div class="cp-note">
+    <b>참고로 확인된 예외(죽은 경로)</b> — profile-assistant SP를 오케스트레이션 중 자동으로 불러오던 <code>_switchToProfileAssistantSP()</code>와 <code>[CALL_PROFILE_ASSISTANT]</code> 태그는 코드 주석상 "2026-07-27부터 현재 미사용"이며, 지금은 방어적으로 무력화만 하고 있습니다. profile-assistant는 이제 설정 패널이 직접 호출하는 경로로만 쓰입니다 — 한때 핵심 경로였다가 빠진 사례라 참고용으로 남겨둡니다.
+  </div>
+
+</div>
+
+</body>
+</html>
