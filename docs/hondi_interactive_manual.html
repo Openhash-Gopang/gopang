@@ -218,6 +218,12 @@ a { color: inherit; }
 }
 .kgov-file-link:hover { background: var(--primary-container); text-decoration: underline; }
 .kgov-loading { font-size: 13px; color: var(--outline); padding: 12px 4px; }
+.kgov-filter-input {
+  width: 100%; box-sizing: border-box; padding: 9px 12px; margin-bottom: 10px;
+  border: 1px solid var(--outline-variant); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; color: var(--on-surface);
+}
+.kgov-filter-input:focus { outline: none; border-color: var(--primary); }
 
 /* SP 열람 모달 */
 .kgov-modal {
@@ -239,6 +245,10 @@ a { color: inherit; }
   width: 28px; height: 28px; border-radius: 50%;
 }
 .kgov-modal-head button:hover { background: var(--surface-container); }
+.kgov-modal-note {
+  font-size: 12px; color: var(--on-surface-variant); background: var(--surface-container);
+  padding: 10px 18px; border-bottom: 1px solid var(--outline-variant); flex-shrink: 0;
+}
 .kgov-modal-inner pre {
   margin: 0; padding: 18px; overflow: auto; font-family: 'Pretendard', monospace; font-size: 12px;
   line-height: 1.7; color: var(--on-surface-variant); white-space: pre-wrap; word-break: break-word;
@@ -435,16 +445,17 @@ document.getElementById('nextFab').addEventListener('click', function () {
 });
 
 
-/* ── K-정부 챕터 전용 데이터/로직 (2026-08-29 신설) ──
-   저장소의 실제 gov-tree 데이터(입법·사법·행정부 실사 부서 목록,
-   지방자치단체 16개 시도, 공기업 30개·공공기관 254개)를 기반으로
-   기관→부서→SP 열람까지 이어지는 인터랙티브 트리를 구성한다.
-   - 입법/사법/행정부/지자체: 부서명은 실사 데이터, SP는 공용 템플릿에
-     그 부서의 데이터 행을 치환해 즉석에서 만든다(저장소의 지연
-     인스턴스화 원칙과 동일한 방식 — 클라이언트에서 fetch 후 문자열 치환).
-   - 공기업/공공기관: 기관마다 완성된 SP 파일이 이미 있으므로, 클릭하면
-     그 파일을 prompt-editor.html 열람 화면에서 바로 연다. */
-var KGOV_DATA = {"legislative": ["국회사무처", "국회의장비서실", "국회예산정책처", "국회입법조사처", "국회미래연구원", "국회도서관"], "judiciary": ["법원행정처", "헌법재판소사무처", "헌법재판연구원", "법원공무원교육원", "사법연수원", "사법정책연구원"], "presidential": ["감사원", "감사교육원", "감사연구원", "대통령비서실", "국가안보실"], "commission": ["방송미디어통신위원회", "고위공직자범죄수사처", "국가인권위원회", "중앙선거관리위원회", "국무조정실", "국민권익위원회", "금융위원회", "공정거래위원회", "원자력안전위원회", "개인정보보호위원회"], "bureau": ["인사혁신처", "법제처", "지식재산처", "국가데이터처", "기획예산처", "식품의약품안전처"], "ministry": ["행정안전부", "법무부", "국방부", "교육부", "농림축산식품부", "문화체육관광부", "기후에너지환경부", "고용노동부", "해양수산부", "외교부", "재정경제부", "성평등가족부", "보건복지부", "국토교통부", "산업통상부", "국가보훈부", "과학기술정보통신부", "중소벤처기업부", "통일부", "방위사업청", "우주항공청", "해양경찰청", "관세청", "질병관리청", "산림청", "국가유산청", "기상청", "병무청", "행정중심복합도시건설청", "소방청", "국세청", "재외동포청", "경찰청", "조달청", "농촌진흥청", "새만금개발청", "검찰청"], "provinces": [{"code": "jeju", "name": "제주특별자치도", "hasData": true}, {"code": "gyeonggi", "name": "경기도", "hasData": true}, {"code": "seoul", "name": "서울특별시", "hasData": true}, {"code": "jeonnam-gwangju", "name": "전남광주통합특별시", "hasData": true}, {"code": "daegu", "name": "대구광역시", "hasData": true}, {"code": "incheon", "name": "인천광역시", "hasData": true}, {"code": "daejeon", "name": "대전광역시", "hasData": true}, {"code": "ulsan", "name": "울산광역시", "hasData": true}, {"code": "sejong", "name": "세종특별자치시", "hasData": true}, {"code": "chungbuk", "name": "충청북도", "hasData": true}, {"code": "chungnam", "name": "충청남도", "hasData": true}, {"code": "jeonbuk", "name": "전북특별자치도", "hasData": true}, {"code": "gyeongbuk", "name": "경상북도", "hasData": true}, {"code": "gyeongnam", "name": "경상남도", "hasData": true}, {"code": "busan", "name": "부산광역시", "hasData": true}, {"code": "gangwon", "name": "강원특별자치도", "hasData": false}], "deptProvinces": ["busan", "chungbuk", "chungnam", "daejeon", "gyeongbuk", "gyeonggi", "gyeongnam", "incheon", "jeju", "jeonbuk", "sejong", "seoul", "ulsan"], "enterpriseGroups": [{"dept": "산업통상부", "items": [{"name": "한국동서발전", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-EWP_v1.1.md"}, {"name": "한전KDN", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KDN_v1.1.md"}, {"name": "한국전력기술", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCOENG_v1.1.md"}, {"name": "한전KPS", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCOKPS_v1.1.md"}, {"name": "한국전력공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCO_v1.1.md"}, {"name": "한국수력원자력", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KHNP_v1.1.md"}, {"name": "강원랜드", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KL_v1.1.md"}, {"name": "한국석유공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KNOC_v1.1.md"}, {"name": "한국지역난방공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KODIT_v1.1.md"}, {"name": "한국남동발전", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOEN_v1.1.md"}, {"name": "한국가스공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOGAS_v1.1.md"}, {"name": "한국가스기술공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOGAT_v1.1.md"}, {"name": "한국중부발전", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMIPO_v1.1.md"}, {"name": "한국광해광업공단", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMIR_v1.1.md"}, {"name": "한국남부발전", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOSPO_v1.1.md"}, {"name": "한국서부발전", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-WP_v1.1.md"}]}, {"dept": "국토교통부", "items": [{"name": "한국도로공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-EX_v1.1.md"}, {"name": "주택도시보증공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-HUG_v1.1.md"}, {"name": "인천국제공항공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-IIAC_v1.1.md"}, {"name": "제주국제자유도시개발센터", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-JDC_v1.1.md"}, {"name": "한국공항공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KAC_v1.1.md"}, {"name": "한국철도공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KORAIL_v1.1.md"}, {"name": "한국토지주택공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-LH_v1.1.md"}, {"name": "한국부동산원", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-REB_v1.1.md"}, {"name": "에스알(SR)", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-SR_v1.1.md"}]}, {"dept": "문화체육관광부", "items": [{"name": "그랜드코리아레저", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-GKL_v1.1.md"}]}, {"dept": "해양수산부", "items": [{"name": "해양환경공단", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOEM_v1.1.md"}]}, {"dept": "재정경제부", "items": [{"name": "한국조폐공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMSCO_v1.1.md"}]}, {"dept": "농림축산식품부", "items": [{"name": "한국마사회", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KRA_v1.1.md"}]}, {"dept": "기후에너지환경부", "items": [{"name": "한국수자원공사", "href": "../prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KWATER_v1.1.md"}]}], "enterpriseCount": 30, "institutionGroups": [{"dept": "문화체육관광부", "items": [{"name": "국립아시아문화전당재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ACC_v1.1.md"}, {"name": "국제방송교류재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ARIRANGTV_v1.1.md"}, {"name": "한국문화예술위원회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ARKO_v1.1.md"}, {"name": "(재)예술경영지원센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GKA_v1.1.md"}, {"name": "게임물관리위원회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GRAC_v1.1.md"}, {"name": "국악방송", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GUKAK_v1.1.md"}, {"name": "한국예술인복지재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KAWF_v1.1.md"}, {"name": "한국저작권위원회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCC2_v1.1.md"}, {"name": "한국공예디자인문화진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCDF_v1.1.md"}, {"name": "한국도박문제예방치유원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCGPTC_v1.1.md"}, {"name": "한국문화정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCII_v1.1.md"}, {"name": "한국저작권보호원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCOPA_v1.1.md"}, {"name": "한국문화진흥주식회사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCPC_v1.1.md"}, {"name": "한국문화관광연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCTI_v1.1.md"}, {"name": "국가유산진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KHF_v1.1.md"}, {"name": "영상물등급위원회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KMRB_v1.1.md"}, {"name": "국립발레단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KNB_v1.1.md"}, {"name": "한국콘텐츠진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOCCA_v1.1.md"}, {"name": "한국문화예술교육진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFAC2_v1.1.md"}, {"name": "한국영상자료원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFA_v1.1.md"}, {"name": "영화진흥위원회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFIC_v1.1.md"}, {"name": "국립박물관문화재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOMUF_v1.1.md"}, {"name": "대한장애인체육회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KPC2_v1.1.md"}, {"name": "한국언론진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KPF_v1.1.md"}, {"name": "한국출판문화산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KPIPA_v1.1.md"}, {"name": "세종학당재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KSIF_v1.1.md"}, {"name": "대한체육회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KSOC_v1.1.md"}, {"name": "한국체육산업개발(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KSPO2_v1.1.md"}, {"name": "한국문학번역원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-LTIKOREA_v1.1.md"}, {"name": "예술의전당", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SAC_v1.1.md"}, {"name": "스포츠윤리센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SEC_v1.1.md"}, {"name": "태권도진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-TPF_v1.1.md"}]}, {"dept": "보건복지부", "items": [{"name": "대구경북첨단의료산업진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-DGMIF_v1.1.md"}, {"name": "한국생명존중희망재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KFSP_v1.1.md"}, {"name": "한국건강증진개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KHEPI_v1.1.md"}, {"name": "한국보건산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KHIDI_v1.1.md"}, {"name": "한국보건의료인국가시험원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KHPLE_v1.1.md"}, {"name": "한국사회복지협의회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KNCSW_v1.1.md"}, {"name": "재단법인 한국장기조직기증원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KODA_v1.1.md"}, {"name": "한국장애인개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KODDI_v1.1.md"}, {"name": "한국국제보건의료재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFIH_v1.1.md"}, {"name": "한국보건복지인재원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOHI_v1.1.md"}, {"name": "(재)한국보건의료정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOHMI_v1.1.md"}, {"name": "의료기관평가인증원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOIHA_v1.1.md"}, {"name": "한국노인인력개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KORDI2_v1.1.md"}, {"name": "재단법인 한국자활복지개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSSWA_v1.1.md"}, {"name": "재단법인 한국공공조직은행", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KPTB_v1.1.md"}, {"name": "대한적십자사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRC_v1.1.md"}, {"name": "한국의료분쟁조정중재원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-K_v1.1.md"}, {"name": "국립암센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NCC_v1.1.md"}, {"name": "한국보건의료연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NECA_v1.1.md"}, {"name": "국가생명윤리정책원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NIBP_v1.1.md"}, {"name": "국가아동권리보장원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NICE2_v1.1.md"}, {"name": "한국한의약진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NIKOM_v1.1.md"}, {"name": "국립중앙의료원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NMC_v1.1.md"}, {"name": "오송첨단의료산업진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-OSONG_v1.1.md"}]}, {"dept": "교육부", "items": [{"name": "한국학중앙연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-AKS_v1.1.md"}, {"name": "분당서울대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-BSNUH_v1.1.md"}, {"name": "충북대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-CBNUH_v1.1.md"}, {"name": "전남대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-CNUH2_v1.1.md"}, {"name": "충남대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-CNUH_v1.1.md"}, {"name": "강릉원주대학교치과병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GNUDH_v1.1.md"}, {"name": "경상국립대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GSNUH_v1.1.md"}, {"name": "한국고전번역원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ITKC_v1.1.md"}, {"name": "전북대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-JBNUH_v1.1.md"}, {"name": "제주대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-JEJUUH_v1.1.md"}, {"name": "강원대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KANGWONUH_v1.1.md"}, {"name": "한국교육학술정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KERIS_v1.1.md"}, {"name": "경북대학교치과병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KNUDH_v1.1.md"}, {"name": "경북대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KNUH_v1.1.md"}, {"name": "한국사학진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSAF2_v1.1.md"}, {"name": "동북아역사재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NEAHF_v1.1.md"}, {"name": "국가평생교육진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NILE_v1.1.md"}, {"name": "부산대학교치과병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-PNUDH_v1.1.md"}, {"name": "부산대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-PNUH_v1.1.md"}, {"name": "서울대학교치과병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SNUDH_v1.1.md"}, {"name": "서울대학교병원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SNUH_v1.1.md"}, {"name": "사립학교교직원연금공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-TPCS_v1.1.md"}]}, {"dept": "국무조정실(경제·인문사회연구회 소관)", "items": [{"name": "한국개발연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KDI_v1.1.md"}, {"name": "한국교육개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEDI_v1.1.md"}, {"name": "한국환경연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEI_v1.1.md"}, {"name": "한국교육과정평가원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KICE_v1.1.md"}, {"name": "한국형사·법무정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KICJ_v1.1.md"}, {"name": "대외경제정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIEP_v1.1.md"}, {"name": "산업연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIET_v1.1.md"}, {"name": "한국보건사회연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIHASA_v1.1.md"}, {"name": "통일연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KINU_v1.1.md"}, {"name": "한국행정연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPA_v1.1.md"}, {"name": "한국조세재정연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPF_v1.1.md"}, {"name": "정보통신정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KISDI_v1.1.md"}, {"name": "한국노동연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLI_v1.1.md"}, {"name": "한국해양수산개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KMI_v1.1.md"}, {"name": "한국농촌경제연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KREI_v1.1.md"}, {"name": "국토연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRIHS_v1.1.md"}, {"name": "한국여성정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KWDI_v1.1.md"}, {"name": "과학기술정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-STEPI_v1.1.md"}]}, {"dept": "국토교통부", "items": [{"name": "한국도로공사서비스(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-EXSERVICE_v1.1.md"}, {"name": "가덕도신공항건설공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GADC_v1.1.md"}, {"name": "주택관리공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-HMC_v1.1.md"}, {"name": "국토교통과학기술진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KAIA_v1.1.md"}, {"name": "항공안전기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KATRI_v1.1.md"}, {"name": "건설기술교육원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KICT2_v1.1.md"}, {"name": "한국해외인프라·도시개발지원공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIND_v1.1.md"}, {"name": "재단법인 대한건설기계안전관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOCEMA_v1.1.md"}, {"name": "자동차손해배상진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOTSA_v1.1.md"}, {"name": "코레일유통(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRDIST_v1.1.md"}, {"name": "코레일로지스(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRLOG_v1.1.md"}, {"name": "코레일네트웍스(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRNW_v1.1.md"}, {"name": "코레일관광개발(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRTC_v1.1.md"}, {"name": "코레일테크(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRTECH_v1.1.md"}, {"name": "국립항공박물관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NAM_v1.1.md"}, {"name": "새만금개발공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SMGC_v1.1.md"}, {"name": "공간정보산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SPACEIC_v1.1.md"}]}, {"dept": "해양수산부", "items": [{"name": "부산항만공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-BPA_v1.1.md"}, {"name": "인천항만공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ICTPA_v1.1.md"}, {"name": "한국해양조사협회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KHOA2_v1.1.md"}, {"name": "해양수산과학기술진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIMST2_v1.1.md"}, {"name": "한국해양과학기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIOST_v1.1.md"}, {"name": "한국항로표지기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLA2_v1.1.md"}, {"name": "한국해양수산연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KMRI_v1.1.md"}, {"name": "한국해양진흥공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOBC_v1.1.md"}, {"name": "한국어촌어항공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFFA_v1.1.md"}, {"name": "한국수산자원공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFRS_v1.1.md"}, {"name": "국립해양생물자원관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-MABIK_v1.1.md"}, {"name": "국립인천해양박물관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NIMM_v1.1.md"}, {"name": "국립해양박물관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NMM_v1.1.md"}, {"name": "국립해양과학관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NMSM_v1.1.md"}, {"name": "울산항만공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-UPA_v1.1.md"}, {"name": "여수광양항만공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-YGPA_v1.1.md"}]}, {"dept": "과학기술정보통신부", "items": [{"name": "국립부산과학관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-BSSM_v1.1.md"}, {"name": "국립대구과학관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-DGSM_v1.1.md"}, {"name": "국립광주과학관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-GJSM_v1.1.md"}, {"name": "기초과학연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-IBS_v1.1.md"}, {"name": "연구개발특구진흥재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-INNOPOLIS_v1.1.md"}, {"name": "한국원자력의학원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIRAMS_v1.1.md"}, {"name": "한국과학기술기획평가원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KISTEP_v1.1.md"}, {"name": "한국데이터산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KODATA_v1.1.md"}, {"name": "한국과학창의재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFAC_v1.1.md"}, {"name": "과학기술사업화진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOITA_v1.1.md"}, {"name": "한국나노기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KONANO_v1.1.md"}, {"name": "정보통신산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NIPA2_v1.1.md"}, {"name": "한국여성과학기술인육성재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-WISET_v1.1.md"}]}, {"dept": "기후에너지환경부", "items": [{"name": "국립호남권생물자원관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-HONAM_v1.1.md"}, {"name": "한국에너지정보문화재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEA2_v1.1.md"}, {"name": "한국환경보전원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KECO2_v1.1.md"}, {"name": "재단법인 한국에너지재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEF2_v1.1.md"}, {"name": "한전MCS(주)", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEPCOMCS_v1.1.md"}, {"name": "한국에너지기술평가원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KETEP_v1.1.md"}, {"name": "한국전력국제원자력대학원대학교", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KINGS_v1.1.md"}, {"name": "한전원자력연료주식회사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KNF_v1.1.md"}, {"name": "한국수자원조사기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOWACO2_v1.1.md"}, {"name": "한국물기술인증원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KWQC_v1.1.md"}, {"name": "한국상하수도협회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KWWA_v1.1.md"}, {"name": "국립낙동강생물자원관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NNIBR_v1.1.md"}, {"name": "수도권매립지관리공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SUDOKWON_v1.1.md"}]}, {"dept": "농림축산식품부", "items": [{"name": "농업정책보험금융원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-APFC_v1.1.md"}, {"name": "가축위생방역지원본부", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-AQIS2_v1.1.md"}, {"name": "농림수산식품교육문화정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-EPIS_v1.1.md"}, {"name": "농림식품기술기획평가원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-FIST_v1.1.md"}, {"name": "한국식품산업클러스터진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-FOODCLUSTER_v1.1.md"}, {"name": "한식진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-HANSIK_v1.1.md"}, {"name": "(재)축산환경관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KAHPA_v1.1.md"}, {"name": "국립농업박물관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NAMU_v1.1.md"}, {"name": "국제식물검역인증원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-QIA2_v1.1.md"}]}, {"dept": "중소벤처기업부", "items": [{"name": "재단법인 장애인기업종합지원센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-DEC_v1.1.md"}, {"name": "창업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KISED_v1.1.md"}, {"name": "한국중소벤처기업유통원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KODIT2_v1.1.md"}, {"name": "신용보증재단중앙회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOREG_v1.1.md"}, {"name": "중소벤처기업연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSBI_v1.1.md"}, {"name": "한국벤처투자", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KVIC_v1.1.md"}, {"name": "(주)공영홈쇼핑", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-PBS_v1.1.md"}, {"name": "중소기업기술정보진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-TIPA_v1.1.md"}]}, {"dept": "산업통상부", "items": [{"name": "한국탄소산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCARBON_v1.1.md"}, {"name": "한국세라믹기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KICET_v1.1.md"}, {"name": "한국디자인진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIDP_v1.1.md"}, {"name": "한국로봇산업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIRIA_v1.1.md"}, {"name": "대한석탄공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOCOAL_v1.1.md"}, {"name": "한국제품안전관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOPSA_v1.1.md"}, {"name": "한국산업기술시험원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KTL_v1.1.md"}, {"name": "무역안보관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-STA_v1.1.md"}]}, {"dept": "고용노동부", "items": [{"name": "건설근로자공제회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCWU_v1.1.md"}, {"name": "한국잡월드", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KJOBWORLD_v1.1.md"}, {"name": "한국고용노동연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLI2_v1.1.md"}, {"name": "한국기술교육대학교", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOREATECH_v1.1.md"}, {"name": "한국사회적기업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSEA_v1.1.md"}, {"name": "노사발전재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NODONG_v1.1.md"}, {"name": "학교법인한국폴리텍", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-POLYTECH_v1.1.md"}]}, {"dept": "국무조정실(경제·인문사회연구회)", "items": [{"name": "건축공간연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-AURI_v1.1.md"}, {"name": "에너지경제연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEEI_v1.1.md"}, {"name": "한국법제연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLRI_v1.1.md"}, {"name": "한국교통연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOTI_v1.1.md"}, {"name": "한국직업능력연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KRIVET_v1.1.md"}, {"name": "한국청소년정책연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NYPI_v1.1.md"}]}, {"dept": "성평등가족부", "items": [{"name": "양육비이행관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-CSSA_v1.1.md"}, {"name": "한국양성평등교육진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIGEPE_v1.1.md"}, {"name": "한국건강가정진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIHF_v1.1.md"}, {"name": "한국여성인권진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KWHRI_v1.1.md"}, {"name": "한국청소년상담복지개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KYCI_v1.1.md"}, {"name": "한국청소년활동진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KYWA_v1.1.md"}]}, {"dept": "지식재산처", "items": [{"name": "한국지식재산연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIIP_v1.1.md"}, {"name": "한국발명진흥회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPA2_v1.1.md"}, {"name": "한국특허정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPI_v1.1.md"}, {"name": "한국특허전략개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPSO_v1.1.md"}, {"name": "한국특허기술진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIPS_v1.1.md"}, {"name": "한국지식재산보호원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOIPA_v1.1.md"}]}, {"dept": "식품의약품안전처", "items": [{"name": "식품안전정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-FSI_v1.1.md"}, {"name": "한국마약퇴치운동본부", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KATO2_v1.1.md"}, {"name": "한국식품안전관리인증원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KFCI_v1.1.md"}, {"name": "한국의약품안전관리원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIDS_v1.1.md"}, {"name": "한국의료기기안전정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOMIDI_v1.1.md"}]}, {"dept": "금융위원회", "items": [{"name": "중소기업은행", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-IBK_v1.1.md"}, {"name": "한국산업은행", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KDB_v1.1.md"}, {"name": "한국수출입은행", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KEXIM_v1.1.md"}, {"name": "서민금융진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KINFA_v1.1.md"}, {"name": "한국예탁결제원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KSD_v1.1.md"}]}, {"dept": "기상청", "items": [{"name": "아시아태평양경제협력체 기후센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-APCC_v1.1.md"}, {"name": "한국기상산업기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KMIPA_v1.1.md"}, {"name": "차세대수치예보모델개발사업단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NEXTMODEL_v1.1.md"}]}, {"dept": "행정안전부", "items": [{"name": "(재)일제강제동원피해자지원재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-FKVJF_v1.1.md"}, {"name": "민주화운동기념사업회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KDF_v1.1.md"}, {"name": "전국재해구호협회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KDRA_v1.1.md"}]}, {"dept": "국가보훈부", "items": [{"name": "독립기념관", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-IHM_v1.1.md"}, {"name": "88관광개발", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KL88_v1.1.md"}, {"name": "한국보훈복지의료공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KVMC_v1.1.md"}]}, {"dept": "산림청", "items": [{"name": "한국치산기술협회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KFERI_v1.1.md"}, {"name": "한국임업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFPI_v1.1.md"}, {"name": "한국등산·트레킹지원센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFTA_v1.1.md"}]}, {"dept": "국방부", "items": [{"name": "한국국방연구원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIDA_v1.1.md"}, {"name": "전쟁기념사업회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KWMF_v1.1.md"}, {"name": "국방전직교육원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-MND2_v1.1.md"}]}, {"dept": "원자력안전위원회", "items": [{"name": "한국원자력통제기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KINAC_v1.1.md"}, {"name": "한국원자력안전기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KINS_v1.1.md"}, {"name": "한국원자력안전재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFONS_v1.1.md"}]}, {"dept": "과학기술정보통신부(우정사업본부)", "items": [{"name": "한국우편사업진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KPBA_v1.1.md"}, {"name": "우체국금융개발원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-POSTFIN_v1.1.md"}, {"name": "우체국물류지원단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-POSTLOG_v1.1.md"}]}, {"dept": "방위사업청", "items": [{"name": "국방과학연구소", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-ADD_v1.1.md"}, {"name": "국방기술품질원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-DTAQ_v1.1.md"}]}, {"dept": "관세청", "items": [{"name": "한국관세정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KCIA_v1.1.md"}, {"name": "한국원산지정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOROIS_v1.1.md"}]}, {"dept": "법무부", "items": [{"name": "대한법률구조공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLAC_v1.1.md"}, {"name": "정부법무공단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KLSC_v1.1.md"}]}, {"dept": "국가데이터처", "items": [{"name": "(재)한국통계정보원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSTATINFO_v1.1.md"}, {"name": "(재)한국통계진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOSTATPROMO_v1.1.md"}]}, {"dept": "통일부", "items": [{"name": "북한이탈주민지원재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-NKRF_v1.1.md"}, {"name": "(사)남북교류협력지원협회", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-SNKA_v1.1.md"}]}, {"dept": "소방청", "items": [{"name": "한국소방산업기술원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KFI_v1.1.md"}]}, {"dept": "외교부", "items": [{"name": "한국국제교류재단", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KF_v1.1.md"}]}, {"dept": "교육부(보건복지부 공동)", "items": [{"name": "한국영유아보육·교육진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KICCE2_v1.1.md"}]}, {"dept": "재정경제부", "items": [{"name": "한국투자공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KIC_v1.1.md"}]}, {"dept": "농촌진흥청", "items": [{"name": "한국농업기술진흥원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOAT_v1.1.md"}]}, {"dept": "방송미디어통신위원회", "items": [{"name": "한국방송광고진흥공사", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOBACO_v1.1.md"}]}, {"dept": "공정거래위원회", "items": [{"name": "한국공정거래조정원", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-KOFAIR_v1.1.md"}]}, {"dept": "재외동포청", "items": [{"name": "재외동포협력센터", "href": "../prompts/gov-tree/09-national/other/SP-NAT-OTHER-OKCC_v1.1.md"}]}], "institutionCount": 254};
+/* ── K-정부 챕터 전용 로직 (2026-08-29 신설, 2026-08-29 단일 출처로 재설계) ──
+   이 챕터는 어떤 기관·부서 명칭도 직접 저장해 두지 않는다 — 전부 그때그때
+   저장소에서 읽어온다:
+   - 입법·사법·행정부·지자체 부서: division목록 JSON(실사 데이터)에서 기관명을
+     매번 새로 뽑아내고, 부서 SP는 공용 템플릿에 그 행의 데이터를 그 자리에서
+     치환해 만든다(저장·중복 없음).
+   - 공기업·공공기관: 사이트가 이미 쓰고 있는 정본 카탈로그
+     prompts/sp-catalog-categories.json에서 해당 폴더 하위 파일 목록을 그대로
+     가져오고, 이름·소관부처는 그 파일을 직접 열어 표시 시점에 읽는다.
+   즉 이 파일 안에 있는 건 전부 "어디서 가져올지"뿐이고, "무엇이 있는지"는
+   단 한 곳(저장소의 실제 데이터/카탈로그)에서만 관리된다. */
 
 var KGOV_CACHE = {};
 function kgovFetchText(url) {
@@ -466,6 +477,14 @@ function kgovSubstitute(tmpl, row) {
   });
   return out;
 }
+function kgovParseHeader(text) {
+  var mName = text.match(/문서명\s*:\s*(.+?)\s*—/);
+  var mDept = text.match(/소관부처\s*:\s*(.+)/);
+  return { name: mName ? mName[1].trim() : null, dept: mDept ? mDept[1].trim() : '기타' };
+}
+function kgovRawUrl(repoRelativePath) {
+  return 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/' + repoRelativePath;
+}
 function kgovModal() {
   var m = document.getElementById('kgovModal');
   if (m) return m;
@@ -482,6 +501,21 @@ function kgovShow(title, text) {
   var m = kgovModal();
   m.querySelector('#kgovModalTitle').textContent = title;
   m.querySelector('#kgovModalBody').textContent = text;
+  var note = m.querySelector('#kgovModalNote');
+  var leftover = text.match(/\{[A-Z_]+\}/g);
+  if (leftover) {
+    if (!note) {
+      note = document.createElement('div');
+      note.id = 'kgovModalNote';
+      note.className = 'kgov-modal-note';
+      m.querySelector('.kgov-modal-inner').insertBefore(note, m.querySelector('#kgovModalBody'));
+    }
+    var uniq = Array.from(new Set(leftover)).join(', ');
+    note.textContent = uniq + '는 실제 서비스에서 상위 공용 SP가 자동으로 삽입되는 자리로, 이 화면에서는 표시되지 않습니다.';
+    note.hidden = false;
+  } else if (note) {
+    note.hidden = true;
+  }
   m.classList.add('open');
 }
 function kgovShowLoading(title) { kgovShow(title, '불러오는 중…'); }
@@ -535,23 +569,31 @@ function kgovAgencyItem(container, label, disabled, onOpen) {
   container.appendChild(wrap);
 }
 
-/* 입법부·사법부·행정부(대통령 직속/위원회/처/부·청) 공용: 템플릿+실사 데이터 치환 */
-function kgovBranch(container, cfg) {
-  cfg.agencies.forEach(function (name) {
-    kgovAgencyItem(container, name, false, function (panel) {
-      panel.textContent = '부서 목록 불러오는 중…';
-      kgovFetchJSON(cfg.jsonUrl).then(function (data) {
-        var rows = data['division목록'].filter(function (r) { return r['기관명'] === name; });
+/* 입법부·사법부·행정부 공용: division목록 JSON을 매번 새로 읽어
+   기관 목록·부서 목록을 뽑아내고, 부서 SP는 공용 템플릿에 그 자리에서 치환한다. */
+function kgovBranch(container, jsonUrl, tmplUrl) {
+  container.innerHTML = '기관 목록 불러오는 중…';
+  kgovFetchJSON(jsonUrl).then(function (data) {
+    var rows = data['division목록'];
+    var agencies = [];
+    rows.forEach(function (r) { if (agencies.indexOf(r['기관명']) === -1) agencies.push(r['기관명']); });
+    container.innerHTML = '';
+    agencies.forEach(function (name) {
+      kgovAgencyItem(container, name, false, function (panel) {
+        var subRows = rows.filter(function (r) { return r['기관명'] === name; });
         panel.innerHTML = '';
-        rows.forEach(function (row) {
+        subRows.forEach(function (row) {
           var dbtn = document.createElement('button');
           dbtn.type = 'button';
           dbtn.className = 'kgov-dept-btn';
           dbtn.textContent = row['부서명'] + (row['부서유형'] ? ' · ' + row['부서유형'] : '');
           dbtn.addEventListener('click', function () {
             kgovShowLoading(name + ' · ' + row['부서명']);
-            kgovFetchText(cfg.tmplUrl).then(function (tmpl) {
-              kgovShow(name + ' · ' + row['부서명'] + ' — SP', kgovSubstitute(tmpl, row));
+            /* 이 6종 템플릿은 자리표시자 이름이 {상위기관이름}/{부서이름}으로,
+               JSON 필드명(기관명/부서명)과 표기가 달라 별칭을 붙여 치환한다. */
+            var aliased = Object.assign({}, row, { '상위기관이름': row['기관명'], '부서이름': row['부서명'] });
+            kgovFetchText(tmplUrl).then(function (tmpl) {
+              kgovShow(name + ' · ' + row['부서명'] + ' — SP', kgovSubstitute(tmpl, aliased));
             });
           });
           panel.appendChild(dbtn);
@@ -561,38 +603,40 @@ function kgovBranch(container, cfg) {
   });
 }
 
-/* 지방자치단체: 시도 자체 SP + (자료가 있는 경우) 실·국 단위 SP */
+/* 지방자치단체: province-master-data.json에 실제 등재된 시도만 그대로
+   보여준다(전체 개수를 가정하거나 미등재 항목을 임의로 채워 넣지 않음). */
 function kgovLocal(container) {
   var PROV_JSON = '../prompts/gov-tree/01-do/templates/province-master-data.json';
   var PROV_TMPL = '../prompts/gov-tree/01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md';
   var DEPT_JSON = '../prompts/gov-tree/02-do-dept/templates/do-dept-master-data.json';
   var DEPT_TMPL_BASE = '../prompts/gov-tree/02-do-dept/templates/';
 
-  KGOV_DATA.provinces.forEach(function (p) {
-    kgovAgencyItem(container, p.name + (p.hasData ? '' : ' (조사 예정)'), !p.hasData, function (panel) {
-      panel.textContent = '불러오는 중…';
-      kgovFetchJSON(PROV_JSON).then(function (data) {
-        var row = data['도목록'].filter(function (r) { return r['도코드'] === p.code; })[0];
+  container.innerHTML = '시도 목록 불러오는 중…';
+  kgovFetchJSON(PROV_JSON).then(function (data) {
+    var provinces = data['도목록'];
+    container.innerHTML = '';
+    provinces.forEach(function (row) {
+      kgovAgencyItem(container, row['도이름'], false, function (panel) {
         panel.innerHTML = '';
         var ownBtn = document.createElement('button');
         ownBtn.type = 'button';
         ownBtn.className = 'kgov-dept-btn kgov-dept-btn-own';
-        ownBtn.textContent = p.name + ' 자체 SP 보기';
+        ownBtn.textContent = row['도이름'] + ' 자체 SP 보기';
         ownBtn.addEventListener('click', function () {
-          kgovShowLoading(p.name);
-          kgovFetchText(PROV_TMPL).then(function (tmpl) { kgovShow(p.name + ' — SP', kgovSubstitute(tmpl, row)); });
+          kgovShowLoading(row['도이름']);
+          kgovFetchText(PROV_TMPL).then(function (tmpl) { kgovShow(row['도이름'] + ' — SP', kgovSubstitute(tmpl, row)); });
         });
         panel.appendChild(ownBtn);
-        if (KGOV_DATA.deptProvinces.indexOf(p.code) === -1) {
-          var note = document.createElement('div');
-          note.className = 'kgov-note';
-          note.textContent = '실·국 단위 부서 데이터는 아직 조사 전입니다.';
-          panel.appendChild(note);
-          return;
-        }
         kgovFetchJSON(DEPT_JSON).then(function (dd) {
-          var rows = dd['부서목록'].filter(function (r) { return r['도코드'] === p.code; });
-          rows.forEach(function (row2) {
+          var deptRows = dd['부서목록'].filter(function (r) { return r['도코드'] === row['도코드']; });
+          if (!deptRows.length) {
+            var note = document.createElement('div');
+            note.className = 'kgov-note';
+            note.textContent = '실·국 단위 부서 데이터는 아직 조사 전입니다.';
+            panel.appendChild(note);
+            return;
+          }
+          deptRows.forEach(function (row2) {
             var tmplFile = row2['template'];
             var notReady = tmplFile.indexOf('미작성') !== -1;
             var dbtn = document.createElement('button');
@@ -601,9 +645,9 @@ function kgovLocal(container) {
             dbtn.textContent = row2['부서명'] + (notReady ? ' (준비 중)' : '');
             if (notReady) dbtn.disabled = true;
             dbtn.addEventListener('click', function () {
-              kgovShowLoading(p.name + ' · ' + row2['부서명']);
+              kgovShowLoading(row['도이름'] + ' · ' + row2['부서명']);
               kgovFetchText(DEPT_TMPL_BASE + tmplFile).then(function (tmpl) {
-                kgovShow(p.name + ' · ' + row2['부서명'] + ' — SP', kgovSubstitute(tmpl, row2));
+                kgovShow(row['도이름'] + ' · ' + row2['부서명'] + ' — SP', kgovSubstitute(tmpl, row2));
               });
             });
             panel.appendChild(dbtn);
@@ -614,35 +658,74 @@ function kgovLocal(container) {
   });
 }
 
-/* 공기업·공공기관: 기관마다 완성된 SP 파일이 있으므로 소관부처별로 묶어
-   보여주고, 클릭하면 prompt-editor.html 열람 화면을 새 창으로 연다. */
-function kgovFileGroups(container, groups) {
-  groups.forEach(function (g) {
-    var wrap = document.createElement('div');
-    wrap.className = 'kgov-group';
-    var head = document.createElement('button');
-    head.type = 'button';
-    head.className = 'kgov-group-head';
-    head.innerHTML = '<span>' + kgovEsc(g.dept) + '</span><span class="kgov-group-count">' + g.items.length + '개</span>';
-    var body = document.createElement('div');
-    body.className = 'kgov-group-body';
-    body.hidden = true;
-    g.items.forEach(function (it) {
-      var a = document.createElement('a');
-      a.href = '../pages/prompt-editor.html?file=' + encodeURIComponent(it.href.replace(/^\.\.\//, ''));
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.className = 'kgov-file-link';
-      a.textContent = it.name;
-      body.appendChild(a);
-    });
-    head.addEventListener('click', function () {
-      body.hidden = !body.hidden;
-      head.classList.toggle('open', !body.hidden);
-    });
-    wrap.appendChild(head);
-    wrap.appendChild(body);
-    container.appendChild(wrap);
+/* 공기업·공공기관: 사이트 정본 카탈로그(prompts/sp-catalog-categories.json)에서
+   해당 폴더 하위 파일 목록만 가져오고, 이름·소관부처는 그 파일을 열어 그
+   자리에서 읽는다 — 파일 자체가 유일한 출처이며 별도로 베껴 두지 않는다. */
+function kgovFileCategory(container, folderPrefix) {
+  var CATALOG_URL = '../prompts/sp-catalog-categories.json';
+  container.innerHTML = '목록 불러오는 중…';
+  kgovFetchJSON(CATALOG_URL).then(function (catalog) {
+    var files = catalog.items.filter(function (it) { return it.file.indexOf(folderPrefix) === 0; });
+    container.innerHTML = files.length + '개 기관의 이름을 불러오는 중… (처음 한 번만 시간이 걸립니다)';
+    return Promise.all(files.map(function (f) {
+      return kgovFetchText(kgovRawUrl(f.file)).then(function (text) {
+        var meta = kgovParseHeader(text);
+        return { name: meta.name || f.name, dept: meta.dept, file: f.file };
+      }).catch(function () {
+        return { name: f.name, dept: '기타', file: f.file };
+      });
+    }));
+  }).then(function (items) {
+    var groups = {};
+    items.forEach(function (it) { (groups[it.dept] = groups[it.dept] || []).push(it); });
+    var groupArr = Object.keys(groups).map(function (k) { return { dept: k, items: groups[k] }; });
+    groupArr.sort(function (a, b) { return b.items.length - a.items.length; });
+
+    container.innerHTML = '';
+    var filterBox = document.createElement('input');
+    filterBox.type = 'text';
+    filterBox.placeholder = '기관 이름으로 찾기…';
+    filterBox.className = 'kgov-filter-input';
+    container.appendChild(filterBox);
+
+    var listWrap = document.createElement('div');
+    container.appendChild(listWrap);
+
+    function render(filterText) {
+      listWrap.innerHTML = '';
+      var q = (filterText || '').trim();
+      groupArr.forEach(function (g) {
+        var matched = q ? g.items.filter(function (it) { return it.name.indexOf(q) !== -1; }) : g.items;
+        if (!matched.length) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'kgov-group';
+        var head = document.createElement('button');
+        head.type = 'button';
+        head.className = 'kgov-group-head';
+        head.innerHTML = '<span>' + kgovEsc(g.dept) + '</span><span class="kgov-group-count">' + matched.length + '개</span>';
+        var body = document.createElement('div');
+        body.className = 'kgov-group-body';
+        body.hidden = !q;
+        matched.forEach(function (it) {
+          var a = document.createElement('a');
+          a.href = '../pages/prompt-editor.html?file=' + encodeURIComponent(it.file);
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.className = 'kgov-file-link';
+          a.textContent = it.name;
+          body.appendChild(a);
+        });
+        head.addEventListener('click', function () {
+          body.hidden = !body.hidden;
+          head.classList.toggle('open', !body.hidden);
+        });
+        wrap.appendChild(head);
+        wrap.appendChild(body);
+        listWrap.appendChild(wrap);
+      });
+    }
+    render('');
+    filterBox.addEventListener('input', function () { render(filterBox.value); });
   });
 }
 
@@ -651,67 +734,43 @@ function kgovBuildApp(root) {
   root.dataset.built = '1';
   root.innerHTML = '';
 
-  root.appendChild(kgovCategorySection('입법부', KGOV_DATA.legislative.length + '개 기관', function (body) {
-    kgovBranch(body, {
-      agencies: KGOV_DATA.legislative,
-      jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/assembly-agency-division-master-data.json',
-      tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-ASSEMBLY-AGENCYDIV-TEMPLATE_v1.0.md'
-    });
+  var DIV_BASE = '../prompts/gov-tree/09-national/policy-bodies/divisions/';
+
+  root.appendChild(kgovCategorySection('입법부', '국회 소속기관', function (body) {
+    kgovBranch(body, DIV_BASE + 'assembly-agency-division-master-data.json', DIV_BASE + 'SP-ASSEMBLY-AGENCYDIV-TEMPLATE_v1.0.md');
   }));
 
-  root.appendChild(kgovCategorySection('사법부', KGOV_DATA.judiciary.length + '개 기관', function (body) {
-    kgovBranch(body, {
-      agencies: KGOV_DATA.judiciary,
-      jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/judiciary-division-master-data.json',
-      tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-JUDICIARY-ADMINDIV-TEMPLATE_v1.0.md'
-    });
+  root.appendChild(kgovCategorySection('사법부', '법원 소속기관', function (body) {
+    kgovBranch(body, DIV_BASE + 'judiciary-division-master-data.json', DIV_BASE + 'SP-JUDICIARY-ADMINDIV-TEMPLATE_v1.0.md');
   }));
 
-  var execTotal = KGOV_DATA.presidential.length + KGOV_DATA.commission.length + KGOV_DATA.bureau.length + KGOV_DATA.ministry.length;
-  root.appendChild(kgovCategorySection('행정부', execTotal + '개 기관', function (body) {
-    body.appendChild(kgovCategorySection('대통령 직속', KGOV_DATA.presidential.length + '개', function (b2) {
-      kgovBranch(b2, {
-        agencies: KGOV_DATA.presidential,
-        jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/presidential-division-master-data.json',
-        tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-PRESIDENTIAL-ADMINDIV-TEMPLATE_v1.0.md'
-      });
+  root.appendChild(kgovCategorySection('행정부', '대통령 직속·위원회·처·부·청', function (body) {
+    body.appendChild(kgovCategorySection('대통령 직속', '', function (b2) {
+      kgovBranch(b2, DIV_BASE + 'presidential-division-master-data.json', DIV_BASE + 'SP-PRESIDENTIAL-ADMINDIV-TEMPLATE_v1.0.md');
     }));
-    body.appendChild(kgovCategorySection('위원회', KGOV_DATA.commission.length + '개', function (b2) {
-      kgovBranch(b2, {
-        agencies: KGOV_DATA.commission,
-        jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/commission-division-master-data.json',
-        tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-COMMISSION-ADMINDIV-TEMPLATE_v1.0.md'
-      });
+    body.appendChild(kgovCategorySection('위원회', '', function (b2) {
+      kgovBranch(b2, DIV_BASE + 'commission-division-master-data.json', DIV_BASE + 'SP-COMMISSION-ADMINDIV-TEMPLATE_v1.0.md');
     }));
-    body.appendChild(kgovCategorySection('처', KGOV_DATA.bureau.length + '개', function (b2) {
-      kgovBranch(b2, {
-        agencies: KGOV_DATA.bureau,
-        jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/bureau-division-master-data.json',
-        tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-BUREAU-ADMINDIV-TEMPLATE_v1.0.md'
-      });
+    body.appendChild(kgovCategorySection('처', '', function (b2) {
+      kgovBranch(b2, DIV_BASE + 'bureau-division-master-data.json', DIV_BASE + 'SP-BUREAU-ADMINDIV-TEMPLATE_v1.0.md');
     }));
-    body.appendChild(kgovCategorySection('부·청', KGOV_DATA.ministry.length + '개', function (b2) {
-      kgovBranch(b2, {
-        agencies: KGOV_DATA.ministry,
-        jsonUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/ministry-division-master-data.json',
-        tmplUrl: '../prompts/gov-tree/09-national/policy-bodies/divisions/SP-MINISTRY-ADMINDIV-TEMPLATE_v1.0.md'
-      });
+    body.appendChild(kgovCategorySection('부·청', '', function (b2) {
+      kgovBranch(b2, DIV_BASE + 'ministry-division-master-data.json', DIV_BASE + 'SP-MINISTRY-ADMINDIV-TEMPLATE_v1.0.md');
     }));
   }));
 
-  root.appendChild(kgovCategorySection('지방자치단체', KGOV_DATA.provinces.length + '개 시도', function (body) {
+  root.appendChild(kgovCategorySection('지방자치단체', '광역시도', function (body) {
     kgovLocal(body);
   }));
 
-  root.appendChild(kgovCategorySection('공기업', KGOV_DATA.enterpriseCount + '개', function (body) {
-    kgovFileGroups(body, KGOV_DATA.enterpriseGroups);
+  root.appendChild(kgovCategorySection('공기업', '', function (body) {
+    kgovFileCategory(body, 'prompts/gov-tree/09-national/enterprises/');
   }));
 
-  root.appendChild(kgovCategorySection('공공기관', KGOV_DATA.institutionCount + '개', function (body) {
-    kgovFileGroups(body, KGOV_DATA.institutionGroups);
+  root.appendChild(kgovCategorySection('공공기관', '', function (body) {
+    kgovFileCategory(body, 'prompts/gov-tree/09-national/other/');
   }));
 }
-
 function renderAll() { renderHeader(); renderTierTabs(); renderChapterTabs(); renderContent(); }
 renderAll();
 window.addEventListener('resize', renderTierTabs);
