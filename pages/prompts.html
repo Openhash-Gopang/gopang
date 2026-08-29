@@ -39,6 +39,15 @@
   .pp-hero h1{font-size:22px;font-weight:700;margin-bottom:8px}
   .pp-hero p{font-size:13.5px;color:#c9d6ee;line-height:1.7;max-width:720px}
 
+  .pp-hero-links{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .pp-hero-link{
+    display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:9px 16px;
+    font-size:13px;font-weight:700;color:#fff;text-decoration:none;transition:background .12s;
+  }
+  .pp-hero-link:hover{background:rgba(255,255,255,.18)}
+  .pp-hero-link .sub{font-weight:500;color:#c9d6ee;font-size:11.5px}
+
   .pp-search-wrap{max-width:980px;margin:-20px auto 0;padding:0 24px;position:relative;z-index:2}
   .pp-search-box{
     background:var(--surface);border:1px solid var(--border);border-radius:14px;
@@ -66,6 +75,16 @@
   .pp-chip .cnt{font-weight:500;color:var(--text4);font-size:11.5px}
   .pp-chip.active .cnt{color:#dbe8ff}
 
+  .pp-sub-row{display:none;flex-wrap:wrap;gap:6px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--border)}
+  .pp-chip-sub{
+    display:inline-flex;align-items:center;background:#f1f5f9;border:1px solid var(--border);
+    border-radius:16px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:600;
+    color:var(--text2);transition:all .12s;user-select:none;
+  }
+  .pp-chip-sub:hover{border-color:var(--blue);color:var(--blue-dk)}
+  .pp-chip-sub.active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .pp-select-hint{text-align:center;padding:30px 20px;color:var(--text4);font-size:13px}
+
   /* ---- slide panel (results) ---- */
   .pp-slide-panel{
     max-height:0; opacity:0; overflow:hidden;
@@ -90,9 +109,8 @@
   }
   .pp-item:hover{border-color:var(--blue);background:var(--blue-bg)}
   .pp-item-main{min-width:0}
-  .pp-item-name{font-size:13.5px;font-weight:600;color:var(--text);font-family:'SF Mono',Consolas,monospace;
+  .pp-item-name{font-size:13.5px;font-weight:600;color:var(--text);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pp-item-path{font-size:11.5px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pp-item-badge{
     flex-shrink:0;font-size:10.5px;font-weight:700;color:var(--text3);background:#f1f5f9;
     border-radius:6px;padding:3px 8px;white-space:nowrap;
@@ -115,13 +133,20 @@
     <img src="../icons/icon-192.png" alt="혼디">
     <span>혼디</span>
   </a>
-  <nav class="site-nav-links"><a class="active" href="#">프롬프트(SP) 검색</a></nav>
 </div>
 
 <div class="pp-hero">
   <div class="pp-hero-inner">
     <h1>프롬프트(System Prompt) 검색</h1>
-    <p>혼디를 구성하는 2,294개 System Prompt를 종류별로 찾아볼 수 있습니다. 소속 기관·부서·직업 이름으로 검색해 자신의 SP를 찾은 뒤, 내용을 확인하고(관리자 권한이 있으면) 수정 요청(PR)을 보낼 수 있습니다.</p>
+    <p>혼디를 구성하는 System Prompt를 종류별로 찾아볼 수 있습니다. 소속 기관·부서·직업 이름으로 검색해 자신의 SP를 찾은 뒤, 내용을 확인하고(관리자 권한이 있으면) 수정 요청(PR)을 보낼 수 있습니다.</p>
+    <div class="pp-hero-links">
+      <a class="pp-hero-link" href="prompt-editor.html?file=prompts%2FAC-PRO-CORE_v1_7.txt">
+        사용자 <span class="sub">· AI 비서(AC) 본체 SP</span>
+      </a>
+      <a class="pp-hero-link" href="prompt-editor.html?file=prompts%2Fhondi_visitor_sp_v1_2.txt">
+        혼디 <span class="sub">· 방문자 기본 SP("물어보세요")</span>
+      </a>
+    </div>
   </div>
 </div>
 
@@ -148,8 +173,9 @@
   const MAX_RENDER = 200;
 
   let MANIFEST = null;
-  let activeCat = null;      // 현재 선택된 카테고리 chip (null이면 미선택)
-  let activeKey = null;      // 패널이 현재 어디에 붙어 있는지: 'search' | <catId> | null
+  let CAT_BY_ID = {};
+  let activeKey = null;     // 패널이 현재 붙어 있는 최상위 트리거: 'search' | <topCatId> | null
+  let activeLeaf = null;    // 실제 목록을 채우는 leaf 카테고리 id (하위분류가 없으면 activeKey와 동일)
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -173,6 +199,7 @@
   panelEl.id = 'ppPanel';
   panelEl.innerHTML = `
     <div class="pp-slide-inner">
+      <div class="pp-sub-row" id="ppSubRow"></div>
       <div class="pp-results-head">
         <h2 id="ppResultsTitle">검색 결과</h2>
         <span id="ppResultsCount"></span>
@@ -196,7 +223,6 @@
     renderResultsContent();
     panelEl.style.maxHeight = '0px';
     panelEl.classList.add('open');
-    // 리플로우 이후 실제 높이로 트랜지션
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         panelEl.style.maxHeight = panelInnerEl().scrollHeight + 'px';
@@ -218,14 +244,13 @@
 
   function moveOrOpen(anchorEl, key){
     if (activeKey === key && panelEl.classList.contains('open')) {
-      // 같은 트리거를 다시 클릭 → slide in(닫기)
       slideClose();
       activeKey = null;
+      activeLeaf = null;
       return;
     }
     const reopen = () => { slideOpenAt(anchorEl); activeKey = key; };
     if (activeKey !== null) {
-      // 다른 트리거였던 패널을 slide in으로 먼저 접고, 새 위치에서 slide out
       slideClose(reopen);
     } else {
       reopen();
@@ -236,20 +261,25 @@
     if (activeKey !== null) {
       slideClose();
       activeKey = null;
+      activeLeaf = null;
     }
   }
 
+  function clearTopChipHighlight(){
+    document.querySelectorAll('.pp-chip[data-topcat]').forEach(c => c.classList.remove('active'));
+  }
+
   function renderGroups(){
+    const topCats = MANIFEST.categories.filter(c => !c.parent);
     const byGroup = {};
-    MANIFEST.categories.forEach(c => {
-      (byGroup[c.group] = byGroup[c.group] || []).push(c);
-    });
+    topCats.forEach(c => { (byGroup[c.group] = byGroup[c.group] || []).push(c); });
+
     const html = Object.entries(byGroup).map(([group, cats]) => `
       <div class="pp-group">
         <div class="pp-group-title">${esc(group)}</div>
         <div class="pp-chip-row">
           ${cats.map(c => `
-            <div class="pp-chip" data-cat="${esc(c.id)}">
+            <div class="pp-chip" data-topcat="${esc(c.id)}">
               <span>${esc(c.label)}</span><span class="cnt">${c.count.toLocaleString()}</span>
             </div>
           `).join('')}
@@ -257,22 +287,25 @@
       </div>
     `).join('');
     $('ppGroups').innerHTML = html;
-    $('ppGroups').querySelectorAll('.pp-chip').forEach(el => {
-      el.addEventListener('click', () => {
-        const cat = el.getAttribute('data-cat');
-        const turningOn = activeCat !== cat;
-        activeCat = turningOn ? cat : null;
-        $('ppGroups').querySelectorAll('.pp-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-cat') === activeCat));
 
-        if (!turningOn && !$('ppSearch').value.trim()) {
-          // 선택 해제 + 검색어도 없음 → 그냥 닫기
+    $('ppGroups').querySelectorAll('.pp-chip[data-topcat]').forEach(el => {
+      el.addEventListener('click', () => {
+        const topId = el.getAttribute('data-topcat');
+        const turningOn = activeKey !== topId;
+
+        clearTopChipHighlight();
+        if (!turningOn) {
           closeAll();
           return;
         }
+        el.classList.add('active');
+        $('ppSearch').value = ''; // 카테고리 선택 시 검색어는 초기화(검색과 분류는 서로 다른 모드)
+
+        const cat = CAT_BY_ID[topId];
+        activeLeaf = cat.children ? null : topId;
+
         const row = el.closest('.pp-group').querySelector('.pp-chip-row');
-        const key = turningOn ? cat : 'search';
-        const anchor = turningOn ? row : $('ppSearchAnchor');
-        moveOrOpen(anchor, key);
+        moveOrOpen(row, topId);
       });
     });
   }
@@ -287,39 +320,22 @@
       <a class="pp-item" href="${href}"${target}>
         <div class="pp-item-main">
           <div class="pp-item-name">${esc(it.name)}</div>
-          <div class="pp-item-path">${esc(it.file)}</div>
         </div>
         <div class="pp-item-badge${editable ? ' editable' : ''}">${editable ? '조회·수정' : 'GitHub에서 보기'}</div>
       </a>
     `;
   }
 
-  function currentItems(){
-    const q = $('ppSearch').value.trim().toLowerCase();
-    let items = MANIFEST.items;
-    if (activeCat) items = items.filter(it => it.cat === activeCat);
-    if (q) items = items.filter(it =>
-      it.name.toLowerCase().includes(q) ||
-      it.file.toLowerCase().includes(q) ||
-      (it.region && it.region.toLowerCase().includes(q))
-    );
-    return items;
-  }
-
-  function renderResultsContent(){
-    const items = currentItems();
-    const catLabel = activeCat ? (MANIFEST.categories.find(c => c.id === activeCat) || {}).label : null;
-    $('ppResultsTitle').textContent = catLabel ? `"${catLabel}" 검색 결과` : '검색 결과';
-    $('ppResultsCount').textContent = `${items.length.toLocaleString()}건`;
-
+  function renderItemList(items){
     if (!items.length) {
       $('ppList').innerHTML = '<div class="pp-empty">일치하는 SP가 없습니다. 검색어를 바꾸거나 카테고리를 다시 선택해 보세요.</div>';
       $('ppMore').style.display = 'none';
+      $('ppResultsCount').textContent = '0건';
       return;
     }
-
     const shown = items.slice(0, MAX_RENDER);
     $('ppList').innerHTML = shown.map(itemRow).join('');
+    $('ppResultsCount').textContent = `${items.length.toLocaleString()}건`;
     if (items.length > MAX_RENDER) {
       $('ppMore').style.display = 'block';
       $('ppMore').textContent = `${(items.length - MAX_RENDER).toLocaleString()}건 더 있습니다 — 검색어를 좁혀 주세요.`;
@@ -328,29 +344,96 @@
     }
   }
 
-  function onSearchInput(){
-    const q = $('ppSearch').value.trim();
+  function childShortLabel(childLabel){
+    const parts = childLabel.split(' · ');
+    return parts.length > 1 ? parts[1] : childLabel;
+  }
 
-    if (activeCat) {
-      // 카테고리 패널이 이미 열려 있는 상태 — 그 자리에서 내용만 갱신
-      if (activeKey === activeCat) { renderResultsContent(); setPanelHeight(); }
+  function renderChildRow(cat){
+    const sub = $('ppSubRow');
+    sub.style.display = 'flex';
+    sub.innerHTML = cat.children.map(cid => {
+      const c = CAT_BY_ID[cid];
+      const active = activeLeaf === cid ? ' active' : '';
+      return `<div class="pp-chip-sub${active}" data-leaf="${esc(cid)}">${esc(childShortLabel(c.label))}</div>`;
+    }).join('');
+    sub.querySelectorAll('.pp-chip-sub').forEach(el => {
+      el.addEventListener('click', () => {
+        const leaf = el.getAttribute('data-leaf');
+        activeLeaf = (activeLeaf === leaf) ? null : leaf;
+        renderResultsContent();
+        setPanelHeight();
+      });
+    });
+  }
+
+  function hideChildRow(){
+    $('ppSubRow').style.display = 'none';
+    $('ppSubRow').innerHTML = '';
+  }
+
+  function renderResultsContent(){
+    if (activeKey === 'search') {
+      hideChildRow();
+      const q = $('ppSearch').value.trim().toLowerCase();
+      const items = MANIFEST.items.filter(it =>
+        it.name.toLowerCase().includes(q) ||
+        it.file.toLowerCase().includes(q) ||
+        (it.region && it.region.toLowerCase().includes(q))
+      );
+      $('ppResultsTitle').textContent = '검색 결과';
+      renderItemList(items);
       return;
     }
 
-    if (!q) { closeAll(); return; }
+    const cat = CAT_BY_ID[activeKey];
+    if (!cat) return;
+
+    if (cat.children) {
+      renderChildRow(cat);
+      if (activeLeaf) {
+        const leafCat = CAT_BY_ID[activeLeaf];
+        $('ppResultsTitle').textContent = `"${leafCat.label}" 검색 결과`;
+        renderItemList(MANIFEST.items.filter(it => it.cat === activeLeaf));
+      } else {
+        $('ppResultsTitle').textContent = `"${cat.label}" 하위 분류`;
+        $('ppList').innerHTML = '<div class="pp-select-hint">위에서 세부 분야를 선택하세요.</div>';
+        $('ppResultsCount').textContent = `${cat.count.toLocaleString()}건`;
+        $('ppMore').style.display = 'none';
+      }
+      return;
+    }
+
+    hideChildRow();
+    $('ppResultsTitle').textContent = `"${cat.label}" 검색 결과`;
+    renderItemList(MANIFEST.items.filter(it => it.cat === activeKey));
+  }
+
+  function onSearchInput(){
+    const q = $('ppSearch').value.trim();
+
+    if (!q) {
+      if (activeKey === 'search') closeAll();
+      return;
+    }
 
     if (activeKey === 'search') {
       renderResultsContent();
       setPanelHeight();
-    } else {
-      moveOrOpen($('ppSearchAnchor'), 'search');
+      return;
     }
+
+    // 검색어 입력 시 선택돼 있던 카테고리는 해제하고 전역 검색으로 전환
+    clearTopChipHighlight();
+    activeLeaf = null;
+    moveOrOpen($('ppSearchAnchor'), 'search');
   }
 
   async function init(){
     try {
       const res = await fetch(CATALOG_URL);
       MANIFEST = await res.json();
+      MANIFEST.categories.forEach(c => { CAT_BY_ID[c.id] = c; });
       $('ppHint').textContent = `총 ${MANIFEST.total.toLocaleString()}개 SP · 카테고리를 선택하거나 검색어를 입력하세요`;
       renderGroups();
     } catch (e) {
