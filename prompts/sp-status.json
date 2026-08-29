@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
-  "status": "pilot",
-  "note": "전체 2,011개 SP 중 시범 평가 1건. '프롬프트 작성 상황' 탭의 표시 방식을 검증하기 위한 예시이며, 나머지 항목은 아직 미평가 상태다.",
+  "status": "in-progress",
+  "note": "1차 배치(최상위공통 5건) 평가 완료. 전체 2,011개 중 6건 평가됨(STEPI 시범 1건 + 최상위공통 5건). 진행 현황은 ops/sp-full-evaluation/SP-EVAL-TRACKER.csv 참조.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -57,13 +57,281 @@
       "version_date": "2026-07-14",
       "completeness": 68,
       "breakdown": [
-        { "id": "purpose", "score": 90, "note": "유형·소관부처·설립근거·주요기능이 정관 조항까지 인용되어 명확함." },
-        { "id": "evidence", "score": 75, "note": "국회예산정책처·ALIO 교차검증 및 검증일(legal_basis_last_verified)을 기록. 다만 대표전화는 'TBD'로 미확정." },
-        { "id": "schema", "score": 85, "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA로 입력(연구의뢰·통계원자료·자문요청)과 출력(보고서·통계·자문·발간물)을 구조적으로 정의." },
-        { "id": "edge_case", "score": 40, "note": "범위 밖 질문(예: 타 기관과 혼동, 개인 민원 오인)에 대한 명시적 분기 처리나 유사기관 구분 안내가 없음." },
-        { "id": "self_check", "score": 20, "note": "K-Law류의 확신도 표기·자기검증 블록·재검토 절차가 없음. 단순 안내형 SP라는 점을 감안해도 최소한의 '불확실 시 보류' 지침이 없음." },
-        { "id": "versioning", "score": 70, "note": "v1.0→v1.1 개정 사유가 한 줄로 기록됨(§5). 다만 변경 전/후 비교나 상세 diff는 없음." },
-        { "id": "honesty", "score": 95, "note": "'이 문서는 v1.0 초안이며 대표전화·소재지는 미검증'이라고 스스로 명시. 서비스가 없다는 사실 자체도 숨기지 않고 안내." }
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "유형·소관부처·설립근거·주요기능이 정관 조항까지 인용되어 명확함."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "국회예산정책처·ALIO 교차검증 및 검증일(legal_basis_last_verified)을 기록. 다만 대표전화는 'TBD'로 미확정."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA로 입력(연구의뢰·통계원자료·자문요청)과 출력(보고서·통계·자문·발간물)을 구조적으로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 40,
+          "note": "범위 밖 질문(예: 타 기관과 혼동, 개인 민원 오인)에 대한 명시적 분기 처리나 유사기관 구분 안내가 없음."
+        },
+        {
+          "id": "self_check",
+          "score": 20,
+          "note": "K-Law류의 확신도 표기·자기검증 블록·재검토 절차가 없음. 단순 안내형 SP라는 점을 감안해도 최소한의 '불확실 시 보류' 지침이 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.0→v1.1 개정 사유가 한 줄로 기록됨(§5). 다만 변경 전/후 비교나 상세 diff는 없음."
+        },
+        {
+          "id": "honesty",
+          "score": 95,
+          "note": "'이 문서는 v1.0 초안이며 대표전화·소재지는 미검증'이라고 스스로 명시. 서비스가 없다는 사실 자체도 숨기지 않고 안내."
+        }
+      ]
+    },
+    {
+      "file": "prompts/K-Public_common_v1_3.md",
+      "name": "K-Public 공통 규칙 (국가기관 정체성 레이어)",
+      "cat": "core",
+      "cat_label": "시스템 · 시스템 코어·공통 규칙 (전체 국가기관 SP가 상속하는 정체성 레이어)",
+      "purpose": "행정부·사법부·입법부 소속 모든 국가기관 AI가 공유하는 정체성 원칙(정체성 고지, 정치적 중립성, 자격 사칭 금지)만을 규정하는 최상위 공통 레이어.",
+      "goal": "UNIVERSAL-INTEGRITY → UNIVERSAL-common → K-Public_common → 개별 기관 SP 순서로 조립되는 상속 체인에서, 국가기관에게만 고유한 조항만 남기고 나머지는 UNIVERSAL-common으로 이관해 단일출처원칙을 지키는 것이 목표.",
+      "version": "v1.3",
+      "version_date": "2026-07-05",
+      "completeness": 72,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 95,
+          "note": "국가기관 정체성 레이어로 범위를 명확히 좁히고, K-Doctor 등 전문가 모듈과의 경계까지 스스로 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 70,
+          "note": "외부 사실 검증 대상이 거의 없는 순수 원칙 문서라 근거 표기 자체의 필요성이 낮음 — 감점보다는 해당 없음에 가까움."
+        },
+        {
+          "id": "schema",
+          "score": 55,
+          "note": "조립 순서(상속 체인)는 명시하지만 자체 입출력 스키마는 정의하지 않음(하위 SP에 위임)."
+        },
+        {
+          "id": "edge_case",
+          "score": 65,
+          "note": "자격 사칭 금지(P8) 외에 정치적 중립성 압박 등 다른 경계 상황에 대한 별도 지침은 얕음."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "자기검증·확신도 절차는 전혀 정의하지 않고 전부 UNIVERSAL-common(U1~U8)에 위임 — 이 문서 자체의 목적(정체성만 규정)에는 맞지만 기준상 낮게 평가됨."
+        },
+        {
+          "id": "versioning",
+          "score": 95,
+          "note": "v1.0~v1.3 각 버전마다 무엇을 이관했는지, 왜 이관했는지(khealth 오상속 버그 등)까지 정확히 기록."
+        },
+        {
+          "id": "honesty",
+          "score": 90,
+          "note": "이 문서 단독으로 삽입하면 안 된다는 전제, 조립 순서를 지키지 않으면 무엇이 깨지는지 명시적으로 경고."
+        }
+      ]
+    },
+    {
+      "file": "prompts/PROFESSIONAL-common_v1_0.md",
+      "name": "PROFESSIONAL 공통 규칙 (전문가 보조 모듈 정체성 원본)",
+      "cat": "core",
+      "cat_label": "시스템 · 시스템 코어·공통 규칙 (전문가 보조 모듈이 상속하는 정체성 레이어)",
+      "purpose": "K-Doctor·K-Professor 등 전문가 보조 모듈 전체가 공유하는 정체성·최종판단 소재 원칙을 규정하는 공통 레이어.",
+      "goal": "누구와 대화하는가(전문가 보조형 vs 최종사용자 직접대화형)와 무관하게, 법령상 최종 확정 권한이 자격자 본인에게 귀속되는지를 기준으로 AI의 판단 범위를 일관되게 규정하는 것이 목표.",
+      "version": "v2.0 (파일명은 v1_0으로 표기됨 — 아래 참고)",
+      "version_date": "2026-07-26",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 95,
+          "note": "Q1~Q4로 정체성·최종판단 소재·자격표시·오배치 되돌림을 명확히 구분해 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 80,
+          "note": "Q2의 판단 기준(의료법 제27조 등 법령상 강제 여부)이 구체적 근거로 뒷받침됨."
+        },
+        {
+          "id": "schema",
+          "score": 60,
+          "note": "Q4의 [SUGGEST_SERVICE_REDIRECT:] 태그 문법은 명확하나, 전체적인 입출력 스키마는 하위 SP에 위임."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "Q4가 실제 300건 라이브 회귀 분석(오배치 39건 중 59%가 이 경계에서 발생)을 근거로 설계된 정교한 예외 처리 메커니즘."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "Q4는 일종의 자기 점검·교정 메커니즘이지만, K-Law류의 확신도 출력 의무는 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.0→v2.0→Q4 추가까지 개정 사유가 상세히 기록되어 있으나, 파일명이 여전히 PROFESSIONAL-common_v1_0.md로 남아 있어 헤더의 v2.0과 불일치(SP 작성 방법론 위반) — 파일명 갱신은 여러 참조 지점에 영향을 줄 수 있어 이번 배치에서는 보류하고 별도 배치로 이관."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "Q3에서 자격 사칭 금지, Q1에서 국가기관 대신 자기소개 금지 등 한계를 명확히 고지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/UNIVERSAL-INTEGRITY_v1_0.md",
+      "name": "UNIVERSAL-INTEGRITY (전체 SP 공통 최상위 행동 지침)",
+      "cat": "core",
+      "cat_label": "시스템 · 시스템 코어·공통 규칙 (전체 SP가 상속하는 판단 방식 원본, U0=핵심 SP 0단계)",
+      "purpose": "정부·K-서비스·전문직 페르소나·AGENT 전체를 아우르며, 트랙별 정체성이 결정되기 전에 먼저 적용되는 판단 방식(정직성·자기검증) 자체를 규정.",
+      "goal": "K-Law v15.1의 확신도 이원화·자기검증 메커니즘을 도메인 무관하게 일반화해, 안내로 끝내지 않고 실제로 업무를 진행하는 것(U0)과 정직한 판단(U1~U8)을 전체 SP의 공통 자산으로 승격하는 것이 목표.",
+      "version": "v1.9 (파일명은 v1_0으로 표기됨 — 아래 참고)",
+      "version_date": "2026-08-12",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 95,
+          "note": "트랙 무관 최상위 위치, 원출처(K-Law v15.1)까지 명시하며 범위를 정확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "94개 SP 사고실험(470건), 30건 실사 검증 등 구체적 감사 수치를 근거로 각 조항이 신설됨."
+        },
+        {
+          "id": "schema",
+          "score": 55,
+          "note": "행동 원칙 목록(U0~U8)이지 literal 입출력 스키마는 아님."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "제1원칙(U0)의 오독 방지를 위해 절대 override하지 않는 경계(면허 영역, HUMAN-AUTHORITY-GATE)를 명시적으로 카드처럼 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 90,
+          "note": "K-Law의 확신도 이원화·자기검증 메커니즘을 직접 계승 — 이 배치 5건 중 자기검증 기준이 가장 강함."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0→v1.9까지 매 버전 실사 근거·수정 이유가 상세히 기록된 모범적 개정이력이지만, 파일명이 UNIVERSAL-INTEGRITY_v1_0.md로 고정되어 헤더의 v1.9와 불일치 — PROFESSIONAL-common과 동일한 패턴의 구조적 결함으로, 별도 배치에서 두 파일을 함께 처리할 예정."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "U0의 한계를 문서 최상단에 못박아 '원칙 이름이 크다고 경계를 넓히는 것이 아니다'라고 스스로 경고."
+        }
+      ]
+    },
+    {
+      "file": "prompts/UNIVERSAL-common_v1_12.md",
+      "name": "UNIVERSAL 공통 규칙 (정체성 무관 절차·원칙 원본)",
+      "cat": "core",
+      "cat_label": "시스템 · 시스템 코어·공통 규칙 (전체 SP가 상속하는 절차 원본, U1~U12)",
+      "purpose": "권한의 한계·사실 정확성·응급우선·개인정보·업무파이프라인·세션연속성·SP 간 호출 프로토콜 등 정체성과 무관한 절차를 전체 SP 공통으로 규정.",
+      "goal": "각 기관·SP가 절차를 저마다 다르게 재정의하지 않도록, 실사에서 반복 발견된 오작동(위치 재질문, 장문 인사말, PDV 미환원 등)을 근거로 U1~U12를 계속 개정해 단일 원본으로 유지하는 것이 목표.",
+      "version": "v1.12",
+      "version_date": "2026-08-12",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 95,
+          "note": "'정체성 무관 절차·원칙 원본'이라는 표제로 K-Public_common·PROFESSIONAL-common과의 역할 분담을 명확히 선언."
+        },
+        {
+          "id": "evidence",
+          "score": 90,
+          "note": "U0~U12 각 조항이 특정 실사 사례(콘디아 위치질의 오작동, 장문 인사말 스크린샷 등)로 근거가 남아 있어 이 배치에서 근거 추적성이 가장 뛰어남."
+        },
+        {
+          "id": "schema",
+          "score": 70,
+          "note": "U8 PDV_HISTORY_REQUEST, U9 SP_CALL, U10 DEPT_TASK_REQUEST, U12 PDV_SAVE_REQUEST 등 실제 태그 문법을 규정 — 이 배치 중 스키마 정의가 가장 구체적."
+        },
+        {
+          "id": "edge_case",
+          "score": 90,
+          "note": "U0-3(인스턴스 데이터 오류 발견 시 즉시 시정), U11(사용자 현황 우선 파악) 등 실사에서 드러난 경계 상황을 지속적으로 흡수."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "U2(모르면 모른다)·U0-3(스스로 발견한 오류 시정 의무)이 자기검증 성격을 가지나, K-Law류의 확신도 출력 의무 자체는 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 95,
+          "note": "파일명(v1_12)과 헤더(v1.12)가 정확히 일치하고, 매 버전 실사 날짜·발견 경위·수정 내용이 매우 상세히 기록됨 — 이 배치의 버전관리 모범 사례."
+        },
+        {
+          "id": "honesty",
+          "score": 90,
+          "note": "U2에서 '모르면 모른다고 한다'를 명문화."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP-10_kpublic_v3.25.txt",
+      "name": "SP-10_kpublic (K-Public · 전국 공통 정부 서비스 레이어, kgov)",
+      "cat": "kservice-kpublic",
+      "cat_label": "K-서비스 · K-퍼블릭(행정민원)",
+      "purpose": "전국 공통 정부 서비스(정부24 등 온라인 민원 처리 채널 안내·연계)를 담당하는 레이어로, 도청·시청 등 지역 SP 트리 전체가 상속하는 원본(kgov).",
+      "goal": "버튼 라벨이 아닌 실제 내용으로 제도안내형/처분형을 구분하고, 지자체 개별 등록과 전국 공통 등록이 중복될 때 전국 공통판을 우선 확인하는 등, 반복 실사로 드러난 오분류를 계속 시정해 정확한 민원 안내를 제공하는 것이 목표.",
+      "version": "v3.25",
+      "version_date": "2026-08-13",
+      "completeness": 87,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "전국 공통 정부 서비스 레이어로서의 역할과 도(道) 트리 등 하위 SP와의 관계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 90,
+          "note": "정부24 카탈로그 사고실험(4차·5차분, 각 40여 건)을 실제로 수행하고 발견 건수·반영 여부까지 투명하게 기록."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES, §REQUIRED-DOCUMENTS, GOV_TASK_SUBMIT_REQUEST, STEP A/B/C 등 입출력·처리 단계가 구조적으로 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 90,
+          "note": "버튼 라벨과 실제 내용의 불일치, 지자체 개별판과 전국 공통판의 중복 등록 등 실제 오분류 사례를 근거로 예외 처리를 계속 정교화."
+        },
+        {
+          "id": "self_check",
+          "score": 75,
+          "note": "STEP B 단계에 확신도 판단이 포함되어 있으나 K-Law만큼의 강제 출력 의무는 아님."
+        },
+        {
+          "id": "versioning",
+          "score": 95,
+          "note": "파일명(v3.25)과 헤더가 정확히 일치하고, 지난 5개 버전 각각의 발견·의사결정 과정이 매우 투명하게 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "발견한 문제 중 일부만 반영하고 나머지는 '과설계 방지'로 의도적으로 보류했다고 명시 — 무리하게 다 고친 척하지 않음."
+        }
       ]
     }
   ]
