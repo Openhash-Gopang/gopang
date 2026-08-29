@@ -82,8 +82,9 @@
 
 .site-hero {
   /* 2026-08-29 — 세로 패딩(top/bottom) 20% 증가로 히어로 전체 높이 확대
-     (48px→58px, 40px→48px). 좌우 패딩은 레이아웃 폭에 영향을 주므로 유지. */
-  background: #0e1c3f; padding: 58px 40px 48px; position: relative;
+     (48px→58px, 40px→48px). 이후 2026-08-29 추가로 30% 더 확대
+     (58px→75px, 48px→62px). 좌우 패딩은 레이아웃 폭에 영향을 주므로 유지. */
+  background: #0e1c3f; padding: 75px 40px 62px; position: relative;
 }
 .site-hero-badge {
   display: inline-flex; align-items: center; gap: 6px; background: #16295a;
