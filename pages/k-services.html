@@ -195,6 +195,7 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
     <div class="svc-tab" data-svc="ktelecom">K-Telecom</div>
     <div class="svc-tab" data-svc="ksearch">K-Search</div>
     <div class="svc-tab" data-svc="kbiz">K-Biz</div>
+    <div class="svc-tab" data-svc="kplan">K-Plan</div>
   </div>
 
   <div class="svc-content" id="svcContent">
@@ -1525,7 +1526,7 @@ var SVC_LABEL = {
   khealth: 'K-Health', kschool: 'K-School', gdc: 'GDC', kstock: 'K-Stock',
   kinsurance: 'K-Insurance', ktax: 'K-Tax', kmarket: 'K-Market', ktraffic: 'K-Traffic',
   klogistics: 'K-Logistics', kcleaner: 'K-Cleaner', kpublic: 'K-Public', kdemocracy: 'K-Democracy',
-  ktelecom: 'K-Telecom', ksearch: 'K-Search', kbiz: 'K-Biz'
+  ktelecom: 'K-Telecom', ksearch: 'K-Search', kbiz: 'K-Biz', kplan: 'K-Plan'
 };
 
 function renderSvc(key) {
@@ -1553,7 +1554,12 @@ document.getElementById('svcTabs').addEventListener('click', function (e) {
 (function () {
   // desktop.html에서 특정 탭으로 바로 진입시키기 위한 딥링크 훅.
   // window.__HONDI_SVC_TAB을 미리 지정해두면 해당 탭으로 열린다(없으면 기본 k119).
-  var initTab = (window.__HONDI_SVC_TAB && SVC_LABEL[window.__HONDI_SVC_TAB]) ? window.__HONDI_SVC_TAB : 'k119';
+  // 다른 페이지에서 pages/k-services.html#kplan 처럼 URL 해시로도 진입 가능
+  // (2026-08-31 신설 — highlights/hondi-network.html의 "K-Plan 바로 가기" 링크용).
+  var hashTab = (location.hash || '').replace('#', '');
+  var initTab = (window.__HONDI_SVC_TAB && SVC_LABEL[window.__HONDI_SVC_TAB]) ? window.__HONDI_SVC_TAB
+    : (hashTab && SVC_LABEL[hashTab]) ? hashTab
+    : 'k119';
   window.__HONDI_SVC_TAB = null;
   document.querySelectorAll('.svc-tab').forEach(function (t) {
     t.classList.toggle('active', t.getAttribute('data-svc') === initTab);
