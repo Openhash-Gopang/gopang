@@ -1274,17 +1274,17 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-PIPC_v1.1.md,개인정보보호위원회,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-PROSECUTION_v1.1.md,검찰청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-POLICE_v1.1.md,경찰청,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOEL_v1.1.md,고용노동부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOEL_v1.1.md,고용노동부,재평가완료,78,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-CIO_v1.1.md,고위공직자범죄수사처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/PUBLIC-MYDATA-REGISTRATION-REQUIREMENTS_2026-07-09.md,공공 마이데이터 등록 요건,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-FTC_v1.1.md,공정거래위원회,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MSIT_v1.1.md,과학기술정보통신부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MSIT_v1.1.md,과학기술정보통신부,재평가완료,77,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-KCS_v1.1.md,관세청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/jurisdiction-staging/README.md,관할권 정리 작업 안내,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md,광주경찰청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.2.md,광주지방고용노동청 제주근로개선지도센터,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md,광주지방식품의약품안전청 제주수입식품검사소,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOE_v1.1.md,교육부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOE_v1.1.md,교육부,재평가완료,77,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NDA_v1.1.md,국가데이터처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MPVA_v1.1.md,국가보훈부,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-KHS_v1.1.md,국가유산청,미착수,,,,
@@ -1298,7 +1298,7 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-ACRC_v1.1.md,국민권익위원회,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md,국민연금공단 제주지역본부,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MND_v1.1.md,국방부,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NTS_v1.1.md,국세청,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NTS_v1.1.md,국세청,재평가완료,80,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOLIT_v1.1.md,국토교통부,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NANET_v1.1.md,국회도서관,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NAFI_v1.1.md,국회미래연구원,미착수,,,,
@@ -1306,7 +1306,7 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NAS_v1.1.md,국회의장비서실,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NARS_v1.1.md,국회입법조사처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.2.md,근로복지공단 제주지사,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-FSC_v1.1.md,금융위원회,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-FSC_v1.1.md,금융위원회,재평가완료,80,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-KMA_v1.1.md,기상청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-OBS_v1.1.md,기획예산처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOCEE_v1.1.md,기후에너지환경부,미착수,,,,
@@ -1320,18 +1320,18 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/CIVIL-PETITION-IO-PLAN-ADDENDUM_2026-07-09.md,민원 처리 입출력 설계 보충안,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-BMTC_v1.1.md,방송미디어통신위원회,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-DAPA_v1.1.md,방위사업청,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOJ_v1.1.md,법무부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOJ_v1.1.md,법무부,재평가완료,78,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-COTI_v1.1.md,법원공무원교육원,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NCA_v1.1.md,법원행정처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOLELEG_v1.1.md,법제처,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MMA_v1.1.md,병무청,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOHW_v1.1.md,보건복지부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOHW_v1.1.md,보건복지부,재평가완료,79,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/SP-부서-입출력-마스터목록_v1.md,부서 입출력 마스터목록,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-JRTI_v1.1.md,사법연수원,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-JPRI_v1.1.md,사법정책연구원,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-FORESTCOOP-TEMPLATE_v1.0.md,산림조합중앙회 제주지역본부,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-KFS_v1.1.md,산림청,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOTIE_v1.1.md,산업통상부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOTIE_v1.1.md,산업통상부,재평가완료,76,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-SDIA_v1.1.md,새만금개발청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.2.md,서울서부지방검찰청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.2.md,서울서부지방법원,미착수,,,,
@@ -1380,8 +1380,8 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-BOK-TEMPLATE_v1.1.md,한국은행 제주본부,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.2.md,한국지능정보사회진흥원 제주스마트쉼센터,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-KCG_v1.1.md,해양경찰청,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOF_v1.1.md,해양수산부,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOIS_v1.1.md,행정안전부,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOF_v1.1.md,해양수산부,재평가완료,77,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOIS_v1.1.md,행정안전부,재평가완료,77,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NAACC_v1.1.md,행정중심복합도시건설청,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-CONSTCOURT_v1.1.md,헌법재판연구원,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md,호남지방데이터청 제주사무소,미착수,,,,

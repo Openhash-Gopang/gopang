@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
   "status": "in-progress",
-  "note": "6차 배치(의사 전 세부분야 24건 + 감정평가사·손해사정사·재무설계사·한의사 4건) 평가 완료 — 3-고위험전문직 그룹(110건) 전체 완료. 전체 2,011개 중 129건 평가됨.",
+  "note": "7차 배치(정부기관 라우팅 — 중앙부처 정책기관 10건) 완료. 전체 2,011개 중 139건 평가됨.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -6235,6 +6235,486 @@
           "id": "honesty",
           "score": 85,
           "note": "[위험 고지] 블록을 보유하며, 확신도 표시로 불확실성을 이용자에게 정직하게 노출."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOIS_v1.1.md",
+      "name": "행정안전부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "행정안전부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "행정안전부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 70,
+          "note": "「정부조직법」 제4장(행정각부)의 관장사무 원문은 확정했으나 정확한 조항 번호는 '재검증 대기' 상태로 정직하게 남겨둠."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOHW_v1.1.md",
+      "name": "보건복지부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "보건복지부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 79,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "보건복지부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "「정부조직법」 제39조제1항까지 조항 번호를 확정하고 law.go.kr 교차검증을 완료."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOEL_v1.1.md",
+      "name": "고용노동부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "고용노동부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "고용노동부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "「정부조직법」 제41조를 근거로 명시하되, 근로기준법·고용보험법 등 개별법은 실제 시행 시 별도 확인이 필요함을 스스로 밝힘."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOE_v1.1.md",
+      "name": "교육부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "교육부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "교육부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 70,
+          "note": "관장사무 원문은 확정했으나 조항 번호는 2차 재교차검증(2026-08-03)까지 거쳤음에도 여전히 '재검증 대기' 상태 — 검증을 반복한 정직한 이력이 남아 있음."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-NTS_v1.1.md",
+      "name": "국세청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "국세청을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "국세청의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "「정부조직법」 제27조제3항에 더해 국세기본법·국세징수법까지 근거법령을 구체적으로 명시 — 이 배치 중 법적 근거가 가장 상세."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MSIT_v1.1.md",
+      "name": "과학기술정보통신부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "과학기술정보통신부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "과학기술정보통신부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 70,
+          "note": "관장사무 원문은 확정했으나 조항 번호는 '재검증 대기' 상태로 정직하게 남겨둠."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOF_v1.1.md",
+      "name": "해양수산부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "해양수산부을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "해양수산부의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 70,
+          "note": "관장사무 원문은 확정했으나 조항 번호는 '재검증 대기' 상태로 정직하게 남겨둠."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOTIE_v1.1.md",
+      "name": "산업통상부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "산업통상자원부(→산업통상부 개칭)을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "산업통상자원부(→산업통상부 개칭)의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "정부 개편으로 인한 개칭을 인지하고 '개칭 전 구법 기준' 근거임을 명시, 개칭 후 관장사무는 별도 확인이 필요하다고 스스로 한계를 고지."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-FSC_v1.1.md",
+      "name": "금융위원회",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "금융위원회을 대표하는 AI 레이어로서, 이 부처의 정책·소관사무 개요를 시민에게 안내하고 개별 신청·사건은 소관 집행기관으로 라우팅.",
+      "goal": "정책 문의(이 SP 소관)와 개별 신청·사건(집행기관 소관)을 ROUTING-PRIORITY-RULES에 따라 정확히 구분하고, 근거 법령을 law.go.kr 원문과 교차검증해 명시하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "금융위원회의 정책기관 역할과 집행기관(있는 경우) 간 경계가 명확히 구분됨."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "일반 정부조직법이 아닌 「금융위원회의 설치 등에 관한 법률」 제3조·제17조라는 개별 설치법 근거를 정확히 특정 — 이 배치에서 근거 특정도가 가장 높음."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES(직접수행/안내만), §3 DATA_REQUIREMENT 표(owner_agency/connected/unavailable_reason/fallback)가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 80,
+          "note": "정책기관·집행기관 라우팅 애매성을 ROUTING-PRIORITY-RULES §2 공통 폴백으로 처리."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음 — UNIVERSAL-common의 공통 절차에 의존."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "여러 차례의 실질적 개정(경로 구체화, 법적근거 보강 등)이 모두 같은 버전 번호(v1.1)로 기록되어 개정 시점 구분이 날짜에만 의존함."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "DATA_REQUIREMENT에 미연동 항목을 정직하게 표시하고, 조항 번호 미확정 시 '재검증 대기'로 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-MOJ_v1.1.md",
+      "name": "법무부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 정책기관(policy-bodies)",
+      "purpose": "법무부를 대표하는 AI 레이어로서, 검찰·교정·출입국·인권 정책 개요를 시민에게 안내하고 개별 비자·형사사건은 소관 집행기관(제주출입국·외국인청·제주지방검찰청·제주준법지원센터)으로 라우팅.",
+      "goal": "정책 문의와 개별 신청·사건을 정확히 구분하고, 무료 법률구조 제도를 유료 EXPERT(변호사 SP) 자문보다 먼저 안내하는 공익 우선 원칙(C40)을 지키는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-08-02",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "3개 집행기관(출입국·준법지원센터·검찰청)과의 소속 구분이 헤더에서부터 명시되어 이 배치에서 경계 설정이 가장 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 90,
+          "note": "「정부조직법」 제32조제1항 관장사무 원문을 law.go.kr에서 교차검증하고 검증일까지 명시 — 조항 번호까지 완전히 확정된 사례."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "§CAPABILITIES, §3 DATA_REQUIREMENT 표가 표준 형식으로 완비됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "출입국·전과기록처럼 실질적 시민 접점이 큰 사안은 경로를 구체화(하이코리아·정부24)하는 등 실사용 관점의 예외 처리가 우수."
+        },
+        {
+          "id": "self_check",
+          "score": 40,
+          "note": "단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 68,
+          "note": "'v1.1 개정(2026-07-14)'과 'v1.1 보강(2026-08-02)' 두 차례의 실질적 개정이 같은 버전 번호로 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "무료 법률구조공단 경로를 유료 EXPERT 자문보다 먼저 안내하도록 명시, DATA_REQUIREMENT에 미연동 항목을 정직하게 표시."
         }
       ]
     }
