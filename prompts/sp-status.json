@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
   "status": "in-progress",
-  "note": "13차 배치 완료(policy-bodies 카테고리 전체 + 라우팅 설계 문서 1건) — 200건 마일스톤 도달. 전체 2,011개 중 200건 평가됨.",
+  "note": "14차 배치(정부기관 라우팅 — 국가 공기업 30건 전체) 완료. 전체 2,011개 중 230건 평가됨.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -9643,6 +9643,1446 @@
           "id": "honesty",
           "score": 90,
           "note": "'미해결 — 다음에 정할 것' 섹션에서 이 규칙이 아직 실제 코드에 배선되지 않은 사람이 읽는 문서일 뿐이라는 점, 판별 주체가 AC인지 K-Intent인지 미정이라는 점을 숨기지 않고 명시 — 이 배치 전체에서 '설계와 구현의 괴리'를 가장 정직하게 인정한 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCO_v1.1.md",
+      "name": "한국전력공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국전력공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(전력 송배전·판매)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 이용자가 월 전기 사용량을 말하면 주택용 3단계 누진구간을 직접 판정처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "이용자가 월 전기 사용량을 말하면 주택용 3단계 누진구간을 직접 판정 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-EWP_v1.1.md",
+      "name": "한국동서발전",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국동서발전(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고,  특화 계산 기능(발전 관련 수치 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": " 특화 계산 기능(발전 관련 수치 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-REB_v1.1.md",
+      "name": "한국부동산원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국부동산원(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(부동산 통계·감정)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(부동산 지표 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(부동산 지표 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-HUG_v1.1.md",
+      "name": "주택도시보증공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "주택도시보증공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(전세보증·주택도시기금)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 이용자가 전세보증금과 매매시세를 말하면 전세가율을 직접 계산해 깡통전세 위험도까지 판단처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 82,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "이용자가 전세보증금과 매매시세를 말하면 전세가율을 직접 계산해 깡통전세 위험도까지 판단 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-SR_v1.1.md",
+      "name": "에스알(SR)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "에스알(SR)(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(철도(SRT) 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 지연배상금 등 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "지연배상금 등 특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOGAS_v1.1.md",
+      "name": "한국가스공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국가스공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(천연가스 공급)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(가스요금 관련 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(가스요금 관련 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOGAT_v1.1.md",
+      "name": "한국가스기술공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국가스기술공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(가스 기술·안전관리)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-LH_v1.1.md",
+      "name": "한국토지주택공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국토지주택공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(공공주택·토지개발)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(공공주택 관련 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(공공주택 관련 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-EX_v1.1.md",
+      "name": "한국도로공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국도로공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(고속도로 건설·관리)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(통행료 관련 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(통행료 관련 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KODIT_v1.1.md",
+      "name": "한국지역난방공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국지역난방공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(지역난방 공급)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(난방요금 관련 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(난방요금 관련 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOEM_v1.1.md",
+      "name": "해양환경공단",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "해양환경공단(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(해양환경 관리)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCOENG_v1.1.md",
+      "name": "한국전력기술",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국전력기술(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전소 설계·엔지니어링)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOEN_v1.1.md",
+      "name": "한국남동발전",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국남동발전(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KORAIL_v1.1.md",
+      "name": "한국철도공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국철도공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(철도 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 이용자가 지연시간과 운임을 말하면 소비자분쟁해결기준(20분·40분·60분 구간별 배상률)에 따라 지연배상금을 직접 계산 — 코레일 공식 FAQ로 검증됨처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 83,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "이용자가 지연시간과 운임을 말하면 소비자분쟁해결기준(20분·40분·60분 구간별 배상률)에 따라 지연배상금을 직접 계산 — 코레일 공식 FAQ로 검증됨 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KNOC_v1.1.md",
+      "name": "한국석유공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국석유공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(석유 비축·개발)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KHNP_v1.1.md",
+      "name": "한국수력원자력",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국수력원자력(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(수력·원자력 발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMIR_v1.1.md",
+      "name": "한국광해광업공단",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국광해광업공단(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(광해방지·광업지원)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KDN_v1.1.md",
+      "name": "한전KDN",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한전KDN(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(전력IT)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-JDC_v1.1.md",
+      "name": "제주국제자유도시개발센터",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "제주국제자유도시개발센터(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(제주 국제자유도시 개발)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KEPCOKPS_v1.1.md",
+      "name": "한전KPS",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한전KPS(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전설비 정비)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-GKL_v1.1.md",
+      "name": "그랜드코리아레저",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "그랜드코리아레저(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(외국인전용 카지노 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KRA_v1.1.md",
+      "name": "한국마사회",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국마사회(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(경마 시행)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMIPO_v1.1.md",
+      "name": "한국중부발전",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국중부발전(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOSPO_v1.1.md",
+      "name": "한국남부발전",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국남부발전(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KOMSCO_v1.1.md",
+      "name": "한국조폐공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국조폐공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(화폐·신분증 제조)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KL_v1.1.md",
+      "name": "강원랜드",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "강원랜드(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(내국인전용 카지노 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KAC_v1.1.md",
+      "name": "한국공항공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국공항공사(준시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(공항 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-IIAC_v1.1.md",
+      "name": "인천국제공항공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "인천국제공항공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(인천공항 운영)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-WP_v1.1.md",
+      "name": "한국서부발전",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국서부발전(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(발전)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/enterprises/SP-NAT-ENT-KWATER_v1.1.md",
+      "name": "한국수자원공사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공기업(enterprises)",
+      "purpose": "한국수자원공사(시장형 공기업)을 대표하는 AI 레이어 — 정부부처와 별도 법인격을 가진 공기업으로서 실제 상품·서비스(수자원 개발·공급)를 산출하는 계층. 정책기관 SP와 달리 §INPUT_SCHEMA/OUTPUT_SCHEMA를 기업의 원자재→상품 구조로 정의.",
+      "goal": "법인격 고지를 응답 시작부에 반드시 포함하고, 특화 계산 기능(수도요금 관련 판정)을 직접 수행처럼 국회예산정책처 원자료·공식 FAQ로 검증된 실제 계산 기능을 직접 수행해 '계산 가능한 것은 계산한다' 원칙(NATIONAL-SP-CORE §3)을 구현하는 것이 목표.",
+      "version": "v1.1 (§6 유의사항은 v1.0 초안으로 표기)",
+      "version_date": "2026-07-23",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "정부부처와 별도 법인격이라는 disclaimer를 모든 응답에 강제하고, 정책기관 SP와의 역할 차이를 명확히 규정."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "국회예산정책처 「일반현황 2025」 원자료의 설립목적·주요기능란을 verbatim으로 인용하고 위키백과·law.go.kr과 교차검증."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "GOV-TIER-IO-SCHEMA 원칙에 따라 §INPUT_SCHEMA(원자재·신청)/§OUTPUT_SCHEMA(상품·서비스)를 기업 구조로 정의."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "특화 계산 기능(수도요금 관련 판정)을 직접 수행 — 정책 변경이 잦은 수치는 재검증 필요를 함께 고지."
+        },
+        {
+          "id": "self_check",
+          "score": 65,
+          "note": "최신 단가·기준이 자주 바뀌는 항목은 '재검증 필요'를 계산 결과와 함께 반드시 동반 고지하도록 설계됨."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명·헤더는 v1.1이지만 §6 유의사항에서는 스스로 'v1.0 초안'이라 지칭 — 문서 내부 버전 표기 불일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "대표전화는 TBD로 남기고, §6에서 이 문서가 초안이며 대표전화·최신 사업현황을 검증하지 못했음을 명시적으로 인정."
         }
       ]
     }
