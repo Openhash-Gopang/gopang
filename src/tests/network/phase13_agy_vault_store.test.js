@@ -13,6 +13,10 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 import worker from '../../../worker.js';
 
 const ORIGIN = 'https://worker.example';
@@ -24,7 +28,7 @@ function req(payload) {
     body: JSON.stringify(payload),
   });
 }
-function makeEnv() { return { DEEPSEEK_API_KEY: 'test-key' }; }
+function makeEnv() { return { DEEPSEEK_API_KEY: 'test-key', GOPANG_MASTER_KEY: 'test-master-key' }; }
 
 let originalFetch;
 beforeEach(() => { originalFetch = globalThis.fetch; });
@@ -72,10 +76,15 @@ describe('AVS: AGY_VAULT_STORE 서버측 처리 (handleGovRelay, 2026-07-23 신�
     assert.ok(pbWriteBody, 'owner_pdv에 실제로 POST돼야 함');
     assert.equal(pbWriteBody.owner_agency, 'emd:한림읍:agent');
     assert.equal(pbWriteBody.record_type, 'consultation');
-    assert.equal(pbWriteBody.what, '주민등록등본 발급 안내');
-    assert.equal(pbWriteBody.why, '전입신고 첨부용');
+    // ★ 2026-08-30 수정 — _writeOwnerPdvRecord가 2026-08-20부터 what/why/
+    // detail을 프로즈 원문이 아니라 SHA-256 해시로만 받는다(원문 미저장
+    // 원칙). 서버측 자동감지 경로(_interceptAgyVaultStore)도 이제 파싱된
+    // 원문을 그 자리에서 해싱해 넘기므로, 여기서도 평문이 아니라 같은
+    // 방식으로 계산한 해시와 비교한다.
+    assert.equal(pbWriteBody.what, await sha256Hex('주민등록등본 발급 안내'));
+    assert.equal(pbWriteBody.why, await sha256Hex('전입신고 첨부용'));
     assert.equal(pbWriteBody.how, 'completed');
-    assert.deepEqual(JSON.parse(pbWriteBody.detail), { procedure: '단독 처리' });
+    assert.equal(pbWriteBody.detail, await sha256Hex(JSON.stringify({ procedure: '단독 처리' })));
     assert.ok(pbWriteBody.who_hash, 'who_hash가 계산돼 있어야 함');
     assert.notEqual(pbWriteBody.who_hash, 'test-guid-1', 'guid 원문이 그대로 들어가면 안 됨(해시돼야 함)');
   });

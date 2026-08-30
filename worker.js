@@ -5193,17 +5193,33 @@ async function _interceptAgyVaultStore(env, dataObj, guid, ctx) {
 
   const fields = _parseAgyVaultStoreTag(match[1]);
   if (fields) {
-    const writeTask = _writeOwnerPdvRecord(env, {
-      recordType: 'consultation',
-      ownerAgency: fields.agency_id,
-      guidForHashing: guid,
-      when: fields.when || new Date().toISOString(),
-      where: fields.where || null,
-      what: fields.what,
-      how: 'completed', // owner_pdv의 how는 완료상태 enum — AGY_VAULT_STORE의 how(처리 절차 설명)와 의미가 달라 detail로 옮긴다
-      why: fields.why || null,
-      detail: fields.how ? { procedure: fields.how } : null,
-    }).catch(e => console.warn('[AgyVaultStore] 기록 실패(응답 흐름은 계속 진행):', e.message));
+    // ★ 2026-08-30 수정 — _writeOwnerPdvRecord가 2026-08-20에 what/why/
+    // detail을 프로즈 원문이 아니라 클라이언트가 미리 계산한 SHA-256
+    // 해시(whatHash/whyHash/detailHash)로만 받도록 바뀌었는데
+    // (handleOwnerPdvReport 쪽 호출부는 그때 함께 갱신됐지만, 이 서버측
+    // 자동감지 경로는 빠졌었다). 여기는 "클라이언트"가 따로 없는 서버
+    // 내부 파싱 경로라, 파싱된 원문을 그 자리에서 직접 해싱해 새 계약에
+    // 맞춘다 — 기존 what/why/detail(prose) 그대로 넘기면 매번
+    // 'what_hash 필수' 예외가 던져지고 아래 .catch가 조용히 삼켜
+    // 2026-08-20 이후 AGY_VAULT_STORE 자동 기록이 전부 실패하고 있었다
+    // (phase13_agy_vault_store.test.js AVS-01로 발견).
+    const detailObj = fields.how ? { procedure: fields.how } : null;
+    const writeTask = (async () => {
+      const whatHash = await _sha256Hex(fields.what);
+      const whyHash = fields.why ? await _sha256Hex(fields.why) : null;
+      const detailHash = detailObj ? await _sha256Hex(JSON.stringify(detailObj)) : null;
+      return _writeOwnerPdvRecord(env, {
+        recordType: 'consultation',
+        ownerAgency: fields.agency_id,
+        guidForHashing: guid,
+        when: fields.when || new Date().toISOString(),
+        where: fields.where || null,
+        whatHash,
+        how: 'completed', // owner_pdv의 how는 완료상태 enum — AGY_VAULT_STORE의 how(처리 절차 설명)와 의미가 달라 detail로 옮긴다
+        whyHash,
+        detailHash,
+      });
+    })().catch(e => console.warn('[AgyVaultStore] 기록 실패(응답 흐름은 계속 진행):', e.message));
     if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
   } else {
     console.warn('[AgyVaultStore] 태그 파싱 실패 — 형식이 예상과 다름:', match[1].slice(0, 200));
