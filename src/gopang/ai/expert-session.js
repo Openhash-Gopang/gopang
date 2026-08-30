@@ -23,8 +23,15 @@ import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON
   from './expert-registry.js';
 import { refineToLeaf } from './subject-gate.js';
 import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
+// ★ 2026-08-30 수정 — 2026-07-19 신설된 핸드오프 맥락 요약(아래
+// summarizeHandoffContext6W 호출부, §"AC와의 이전 대화 맥락을 페르소나에
+// 함께 인계")이 이 import 자체가 빠져 있어 매번 ReferenceError로 죽고,
+// 감싸는 try/catch가 조용히 삼켜 항상 폴백(이번 발화만 전달)으로만
+// 동작하고 있었다 — 즉 이 기능은 도입 이후 한 번도 실제로 작동한 적이
+// 없었다(expert-session-switch.test.mjs 핸드오프 스위트로 발견).
 import { _gwpLaunch } from '../gwp/engine.js';
 import { _buildRoutingFacts } from '../services/location.js';
+import { summarizeHandoffContext6W } from './report-utils.js';
 
 // 합성된 System Prompt 캐시 (같은 페르소나 재호출 시 재요청 방지 — K-Compose
 // nested 위임처럼 한 세션 안에서 같은 페르소나가 반복 호출될 수 있다)
