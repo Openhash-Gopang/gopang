@@ -103,7 +103,8 @@
 }
 .site-hero-corner-logo img { height: 60px; width: auto; display: block; }
 .site-hero h1 {
-  font-size: 30px; font-weight: 500; line-height: 1.4; margin: 0 0 16px;
+  /* 2026-08-30 — 두 줄 헤드라인(l1/l2) 행간 10% 증가 (1.4 → 1.54) */
+  font-size: 30px; font-weight: 500; line-height: 1.54; margin: 0 0 16px;
   max-width: 560px; font-family: 'Pretendard', sans-serif;
 }
 .site-hero h1 .l1 { color: #ffffff; }
