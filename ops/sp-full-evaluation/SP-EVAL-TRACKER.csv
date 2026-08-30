@@ -18,7 +18,7 @@
 2-핵심SP,시스템 코어·공통 규칙,prompts/TASK-DELEGATION-GUIDE_v1_0.md,업무대행 지침,재평가완료,68,파일명(v1_0)이 헤더 버전(v1.1)과 불일치. 수록 서비스가 1건뿐(주민등록 등본) — 커버리지 확장 필요,,2026-08-30
 2-핵심SP,시스템 코어·공통 규칙,prompts/hondi_visitor_sp_v1_2.txt,혼디 방문자 기본 SP,재평가완료,62,'전문 AI 22개+' 등 수치·서비스 예시가 sp-catalog(K-서비스 20개)와 정확히 일치하는지 재확인 필요. 정식 변경이력 섹션 없음,,2026-08-30
 3-고위험전문직,간호사,prompts/SP_nurse_v3_7.md,간호사,재평가완료,84,,,2026-08-30
-3-고위험전문직,감정평가사,prompts/SP_appraiser_v1_9.md,감정평가사,미착수,,,,
+3-고위험전문직,감정평가사,prompts/SP_appraiser_v1_9.md,감정평가사,재평가완료,84,,,2026-08-30
 3-고위험전문직,공인중개사,prompts/SP_real-estate-agent_v2_0.md,공인중개사,재평가완료,84,,,2026-08-30
 3-고위험전문직,관세사,prompts/SP_customs-broker_v1_7.md,관세사,재평가완료,84,,,2026-08-30
 3-고위험전문직,노무사,prompts/SP_labor-attorney_v1_7.md,노무사,재평가완료,84,,,2026-08-30
@@ -82,41 +82,41 @@
 3-고위험전문직,변호사 · 형사법,prompts/SP_lawyer-criminal_v1_0.md,변호사 - 형사법,재평가완료,81,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
 3-고위험전문직,변호사 · 환경법,prompts/SP_lawyer-environmental_v1_0.md,변호사 - 환경법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
 3-고위험전문직,세무사,prompts/SP_tax-accountant_v2_2.md,세무사,재평가완료,84,,,2026-08-30
-3-고위험전문직,손해사정사,prompts/SP_loss-adjuster_v1_7.md,손해사정사,미착수,,,,
+3-고위험전문직,손해사정사,prompts/SP_loss-adjuster_v1_7.md,손해사정사,재평가완료,84,,,2026-08-30
 3-고위험전문직,수의사,prompts/SP_veterinarian_v3_1.md,수의사,재평가완료,84,,,2026-08-30
 3-고위험전문직,약사,prompts/SP_pharmacist_v1_9.md,약사,재평가완료,84,,,2026-08-30
 3-고위험전문직,응급구조사,prompts/SP_paramedic_v1_6.md,응급구조사,재평가완료,84,,,2026-08-30
-3-고위험전문직,의사 · 내과,prompts/SP_physician-internal-medicine_v1_0.md,의사 - 내과,미착수,,,,
-3-고위험전문직,의사 · 마취통증의학과,prompts/SP_physician-anesthesiology_v1_0.md,의사 - 마취통증의학과,미착수,,,,
-3-고위험전문직,의사 · 방사선종양학과,prompts/SP_physician-radiation-oncology_v1_0.md,의사 - 방사선종양학과,미착수,,,,
-3-고위험전문직,의사 · 병리과,prompts/SP_physician-pathology_v1_0.md,의사 - 병리과,미착수,,,,
-3-고위험전문직,의사 · 비뇨의학과,prompts/SP_physician-urology_v1_0.md,의사 - 비뇨의학과,미착수,,,,
-3-고위험전문직,의사 · 산부인과,prompts/SP_physician-obgyn_v1_0.md,의사 - 산부인과,미착수,,,,
-3-고위험전문직,의사 · 성형외과,prompts/SP_physician-plastic_v1_0.md,의사 - 성형외과,미착수,,,,
-3-고위험전문직,의사 · 소아청소년과,prompts/SP_physician-pediatrics_v1_0.md,의사 - 소아청소년과,미착수,,,,
-3-고위험전문직,의사 · 신경과,prompts/SP_physician-neurology_v1_0.md,의사 - 신경과,미착수,,,,
-3-고위험전문직,의사 · 안과,prompts/SP_physician-ophthalmology_v1_0.md,의사 - 안과,미착수,,,,
-3-고위험전문직,의사 · 영상의학과,prompts/SP_physician-radiology_v1_0.md,의사 - 영상의학과,미착수,,,,
-3-고위험전문직,의사 · 예방의학과,prompts/SP_physician-preventive_v1_0.md,의사 - 예방의학과,미착수,,,,
-3-고위험전문직,의사 · 외과,prompts/SP_physician-surgery_v1_0.md,의사 - 외과,미착수,,,,
-3-고위험전문직,의사 · 응급의학과,prompts/SP_physician-emergency_v1_0.md,의사 - 응급의학과,미착수,,,,
-3-고위험전문직,의사 · 이비인후과,prompts/SP_physician-ent_v1_0.md,의사 - 이비인후과,미착수,,,,
-3-고위험전문직,의사 · 일반,prompts/SP_physician_v2_5.md,의사 - 일반,미착수,,,,
-3-고위험전문직,의사 · 재활의학과,prompts/SP_physician-rehabilitation_v1_0.md,의사 - 재활의학과,미착수,,,,
-3-고위험전문직,의사 · 정신건강의학과,prompts/SP_physician-psychiatry_v1_0.md,의사 - 정신건강의학과,미착수,,,,
-3-고위험전문직,의사 · 정형외과,prompts/SP_physician-orthopedics_v1_0.md,의사 - 정형외과,미착수,,,,
-3-고위험전문직,의사 · 직업환경의학과,prompts/SP_physician-occupational_v1_0.md,의사 - 직업환경의학과,미착수,,,,
-3-고위험전문직,의사 · 진단검사의학과,prompts/SP_physician-lab-medicine_v1_0.md,의사 - 진단검사의학과,미착수,,,,
-3-고위험전문직,의사 · 피부과,prompts/SP_physician-dermatology_v1_0.md,의사 - 피부과,미착수,,,,
-3-고위험전문직,의사 · 핵의학과,prompts/SP_physician-nuclear-medicine_v1_0.md,의사 - 핵의학과,미착수,,,,
-3-고위험전문직,의사 · 흉부외과,prompts/SP_physician-cardiothoracic_v1_0.md,의사 - 흉부외과,미착수,,,,
+3-고위험전문직,의사 · 내과,prompts/SP_physician-internal-medicine_v1_0.md,의사 - 내과,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 마취통증의학과,prompts/SP_physician-anesthesiology_v1_0.md,의사 - 마취통증의학과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 방사선종양학과,prompts/SP_physician-radiation-oncology_v1_0.md,의사 - 방사선종양학과,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 병리과,prompts/SP_physician-pathology_v1_0.md,의사 - 병리과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 비뇨의학과,prompts/SP_physician-urology_v1_0.md,의사 - 비뇨의학과,재평가완료,80,M1 관련 언급 3회.,,2026-08-30
+3-고위험전문직,의사 · 산부인과,prompts/SP_physician-obgyn_v1_0.md,의사 - 산부인과,재평가완료,84,임신 중 응급신호를 구체적으로 열거해 즉시 응급실 안내로 연결 — 산과 특화 안전장치가 우수.,,2026-08-30
+3-고위험전문직,의사 · 성형외과,prompts/SP_physician-plastic_v1_0.md,의사 - 성형외과,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 소아청소년과,prompts/SP_physician-pediatrics_v1_0.md,의사 - 소아청소년과,재평가완료,82,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 신경과,prompts/SP_physician-neurology_v1_0.md,의사 - 신경과,재평가완료,85,뇌졸중 골든타임을 근거로 한 무예외 응급 우선 규칙 — 이 배치 전체에서 가장 엄격한 자기검증/안전 장치.,,2026-08-30
+3-고위험전문직,의사 · 안과,prompts/SP_physician-ophthalmology_v1_0.md,의사 - 안과,재평가완료,81,M1 관련 언급 2회.,,2026-08-30
+3-고위험전문직,의사 · 영상의학과,prompts/SP_physician-radiology_v1_0.md,의사 - 영상의학과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 예방의학과,prompts/SP_physician-preventive_v1_0.md,의사 - 예방의학과,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 외과,prompts/SP_physician-surgery_v1_0.md,의사 - 외과,재평가완료,81,"M1 관련 언급 1회, M2·M3 경계를 부모와 동일하게 엄격히 유지한다고 재확인.",,2026-08-30
+3-고위험전문직,의사 · 응급의학과,prompts/SP_physician-emergency_v1_0.md,의사 - 응급의학과,재평가완료,84,"M1 관련 언급 3회로, 응급실 도착 이후 상황에서도 병원 전 단계 응급신호와의 경계를 구분해 다룸.",,2026-08-30
+3-고위험전문직,의사 · 이비인후과,prompts/SP_physician-ent_v1_0.md,의사 - 이비인후과,재평가완료,79,M1 관련 언급 3회로 이 배치에서 상대적으로 자기검증 장치가 탄탄한 편.,,2026-08-30
+3-고위험전문직,의사 · 일반,prompts/SP_physician_v2_5.md,의사 - 일반,재평가완료,86,,,2026-08-30
+3-고위험전문직,의사 · 재활의학과,prompts/SP_physician-rehabilitation_v1_0.md,의사 - 재활의학과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 정신건강의학과,prompts/SP_physician-psychiatry_v1_0.md,의사 - 정신건강의학과,재평가완료,81,M1 관련 언급 1회 — 자살·자해 위험 신호에 대한 처리가 포함되어 있을 것으로 구조상 추정됨.,,2026-08-30
+3-고위험전문직,의사 · 정형외과,prompts/SP_physician-orthopedics_v1_0.md,의사 - 정형외과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 직업환경의학과,prompts/SP_physician-occupational_v1_0.md,의사 - 직업환경의학과,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 진단검사의학과,prompts/SP_physician-lab-medicine_v1_0.md,의사 - 진단검사의학과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 피부과,prompts/SP_physician-dermatology_v1_0.md,의사 - 피부과,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 핵의학과,prompts/SP_physician-nuclear-medicine_v1_0.md,의사 - 핵의학과,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,의사 · 흉부외과,prompts/SP_physician-cardiothoracic_v1_0.md,의사 - 흉부외과,재평가완료,83,급성 대동맥박리·급성 관동맥증후군 등 분 단위로 예후가 갈리는 상황에서 세부분야 설명보다 119 안내를 항상 우선하도록 M1을 세부분야 특화로 강화 — 이 배치에서 가장 정교한 자기검증 사례.,,2026-08-30
 3-고위험전문직,임상심리사,prompts/SP_clinical-psychologist_v3_4.md,임상심리사,재평가완료,84,,,2026-08-30
-3-고위험전문직,재무설계사,prompts/SP_financial-planner_v1_7.md,재무설계사,미착수,,,,
+3-고위험전문직,재무설계사,prompts/SP_financial-planner_v1_7.md,재무설계사,재평가완료,84,,,2026-08-30
 3-고위험전문직,전문간호사,prompts/SP_advanced-practice-nurse_v3_9.md,전문간호사,재평가완료,84,,,2026-08-30
 3-고위험전문직,정신건강전문요원,prompts/SP_mental-health-professional_v3_3.md,정신건강전문요원,재평가완료,84,,,2026-08-30
 3-고위험전문직,조산사,prompts/SP_midwife_v1_6.md,조산사,재평가완료,84,,,2026-08-30
 3-고위험전문직,치과의사,prompts/SP_dentist_v1_9.md,치과의사,재평가완료,84,,,2026-08-30
-3-고위험전문직,한의사,prompts/SP_traditional-medicine-doctor_v2_0.md,한의사,미착수,,,,
+3-고위험전문직,한의사,prompts/SP_traditional-medicine-doctor_v2_0.md,한의사,재평가완료,84,,,2026-08-30
 3-고위험전문직,회계사 · IFRS,prompts/SP_accountant-ifrs_v1_0.md,회계사 - IFRS,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
 3-고위험전문직,회계사 · IPO,prompts/SP_accountant-ipo_v1_0.md,회계사 - IPO,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
 3-고위험전문직,회계사 · 가치평가,prompts/SP_accountant-valuation_v1_0.md,회계사 - 가치평가,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30

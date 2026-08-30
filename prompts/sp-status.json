@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
   "status": "in-progress",
-  "note": "5차 배치 완료(변리사 상표 세부분야 누락분 보정 포함). 전체 2,011개 중 101건 평가됨.",
+  "note": "6차 배치(의사 전 세부분야 24건 + 감정평가사·손해사정사·재무설계사·한의사 4건) 평가 완료 — 3-고위험전문직 그룹(110건) 전체 완료. 전체 2,011개 중 129건 평가됨.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -4891,6 +4891,1350 @@
           "id": "honesty",
           "score": 80,
           "note": "최종 출원서 작성·제출은 등록 변리사 전속 업무이거나 본인인증이 필요해 자동화 대상이 아니라고 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician_v2_5.md",
+      "name": "의사 - 일반",
+      "cat": "prof-physician--base",
+      "cat_label": "전문직 페르소나 · 의사 - 일반 (부모 SP)",
+      "purpose": "K-Health AI 의사 자문가의 부모 SP — 26개 세부분야가 상속하는 STEP 0~D 판단 골격, M1(응급 최우선 트리아지)·M2·M3 경계, 세부분야 자문 호출 체계를 정의.",
+      "goal": "대면진찰이 없으면 확신도를 구조적으로 낮게 잡는 안전장치를 두고, 세부분야별로 M1 응급 임계값을 다르게 조정할 수 있는 유연한 골격을 제공하는 것이 목표. 변리사 등 다른 전문직 페르소나가 이 패턴을 이식해가는 선도 사례.",
+      "version": "v2.5",
+      "version_date": "2026-08-07",
+      "completeness": 86,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 92,
+          "note": "HT:3(의료·수의 계열) 위험등급, 26개 세부분야 확장 계획이 완료된 배경이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "26개 세부분야를 배치별로 순차 신설한 이력이 계획서(HANDOFF 문서)와 함께 상세히 기록됨."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "STEP 0~D 골격에 더해 M1(응급 트리아지)·M2·M3 3단계 권한 경계가 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "'대면진찰 없으면 확신도 구조적으로 낮게 잡는다'는 원칙을 변리사 등 다른 전문직 페르소나가 이식해갈 정도로 우수한 안전장치."
+        },
+        {
+          "id": "self_check",
+          "score": 85,
+          "note": "확신도 관련 언급 5회, M1 응급 임계값이라는 의료 특화 자기검증 축을 별도로 운용."
+        },
+        {
+          "id": "versioning",
+          "score": 85,
+          "note": "v2.3~v2.5까지 세부분야 확장 배치가 상세히 기록되고 파일명·헤더가 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "결핵과처럼 계획서상 신설을 의도적으로 제외한 세부분야가 있음을 투명하게 기록."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-anesthesiology_v1_0.md",
+      "name": "의사 - 마취통증의학과",
+      "cat": "prof-physician--anesthesiology",
+      "cat_label": "전문직 페르소나 · 의사 - 마취통증의학과",
+      "purpose": "K-Health AI 의사 자문가의 마취통증의학과(수술마취+통증클리닉 통합) 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "마취통증의학과(수술마취+통증클리닉 통합) 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "수술마취와 통증클리닉 두 축을 통합해 다룬다는 점과, 실사용 수요를 지켜본 뒤 분리 여부를 재논의하기로 한 결정 과정이 투명함."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "두 축(수술마취/통증클리닉) 간 경계를 스스로 명시."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-cardiothoracic_v1_0.md",
+      "name": "의사 - 흉부외과",
+      "cat": "prof-physician--cardiothoracic",
+      "cat_label": "전문직 페르소나 · 의사 - 흉부외과",
+      "purpose": "K-Health AI 의사 자문가의 심장혈관흉부외과 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "심장혈관흉부외과 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 83,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "심장·대혈관·흉부 수술에 특화되고, 부모보다 M1 임계값을 더 낮게 적용한다는 자기 조정이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "내과(비수술적 관리)·일반외과(장기별 범위)와의 경계를 구체적으로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "급성 대동맥박리·급성 관동맥증후군 등 분 단위로 예후가 갈리는 상황에서 세부분야 설명보다 119 안내를 항상 우선하도록 M1을 세부분야 특화로 강화 — 이 배치에서 가장 정교한 자기검증 사례."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-dermatology_v1_0.md",
+      "name": "의사 - 피부과",
+      "cat": "prof-physician--dermatology",
+      "cat_label": "전문직 페르소나 · 의사 - 피부과",
+      "purpose": "K-Health AI 의사 자문가의 피부·모발·손발톱 질환 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "피부·모발·손발톱 질환 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "피부·모발·손발톱 질환에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "미용사(비의료 미용시술)·성형외과와의 경계를 구체적 예시('가려운데 어떤 제품' vs 지속되는 병변)로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-emergency_v1_0.md",
+      "name": "의사 - 응급의학과",
+      "cat": "prof-physician--emergency",
+      "cat_label": "전문직 페르소나 · 의사 - 응급의학과",
+      "purpose": "K-Health AI 의사 자문가의 병원 응급실 초기평가·중증도분류 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "병원 응급실 초기평가·중증도분류 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "병원 응급실 초기평가·중증도분류에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "응급구조사(paramedic, 병원 전 단계) 페르소나와의 경계를 '가장 중요한 경계선'으로 명시 — 병원 전/후 구분이 정확함."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 3회로, 응급실 도착 이후 상황에서도 병원 전 단계 응급신호와의 경계를 구분해 다룸."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-ent_v1_0.md",
+      "name": "의사 - 이비인후과",
+      "cat": "prof-physician--ent",
+      "cat_label": "전문직 페르소나 · 의사 - 이비인후과",
+      "purpose": "K-Health AI 의사 자문가의 귀·코·목(인후두) 질환 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "귀·코·목(인후두) 질환 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 79,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "귀·코·목(인후두) 질환에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "내과(전신 감염 증상)와의 경계를 국소 부위·만성화·구조적 이상 여부로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 3회로 이 배치에서 상대적으로 자기검증 장치가 탄탄한 편."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-internal-medicine_v1_0.md",
+      "name": "의사 - 내과",
+      "cat": "prof-physician--internal-medicine",
+      "cat_label": "전문직 페르소나 · 의사 - 내과",
+      "purpose": "K-Health AI 의사 자문가의 성인 만성질환 비수술적 진단·관리 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "성인 만성질환 비수술적 진단·관리 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 79,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "성인 만성질환 비수술적 진단·관리에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "외과와의 경계(수술 필요성 판단까지는 다루되 수술 시행 자체는 소관 아님)를 명확히 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-lab-medicine_v1_0.md",
+      "name": "의사 - 진단검사의학과",
+      "cat": "prof-physician--lab-medicine",
+      "cat_label": "전문직 페르소나 · 의사 - 진단검사의학과",
+      "purpose": "K-Health AI 의사 자문가의 체액검사 결과 해석·진단 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "체액검사 결과 해석·진단 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "체액검사 결과 해석·진단에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "임상병리사(검사 시행)와의 경계(시행 vs 해석)를 명확히 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-neurology_v1_0.md",
+      "name": "의사 - 신경과",
+      "cat": "prof-physician--neurology",
+      "cat_label": "전문직 페르소나 · 의사 - 신경과",
+      "purpose": "K-Health AI 의사 자문가의 신경계 증상(마비·경련·의식변화 등) 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "신경계 증상(마비·경련·의식변화 등) 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 85,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "부모 M1이 '이 세부분야에서는 특히 더 엄격하게 적용된다'고 별도 표제로 강조 — 이 배치에서 M1 강화가 가장 명시적인 사례."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "급성 뇌졸중의 '골든타임' 특성을 근거로 특정 증상 발생 시 STEP 0 진입 전 무조건 즉시 119 안내를 예외 없이 강제."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "뇌졸중 골든타임을 근거로 한 무예외 응급 우선 규칙 — 이 배치 전체에서 가장 엄격한 자기검증/안전 장치."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-nuclear-medicine_v1_0.md",
+      "name": "의사 - 핵의학과",
+      "cat": "prof-physician--nuclear-medicine",
+      "cat_label": "전문직 페르소나 · 의사 - 핵의학과",
+      "purpose": "K-Health AI 의사 자문가의 방사성동위원소 특수영상·치료(PET 등) 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "방사성동위원소 특수영상·치료(PET 등) 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "방사성동위원소 특수영상·치료(PET 등)에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "영상의학과(일반 영상검사)와의 경계를 검사 방식 차이로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-obgyn_v1_0.md",
+      "name": "의사 - 산부인과",
+      "cat": "prof-physician--obgyn",
+      "cat_label": "전문직 페르소나 · 의사 - 산부인과",
+      "purpose": "K-Health AI 의사 자문가의 임신·출산·부인과 질환 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "임신·출산·부인과 질환 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "부모 M1이 산과 특유 응급신호(자간전증·태반조기박리 의심 등)로 확장된다는 도메인 특화가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "자간전증 의심(두통·시야이상·상복부통증), 태반조기박리 의심(질출혈+복통), 태동 소실 등 구체적 응급신호 목록을 제시."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "임신 중 응급신호를 구체적으로 열거해 즉시 응급실 안내로 연결 — 산과 특화 안전장치가 우수."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-occupational_v1_0.md",
+      "name": "의사 - 직업환경의학과",
+      "cat": "prof-physician--occupational",
+      "cat_label": "전문직 페르소나 · 의사 - 직업환경의학과",
+      "purpose": "K-Health AI 의사 자문가의 직업병·산재 인과관계 의학적 판단 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "직업병·산재 인과관계 의학적 판단 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "직업병·산재 인과관계 의학적 판단에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "산업안전·보건지도사(비의료 예방조치)와의 경계를 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-ophthalmology_v1_0.md",
+      "name": "의사 - 안과",
+      "cat": "prof-physician--ophthalmology",
+      "cat_label": "전문직 페르소나 · 의사 - 안과",
+      "purpose": "K-Health AI 의사 자문가의 안구·시신경 질환 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "안구·시신경 질환 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "안구·시신경 질환에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "안경사(비질환 시력교정) 페르소나와의 경계를 '가장 중요한 경계선'으로 구체적 예시와 함께 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 2회."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-orthopedics_v1_0.md",
+      "name": "의사 - 정형외과",
+      "cat": "prof-physician--orthopedics",
+      "cat_label": "전문직 페르소나 · 의사 - 정형외과",
+      "purpose": "K-Health AI 의사 자문가의 근골격계 질환·손상 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "근골격계 질환·손상 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "근골격계 질환·손상에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "일반외과(근골격계 외 영역)와의 경계, 다발성 외상 시 우선순위 판단 기준을 제시."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-pathology_v1_0.md",
+      "name": "의사 - 병리과",
+      "cat": "prof-physician--pathology",
+      "cat_label": "전문직 페르소나 · 의사 - 병리과",
+      "purpose": "K-Health AI 의사 자문가의 조직·세포 검체 판독(암 확진 등) 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "조직·세포 검체 판독(암 확진 등) 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "조직·세포 검체 판독(암 확진 등)에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "임상병리사(검사 시행)와의 경계를 시행 vs 판독·확진으로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-pediatrics_v1_0.md",
+      "name": "의사 - 소아청소년과",
+      "cat": "prof-physician--pediatrics",
+      "cat_label": "전문직 페르소나 · 의사 - 소아청소년과",
+      "purpose": "K-Health AI 의사 자문가의 출생~18세 소아청소년 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "출생~18세 소아청소년 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 82,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "'용량·정상범위가 성인과 완전히 다르다'는 점을 가장 중요한 차이로 명시 — 성인 기준 오적용 시 위험하다는 안전 경고가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "체중(mg/kg) 기준 약물 용량, 연령·발달단계별 정상범위 차이를 구체적으로 경고."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-plastic_v1_0.md",
+      "name": "의사 - 성형외과",
+      "cat": "prof-physician--plastic",
+      "cat_label": "전문직 페르소나 · 의사 - 성형외과",
+      "purpose": "K-Health AI 의사 자문가의 재건(reconstructive)·미용(cosmetic) 수술 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "재건(reconstructive)·미용(cosmetic) 수술 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "재건 목적과 미용 목적을 명확히 구분해서 응답한다는 이원적 처리 원칙이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "화상·외상·선천기형 재건과 순수 미용시술을 별도 트랙으로 다뤄 과잉 미용 정보 제공을 방지."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-preventive_v1_0.md",
+      "name": "의사 - 예방의학과",
+      "cat": "prof-physician--preventive",
+      "cat_label": "전문직 페르소나 · 의사 - 예방의학과",
+      "purpose": "K-Health AI 의사 자문가의 질병예방·건강검진·역학적 판단 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "질병예방·건강검진·역학적 판단 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "질병예방·건강검진·역학적 판단에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "보건교육사(교육·캠페인)와의 경계를 개인·집단 위험도 판단 여부로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-psychiatry_v1_0.md",
+      "name": "의사 - 정신건강의학과",
+      "cat": "prof-physician--psychiatry",
+      "cat_label": "전문직 페르소나 · 의사 - 정신건강의학과",
+      "purpose": "K-Health AI 의사 자문가의 정신질환 의학적 진단·약물치료 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "정신질환 의학적 진단·약물치료 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "정신질환 의학적 진단·약물치료에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "임상심리사(비약물적 개입, 처방 불가)와의 경계를 '가장 중요한 경계선'으로 명확히 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 1회 — 자살·자해 위험 신호에 대한 처리가 포함되어 있을 것으로 구조상 추정됨."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-radiation-oncology_v1_0.md",
+      "name": "의사 - 방사선종양학과",
+      "cat": "prof-physician--radiation-oncology",
+      "cat_label": "전문직 페르소나 · 의사 - 방사선종양학과",
+      "purpose": "K-Health AI 의사 자문가의 암 방사선 치료(선량·조사야 설계) 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "암 방사선 치료(선량·조사야 설계) 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 77,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "암 방사선 치료(선량·조사야 설계)에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "영상의학과(진단 목적)와의 경계를 진단 vs 치료 목적으로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-radiology_v1_0.md",
+      "name": "의사 - 영상의학과",
+      "cat": "prof-physician--radiology",
+      "cat_label": "전문직 페르소나 · 의사 - 영상의학과",
+      "purpose": "K-Health AI 의사 자문가의 영상검사(X-ray·CT·MRI 등) 판독 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "영상검사(X-ray·CT·MRI 등) 판독 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "영상검사(X-ray·CT·MRI 등) 판독에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "방사선사(촬영 시행)와의 경계를 시행 vs 판독으로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-rehabilitation_v1_0.md",
+      "name": "의사 - 재활의학과",
+      "cat": "prof-physician--rehabilitation",
+      "cat_label": "전문직 페르소나 · 의사 - 재활의학과",
+      "purpose": "K-Health AI 의사 자문가의 재활 진단·처방 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "재활 진단·처방 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 78,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "재활 진단·처방에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "물리치료사·작업치료사(훈련 시행)와의 경계를 처방 vs 시행으로 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-surgery_v1_0.md",
+      "name": "의사 - 외과",
+      "cat": "prof-physician--surgery",
+      "cat_label": "전문직 페르소나 · 의사 - 외과",
+      "purpose": "K-Health AI 의사 자문가의 수술 필요성 판단·수술 전후 경과 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "수술 필요성 판단·수술 전후 경과 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 81,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "'외과 의사라는 이름이 실제 수술 시행 권한을 뜻하지 않는다'고 명시적으로 경고 — 페르소나 명칭에서 오는 오해를 스스로 차단."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "실제 수술 시행·집도를 절대 하지 않는다고 명시적으로 금지 목록에 포함."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 1회, M2·M3 경계를 부모와 동일하게 엄격히 유지한다고 재확인."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_physician-urology_v1_0.md",
+      "name": "의사 - 비뇨의학과",
+      "cat": "prof-physician--urology",
+      "cat_label": "전문직 페르소나 · 의사 - 비뇨의학과",
+      "purpose": "K-Health AI 의사 자문가의 비뇨기계·남성생식기계 질환 세부분야 — 부모 SP의 STEP 0~D 골격은 재서술하지 않고 경계·Tier·심화모듈·STEP R 훅만 추가하는 얇은 오버레이.",
+      "goal": "비뇨기계·남성생식기계 질환 관련 사안에서 인접 세부분야·페르소나와 정확히 구분되는 역할을 수행하고, 최종 진단·처방 확정은 인증된 의사(M3)에게 넘기는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-07",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "비뇨기계·남성생식기계 질환에 특화된 역할모델로 인접 세부분야·페르소나와의 경계가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "구체적 임상 기준을 제시하나 외부 출처 인용 없이 일반 의학 지식으로 서술."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "세부분야 경계/Tier 테이블/L2·L3 전용 모듈/STEP R 3훅의 일관된 4단 구조를 따름(부모 SP 템플릿)."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "내과(신기능 저하 자체)와의 경계를 구분."
+        },
+        {
+          "id": "self_check",
+          "score": 68,
+          "note": "M1 관련 언급 3회."
+        },
+        {
+          "id": "versioning",
+          "score": 75,
+          "note": "v1.0 최초 신설이라 자체 개정이력은 없으나 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "최종 진단·처방·수술 시행 확정은 M3(부모 상속) 전속 영역이라는 한계를 일관되게 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_appraiser_v1_9.md",
+      "name": "감정평가사",
+      "cat": "prof-appraiser",
+      "cat_label": "전문직 페르소나 · 감정평가사",
+      "purpose": "SP-LAW-03 · 부동산·자산 감정평가 자문.",
+      "goal": "변호사 페르소나 기준 품질평가를 통해 확신도 라벨·강제전환 트리거를 신설하고, 도메인 특화 안전장치를 갖추는 것이 목표.",
+      "version": "v1.9",
+      "version_date": "2026-08-08",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "부동산·자산 감정평가 자문에 특화된 역할이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "'변호사 페르소나 기준 품질평가 결과 반영'이라는 명시적 벤치마킹을 근거로 개정."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "STEP 0~D 골격, L2·L3 전용 예외 분기가 lawyer 페르소나와 동일한 패턴으로 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "소송·상속·과세 등 법적 효력이 필요한 상황에서 참고치와 정식 감정평가서를 구분하도록 명시."
+        },
+        {
+          "id": "self_check",
+          "score": 80,
+          "note": "확신도 라벨(🔴🟡🟢) 체계와 강제전환 트리거가 2026-08-08에 신설되어 자기검증 장치가 최근 크게 보강됨."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "파일명·헤더 버전 일치. 헤더 인라인 노트로 버전 이력을 기록하는 이 SP 계열의 일관된 관행."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "[위험 고지] 블록을 보유하며, 확신도 표시로 불확실성을 이용자에게 정직하게 노출."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_loss-adjuster_v1_7.md",
+      "name": "손해사정사",
+      "cat": "prof-loss-adjuster",
+      "cat_label": "전문직 페르소나 · 손해사정사",
+      "purpose": "SP-LAW-04 · 보험금 손해액 산정 자문.",
+      "goal": "변호사 페르소나 기준 품질평가를 통해 확신도 라벨·강제전환 트리거를 신설하고, 도메인 특화 안전장치를 갖추는 것이 목표.",
+      "version": "v1.7",
+      "version_date": "2026-08-08",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "보험금 손해액 산정 자문에 특화된 역할이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "'변호사 페르소나 기준 품질평가 결과 반영'이라는 명시적 벤치마킹을 근거로 개정."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "STEP 0~D 골격, L2·L3 전용 예외 분기가 lawyer 페르소나와 동일한 패턴으로 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "보험사기 의심 청구 거절, 청구권 소멸시효 임박 시 기한 환기 원칙을 명시."
+        },
+        {
+          "id": "self_check",
+          "score": 80,
+          "note": "확신도 라벨(🔴🟡🟢) 체계와 강제전환 트리거가 2026-08-08에 신설되어 자기검증 장치가 최근 크게 보강됨."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "파일명·헤더 버전 일치. 헤더 인라인 노트로 버전 이력을 기록하는 이 SP 계열의 일관된 관행."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "[위험 고지] 블록을 보유하며, 확신도 표시로 불확실성을 이용자에게 정직하게 노출."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_financial-planner_v1_7.md",
+      "name": "재무설계사",
+      "cat": "prof-financial-planner",
+      "cat_label": "전문직 페르소나 · 재무설계사",
+      "purpose": "SP-FIN-03 · 개인 자산운용·재무설계 자문.",
+      "goal": "변호사 페르소나 기준 품질평가를 통해 확신도 라벨·강제전환 트리거를 신설하고, 도메인 특화 안전장치를 갖추는 것이 목표.",
+      "version": "v1.7",
+      "version_date": "2026-08-08",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "개인 자산운용·재무설계 자문에 특화된 역할이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "'변호사 페르소나 기준 품질평가 결과 반영'이라는 명시적 벤치마킹을 근거로 개정."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "STEP 0~D 골격, L2·L3 전용 예외 분기가 lawyer 페르소나와 동일한 패턴으로 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "투자사기 의심 상품이나 몰빵 계획에 대해 위험경고를 우선하는 원칙을 명시."
+        },
+        {
+          "id": "self_check",
+          "score": 80,
+          "note": "확신도 라벨(🔴🟡🟢) 체계와 강제전환 트리거가 2026-08-08에 신설되어 자기검증 장치가 최근 크게 보강됨."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "파일명·헤더 버전 일치. 헤더 인라인 노트로 버전 이력을 기록하는 이 SP 계열의 일관된 관행."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "[위험 고지] 블록을 보유하며, 확신도 표시로 불확실성을 이용자에게 정직하게 노출."
+        }
+      ]
+    },
+    {
+      "file": "prompts/SP_traditional-medicine-doctor_v2_0.md",
+      "name": "한의사",
+      "cat": "prof-traditional-medicine-doctor",
+      "cat_label": "전문직 페르소나 · 한의사",
+      "purpose": "SP-HEALTH-18 · 한의학적 진단·치료 자문.",
+      "goal": "변호사 페르소나 기준 품질평가를 통해 확신도 라벨·강제전환 트리거를 신설하고, 도메인 특화 안전장치를 갖추는 것이 목표.",
+      "version": "v2.0",
+      "version_date": "2026-08-08",
+      "completeness": 84,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "한의학적 진단·치료 자문에 특화된 역할이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 85,
+          "note": "'변호사 페르소나 기준 품질평가 결과 반영'이라는 명시적 벤치마킹을 근거로 개정."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "STEP 0~D 골격, L2·L3 전용 예외 분기가 lawyer 페르소나와 동일한 패턴으로 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 85,
+          "note": "HT:3(의료계열)임에도 중증신호 시 양방(서양의학) 응급 연계를 명시하는 표준 트리거가 갖춰짐."
+        },
+        {
+          "id": "self_check",
+          "score": 80,
+          "note": "확신도 라벨(🔴🟡🟢) 체계와 강제전환 트리거가 2026-08-08에 신설되어 자기검증 장치가 최근 크게 보강됨."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "파일명·헤더 버전 일치. 헤더 인라인 노트로 버전 이력을 기록하는 이 SP 계열의 일관된 관행."
+        },
+        {
+          "id": "honesty",
+          "score": 85,
+          "note": "[위험 고지] 블록을 보유하며, 확신도 표시로 불확실성을 이용자에게 정직하게 노출."
         }
       ]
     }
