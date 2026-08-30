@@ -20,15 +20,25 @@
   <span class="ps-topbar-title">혼디 프로젝트 지원</span>
 </header>
 
+<div class="subscribe-box" style="max-width:860px; margin:24px auto 0;">
+  <div class="h">구독 방법</div>
+  <ol>
+    <li>아래 입금 계좌로 이용료를 입금하십시오.</li>
+    <li>입금 즉시 사용자 대시보드에 GDC로 자동 충전되며, 구독 종류(기본 요금제, 월 정액제, 연간 구독)는 입금액에 따라 자동으로 결정됩니다.</li>
+  </ol>
+  <div class="account-line">
+    <span class="label">입금 계좌</span>
+    <span class="acct">기업은행 315-092028-04-011 에이아이시티주식회사</span>
+  </div>
+</div>
+
 <section class="ps-hero">
   <div class="ps-hero-inner">
-    <h1 class="ps-hero-title">국내 AI 서버 구축을 위해 <span>혼디 프로젝트를 지원해 주십시오</span></h1>
-    <p class="ps-hero-sub">혼디는 5천만 국민 각자에게, 그리고 수백만에 이르는 기관·부서 각각에게 전담 AI 비서를 제공하는 전자동 AI 정부 플랫폼입니다. 2026년 9월 현재 완성도는 90% 수준이지만, 서버 자원의 한계로 설계 성능의 절반밖에 발휘하지 못하고 있습니다. 지금 가입하시면 국내 AI 서버 구축에 직접 동참하시게 됩니다.</p>
-    <div class="ps-hero-actions">
-      <a href="#support" class="primary">연간 GDC 충전으로 지원하기</a>
-      <a href="#why-hondi" class="outline">개요 읽기</a>
+    <div class="ps-hero-title-row">
+      <h1 class="ps-hero-title">국내 AI 서버 구축을 위해 <span>혼디 프로젝트를 지원해 주십시오</span></h1>
+      <a href="#support" class="ps-hero-gdc-btn">혼디 이용료(GDC) 충전</a>
     </div>
-    <p class="ps-hero-note">가입은 전화번호만으로 즉시 가능합니다. 자세한 설명은 PC로 hondi.net에 접속해 보세요.</p>
+    <p class="ps-hero-sub">혼디는 5천만 국민 각자에게, 그리고 수백만에 이르는 기관·부서 각각에게 전담 AI 비서를 제공하는 전자동 AI 정부 플랫폼입니다. 2026년 9월 현재 완성도는 90% 수준이지만, 서버 자원의 한계로 설계 성능의 절반밖에 발휘하지 못하고 있습니다. 지금 가입하시면 국내 AI 서버 구축에 직접 동참하시게 됩니다.</p>
   </div>
 </section>
 
@@ -147,20 +157,16 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 /* ── 페이지 타이틀 영역 ── */
 .ps-hero { background: var(--surface); padding: 44px 8% 36px; border-bottom: 1px solid var(--border); }
 .ps-hero-inner { max-width: 860px; margin: 0 auto; }
+.ps-hero-title-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .ps-hero-title {
   font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; color: var(--navy);
   line-height: 1.4; margin: 14px 0 14px;
 }
 .ps-hero-title span { color: var(--brand); display: block; margin-top: 2px; }
+.ps-hero-gdc-btn { font-size: 13.5px; font-weight: 700; padding: 11px 20px; border-radius: 8px; text-decoration: none; background: var(--brand); color: #fff; box-shadow: var(--el-1); white-space: nowrap; flex-shrink: 0; transition: box-shadow 0.15s, transform 0.15s, background 0.15s; }
+.ps-hero-gdc-btn:hover { background: var(--brand-dk); box-shadow: var(--el-2); transform: translateY(-1px); }
+.ps-hero-gdc-btn:active { box-shadow: var(--el-1); transform: translateY(0); }
 .ps-hero-sub { font-size: 13.5px; color: var(--text3); line-height: 1.8; max-width: 100%; margin-bottom: 18px; }
-.ps-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.ps-hero-actions a { font-size: 13.5px; font-weight: 700; padding: 11px 20px; border-radius: 8px; text-decoration: none; transition: box-shadow 0.15s, transform 0.15s, background 0.15s; }
-.ps-hero-actions a.primary { background: var(--brand); color: #fff; box-shadow: var(--el-1); }
-.ps-hero-actions a.primary:hover { background: var(--brand-dk); box-shadow: var(--el-2); transform: translateY(-1px); }
-.ps-hero-actions a.primary:active { box-shadow: var(--el-1); transform: translateY(0); }
-.ps-hero-actions a.outline { background: var(--surface); border: 1px solid var(--border2); color: var(--text2); }
-.ps-hero-actions a.outline:hover { background: var(--bg-subtle); }
-.ps-hero-note { font-size: 12px; color: var(--text4); margin-top: 16px; }
 
 /* ── 판결 정확도 강조 수치 (섹션 본문 내 인라인 스탯) ── */
 .stat-inline { font-size: 28px; font-weight: 700; color: var(--brand-dk); line-height: 1; }
@@ -468,12 +474,11 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
       </table>
       <div class="footline">여러분의 구독료는 더 빠르고, 더 정확하며, 국민 개개인의 데이터가 국내에 머무는 안전한 혼디 인프라를 만드는 데 쓰입니다. <strong>지금, 혼디와 함께 한국형 AI 정부의 현장 테스트에 참여해 주십시오.</strong></div>
       <div class="footline" style="margin-top:14px;padding-top:14px"><strong>2026년 가입자 특별 혜택(1+1):</strong> 2026년 중 가입하여 1년 구독(10만 원)을 결제하시면, 구독 기간을 1년 추가하여 총 2년으로 연장해 드립니다.</div>
-      <div class="footline" style="margin-top:14px;padding-top:14px;font-size:12.5px;color:var(--text3,#6b7280)">에이아이시티주식회사는 2024년 설립된 스타트업으로, 아직 매출 및 재무제표가 없습니다. 위 GDC 충전은 실제 제공되는 혼디 서비스에 대한 정당한 이용료 결제이며, 지분·증권·수익을 제공하는 투자가 아닙니다. 향후 지분투자 유치를 진행할 경우, 자본시장법에 따라 금융위원회에 등록된 온라인소액투자중개업자를 통해 별도로 안내해 드립니다.</div>
     </div>
     </div>
 
     <h3 class="sub-heading">혼디 요금제</h3>
-    <div class="section-sub">사용자의 이용 패턴에 맞춰 아래 세 가지 요금제 중 선택할 수 있습니다.</div>
+    <div class="section-sub">사용자의 이용 패턴에 맞춰 아래 세 가지 요금제 중 선택할 수 있습니다. 혼디 이용료(GDC)를 아래 계좌로 입금하면, 자동으로 충전됩니다. <strong><a href="/pages/dashboard.html">대시보드</a></strong>에 로그인하여 충전 및 비용 내역을 확인하십시오.</div>
 
     <div class="plan-grid">
       <div class="plan-card">
@@ -501,29 +506,6 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
       <div style="font-size:13px;font-weight:700;color:var(--text2,#374151);margin-bottom:6px">정직한 고지</div>
       <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0 0 10px">혼디 이용료는 반대급부가 아니라, 실제로 제공되는 AI 비서 서비스에 대해 에이아이시티주식회사가 받는 정당한 매출입니다. 다만 2026년 9월 현재 혼디는 베타(필드) 테스트 단계이며, 개발 완료 시점은 12월 말입니다. 이 단계에서 혼디는 정상적인 완성 서비스 수준에 미치지 못하며 여러 종류의 오류나 결함이 발생할 수 있습니다.</p>
       <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0">이러한 한계를 알고도 혼디의 완성에 동참하고자 하시는 분들의 구독을 추천드리며, 혼디 사용자들 간의 디지털 화폐(GDC) 결제는 별도의 고지 시점까지 자제하십시오.</p>
-    </div>
-
-    <div class="subscribe-box">
-      <div class="h">구독 방법</div>
-      <ol>
-        <li><a href="/pages/dashboard.html">사용자 대시보드</a>에서 종량제(월 1,000원 +α) · 정액제(월 1만 원) · 연간 구독(연 10만 원) 세 가지 중 하나를 선택하십시오.</li>
-        <li>아래 입금 계좌로 이용료를 입금하십시오.</li>
-        <li>입금 즉시 사용자 대시보드에 GDC로 자동 충전됩니다.</li>
-      </ol>
-      <div class="account-line">
-        <span class="label">입금 계좌</span>
-        <span class="acct">기업은행 315-092028-04-011 에이아이시티주식회사</span>
-      </div>
-    </div>
-
-    <div class="cta-box" id="support-cta" style="margin-top:24px">
-      <h3>혼디 프로젝트를 지원해 주십시오</h3>
-      <p>GDC로 연간 이용료를 선결제하면 혼디 개발 진행 상황 정기 리포트를 받아보실 수 있습니다.</p>
-      <div class="price-line"><s>정가 12만 원</s>10만 원</div>
-      <div class="cta-actions">
-        <a href="/pages/dashboard.html" class="primary">GDC로 연간 이용료 충전하기</a>
-        <a href="/desktop.html" class="outline">혼디 가입 / 시작하기</a>
-      </div>
     </div>
 
     <div class="section-body" style="margin-top:32px">
