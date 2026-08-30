@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
   "status": "in-progress",
-  "note": "17차 배치(정부기관 라우팅 — 기타공공기관 대량배치 253건) 완료. 전체 2,011개 중 575건 평가됨.",
+  "note": "19차 배치(정부기관 라우팅 — gov-tree 설계 문서 4건 + 내부조직 템플릿 11건) 완료. 전체 2,011개 중 614건 평가됨.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -27643,6 +27643,1878 @@
           "id": "honesty",
           "score": 95,
           "note": "'이 문서는 대량배치 v1.0 초안이다. Input/Output은 명칭 기반 추정 수준'이라고 스스로 명시하고, 대표전화·소재지 미검증(TBD)임을 숨기지 않음 — STEPI 시범평가와 동일한 수준의 정직성."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-ARIRANGMEDIA_v1.1.md",
+      "name": "㈜아리랑TV미디어",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "㈜아리랑TV미디어(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 해외홍보 방송 콘텐츠 제작·유통. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-CAMCOFMC_v1.1.md",
+      "name": "㈜캠코에프엠씨",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "㈜캠코에프엠씨(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 부동산 시설관리. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-EASYCARE_v1.1.md",
+      "name": "이지케어텍(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "이지케어텍(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 의료정보시스템(HIS) 구축·운영·유지보수. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-EXFM_v1.1.md",
+      "name": "한국도로공사시설관리(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "한국도로공사시설관리(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 고속도로 시설물관리·보안·미화. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-HANIL_v1.1.md",
+      "name": "의료법인 한전의료재단 한일병원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "의료법인 한전의료재단 한일병원(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 종합병원 진료. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKAM_v1.1.md",
+      "name": "IBK자산운용",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK자산운용(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(투자·자산운용). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKCAP_v1.1.md",
+      "name": "IBK캐피탈",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK캐피탈(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(캐피탈). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKCB_v1.1.md",
+      "name": "IBK신용정보",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK신용정보(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(신용정보·채권추심). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKPENSION_v1.1.md",
+      "name": "IBK연금보험(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK연금보험(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(연금보험). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKSB_v1.1.md",
+      "name": "IBK저축은행",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK저축은행(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(저축은행). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKSEC_v1.1.md",
+      "name": "IBK투자증권(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "IBK투자증권(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(투자증권). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKSYS_v1.1.md",
+      "name": "㈜아이비케이시스템",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "㈜아이비케이시스템(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융IT 시스템 운영. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IBKVC_v1.1.md",
+      "name": "(주)IBK벤처투자",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "(주)IBK벤처투자(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(벤처투자). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-IIACFM_v1.1.md",
+      "name": "인천공항시설관리(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "인천공항시설관리(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 공항시설 유지관리. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KDBCAP_v1.1.md",
+      "name": "산은캐피탈(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "산은캐피탈(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(캐피탈). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KDBINFRA_v1.1.md",
+      "name": "산은인프라자산운용(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "산은인프라자산운용(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(인프라자산운용). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KDBINVEST_v1.1.md",
+      "name": "산은인베스트먼트(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "산은인베스트먼트(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(투자). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KDBLIFE_v1.1.md",
+      "name": "KDB생명(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "KDB생명(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 금융서비스(생명보험). 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KEPCOCSC_v1.1.md",
+      "name": "한전CSC",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "한전CSC(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 전기 관련 상담 서비스. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KEPCOFMS_v1.1.md",
+      "name": "한전FMS",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "한전FMS(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 한전 시설(지사·변전소 등) 관리서비스. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KLIC_v1.1.md",
+      "name": "한국법령정보원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "한국법령정보원(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 국가법령정보센터(law.go.kr) 운영. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-KOGASSECURITY_v1.1.md",
+      "name": "코가스보안관리",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "코가스보안관리(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 가스시설 보안관리. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-LHWELFARE_v1.1.md",
+      "name": "엘에이치주거복지정보(주)",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "엘에이치주거복지정보(주)(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 임대주택 입주민 복지정보 관리. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-SPOSTPENSION_v1.1.md",
+      "name": "별정우체국연금관리단",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 공운법 미지정기관(unlisted)",
+      "purpose": "별정우체국연금관리단(공운법 342개 공공기관 목록 밖 미지정기관)을 대표하는 AI 레이어 — 별정우체국 직원 연금 관리. 모기업은 공공기관이나 이 회사 자체는 민간 시장에서 경쟁하는 구조라 미지정.",
+      "goal": "정부기관도 공식 공공기관도 아닌 '회색지대'라는 사실을 disclaimer로 명확히 고지하고, 공공기관 SP보다 정보 신뢰도가 낮다는 한계를 스스로 인정하는 것이 목표.",
+      "version": "v1.1",
+      "version_date": "2026-07-23",
+      "completeness": 76,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "공운법 미지정 사유(민간경쟁 자회사·요건 미달 등)를 구체적으로 설명하고, 모기업이 공공기관이라는 사실과 이 회사의 지위를 명확히 분리."
+        },
+        {
+          "id": "evidence",
+          "score": 75,
+          "note": "재정경제부가 공개한 미지정기관 183개 목록과 국회예산정책처 자료를 근거로 삼되, 개별 설립법이 없는 상법상 주식회사라는 점을 명시."
+        },
+        {
+          "id": "schema",
+          "score": 78,
+          "note": "§INPUT_SCHEMA/OUTPUT_SCHEMA·DATA_REQUIREMENT는 있으나 다른 카테고리 대비 항목 수가 적음."
+        },
+        {
+          "id": "edge_case",
+          "score": 70,
+          "note": "금융계열사의 경우 투자상품(원금손실 가능) vs 예금(예금자보호)을 직접 구분해 안내하는 등 실질적 소비자보호 판정을 수행."
+        },
+        {
+          "id": "self_check",
+          "score": 35,
+          "note": "'이 SP의 정보 신뢰도는 지정된 공공기관 SP보다 낮다'고 스스로 명시 — 정보의 신뢰수준 자체를 등급으로 매기는 특이한 자기평가."
+        },
+        {
+          "id": "versioning",
+          "score": 70,
+          "note": "v1.1 개정 사유가 기록되고 파일명·헤더 버전이 일치."
+        },
+        {
+          "id": "honesty",
+          "score": 92,
+          "note": "'정부기관도 공식 공공기관도 아닌 회색지대'임을 모든 응답에 고지하도록 강제 — 애매한 법적 지위를 숨기지 않고 오히려 그 애매함 자체를 최우선 disclaimer로 삼음."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/NATIONAL-SP-CORE_v1.2.md",
+      "name": "중앙기관 SP 공통 코어",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · gov-tree 설계 문서(docs)",
+      "purpose": "국가기관(특별지방행정기관) 전체가 상속하는 전국 공통 코어 — agencies·enterprises·policy-bodies·qgov·other·unlisted 전체(500+건)에 구조적으로 적용되는 §3(업무수행우선원칙) 등을 정의.",
+      "goal": "'계산 가능한가→판정 가능한가→개인화 가능한가→경로구체화 가능한가→안내'의 5단계 검토 순서를 정식화하되, 국가유공자 최종판정·방사성폐기물 안전처럼 과잉확신이 더 위험한 영역에서는 의도적으로 유보하도록 예외를 두는 것이 목표.",
+      "version": "v1.2",
+      "version_date": "2026-07-14",
+      "completeness": 85,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 92,
+          "note": "하위 SP 트리 전체(agencies·enterprises·qgov 등)에 구조적으로 적용되는 위치와 역할이 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "라우팅 테이블이 정적 텍스트라 낡은 정보를 주입하던 버그, 86개+ 파일이 인용하는 §3가 실제로는 존재하지 않았던 결함을 구체적으로 발견·기록."
+        },
+        {
+          "id": "schema",
+          "score": 80,
+          "note": "§2·§3·§4·§5로 원칙이 구조화되어 있으나 이 문서 자체는 원칙 문서라 입출력 스키마 개념은 약함."
+        },
+        {
+          "id": "edge_case",
+          "score": 90,
+          "note": "'신중한 유보' 섹션에서 계산·판정 우선 원칙을 과잉 적용하면 안 되는 고위험 영역을 구체적으로 열거."
+        },
+        {
+          "id": "self_check",
+          "score": 70,
+          "note": "직접적 자기검증 장치는 아니지만, 하위 SP 전체의 자기검증(계산 가능 여부 판단)의 근간을 제공."
+        },
+        {
+          "id": "versioning",
+          "score": 85,
+          "note": "v1.0→v1.2 개정 사유가 매우 상세하고, 자신의 문서에 있던 '존재하지 않는 섹션을 인용당하던' 결함을 스스로 발견해 정정한 이력이 투명."
+        },
+        {
+          "id": "honesty",
+          "score": 90,
+          "note": "'대부분의 DATA_REQUIREMENT 필드가 connected:false인 것이 결함이 아니라 정직한 초기 상태'라고 명시해, 이 프로젝트 초반 STEPI 평가에서 지적했던 미연동 문제를 시스템 차원에서 이미 정당화하고 있었음을 확인."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/JEJU-NATIONAL-SP_v1.0.md",
+      "name": "제주 소재 중앙기관 SP 마스터",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · gov-tree 설계 문서(docs)",
+      "purpose": "제주 소재 국가기관 전체의 진입점 — 도청 트리와 형제 노드로 라우팅되는 Common System Prompt.",
+      "goal": "도청과 국가기관의 관할 구분(제주도지사 지휘·감독 여부)을 명확히 하고, 자치경찰 vs 국가경찰 등 헷갈리기 쉬운 구분을 짚어주는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-07-03",
+      "completeness": 55,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 85,
+          "note": "도청과의 관할 구분, 자치경찰·국가경찰 구분 등 정체성 규정 자체는 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 65,
+          "note": "§3 라우팅 테이블이 이 문서의 핵심 내용인데, 다른 문서(NATIONAL-SP-CORE)가 바로 이 문서의 §3/§6을 '낡은 정보를 매번 주입하던 버그'로 지목하며 별도 문서로 분리·대체했다."
+        },
+        {
+          "id": "schema",
+          "score": 65,
+          "note": "§0~§5 구조는 있으나 §1(정체성)은 NATIONAL-SP-OVERLAY-TEMPLATE로, §3/§6은 NATIONAL-SP-CORE로 각각 분리·이관된 이력이 있어 이 원본 파일 자체의 현재 역할이 불분명."
+        },
+        {
+          "id": "edge_case",
+          "score": 75,
+          "note": "국세(국가기관)와 지방세(도청)를 헷갈리는 사용자 응대 등 실사용 관점의 구분 기준이 구체적."
+        },
+        {
+          "id": "self_check",
+          "score": 30,
+          "note": "자체 확신도 장치는 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 30,
+          "note": "헤더에 '다음 버전: v1.1 — 1차 배치(8개) 외 나머지 기관 SP 실장착'이라 예고했으나 실제 v1.1 파일은 존재하지 않고, 대신 그 문제(§3/§6)가 별도 문서(NATIONAL-SP-CORE)로 흡수됐다 — 이 v1.0 파일 자체는 갱신되지 않은 채 잠재적으로 낡은 라우팅 테이블을 여전히 포함한 상태로 남아있을 가능성이 있다. 아카이브 이동 여부 확인 필요."
+        },
+        {
+          "id": "honesty",
+          "score": 55,
+          "note": "이 문서 자신은 스스로 낡았다고 언급하지 않는다 — 그 사실은 다른 문서(NATIONAL-SP-CORE)가 발견해 알린 것이라, 이 파일만 단독으로 읽으면 이용자가 낡은 정보인지 알 수 없다."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/NATIONAL-AGENCY-CLASS-INSTANCE-ARCHITECTURE_v1.0.md",
+      "name": "중앙기관 분류체계 설계 문서",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · gov-tree 설계 문서(docs)",
+      "purpose": "국가기관(중앙행정기관)의 클래스-인스턴스 아키텍처 — 지역 행정기관(도청·시청)은 지역마다 별도 인스턴스가 필요하지만 국가기관은 전국에 정확히 하나뿐인 싱글턴이라는 원칙을 정식화.",
+      "goal": "주피터의 구두 지시('클래스를 구성한 뒤 인스턴스를 생성, 중앙정부기관은 싱글턴')를 09-national 트리 전체에 일관되게 적용하는 설계 근거를 제공하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-07-24",
+      "completeness": 87,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 92,
+          "note": "지역행정기관 vs 국가기관의 클래스-인스턴스 대응관계를 표로 명확히 대조."
+        },
+        {
+          "id": "evidence",
+          "score": 88,
+          "note": "주피터의 지시 원문을 인용하고, 09-national 범위와 지역행정기관(별도 세션 작업 중) 범위를 명확히 분리."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "마스터데이터 파일 역할 차이(레코드=인스턴스 vs 레코드=지사 디렉터리)까지 구체적으로 규정."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "'세무서가 어디 있는지'는 인스턴스가 여러 개라서가 아니라 싱글턴 SP의 부가기능이라는 미묘한 차이를 정확히 짚음."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "설계 원칙 문서로서 다른 SP들의 자기검증 근거를 제공하는 역할."
+        },
+        {
+          "id": "versioning",
+          "score": 80,
+          "note": "최초 신설 문서로 버전 이력은 없으나 파일명·헤더가 일치하고 작업 범위·시점이 명확."
+        },
+        {
+          "id": "honesty",
+          "score": 82,
+          "note": "다른 세션에서 작업 중인 지역행정기관 부분은 건드리지 않는다고 명확히 범위를 한정."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md",
+      "name": "중앙기관 SP 오버레이 템플릿",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · gov-tree 설계 문서(docs)",
+      "purpose": "국가기관의 도별 오버레이 템플릿 — JEJU-NATIONAL-SP_v1.0의 §1(정체성)에서 분리·템플릿화해, 도 이름만 자리표시자로 바꾸면 전국 어디서나 재사용 가능하게 일반화.",
+      "goal": "NATIONAL-SP-CORE 바로 뒤에 위치해 라우터가 동적 생성하는 '관할 지역사무소 목록'과 이어붙는 구조를 완성하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-07-04",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "JEJU-NATIONAL-SP §1에서 도 이름 의존적 표현만 분리해 일반화한 경위가 명확."
+        },
+        {
+          "id": "evidence",
+          "score": 82,
+          "note": "정부조직법 제3조(특별지방행정기관 설치)를 클래스 공통 법적 근거로 명시."
+        },
+        {
+          "id": "schema",
+          "score": 82,
+          "note": "§LEGAL-BASIS를 클래스 레벨로 선언해 각 인스턴스가 중복 기재하지 않도록 설계."
+        },
+        {
+          "id": "edge_case",
+          "score": 78,
+          "note": "자치경찰·국가경찰처럼 지사명 없이 코드만으로 구분 가능한 예시로 템플릿을 단순화."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없음."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "JEJU-NATIONAL-SP에서 분리된 경위가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "분리 대상에서 제외한 부분(지사명 예시 단순화)의 이유를 명시."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-ASSEMBLY-AGENCYDIV-TEMPLATE_v1.0.md",
+      "name": "Assembly Agencydiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "국회 소속기관(사무처·예산정책처 등) 내부 조직을 대표하는 세부조직 단위 System Prompt 템플릿 — 입법활동 지원 실무기관(예산분석·입법조사 등)에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-ASSEMBLYDIV-TEMPLATE_v1.0.md",
+      "name": "Assemblydiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "국회 상임위원회을 대표하는 세부조직 단위 System Prompt 템플릿 — 입법 심의에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-BUREAU-ADMINDIV-TEMPLATE_v1.0.md",
+      "name": "Bureau Admindiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "청(廳)급 중앙행정기관 내부 조직을 대표하는 세부조직 단위 System Prompt 템플릿 — 실·국·과 단위 행정업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-COMMISSION-ADMINDIV-TEMPLATE_v1.0.md",
+      "name": "Commission Admindiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "위원회(합의제 의결기구) 내부 조직을 대표하는 세부조직 단위 System Prompt 템플릿 — 심의·의결 지원업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-JUDICIARY-ADMINDIV-TEMPLATE_v1.0.md",
+      "name": "Judiciary Admindiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "법원행정처 등 사법행정 내부 조직을 대표하는 세부조직 단위 System Prompt 템플릿 — 사법행정 지원업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-MINISTRY-ADMINDIV-TEMPLATE_v1.0.md",
+      "name": "Ministry Admindiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "행정각부(部) 내부 조직(실·국·과)을 대표하는 세부조직 단위 System Prompt 템플릿 — 실→국/관→과 다층 행정업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-PRESIDENTIAL-ADMINDIV-TEMPLATE_v1.0.md",
+      "name": "Presidential Admindiv Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "대통령실 내부 조직을 대표하는 세부조직 단위 System Prompt 템플릿 — 비서실·수석실 단위 보좌업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/policy-bodies/divisions/SP-SUPREMECOURT-BENCH_v1.0.md",
+      "name": "Supremecourt Bench",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "대법원 재판부을 대표하는 세부조직 단위 System Prompt 템플릿 — 상고심 재판업무에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/investigation-compliance/SP-POLICEDIV-CYBER-COMPLIANCE-TEMPLATE_v1.0.md",
+      "name": "Policediv Cyber Compliance Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "경찰서 사이버수사팀 절차준수을 대표하는 세부조직 단위 System Prompt 템플릿 — 디지털 증거 압수수색·포렌식 절차준수 기록에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/investigation-compliance/SP-POLICEDIV-VIOLENTCRIME-COMPLIANCE-TEMPLATE_v1.0.md",
+      "name": "Policediv Violentcrime Compliance Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "경찰서 강력계 절차준수을 대표하는 세부조직 단위 System Prompt 템플릿 — 강력범죄 수사 절차준수 기록에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/investigation-compliance/SP-POLICEDIV-WOMENYOUTH-COMPLIANCE-TEMPLATE_v1.0.md",
+      "name": "Policediv Womenyouth Compliance Template",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 내부조직/절차준수 템플릿(divisions·investigation-compliance)",
+      "purpose": "경찰서 여성청소년과 절차준수을 대표하는 세부조직 단위 System Prompt 템플릿 — 여성·청소년 대상 범죄 수사 절차준수 기록에 특화되어 상위 정책기관/집행기관 SP 아래에 삽입되는 클래스.",
+      "goal": "상위기관(부처·법원·경찰서 등)과의 상속 관계를 명확히 하고, 같은 계열의 다른 조직 유형(예: 상임위원회 vs 실무지원기관)과 §INPUT/OUTPUT 프레이밍을 구분하는 것이 목표.",
+      "version": "v1.0",
+      "version_date": "2026-08-15",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 88,
+          "note": "같은 계열의 인접 조직 유형과의 차이를 헤더에서부터 '★ 차이 ★' 형식으로 명확히 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "웹조사 지원을 근거로 조직 위계·절차를 구성했다고 명시."
+        },
+        {
+          "id": "schema",
+          "score": 85,
+          "note": "상위 상속 체인(kgov→JEJU-NATIONAL-SP→상위기관 SP→본 템플릿)이 명확히 정의됨."
+        },
+        {
+          "id": "edge_case",
+          "score": 82,
+          "note": "절차준수 템플릿 계열은 CASE-COMPLIANCE-LOG-SCHEMA를 상속하되 도메인별 특수성(디지털 증거의 동일성·무결성 등)만 교체하는 정밀한 설계."
+        },
+        {
+          "id": "self_check",
+          "score": 55,
+          "note": "자체 확신도 장치는 없으나 상위 스키마의 절차 준수 로그 원칙을 상속."
+        },
+        {
+          "id": "versioning",
+          "score": 78,
+          "note": "신설 배경과 상위 스키마와의 관계가 명확히 기록됨."
+        },
+        {
+          "id": "honesty",
+          "score": 80,
+          "note": "적용 대상(GWP 라우터가 특정 조직 소관으로 분류한 세션)을 명확히 한정해 과잉 적용을 방지."
         }
       ]
     }
