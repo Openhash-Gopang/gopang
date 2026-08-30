@@ -1110,7 +1110,14 @@ const FREE_QUOTA_KRW_LIMIT = 0; // 2026-07-23: 100 → 0 (SP-GDC-CHARGE-v1_0 B�
 //  L1이 다시 안정화되고 베타 배포를 재개할 때 true로 되돌릴 것 — spend
 //  추적 자체는 계속 켜져 있으므로(FREE_QUOTA_KRW_LIMIT/_recordAiUsage
 //  불변) 이 기간의 사용량 데이터는 그대로 보존된다.
-const FREE_QUOTA_ENFORCEMENT_ENABLED = false;
+//  2026-08-30: 재활성화(true). _l1GetBalanceKRW의 L1 왕복 fetch에
+//  AbortSignal.timeout(6000)을 추가해 위 45초 행 원인(무제한 대기)을
+//  제거했다 — 이제 L1이 죽어있어도 재시도 1회 포함 최대 약 12.25초
+//  안에 502(GDC_BALANCE_CHECK_FAILED)로 안전하게 차단된다. 이 변경은
+//  phase27_gdc_billing_gate.test.mjs가 GATE-02/03/04·K-Law/기업/정부
+//  릴레이 잔액부족 시나리오에서 402/502 대신 200이 나가고 DeepSeek이
+//  계속 호출되는 것을 잡아낸 뒤 확인 후 적용함(주피터님 확인).
+const FREE_QUOTA_ENFORCEMENT_ENABLED = true;
 
 function _deepseekUsageToKRW(usage, tierKey) {
   if (!usage) return 0;
@@ -1242,7 +1249,7 @@ async function _l1GetBalanceKRW(guid) {
   // 방향의 실패).
   const attempt = async () => {
     try {
-      const res = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+      const res = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`, { signal: AbortSignal.timeout(6000) });
       const data = await res.json().catch(() => null);
       if (!data || !data.ok) return null;
       return data;
