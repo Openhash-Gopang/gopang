@@ -27,11 +27,23 @@ async function makeVapidEnv(overrides = {}) {
   const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
   const rawPub  = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
   const jwkPriv = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  // ★ 2026-08-30 추가 — handleDeviceLinkInit(_dlPut 경유)이 필요로 하는
+  // DEVICE_LINK_SESSIONS(Durable Object 네임스페이스) 바인딩이 이
+  // 픽스처에 아예 없어서, 'DO_NOT_BOUND'(500) 가드에 걸려 push 로직
+  // 자체에 도달하기 전에 조기 종료되고 있었다(PM-02 실패 원인). 실제
+  // DO 인스턴스 대신, _dlStub이 기대하는 최소 인터페이스
+  // (idFromName→get→fetch)만 흉내내는 stub으로 대체 — PUT 요청이면
+  // 무조건 성공 응답만 반환해도 _dlPut 호출부는 그 결과를 안 쓴다.
+  const deviceLinkSessionsStub = {
+    idFromName: () => 'stub-id',
+    get: () => ({ fetch: async () => new Response('{}', { status: 200 }) }),
+  };
   return {
     L1_ADMIN_EMAIL: 'a@a.com', L1_ADMIN_PASSWORD: 'pw',
     VAPID_PUBLIC_KEY:  b64uEncodeBytes(rawPub),
     VAPID_PRIVATE_KEY: jwkPriv.d.replace(/=+$/, ''),
     VAPID_SUBJECT: 'mailto:a@a.com',
+    DEVICE_LINK_SESSIONS: deviceLinkSessionsStub,
     ...overrides,
   };
 }
@@ -82,13 +94,21 @@ describe('PM: push 구독 기기별 분리 (2026-07-23 — device-link 알림이
     assert.deepEqual(endpoints, ['https://fake/pc', 'https://fake/phone']);
   });
 
-  it('PM-02: device-link 알림은 등록된 모든 기기로 발송된다(PC만 받고 끝나지 않음)', async () => {
+  it('PM-02: device-link 알림은 등록된 모바일 기기로만 발송된다(PC 자기수신 차단, 2026-08-29 근본 수정 반영)', async () => {
     const keysPc    = await makeSubscriberKeys();
     const keysPhone = await makeSubscriberKeys();
     const sentTo = [];
+    // ★ 2026-08-30 수정 — deviceType 필드는 2026-07-28 신설, 2026-08-29에
+    // "device-link 알림은 mobile 기기에만 보낸다"로 발송 자체를 원천
+    // 차단하는 근본 수정이 추가됐다(PC가 자기 요청을 스스로 받던 사고
+    // 방지). 이 테스트는 그 이전(2026-07-23) "등록된 모든 기기로 발송"
+    // 설계를 검증하던 것이라 픽스처에 deviceType이 아예 없었다 — 지금은
+    // deviceType 미지정 시 'unknown'으로 취급돼 mobile 필터에 안 걸려
+    // 발송 자체가 스킵된다. 현재 의도(모바일만 발송)에 맞게 각 기기의
+    // deviceType을 명시하고, 검증 방향도 "PC 제외"로 뒤집는다.
     const existingDevices = JSON.stringify([
-      { deviceId: 'pc-1',    subscription: { endpoint: 'https://fake/pc',    keys: keysPc },    sound: 'ping', updatedAt: 2000 },
-      { deviceId: 'phone-1', subscription: { endpoint: 'https://fake/phone', keys: keysPhone }, sound: 'ping', updatedAt: 1000 },
+      { deviceId: 'pc-1',    subscription: { endpoint: 'https://fake/pc',    keys: keysPc },    sound: 'ping', updatedAt: 2000, deviceType: 'desktop' },
+      { deviceId: 'phone-1', subscription: { endpoint: 'https://fake/phone', keys: keysPhone }, sound: 'ping', updatedAt: 1000, deviceType: 'mobile' },
     ]);
 
     globalThis.fetch = async (u, init = {}) => {
@@ -104,14 +124,15 @@ describe('PM: push 구독 기기별 분리 (2026-07-23 — device-link 알림이
 
     const res = await worker.fetch(req('/auth/device-link/init', {
       e164: '+821012345678', pcPubKeyB64u: b64uEncodeBytes(new Uint8Array(32)), pcLabel: '테스트 PC',
-    }), await makeVapidEnv({ QR_SESSIONS_KV: { put: async () => {} } }));
+    }), await makeVapidEnv({ QR_SESSIONS_KV: { get: async () => null, put: async () => {} } }));
 
     const data = await res.json();
     assert.equal(data.ok, true);
     assert.equal(data.pushSent, true);
-    assert.equal(sentTo.length, 2, 'PC와 폰 둘 다에게 발송돼야 함(이번 사고의 핵심 — 이전엔 마지막에 구독한 기기 1곳에만 갔음)');
-    assert.ok(sentTo.some(u => u.startsWith('https://fake/pc')));
+    assert.equal(data.pushSentToMobile, true);
+    assert.equal(sentTo.length, 1, '모바일 기기에만 발송돼야 함(PC 자기수신 차단이 이번 사고의 핵심)');
     assert.ok(sentTo.some(u => u.startsWith('https://fake/phone')));
+    assert.ok(!sentTo.some(u => u.startsWith('https://fake/pc')), 'PC(desktop)는 발송 대상에서 제외돼야 함');
   });
 
   it('PM-03: 구독 취소는 그 기기 항목만 제거하고 다른 기기는 그대로 남는다', async () => {
