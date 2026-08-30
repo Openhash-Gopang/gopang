@@ -303,17 +303,26 @@ describe('KLAW-CASE: 사건단위 중복방지 — STEP A/B/C 이중과금 버�
 });
 
 // ══════════════════════════════════════════════════════════════════
-describe('KLAW-FREE: 전문직 티어(all_services_free) — 사고실험 #14~15', () => {
-  it('KF-14/15: 전문직 구독자는 STEP0·STEP A 전부 무료, 사건 기록도 생성 안 됨', async () => {
+describe('KLAW-FREE: 무료 면제 티어 부재 확인 (2026-08-14 요금제 재설계 반영, 구 사고실험 #14~15)', () => {
+  it('KF-14/15: "professional" 구독 레코드가 있어도 무료 면제 티어가 없어 정상 과금됨', async () => {
+    // ★ 2026-08-30 갱신 — 2026-08-11엔 "전문직 티어(all_services_free)"가
+    // 있어 K-Law를 무료로 면제했으나, 2026-08-14 요금제가 시민(990원)
+    // 단일로 재설계되며 all_services_free:true인 티어 자체가 SUBSCRIPTION_
+    // TIERS에서 사라졌다(worker.js handleKlawRelay 주석 참고 — "지금은 이
+    // 조회가 사실상 항상 false로 귀결된다"). 이 테스트는 그 이전 설계를
+    // 그대로 검증하고 있었음 — 코드는 현재 의도대로 정상 과금 중이었다.
+    // 무료 면제 구조 자체는 향후 재도입 대비로 코드에 남아있으므로,
+    // "professional" 같은 옛/무관한 tier 문자열이 실수로 무료 처리로
+    // 새지 않는다는 걸 확인하는 회귀 테스트로 용도를 바꿔 유지한다.
     balances['guid-전문직'] = 100_000;
     subscriptionsDb.push({ user_guid: 'guid-전문직', tier: 'professional' });
 
     await callKlaw(baseKlawBody({ guid: 'guid-전문직', step_cycle: true, case_id: 'case-pro', claim_amount_krw: 500_000_000 }));
     await callKlaw(baseKlawBody({ guid: 'guid-전문직', step_cycle: false, case_id: 'case-pro' }));
 
-    assert.equal(aiChargeCalls.length, 0, '전문직은 GDC 차감 자체가 없어야 함');
-    assert.equal(balances['guid-전문직'], 100_000, '잔액 변화 없어야 함');
-    assert.equal(caseChargesDb.length, 0, '무료 처리는 사건 기록을 남기지 않음(구독 해지 후 재생성 시 정상 과금되도록)');
+    assert.equal(aiChargeCalls.length, 1, '무료 면제 티어가 없으므로 STEP0에서 정상 과금돼야 함');
+    assert.equal(balances['guid-전문직'], 100_000 - 35_000, 'STEP0 정액과금(claim_amount_krw 5억원 이하 구간, KLAW_CLAIM_FEE_SCHEDULE 기준 35,000)만큼 차감돼야 함');
+    assert.equal(caseChargesDb.length, 1, '정상 과금이므로 사건 기록이 생성돼야 함');
   });
 });
 
