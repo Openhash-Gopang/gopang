@@ -29,6 +29,16 @@ const PROMPT_FILES = {
   'sp-catalog.json': JSON.stringify({
     'SP-04_khealth': 'SP-04_khealth_v2.1.txt',
     'SP-10_kpublic': 'SP-10_kpublic_v3.4.txt',
+    // ★ 2026-08-30 추가 — 2026-07-21 gov_do/gov_national dynamicRegional
+    // 재설계로 새로 생긴 매니페스트 경유 파일 3종(SP-PROVINCE-TEMPLATE,
+    // NATIONAL-SP-CORE, NATIONAL-SP-OVERLAY-TEMPLATE). 옛 정적 파일
+    // (JEJU-DO-SP_v1.5.md 등)은 더 이상 이 경로에서 안 쓰이지만, 다른
+    // 위임 대상(via:'url')이 참조할 수 있어 그대로 남겨둔다.
+    'SP-PROVINCE-TEMPLATE':         'SP-PROVINCE-TEMPLATE_v1.1.md',
+    'NATIONAL-SP-CORE':             'NATIONAL-SP-CORE_v1.2.md',
+    'NATIONAL-SP-OVERLAY-TEMPLATE': 'NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md',
+    'GOV-COMMON-OVERLAY-TEMPLATE':  'GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md',
+    'GOV-TREE-PROTOCOL':            'JEJU-TREE-PROTOCOL_v1.0.md',
     // [2026-08-06 추가 — 사전 존재 버그] 실제 sp-catalog.json(prompts/)에는
     // 있지만 이 목에는 빠져 있던 4개 키. UNIVERSAL-INTEGRITY·UNIVERSAL-
     // common·PROFESSIONAL-common은 PROMPT_FILES에 내용까지 이미 있었는데
@@ -57,13 +67,36 @@ const PROMPT_FILES = {
       출자기관예시_문구: '(테스트)', 행정시목록_문구: '제주시와 서귀포시', 관할예시_문구: '(테스트)' }],
   }),
   'JEJU-TREE-PROTOCOL_v1.0.md': '[JEJU-TREE-PROTOCOL 텍스트]',
+  // ★ 2026-08-20 신설 — _loadGovCommonChain이 AGENCY-AC-COMMON도 함께
+  // 조립한다(직접 fetch, GITHUB_RAW_BASE + 경로 + 캐시버스팅 쿼리).
+  'AGENCY-AC-COMMON_v1.5.md': '[AGENCY-AC-COMMON 텍스트]',
+  // ★ 2026-08-30 추가 — gov_do/gov_national의 2026-07-21 dynamicRegional
+  // 재설계로 필요해진 도별 동적 렌더링 원본. 옛 JEJU-DO-SP_v1.5.md/
+  // JEJU-NATIONAL-SP_v1.0.md는 이 경로에서 더는 안 읽히지만(다른
+  // 위임 대상이 참조할 수 있어 아래에 그대로 둠), 실제로 렌더링에
+  // 쓰이는 건 이 템플릿+마스터데이터 조합이다.
+  'SP-PROVINCE-TEMPLATE_v1.1.md':
+    '[제주도청 총괄 SP 텍스트] {도이름}({도코드}) {통치구조_문구} {이원화_문구} {인접기관_문구} {광역출력_문구} {위임사무_문구} {하위SP_접두어} {유의사항_추가}',
+  'province-master-data.json': JSON.stringify({
+    도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도', 통치구조_문구: '(테스트)', 이원화_문구: '(테스트)',
+      인접기관_문구: '(테스트)', 광역출력_문구: '(테스트)', 위임사무_문구: '(테스트)', 하위SP_접두어: 'SP-CITY',
+      유의사항_추가: '' }],
+  }),
+  'NATIONAL-SP-CORE_v1.2.md': '[제주 국가기관 총괄 SP 텍스트]',
+  'NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md': '[국가기관 오버레이 템플릿] {도이름}',
+  'national-sp-overlay-master-data.json': JSON.stringify({
+    도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도' }],
+  }),
+  'national-agency-master-data.json': JSON.stringify({ 기관목록: [] }),
   // BUG-FIX(2026-07-17): worker.js SP_DELEGATION_REGISTRY.jeju_do.url이
   // .../01-do/JEJU-DO-SP_v1.5.md를 가리키는데(버전 올라감) 이 목은 예전
   // v1.0 파일명 그대로 남아있어 실제로는 404를 돌려주고 있었다(테스트가
   // "위임 대상 SP 로드 실패" 예외 경로를 조용히 타면서 LLM 호출 횟수 등
-  // 나머지 검증이 줄줄이 어긋남).
-  'JEJU-DO-SP_v1.5.md':       '[제주도청 총괄 SP 텍스트]',
-  'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트]',
+  // 나머지 검증이 줄줄이 어긋남). ★ 2026-08-30 — 이 두 파일은 이제
+  // gov_do/gov_national dynamicRegional 경로에서는 안 쓰이지만(위 새
+  // 템플릿으로 대체됨), via:'url' 레거시 경로용으로 남겨둔다.
+  'JEJU-DO-SP_v1.5.md':       '[제주도청 총괄 SP 텍스트(레거시 정적 파일)]',
+  'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트(레거시 정적 파일)]',
   'HUMAN-AUTHORITY-GATE-SCHEMA_v1_0.md': '[HUMAN-AUTHORITY-GATE-SCHEMA 텍스트]',
   'PDV-TRANSFER-PROTOCOL_v1_0.md':       '[PDV-TRANSFER-PROTOCOL 텍스트]',
 };
@@ -86,7 +119,11 @@ global.fetch = async (url, opts = {}) => {
   }
 
   if (u.includes('raw.githubusercontent.com')) {
-    const fname = u.split('/').pop();
+    // ★ 2026-08-30 수정 — AGENCY-AC-COMMON 등 일부 fetch가 캐시버스팅
+    // 쿼리스트링(?t=...)을 붙이는데, 기존엔 u.split('/').pop()이 그
+    // 쿼리까지 파일명에 포함시켜 PROMPT_FILES 매칭에 실패했다. 쿼리를
+    // 떼고 매칭한다.
+    const fname = u.split('/').pop().split('?')[0];
     const content = PROMPT_FILES[fname];
     if (content == null) return { ok: false, status: 404 };
     return { ok: true, text: async () => content, json: async () => JSON.parse(content) };
@@ -124,13 +161,13 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('정상 위임', [
-    JSON.stringify({ sp_call: { target: 'jeju_national', purpose: '국세 확인', query: '국세 체납액 확인' } }), // 1차: 위임 요청
-    '국세 체납 조회는 홈택스 연동이 필요합니다.',                                                              // 2차: 위임 대상(jeju_national) 답변
+    JSON.stringify({ sp_call: { target: 'gov_national', purpose: '국세 확인', query: '국세 체납액 확인' } }), // 1차: 위임 요청
+    '국세 체납 조회는 홈택스 연동이 필요합니다.',                                                              // 2차: 위임 대상(gov_national) 답변
     '제주 소재 국가기관 확인 결과, 국세는 홈택스에서 확인 필요합니다. 지방세는 0원입니다.',                     // 3차: 원 SP 최종 합성
-  ], { guid: 'u1', agency: 'public', agencyPrompt: '[도청 SP]', messages: [{ role: 'user', content: '국세랑 지방세 체납액 합쳐서 알려줘' }], stream: false });
+  ], { guid: 'u1', agency: 'public', agencyPrompt: '[도청 SP]', provinceCode: 'jeju', messages: [{ role: 'user', content: '국세랑 지방세 체납액 합쳐서 알려줘' }], stream: false });
 
   check('LLM 호출 정확히 3회', calls.length === 3, `실제 ${calls.length}회`);
-  check('2번째 호출이 위임 대상(jeju_national) 프롬프트 기반', calls[1]?.lastMsg?.content === '국세 체납액 확인');
+  check('2번째 호출이 위임 대상(gov_national) 프롬프트 기반', calls[1]?.lastMsg?.content === '국세 체납액 확인');
   check('최종 응답에 위임 결과가 반영됨', data.choices[0].message.content.includes('홈택스'));
   check('최종 응답에 출처 문구 포함(U9-5 취지)', data.choices[0].message.content.includes('국가기관'));
 }
@@ -157,7 +194,7 @@ async function run(name, queue, payload) {
   const { calls } = await run('미등록 대상 거부', [
     JSON.stringify({ sp_call: { target: 'made_up_agency', purpose: 'x', query: 'y' } }),
     '알겠습니다, 가진 정보로만 답변드립니다.',
-  ], { guid: 'u3', agency: 'jeju_do', agencyPrompt: '[도청]', messages: [{ role: 'user', content: 'x' }], stream: false });
+  ], { guid: 'u3', agency: 'gov_do', agencyPrompt: '[도청]', provinceCode: 'jeju', messages: [{ role: 'user', content: 'x' }], stream: false });
 
   check('미등록 대상 거부 시 LLM 호출 2회로 종료', calls.length === 2, `실제 ${calls.length}회`);
   check('거부 사유가 TARGET_NOT_REGISTERED', calls[1]?.lastMsg?.content?.includes('TARGET_NOT_REGISTERED'));
@@ -169,10 +206,10 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('위임 대상의 재위임 시도 무시', [
-    JSON.stringify({ sp_call: { target: 'jeju_national', purpose: 'x', query: 'y' } }),      // 1차: 정상 위임
+    JSON.stringify({ sp_call: { target: 'gov_national', purpose: 'x', query: 'y' } }),      // 1차: 정상 위임
     JSON.stringify({ sp_call: { target: 'health', purpose: '재위임시도', query: 'z' } }),     // 2차: 위임 대상이 규칙 위반 시도
     '위임 대상의 응답을 있는 그대로 반영한 최종 답변입니다.',                                  // 3차: 원 SP 최종 합성
-  ], { guid: 'u4', agency: 'public', agencyPrompt: '[도청]', messages: [{ role: 'user', content: 'x' }], stream: false });
+  ], { guid: 'u4', agency: 'public', agencyPrompt: '[도청]', provinceCode: 'jeju', messages: [{ role: 'user', content: 'x' }], stream: false });
 
   check('재위임 시도가 있어도 LLM 호출 정확히 3회(4회 이상으로 번지지 않음)', calls.length === 3, `실제 ${calls.length}회`);
   check('원 SP가 받은 위임 결과 텍스트에 재위임 JSON 원문이 그대로 포함(무시하고 흡수됨)',
@@ -185,10 +222,10 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('최종 합성 단계 안전망', [
-    JSON.stringify({ sp_call: { target: 'jeju_national', purpose: 'x', query: 'y' } }),
+    JSON.stringify({ sp_call: { target: 'gov_national', purpose: 'x', query: 'y' } }),
     '위임 대상 정상 답변',
     JSON.stringify({ sp_call: { target: 'health', purpose: '또시도', query: 'z' } }), // 최종 합성조차 규칙 위반
-  ], { guid: 'u5', agency: 'public', agencyPrompt: '[도청]', messages: [{ role: 'user', content: 'x' }], stream: false });
+  ], { guid: 'u5', agency: 'public', agencyPrompt: '[도청]', provinceCode: 'jeju', messages: [{ role: 'user', content: 'x' }], stream: false });
 
   check('최종 안전망 발동 시에도 LLM 호출 3회로 종료', calls.length === 3, `실제 ${calls.length}회`);
   check('클라이언트에 원문 JSON이 새지 않고 안내 문구로 치환됨',
@@ -201,7 +238,7 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('비-originator agency는 위임 발동 안 함', [
-    JSON.stringify({ sp_call: { target: 'jeju_national', purpose: 'x', query: 'y' } }), // health는 originator가 아니므로 이 텍스트가 그대로 최종 응답이 되어야 함
+    JSON.stringify({ sp_call: { target: 'gov_national', purpose: 'x', query: 'y' } }), // health는 originator가 아니므로 이 텍스트가 그대로 최종 응답이 되어야 함
   ], { guid: 'u6', agency: 'health', agencyPrompt: '[K-Health]', messages: [{ role: 'user', content: 'x' }], stream: false });
 
   check('비-originator는 LLM 호출 1회로 종료(위임 오케스트레이션 미발동)', calls.length === 1, `실제 ${calls.length}회`);
@@ -217,10 +254,10 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('실사용 A: 도청→국가기관(국세) 위임', [
-    JSON.stringify({ sp_call: { target: 'jeju_national', purpose: '국세 체납액 확인', query: '국세 체납액이 얼마인지 확인해줘' } }),
+    JSON.stringify({ sp_call: { target: 'gov_national', purpose: '국세 체납액 확인', query: '국세 체납액이 얼마인지 확인해줘' } }),
     '국세 체납 조회는 홈택스 로그인 후 "나의 세금 조회"에서 확인 가능합니다. Hondi와는 아직 직접 연동돼 있지 않습니다.',
     '지방세(취득세·재산세) 체납액은 0원으로 확인됩니다. 국세는 제주세무서(국가기관) 확인 결과, 홈택스에서 직접 조회하셔야 합니다 — 두 세목은 관할이 달라 따로 안내드립니다.',
-  ], { guid: 'jeju1', agency: 'jeju_do', agencyPrompt: '[SP-DO-PLAN — 지방세 담당]', messages: [{ role: 'user', content: '국세랑 지방세 체납액 합쳐서 알려줘' }], stream: false });
+  ], { guid: 'jeju1', agency: 'gov_do', agencyPrompt: '[SP-DO-PLAN — 지방세 담당]', provinceCode: 'jeju', messages: [{ role: 'user', content: '국세랑 지방세 체납액 합쳐서 알려줘' }], stream: false });
 
   check('실사용 A: LLM 호출 3회(판단/위임대상/최종합성)', calls.length === 3, `실제 ${calls.length}회`);
   check('실사용 A: 최종 답변에 지방세+국세 정보 모두 포함', data.choices[0].message.content.includes('지방세') && data.choices[0].message.content.includes('국세'));
@@ -235,10 +272,10 @@ async function run(name, queue, payload) {
 // ═══════════════════════════════════════════════════════════
 {
   const { data, calls } = await run('실사용 B: 국가기관→도청(전입신고) 위임', [
-    JSON.stringify({ sp_call: { target: 'jeju_do', purpose: '전입신고 절차 확인', query: '제주 전입신고는 어디서 어떻게 하나요' } }),
+    JSON.stringify({ sp_call: { target: 'gov_do', purpose: '전입신고 절차 확인', query: '제주 전입신고는 어디서 어떻게 하나요' } }),
     '전입신고는 관할 읍면동 주민센터 방문 또는 정부24 온라인으로 가능합니다.',
     '국민연금 가입은 저희(국민연금공단 제주지역본부)에서 안내드리며, 전입신고는 제주도청 확인 결과 읍면동 주민센터 방문 또는 정부24로 가능합니다.',
-  ], { guid: 'jeju2', agency: 'jeju_national', agencyPrompt: '[SP-NAT-NPS — 국민연금 담당]', messages: [{ role: 'user', content: '전입신고랑 국민연금 가입 둘 다 어디서 처리하나요' }], stream: false });
+  ], { guid: 'jeju2', agency: 'gov_national', agencyPrompt: '[SP-NAT-NPS — 국민연금 담당]', provinceCode: 'jeju', messages: [{ role: 'user', content: '전입신고랑 국민연금 가입 둘 다 어디서 처리하나요' }], stream: false });
 
   check('실사용 B: LLM 호출 3회', calls.length === 3, `실제 ${calls.length}회`);
   check('실사용 B: 위임 방향이 역방향(국가기관→도청)으로 정상 작동', calls[1]?.lastMsg?.content === '제주 전입신고는 어디서 어떻게 하나요');
@@ -246,34 +283,38 @@ async function run(name, queue, payload) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 시나리오 9 — ★ 2026-07-09 신설: jeju_do/jeju_national로 위임될 때
-// worker.js가 실제로 kgov+OVERLAY+TREE-PROTOCOL 상위 체인을 앞에
-// 붙이는지 검증(GOV_COMMON 조사에서 발견한 갭의 회귀 방지). 위임
-// 대상의 시스템 메시지(messages[0])에 세 마커가 순서대로 들어있어야
-// 한다 — JEJU-DO-SP_v1.0.md 헤더가 "반드시 상위 문서 뒤에 고정 삽입"
-// 이라고 요구하는 바로 그 요건.
+// 시나리오 9 — ★ 2026-07-09 신설, 2026-08-30 gov_do/gov_national
+// dynamicRegional 재설계에 맞게 갱신: gov_do/gov_national로 위임될 때
+// worker.js가 실제로 kgov+OVERLAY+TREE-PROTOCOL+AGENCY-AC-COMMON 상위
+// 체인을 앞에 붙이는지, 그리고 도별 동적 렌더링 본문(SP-PROVINCE-
+// TEMPLATE 기반)이 그 뒤에 이어지는지 검증(GOV_COMMON 조사에서 발견한
+// 갭의 회귀 방지 + 2026-07-21 재설계 이후에도 순서 요건이 유지되는지
+// 확인). 위임 대상의 시스템 메시지(messages[0])에 마커가 순서대로
+// 들어있어야 한다.
 // ═══════════════════════════════════════════════════════════
 {
-  const { calls } = await run('GOV-COMMON 체인이 jeju_do 위임 프롬프트 앞에 붙음', [
-    JSON.stringify({ sp_call: { target: 'jeju_do', purpose: '테스트', query: '테스트 질의' } }),
+  const { calls } = await run('GOV-COMMON 체인이 gov_do 위임 프롬프트 앞에 붙음', [
+    JSON.stringify({ sp_call: { target: 'gov_do', purpose: '테스트', query: '테스트 질의' } }),
     '위임 결과 반영한 최종 답변',
-  ], { guid: 'gc1', agency: 'public', agencyPrompt: '[도청]', messages: [{ role: 'user', content: 'x' }], stream: false });
+  ], { guid: 'gc1', agency: 'public', agencyPrompt: '[도청]', provinceCode: 'jeju', messages: [{ role: 'user', content: 'x' }], stream: false });
 
-  const delegatedCall = calls[1]; // 0=판단 호출(public), 1=위임 대상(jeju_do) 호출
+  const delegatedCall = calls[1]; // 0=판단 호출(public), 1=위임 대상(gov_do) 호출
   const sysMsg = delegatedCall?.messages?.find(m => m.role === 'system')?.content
     ?? delegatedCall?.messages?.[0]?.content ?? '';
   const idxKgov = sysMsg.indexOf('kgov(SP-10_kpublic)');
   const idxOverlay = sysMsg.indexOf('[오버레이 템플릿] 제주특별자치도');
   const idxTree = sysMsg.indexOf('[JEJU-TREE-PROTOCOL 텍스트]');
-  const idxDoSp = sysMsg.indexOf('[제주도청 총괄 SP 텍스트]');
+  const idxAgencyAc = sysMsg.indexOf('[AGENCY-AC-COMMON 텍스트]');
+  const idxDoSp = sysMsg.indexOf('[제주도청 총괄 SP 텍스트]'); // SP-PROVINCE-TEMPLATE_v1.1.md 렌더링 결과(도별 동적)
 
   check('kgov(SP-10_kpublic) 마커가 위임 프롬프트에 포함됨', idxKgov !== -1, `sysMsg 앞 200자: ${sysMsg.slice(0, 200)}`);
   check('오버레이(제주특별자치도 렌더링 결과)가 포함됨', idxOverlay !== -1);
   check('JEJU-TREE-PROTOCOL이 포함됨', idxTree !== -1);
-  check('JEJU-DO-SP 본문이 포함됨', idxDoSp !== -1);
-  check('네 조각이 kgov→오버레이→TREE-PROTOCOL→JEJU-DO-SP 순서로 이어붙여짐',
-    idxKgov !== -1 && idxOverlay > idxKgov && idxTree > idxOverlay && idxDoSp > idxTree,
-    `순서: kgov=${idxKgov}, overlay=${idxOverlay}, tree=${idxTree}, doSp=${idxDoSp}`);
+  check('AGENCY-AC-COMMON이 포함됨(2026-08-20 신설분)', idxAgencyAc !== -1);
+  check('도별 동적 렌더링 본문(SP-PROVINCE-TEMPLATE)이 포함됨', idxDoSp !== -1);
+  check('다섯 조각이 kgov→오버레이→TREE-PROTOCOL→AGENCY-AC-COMMON→동적본문 순으로 이어붙여짐',
+    idxKgov !== -1 && idxOverlay > idxKgov && idxTree > idxOverlay && idxAgencyAc > idxTree && idxDoSp > idxAgencyAc,
+    `순서: kgov=${idxKgov}, overlay=${idxOverlay}, tree=${idxTree}, agencyAc=${idxAgencyAc}, doSp=${idxDoSp}`);
 }
 
 console.log(`\n총 ${pass + fail}개 검증 — 통과 ${pass} / 실패 ${fail}`);
