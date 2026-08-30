@@ -930,8 +930,10 @@ function toggleMegaMenu() {
   var overlay = document.getElementById('megaMenuOverlay');
   if (overlay.classList.contains('open')) closeMegaMenu(); else openMegaMenu();
 }
-document.getElementById('menuToggleBtn').addEventListener('click', toggleMegaMenu);
-document.getElementById('megaMenuScrim').addEventListener('click', closeMegaMenu);
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('menuToggleBtn').addEventListener('click', toggleMegaMenu);
+  document.getElementById('megaMenuScrim').addEventListener('click', closeMegaMenu);
+});
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeMegaMenu();
 });
