@@ -17,75 +17,75 @@
 2-핵심SP,시스템 코어·공통 규칙,prompts/CONTROL-TOWER-PRINCIPLE_v1_1.md,관제탑 원칙,재평가완료,81,,,2026-08-30
 2-핵심SP,시스템 코어·공통 규칙,prompts/TASK-DELEGATION-GUIDE_v1_0.md,업무대행 지침,재평가완료,68,파일명(v1_0)이 헤더 버전(v1.1)과 불일치. 수록 서비스가 1건뿐(주민등록 등본) — 커버리지 확장 필요,,2026-08-30
 2-핵심SP,시스템 코어·공통 규칙,prompts/hondi_visitor_sp_v1_2.txt,혼디 방문자 기본 SP,재평가완료,62,'전문 AI 22개+' 등 수치·서비스 예시가 sp-catalog(K-서비스 20개)와 정확히 일치하는지 재확인 필요. 정식 변경이력 섹션 없음,,2026-08-30
-3-고위험전문직,간호사,prompts/SP_nurse_v3_7.md,간호사,미착수,,,,
+3-고위험전문직,간호사,prompts/SP_nurse_v3_7.md,간호사,재평가완료,84,,,2026-08-30
 3-고위험전문직,감정평가사,prompts/SP_appraiser_v1_9.md,감정평가사,미착수,,,,
-3-고위험전문직,공인중개사,prompts/SP_real-estate-agent_v2_0.md,공인중개사,미착수,,,,
-3-고위험전문직,관세사,prompts/SP_customs-broker_v1_7.md,관세사,미착수,,,,
-3-고위험전문직,노무사,prompts/SP_labor-attorney_v1_7.md,노무사,미착수,,,,
-3-고위험전문직,법무사,prompts/SP_judicial-scrivener_v2_2.md,법무사,미착수,,,,
-3-고위험전문직,변리사 · IP전략,prompts/SP_patent-attorney-ip-strategy_v1_0.md,변리사 - IP전략,미착수,,,,
-3-고위험전문직,변리사 · IT·소프트웨어,prompts/SP_patent-attorney-it-software_v1_0.md,변리사 - IT·소프트웨어,미착수,,,,
-3-고위험전문직,변리사 · PCT국제출원,prompts/SP_patent-attorney-pct-international_v1_0.md,변리사 - PCT국제출원,미착수,,,,
-3-고위험전문직,변리사 · 기계·전기전자,prompts/SP_patent-attorney-mechanical-electrical_v1_0.md,변리사 - 기계·전기전자,미착수,,,,
-3-고위험전문직,변리사 · 디자인,prompts/SP_patent-attorney-design_v1_0.md,변리사 - 디자인,미착수,,,,
-3-고위험전문직,변리사 · 라이선싱,prompts/SP_patent-attorney-licensing_v1_0.md,변리사 - 라이선싱,미착수,,,,
-3-고위험전문직,변리사 · 바이오·제약,prompts/SP_patent-attorney-bio-pharma_v1_0.md,변리사 - 바이오·제약,미착수,,,,
-3-고위험전문직,변리사 · 상표,prompts/SP_patent-attorney-trademark_v1_0.md,변리사 - 상표,미착수,,,,
-3-고위험전문직,변리사 · 심판·소송,prompts/SP_patent-attorney-trial-litigation_v1_0.md,변리사 - 심판·소송,미착수,,,,
-3-고위험전문직,변리사 · 종합,prompts/SP_patent-attorney_v1_8.md,변리사 - 종합,미착수,,,,
-3-고위험전문직,변리사 · 화학·소재,prompts/SP_patent-attorney-chemistry-materials_v1_0.md,변리사 - 화학·소재,미착수,,,,
-3-고위험전문직,변호사 · IT법,prompts/SP_lawyer-it_v1_0.md,변호사 - IT법,미착수,,,,
-3-고위험전문직,변호사 · 가사법,prompts/SP_lawyer-family_v1_0.md,변호사 - 가사법,미착수,,,,
-3-고위험전문직,변호사 · 강제집행,prompts/SP_lawyer-execution_v1_0.md,변호사 - 강제집행,미착수,,,,
-3-고위험전문직,변호사 · 건설법,prompts/SP_lawyer-construction_v1_0.md,변호사 - 건설법,미착수,,,,
-3-고위험전문직,변호사 · 경매,prompts/SP_lawyer-auction_v1_0.md,변호사 - 경매,미착수,,,,
-3-고위험전문직,변호사 · 공정거래법,prompts/SP_lawyer-antitrust_v1_0.md,변호사 - 공정거래법,미착수,,,,
-3-고위험전문직,변호사 · 교통사고,prompts/SP_lawyer-traffic_v1_0.md,변호사 - 교통사고,미착수,,,,
-3-고위험전문직,변호사 · 국제거래,prompts/SP_lawyer-international-transactions_v1_0.md,변호사 - 국제거래,미착수,,,,
-3-고위험전문직,변호사 · 국제관계법,prompts/SP_lawyer-international-relations_v1_0.md,변호사 - 국제관계법,미착수,,,,
-3-고위험전문직,변호사 · 국제중재,prompts/SP_lawyer-international-arbitration_v1_0.md,변호사 - 국제중재,미착수,,,,
-3-고위험전문직,변호사 · 군사법,prompts/SP_lawyer-military_v1_0.md,변호사 - 군사법,미착수,,,,
-3-고위험전문직,변호사 · 금융법,prompts/SP_lawyer-finance_v1_0.md,변호사 - 금융법,미착수,,,,
-3-고위험전문직,변호사 · 기업법무,prompts/SP_lawyer-corporate_v1_0.md,변호사 - 기업법무,미착수,,,,
-3-고위험전문직,변호사 · 도산·회생,prompts/SP_lawyer-insolvency_v1_0.md,변호사 - 도산·회생,미착수,,,,
-3-고위험전문직,변호사 · 민사법,prompts/SP_lawyer-civil_v1_0.md,변호사 - 민사법,미착수,,,,
-3-고위험전문직,변호사 · 방송법,prompts/SP_lawyer-broadcasting_v1_0.md,변호사 - 방송법,미착수,,,,
-3-고위험전문직,변호사 · 보험법,prompts/SP_lawyer-insurance_v1_0.md,변호사 - 보험법,미착수,,,,
-3-고위험전문직,변호사 · 부동산법,prompts/SP_lawyer-realestate_v1_0.md,변호사 - 부동산법,미착수,,,,
-3-고위험전문직,변호사 · 상법,prompts/SP_lawyer-commercial_v1_0.md,변호사 - 상법,미착수,,,,
-3-고위험전문직,변호사 · 상속법,prompts/SP_lawyer-inheritance_v1_0.md,변호사 - 상속법,미착수,,,,
-3-고위험전문직,변호사 · 성년후견,prompts/SP_lawyer-guardianship_v1_0.md,변호사 - 성년후견,미착수,,,,
-3-고위험전문직,변호사 · 소년법,prompts/SP_lawyer-juvenile_v1_0.md,변호사 - 소년법,미착수,,,,
-3-고위험전문직,변호사 · 손해배상,prompts/SP_lawyer-damages_v1_0.md,변호사 - 손해배상,미착수,,,,
-3-고위험전문직,변호사 · 수용·보상,prompts/SP_lawyer-expropriation_v1_0.md,변호사 - 수용·보상,미착수,,,,
-3-고위험전문직,변호사 · 스타트업법무,prompts/SP_lawyer-startup_v1_0.md,변호사 - 스타트업법무,미착수,,,,
-3-고위험전문직,변호사 · 스포츠법,prompts/SP_lawyer-sports_v1_0.md,변호사 - 스포츠법,미착수,,,,
-3-고위험전문직,변호사 · 식품·의약법,prompts/SP_lawyer-foodpharma_v1_0.md,변호사 - 식품·의약법,미착수,,,,
-3-고위험전문직,변호사 · 에너지법,prompts/SP_lawyer-energy_v1_0.md,변호사 - 에너지법,미착수,,,,
-3-고위험전문직,변호사 · 엔터테인먼트법,prompts/SP_lawyer-entertainment_v1_0.md,변호사 - 엔터테인먼트법,미착수,,,,
-3-고위험전문직,변호사 · 이민법,prompts/SP_lawyer-immigration_v1_0.md,변호사 - 이민법,미착수,,,,
-3-고위험전문직,변호사 · 입법,prompts/SP_lawyer-legislation_v1_0.md,변호사 - 입법,미착수,,,,
-3-고위험전문직,변호사 · 재개발·재건축,prompts/SP_lawyer-redevelopment_v1_0.md,변호사 - 재개발·재건축,미착수,,,,
-3-고위험전문직,변호사 · 정부계약,prompts/SP_lawyer-government-contract_v1_0.md,변호사 - 정부계약,미착수,,,,
-3-고위험전문직,변호사 · 조선·해양플랜트,prompts/SP_lawyer-shipbuilding_v1_0.md,변호사 - 조선·해양플랜트,미착수,,,,
-3-고위험전문직,변호사 · 종교법,prompts/SP_lawyer-religious_v1_0.md,변호사 - 종교법,미착수,,,,
-3-고위험전문직,변호사 · 종합,prompts/SP_lawyer_v5_4.md,변호사 - 종합,미착수,,,,
-3-고위험전문직,변호사 · 중재,prompts/SP_lawyer-arbitration_v1_0.md,변호사 - 중재,미착수,,,,
-3-고위험전문직,변호사 · 증권법,prompts/SP_lawyer-securities_v1_0.md,변호사 - 증권법,미착수,,,,
-3-고위험전문직,변호사 · 채권추심,prompts/SP_lawyer-collection_v1_0.md,변호사 - 채권추심,미착수,,,,
-3-고위험전문직,변호사 · 통상법,prompts/SP_lawyer-trade_v1_0.md,변호사 - 통상법,미착수,,,,
-3-고위험전문직,변호사 · 학교폭력,prompts/SP_lawyer-school-violence_v1_0.md,변호사 - 학교폭력,미착수,,,,
-3-고위험전문직,변호사 · 해상법,prompts/SP_lawyer-maritime_v1_0.md,변호사 - 해상법,미착수,,,,
-3-고위험전문직,변호사 · 해외투자,prompts/SP_lawyer-overseas-investment_v1_0.md,변호사 - 해외투자,미착수,,,,
-3-고위험전문직,변호사 · 행정법,prompts/SP_lawyer-administrative_v1_0.md,변호사 - 행정법,미착수,,,,
-3-고위험전문직,변호사 · 헌법,prompts/SP_lawyer-constitutional_v1_0.md,변호사 - 헌법,미착수,,,,
-3-고위험전문직,변호사 · 형사법,prompts/SP_lawyer-criminal_v1_0.md,변호사 - 형사법,미착수,,,,
-3-고위험전문직,변호사 · 환경법,prompts/SP_lawyer-environmental_v1_0.md,변호사 - 환경법,미착수,,,,
-3-고위험전문직,세무사,prompts/SP_tax-accountant_v2_2.md,세무사,미착수,,,,
+3-고위험전문직,공인중개사,prompts/SP_real-estate-agent_v2_0.md,공인중개사,재평가완료,84,,,2026-08-30
+3-고위험전문직,관세사,prompts/SP_customs-broker_v1_7.md,관세사,재평가완료,84,,,2026-08-30
+3-고위험전문직,노무사,prompts/SP_labor-attorney_v1_7.md,노무사,재평가완료,84,,,2026-08-30
+3-고위험전문직,법무사,prompts/SP_judicial-scrivener_v2_2.md,법무사,재평가완료,84,,,2026-08-30
+3-고위험전문직,변리사 · IP전략,prompts/SP_patent-attorney-ip-strategy_v1_0.md,변리사 - IP전략,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · IT·소프트웨어,prompts/SP_patent-attorney-it-software_v1_0.md,변리사 - IT·소프트웨어,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · PCT국제출원,prompts/SP_patent-attorney-pct-international_v1_0.md,변리사 - PCT국제출원,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 기계·전기전자,prompts/SP_patent-attorney-mechanical-electrical_v1_0.md,변리사 - 기계·전기전자,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 디자인,prompts/SP_patent-attorney-design_v1_0.md,변리사 - 디자인,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 라이선싱,prompts/SP_patent-attorney-licensing_v1_0.md,변리사 - 라이선싱,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 바이오·제약,prompts/SP_patent-attorney-bio-pharma_v1_0.md,변리사 - 바이오·제약,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 상표,prompts/SP_patent-attorney-trademark_v1_0.md,변리사 - 상표,재평가완료,79,,,2026-08-30
+3-고위험전문직,변리사 · 심판·소송,prompts/SP_patent-attorney-trial-litigation_v1_0.md,변리사 - 심판·소송,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변리사 · 종합,prompts/SP_patent-attorney_v1_8.md,변리사 - 종합,재평가완료,87,,,2026-08-30
+3-고위험전문직,변리사 · 화학·소재,prompts/SP_patent-attorney-chemistry-materials_v1_0.md,변리사 - 화학·소재,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · IT법,prompts/SP_lawyer-it_v1_0.md,변호사 - IT법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 가사법,prompts/SP_lawyer-family_v1_0.md,변호사 - 가사법,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 강제집행,prompts/SP_lawyer-execution_v1_0.md,변호사 - 강제집행,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 건설법,prompts/SP_lawyer-construction_v1_0.md,변호사 - 건설법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 경매,prompts/SP_lawyer-auction_v1_0.md,변호사 - 경매,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 공정거래법,prompts/SP_lawyer-antitrust_v1_0.md,변호사 - 공정거래법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 교통사고,prompts/SP_lawyer-traffic_v1_0.md,변호사 - 교통사고,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 국제거래,prompts/SP_lawyer-international-transactions_v1_0.md,변호사 - 국제거래,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 국제관계법,prompts/SP_lawyer-international-relations_v1_0.md,변호사 - 국제관계법,재평가완료,75,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 국제중재,prompts/SP_lawyer-international-arbitration_v1_0.md,변호사 - 국제중재,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 군사법,prompts/SP_lawyer-military_v1_0.md,변호사 - 군사법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 금융법,prompts/SP_lawyer-finance_v1_0.md,변호사 - 금융법,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 기업법무,prompts/SP_lawyer-corporate_v1_0.md,변호사 - 기업법무,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 도산·회생,prompts/SP_lawyer-insolvency_v1_0.md,변호사 - 도산·회생,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 민사법,prompts/SP_lawyer-civil_v1_0.md,변호사 - 민사법,재평가완료,81,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 방송법,prompts/SP_lawyer-broadcasting_v1_0.md,변호사 - 방송법,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 보험법,prompts/SP_lawyer-insurance_v1_0.md,변호사 - 보험법,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 부동산법,prompts/SP_lawyer-realestate_v1_0.md,변호사 - 부동산법,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 상법,prompts/SP_lawyer-commercial_v1_0.md,변호사 - 상법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 상속법,prompts/SP_lawyer-inheritance_v1_0.md,변호사 - 상속법,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 성년후견,prompts/SP_lawyer-guardianship_v1_0.md,변호사 - 성년후견,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 소년법,prompts/SP_lawyer-juvenile_v1_0.md,변호사 - 소년법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 손해배상,prompts/SP_lawyer-damages_v1_0.md,변호사 - 손해배상,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 수용·보상,prompts/SP_lawyer-expropriation_v1_0.md,변호사 - 수용·보상,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 스타트업법무,prompts/SP_lawyer-startup_v1_0.md,변호사 - 스타트업법무,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 스포츠법,prompts/SP_lawyer-sports_v1_0.md,변호사 - 스포츠법,재평가완료,74,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 식품·의약법,prompts/SP_lawyer-foodpharma_v1_0.md,변호사 - 식품·의약법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 에너지법,prompts/SP_lawyer-energy_v1_0.md,변호사 - 에너지법,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 엔터테인먼트법,prompts/SP_lawyer-entertainment_v1_0.md,변호사 - 엔터테인먼트법,재평가완료,76,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 이민법,prompts/SP_lawyer-immigration_v1_0.md,변호사 - 이민법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 입법,prompts/SP_lawyer-legislation_v1_0.md,변호사 - 입법,재평가완료,75,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 재개발·재건축,prompts/SP_lawyer-redevelopment_v1_0.md,변호사 - 재개발·재건축,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 정부계약,prompts/SP_lawyer-government-contract_v1_0.md,변호사 - 정부계약,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 조선·해양플랜트,prompts/SP_lawyer-shipbuilding_v1_0.md,변호사 - 조선·해양플랜트,재평가완료,76,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 종교법,prompts/SP_lawyer-religious_v1_0.md,변호사 - 종교법,재평가완료,74,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 종합,prompts/SP_lawyer_v5_4.md,변호사 - 종합,재평가완료,91,,,2026-08-30
+3-고위험전문직,변호사 · 중재,prompts/SP_lawyer-arbitration_v1_0.md,변호사 - 중재,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 증권법,prompts/SP_lawyer-securities_v1_0.md,변호사 - 증권법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 채권추심,prompts/SP_lawyer-collection_v1_0.md,변호사 - 채권추심,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 통상법,prompts/SP_lawyer-trade_v1_0.md,변호사 - 통상법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 학교폭력,prompts/SP_lawyer-school-violence_v1_0.md,변호사 - 학교폭력,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 해상법,prompts/SP_lawyer-maritime_v1_0.md,변호사 - 해상법,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 해외투자,prompts/SP_lawyer-overseas-investment_v1_0.md,변호사 - 해외투자,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 행정법,prompts/SP_lawyer-administrative_v1_0.md,변호사 - 행정법,재평가완료,81,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 헌법,prompts/SP_lawyer-constitutional_v1_0.md,변호사 - 헌법,재평가완료,81,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 형사법,prompts/SP_lawyer-criminal_v1_0.md,변호사 - 형사법,재평가완료,81,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,변호사 · 환경법,prompts/SP_lawyer-environmental_v1_0.md,변호사 - 환경법,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,세무사,prompts/SP_tax-accountant_v2_2.md,세무사,재평가완료,84,,,2026-08-30
 3-고위험전문직,손해사정사,prompts/SP_loss-adjuster_v1_7.md,손해사정사,미착수,,,,
-3-고위험전문직,수의사,prompts/SP_veterinarian_v3_1.md,수의사,미착수,,,,
-3-고위험전문직,약사,prompts/SP_pharmacist_v1_9.md,약사,미착수,,,,
-3-고위험전문직,응급구조사,prompts/SP_paramedic_v1_6.md,응급구조사,미착수,,,,
+3-고위험전문직,수의사,prompts/SP_veterinarian_v3_1.md,수의사,재평가완료,84,,,2026-08-30
+3-고위험전문직,약사,prompts/SP_pharmacist_v1_9.md,약사,재평가완료,84,,,2026-08-30
+3-고위험전문직,응급구조사,prompts/SP_paramedic_v1_6.md,응급구조사,재평가완료,84,,,2026-08-30
 3-고위험전문직,의사 · 내과,prompts/SP_physician-internal-medicine_v1_0.md,의사 - 내과,미착수,,,,
 3-고위험전문직,의사 · 마취통증의학과,prompts/SP_physician-anesthesiology_v1_0.md,의사 - 마취통증의학과,미착수,,,,
 3-고위험전문직,의사 · 방사선종양학과,prompts/SP_physician-radiation-oncology_v1_0.md,의사 - 방사선종양학과,미착수,,,,
@@ -110,23 +110,23 @@
 3-고위험전문직,의사 · 피부과,prompts/SP_physician-dermatology_v1_0.md,의사 - 피부과,미착수,,,,
 3-고위험전문직,의사 · 핵의학과,prompts/SP_physician-nuclear-medicine_v1_0.md,의사 - 핵의학과,미착수,,,,
 3-고위험전문직,의사 · 흉부외과,prompts/SP_physician-cardiothoracic_v1_0.md,의사 - 흉부외과,미착수,,,,
-3-고위험전문직,임상심리사,prompts/SP_clinical-psychologist_v3_4.md,임상심리사,미착수,,,,
+3-고위험전문직,임상심리사,prompts/SP_clinical-psychologist_v3_4.md,임상심리사,재평가완료,84,,,2026-08-30
 3-고위험전문직,재무설계사,prompts/SP_financial-planner_v1_7.md,재무설계사,미착수,,,,
-3-고위험전문직,전문간호사,prompts/SP_advanced-practice-nurse_v3_9.md,전문간호사,미착수,,,,
-3-고위험전문직,정신건강전문요원,prompts/SP_mental-health-professional_v3_3.md,정신건강전문요원,미착수,,,,
-3-고위험전문직,조산사,prompts/SP_midwife_v1_6.md,조산사,미착수,,,,
-3-고위험전문직,치과의사,prompts/SP_dentist_v1_9.md,치과의사,미착수,,,,
+3-고위험전문직,전문간호사,prompts/SP_advanced-practice-nurse_v3_9.md,전문간호사,재평가완료,84,,,2026-08-30
+3-고위험전문직,정신건강전문요원,prompts/SP_mental-health-professional_v3_3.md,정신건강전문요원,재평가완료,84,,,2026-08-30
+3-고위험전문직,조산사,prompts/SP_midwife_v1_6.md,조산사,재평가완료,84,,,2026-08-30
+3-고위험전문직,치과의사,prompts/SP_dentist_v1_9.md,치과의사,재평가완료,84,,,2026-08-30
 3-고위험전문직,한의사,prompts/SP_traditional-medicine-doctor_v2_0.md,한의사,미착수,,,,
-3-고위험전문직,회계사 · IFRS,prompts/SP_accountant-ifrs_v1_0.md,회계사 - IFRS,미착수,,,,
-3-고위험전문직,회계사 · IPO,prompts/SP_accountant-ipo_v1_0.md,회계사 - IPO,미착수,,,,
-3-고위험전문직,회계사 · 가치평가,prompts/SP_accountant-valuation_v1_0.md,회계사 - 가치평가,미착수,,,,
-3-고위험전문직,회계사 · 감사,prompts/SP_accountant-audit_v1_0.md,회계사 - 감사,미착수,,,,
-3-고위험전문직,회계사 · 구조조정,prompts/SP_accountant-restructuring_v1_0.md,회계사 - 구조조정,미착수,,,,
-3-고위험전문직,회계사 · 내부통제,prompts/SP_accountant-internal-control_v1_0.md,회계사 - 내부통제,미착수,,,,
-3-고위험전문직,회계사 · 비영리·공공회계,prompts/SP_accountant-nonprofit-public_v1_0.md,회계사 - 비영리·공공회계,미착수,,,,
-3-고위험전문직,회계사 · 실사(듀딜리전스),prompts/SP_accountant-due-diligence_v1_0.md,회계사 - 실사(듀딜리전스),미착수,,,,
-3-고위험전문직,회계사 · 종합,prompts/SP_accountant_v1_10.md,회계사 - 종합,미착수,,,,
-3-고위험전문직,회계사 · 포렌식회계,prompts/SP_accountant-forensic_v1_0.md,회계사 - 포렌식회계,미착수,,,,
+3-고위험전문직,회계사 · IFRS,prompts/SP_accountant-ifrs_v1_0.md,회계사 - IFRS,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · IPO,prompts/SP_accountant-ipo_v1_0.md,회계사 - IPO,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 가치평가,prompts/SP_accountant-valuation_v1_0.md,회계사 - 가치평가,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 감사,prompts/SP_accountant-audit_v1_0.md,회계사 - 감사,재평가완료,80,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 구조조정,prompts/SP_accountant-restructuring_v1_0.md,회계사 - 구조조정,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 내부통제,prompts/SP_accountant-internal-control_v1_0.md,회계사 - 내부통제,재평가완료,78,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 비영리·공공회계,prompts/SP_accountant-nonprofit-public_v1_0.md,회계사 - 비영리·공공회계,재평가완료,77,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 실사(듀딜리전스),prompts/SP_accountant-due-diligence_v1_0.md,회계사 - 실사(듀딜리전스),재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
+3-고위험전문직,회계사 · 종합,prompts/SP_accountant_v1_10.md,회계사 - 종합,재평가완료,87,,,2026-08-30
+3-고위험전문직,회계사 · 포렌식회계,prompts/SP_accountant-forensic_v1_0.md,회계사 - 포렌식회계,재평가완료,79,Tier 2 항목에 🔴[VERIFY: HIGH] 태그로 부모 SP의 확신도 체계를 그대로 상속·적용.,,2026-08-30
 4-정부기관라우팅,gov-tree 설계 문서,prompts/gov-tree/docs/AGY-B-PLAN-SCENARIO-THOUGHT-EXPERIMENT_2026-07-13.md,AGY B 기획조정실 Scenario Thought Experiment 2026 07 13,미착수,,,,
 4-정부기관라우팅,gov-tree 설계 문서,prompts/gov-tree/docs/ALL-SP-SCENARIO-EXPERIMENT-REPORT_v1.md,ALL SP Scenario Experiment Report,미착수,,,,
 4-정부기관라우팅,gov-tree 설계 문서,prompts/gov-tree/docs/ADVERSARIAL-TEST-BATCH1_2026-07-14.md,Adversarial TEST Batch1 2026 07 14,미착수,,,,
