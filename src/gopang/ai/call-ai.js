@@ -4591,7 +4591,7 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
           console.warn(`[GWP] '${svcId}'는 type:switch인데 SWITCH_SP_LOADERS에 로더가 없어 자동복구 불가.`);
           if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
         }
-      } else if (svcDef && (svcDef.type === 'tool' || svcDef.type === 'inline')) {
+      } else if (svcDef && !svcDef.url) {
         // ★ 2026-08-11 신설 — kestate/ktelecom(type:switch)과 동일한 계열의
         // 사고: url이 없는 TOOL/INLINE 항목(tool-web-search, ksearch,
         // tool-calculator 등, gwp-registry.js 참조)이 구식 [GWP: id]
@@ -4603,7 +4603,18 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         // 있는지 알아봐 줘" → 웹 검색 의도 표명 후 빈 탭). switch와
         // 달리 이 항목들은 SWITCH_SP_LOADERS 가드에 걸리지 않아 지금껏
         // 무방비였다 — 이 분기가 그 사각지대를 메운다.
-        console.warn(`[GWP] '${svcId}'는 type:${svcDef.type}(탭 대상 아님)인데 구식 [GWP: id] 문법으로 호출됨 — 자동복구 시도.`);
+        // ★ 2026-08-30 수정 — 원래 조건(svcDef.type === 'tool' ||
+        // svcDef.type === 'inline')이 실제로는 url이 있는 type:'inline'
+        // 서비스 14개(klaw 등)까지 전부 이 분기로 잘못 끌어들이고
+        // 있었다(sp-tag-dispatch.test.mjs SD-01로 발견 — "[GWP: klaw]"가
+        // 조용히 아무것도 안 하고 끝남, 아래쪽 'tool-calculator 등 아직
+        // 전용 실행부가 없는 항목' else 분기로 떨어져 로그만 남기고
+        // launch 자체가 누락됨). 이 가드의 진짜 의도(주석 그대로 "url이
+        // 없는" 항목)에 맞게 type 문자열 대신 url 존재 여부로 직접
+        // 판별한다 — tool 항목은 gwp-registry.js에 url:null로 명시돼
+        // 있어 그대로 이 분기를 타고, url 있는 inline 항목은 이제 아래
+        // 정상 launch 분기로 흐른다.
+        console.warn(`[GWP] '${svcId}'는 url 없는 서비스(type:${svcDef.type})인데 구식 [GWP: id] 문법으로 호출됨 — 자동복구 시도.`);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
         const cleanedReplyTool = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
         if (bubble) _updateStreamBubble(bubble, cleanedReplyTool);
