@@ -429,6 +429,13 @@
 
     const evalCatCounts = {};
     STATUS.items.forEach(it => { evalCatCounts[it.cat] = (evalCatCounts[it.cat] || 0) + 1; });
+    // 하위분류(children)가 있는 카테고리는 자신에게 직접 달린 평가가 없어도
+    // 하위분류들의 평가 건수를 합산해 상위 칩에 표시한다.
+    topCats.forEach(c => {
+      if (c.children) {
+        evalCatCounts[c.id] = c.children.reduce((sum, cid) => sum + (evalCatCounts[cid] || 0), 0);
+      }
+    });
 
     const html = Object.entries(byGroup).map(([group, cats]) => `
       <div>
