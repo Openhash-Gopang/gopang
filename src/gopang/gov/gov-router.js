@@ -2979,7 +2979,21 @@ async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn
     // K-Intent 개입 기회조차 없었음). 같은 계층(agency/org) 후보뿐 아니라
     // L2(도청 실·국) 1등 후보도 함께 넣어 진짜 정답이 계층을 넘나드는
     // 경우까지 구제한다. classifyFn이 없으면(하위호환) 기존처럼 즉시 확정.
-    if (!classifyFn) return best;
+    if (!classifyFn) {
+      // ★ 2026-08-30 수정 — LLM 없다고 그냥 포기하지 않는다. L2가 이
+      // 1키워드짜리 약한 매칭보다 명백히 강하면(topScore 더 높음) 이
+      // 약한 우연 매칭을 확정하지 않는다 — 결정론적으로 판단 가능한
+      // 경우까지 "classifyFn 없음"을 핑계로 원래 버그(위 주석의 "어린이집
+      // 보육료 지원" 사례)를 재현하지 않기 위함. null을 반환해 이
+      // agency/org 매칭 자체를 무효화하면, 호출부가 자연히 뒤쪽의 정상
+      // L2 매칭 경로(_scoreMatch+_fetchDeptText, agency 전용 렌더링과
+      // 다름)로 폴백한다 — 여기서 L2 엔트리를 직접 반환하면 agency 전용
+      // 조합 함수에 잘못된 모양의 데이터가 들어가는 위험이 있어 피한다.
+      // 강도가 같거나 L2가 없으면 기존처럼 best(약한 매칭) 그대로 확정
+      // — 회귀 없음.
+      const l2ForWeak = _scoreMatchTies(text, _l2Table());
+      return (l2ForWeak.best && l2ForWeak.topScore > topScore) ? null : best;
+    }
     const l2Best = _scoreMatchTies(text, _l2Table()).best;
     const extendedTable = l2Best && !table.includes(l2Best)
       ? [...table, { ...l2Best, name: l2Best.code, desc: ROUTE_DESCRIPTIONS[l2Best.code] || l2Best.domain || '' }]
@@ -5614,11 +5628,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   const _nameCollisionExempt = policyBodyGuess && _natAgencyHit &&
     (_POLICY_BODY_NAME_COLLISION_EXEMPT[policyBodyGuess] || []).some(kw => text.includes(kw));
   // ★ 2026-08-23 신설(재설계 1단계) — 국가기관(정책기관) 즉시확정 전
-  // 시청 국(jachi 등) 계층 충돌 여부를 먼저 확인한다. classifyFn이
-  // 없으면(하위호환) 검사 자체를 생략하고 기존처럼 즉시 확정 — 회귀 없음.
-  // 시청 계층 후보가 없으면(대다수 발화) 검사 비용만 들고 결과는
-  // 기존과 동일 — 기존 통과 테스트 28건에 영향 없음.
-  const _policyCityCollision = (policyBodyGuess && classifyFn)
+  // 시청 국(jachi 등) 계층 충돌 여부를 먼저 확인한다.
+  // ★ 2026-08-30 수정 — 이 검사(_localGovCollisionCandidate) 자체는
+  // 순수 키워드 스코어링이라 LLM 호출이 전혀 없다. 예전엔 classifyFn이
+  // 없으면(하위호환) 검사를 통째로 생략했는데, 그러면 바로 위 주석이
+  // 설명하는 원래 버그("소상공인 정책자금 대출 상담" → MSS로 즉시확정)가
+  // classifyFn 없는 모드(gov-router.test.mjs 등)에서 그대로 재현됐다
+  // (실측 확인). LLM 없이도 결정론적으로 판단 가능하므로 classifyFn
+  // 유무와 무관하게 항상 검사한다.
+  const _policyCityCollision = policyBodyGuess
     ? _localGovCollisionCandidate(text, pdvLocationHint) : null;
   if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt) && !_policyCityCollision) {
     const nationalSp = await _loadNationalSp();
@@ -5639,6 +5657,16 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
   if (policyBodyGuess && (!_natAgencyHit || _nameCollisionExempt) && _policyCityCollision) {
+    // ★ 2026-08-30 수정 — classifyFn이 없으면 안 되묻고 안 통합판단할 수
+    // 있으니, 예전엔 그냥 국가기관으로 확정해버렸다(원래 버그 재현:
+    // "소상공인 정책자금 대출 상담" 등). 이 계층충돌이 감지됐다는 것
+    // 자체가 "지역 소관이 더 흔한 사례"라는 뜻(위 -0.8) 진입 주석 참고)
+    // 이므로, classifyFn 없을 때의 안전 기본값을 국가기관에서 로컬
+    // (도청/시청)로 바꾼다 — classifyFn이 있을 때 시청 국을 고른 경우와
+    // 동일하게 아래 일반 라우팅 경로로 통과시킨다.
+    if (!classifyFn) {
+      trace.push('(계층충돌 — classifyFn 없어 결정론적으로 지방행정 우선, 아래 라우팅 경로로 위임)');
+    } else {
     // 국가기관과 시청 국 계층이 동시에 걸렸다 — 둘 다 후보로 얹어
     // classifyFn 한 번으로 통합 판단(2단계). CLARIFY 신호는 그대로
     // 위로 던져 사용자에게 되묻는다(기존 관례와 동일).
@@ -5676,6 +5704,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // 통과시킨다. 그 경로가 PERMIT-CRITERIA-PROTOCOL·division 매칭 등
     // 기존 배선을 이미 다 갖추고 있어 여기서 중복 구현하지 않는다.
     trace.push(`(계층충돌 통합판단 — 지방행정(${picked.code}) 소관으로 판정, 아래 라우팅 경로로 위임)`);
+    }
   }
 
   // -0.78) 국가 공기업(enterprises) 매칭 (2026-08-23 신설) — enterprises도
