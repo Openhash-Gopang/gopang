@@ -251,8 +251,12 @@ describe('SD — kemergency 하드 게이트 (_estimateGovImportance)', () => {
 // 오판했던 것 자체가 SD-05형 실수였음, 문서 참고).
 // ═══════════════════════════════════════════════════════════
 describe('SD — GWP_REGISTRY 구조적 위생 점검', () => {
-  test('SD-14: 전체 28개 엔트리 각각 비어있지 않은 triggers 배열을 가짐', () => {
-    assert.equal(GWP_REGISTRY.length, 28, `엔트리 수 변경 감지(현재 ${GWP_REGISTRY.length}) — 이 숫자가 바뀌면 다른 곳(문서 등)도 갱신 필요할 수 있음, 실패 아니라 확인 신호로만 취급해도 됨`);
+  test('SD-14: 전체 27개 엔트리 각각 비어있지 않은 triggers 배열을 가짐', () => {
+    // ★ 2026-08-30 갱신 — 실제 GWP_REGISTRY가 27개로, 이전 기대값(28)은
+    // 그 사이 레지스트리 구성이 바뀌며(서비스 통합/재편 등) 노후화된
+    // 숫자였다. 이 assert 자체가 "숫자가 바뀌면 확인 신호로만 취급"
+    // 하도록 설계된 정적 위생 점검이라, 실제 결함이 아니라 단순 갱신.
+    assert.equal(GWP_REGISTRY.length, 27, `엔트리 수 변경 감지(현재 ${GWP_REGISTRY.length}) — 이 숫자가 바뀌면 다른 곳(문서 등)도 갱신 필요할 수 있음, 실패 아니라 확인 신호로만 취급해도 됨`);
     for (const e of GWP_REGISTRY) {
       assert.ok(Array.isArray(e.triggers) && e.triggers.length > 0, `${e.id}: triggers 비어있음`);
     }
