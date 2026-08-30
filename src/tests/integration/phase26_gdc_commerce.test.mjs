@@ -417,7 +417,13 @@ describe('GDC08: 발행잔액 집계', () => {
     const { status, json } = await call('/ledger/issuance-summary');
     assert.equal(status, 200);
     assert.equal(json.total_issued_gdc, 3000);
-    assert.equal(json.total_issued_krw, 3000 * 1000);
+    // ★ 2026-08-30 갱신 — EXCHANGE_RATE_KRW_PER_GDC가 2026-07-27
+    // "베타 테스트 기간 한정" 조치로 100 → 1로 내려갔다(주피터 지시,
+    // worker.js 1231/12935행). 이 테스트는 그 이전의 1:1000 비율을
+    // 그대로 가정하고 있어 뒤처져 있었음 — 현재 실제 환율(1)에 맞게
+    // 갱신. 테스트 기간이 끝나 환율이 다시 바뀌면 이 값도 함께
+    // 갱신해야 한다.
+    assert.equal(json.total_issued_krw, 3000 * 1);
   });
 
   it('발행 기록이 하나도 없으면 0으로 정상 응답(에러 아님)', async () => {
