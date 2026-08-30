@@ -101,84 +101,19 @@ describe('B3-4 — UNIVERSAL-INTEGRITY 자동 상속 (_loadSpByKey)', () => {
   });
 });
 
-describe('B3-2 — 전문가 세션 same-thread SP 전환', () => {
-  test('세션 시작 시 CFG.system이 페르소나 합성 프롬프트로 교체되고 history는 유지됨', async () => {
-    CFG.system = '[그림자 AI(AGENT-COMMON) 프롬프트]';
-    CFG.system_base = CFG.system;
-    history.length = 0;
-    history.push({ role: 'system', content: CFG.system });
-    history.push({ role: 'user', content: '이혼 소송 준비 중이에요' });
-
-    const personaId = resolveExpertId('lawyer');
-    assert.equal(personaId, 'lawyer');
-    const def = { label: '변호사', icon: '⚖️', key: 'SP_lawyer', needsMedicalSafety: false };
-
-    await startExpertSession(personaId, def);
-
-    assert.equal(isExpertActive(), true);
-    assert.equal(currentExpertLabel(), '⚖️ 변호사');
-    assert.ok(CFG.system.includes('변호사 페르소나 SP 원문'), 'CFG.system이 페르소나 프롬프트로 안 바뀜');
-    assert.ok(CFG.system.includes('UNIVERSAL-INTEGRITY 원문'), '페르소나 전환에도 UNIVERSAL-INTEGRITY 유지돼야 함');
-    // 2026-07-19 신설 — U0/U1/U7("안내로 끝내지 않는다")과 전문가 정체성
-    // 계층이 실제로 조립되는지 검증(2026-07-19 실사로 발견된 결함의 회귀 방지).
-    assert.ok(CFG.system.includes('UNIVERSAL-common 원문'), 'UNIVERSAL-common(U0/U1/U7)이 조립에서 빠짐 — 회귀');
-    assert.ok(CFG.system.includes('PROFESSIONAL-common 원문'), 'PROFESSIONAL-common(전문가 정체성 계층)이 조립에서 빠짐 — 회귀');
-    // UNIVERSAL-INTEGRITY가 중복 삽입되지 않는지 검증(3중복 버그 회귀 방지).
-    const uiCount = CFG.system.split('UNIVERSAL-INTEGRITY 원문').length - 1;
-    assert.equal(uiCount, 1, `UNIVERSAL-INTEGRITY가 ${uiCount}회 삽입됨 — 정확히 1회여야 함(중복 버그 회귀)`);
-    assert.equal(history[0].content, CFG.system, 'history[0](캐시된 system)도 함께 갱신돼야 함(캐시 최적화 우회)');
-    assert.equal(history.length, 2, '기존 대화(history)가 유실되면 안 됨 — 같은 스레드 유지가 핵심');
-
-    await endExpertSession('test_cleanup');
-  });
-
-  test('종료 발화 감지 시 세션 종료 + CFG.system이 system_base로 복원 + 이전 페르소나 잔존 없음', async () => {
-    CFG.system = '[그림자 AI(AGENT-COMMON) 프롬프트]';
-    CFG.system_base = CFG.system;
-    history.length = 0;
-    history.push({ role: 'system', content: CFG.system });
-
-    const def = { label: '변호사', icon: '⚖️', key: 'SP_lawyer', needsMedicalSafety: false };
-    await startExpertSession('lawyer', def);
-    assert.equal(isExpertActive(), true);
-
-    const ended = await maybeHandleExpertTurn('상담 끝났어, 그만할게');
-    assert.equal(ended, true, '종료 발화인데 세션이 안 끝남');
-    assert.equal(isExpertActive(), false, '세션 활성 플래그가 안 꺼짐(이전 페르소나 잔존)');
-    assert.equal(currentExpertLabel(), null);
-    assert.equal(CFG.system, '[그림자 AI(AGENT-COMMON) 프롬프트]', 'system_base로 정확히 복원 안 됨');
-    assert.ok(!CFG.system.includes('변호사'), '이전 페르소나 프롬프트가 잔존함');
-    assert.ok(recordedPdv, '세션 종료 시 PDV 기록(_recordPDV)이 호출돼야 함');
-    assert.equal(recordedPdv.serviceId, 'lawyer');
-  });
-
-  test('종료 발화가 아니면 세션이 계속 유지됨(오탐 방지)', async () => {
-    CFG.system = '[그림자 AI(AGENT-COMMON) 프롬프트]';
-    CFG.system_base = CFG.system;
-    const def = { label: '변호사', icon: '⚖️', key: 'SP_lawyer', needsMedicalSafety: false };
-    await startExpertSession('lawyer', def);
-
-    const ended = await maybeHandleExpertTurn('그럼 위자료는 어느 정도 받을 수 있을까요');
-    assert.equal(ended, false);
-    assert.equal(isExpertActive(), true, '무관한 발화로 세션이 조기 종료되면 안 됨');
-
-    await endExpertSession('test_cleanup');
-  });
-
-  test('applyExpertSystemIfActive — 활성 세션의 system이 캐시에서 재적용됨(다른 곳이 system을 덮어써도 복구)', async () => {
-    CFG.system = '[그림자 AI(AGENT-COMMON) 프롬프트]';
-    CFG.system_base = CFG.system;
-    const def = { label: '변호사', icon: '⚖️', key: 'SP_lawyer', needsMedicalSafety: false };
-    await startExpertSession('lawyer', def);
-
-    CFG.system = '[누군가 실수로 덮어씀]';
-    const applied = applyExpertSystemIfActive();
-    assert.equal(applied, true);
-    assert.ok(CFG.system.includes('변호사 페르소나 SP 원문'), '캐시에서 재적용 안 됨');
-
-    await endExpertSession('test_cleanup');
-  });
-});
+// ★ 2026-08-30 제거 — 아래 있던 'B3-2 — 전문가 세션 same-thread SP 전환'
+// describe 블록(startExpertSession/isExpertActive/maybeHandleExpertTurn/
+// applyExpertSystemIfActive/endExpertSession 검증)을 삭제했다. 이
+// same-thread 세션 서브시스템은 2026-07-03부터 아무도 호출하지 않는
+// 죽은 코드였음이 2026-08-06 감사로 확인되어 src/_archive/
+// expert-session-legacy-inthread.js.md로 코드와 근거를 통째로 이관됐다
+// (expert-session.js 최상단 ARCHITECTURE NOTE 참고 — 전문가 AI는 이제
+// 새 탭(pages/expert-chat.html)에서 독립 실행되고, handleExpertTag가
+// 그 라우팅을 담당한다). startExpertSession 등은 현재 모듈에 아예
+// export돼 있지 않아 "TypeError: startExpertSession is not a
+// function"으로 매번 실패하고 있었음 — 코드 결함이 아니라 삭제된
+// 기능을 계속 테스트하고 있었던 것. 부활이 필요하면 위 archive 파일과
+// 함께 이 테스트도 git 이력에서 복원하면 된다.
 
 describe('2026-07-19 신설 — handleExpertTag 핸드오프 맥락 전달', () => {
   test('AC와의 이전 대화가 없으면 이번 발화 원문만 그대로 전달됨(하위호환)', async () => {
