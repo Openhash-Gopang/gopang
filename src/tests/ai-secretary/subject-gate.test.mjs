@@ -100,18 +100,36 @@ describe('refineToLeaf — 2단계 과목 게이트', () => {
   });
 
   test('초등 수준 동의어(산수)로 물어도 게이트 메뉴에 실려 professor-math로 정밀화된다', async () => {
-    let capturedSystemPrompt = null;
+    // ★ 2026-08-30 수정 — professor-math는 2026-08-10 계층 개편으로
+    // professor → professor-mathphys → professor-math-series →
+    // professor-math, 3단계 깊이로 재소속됐다(expert-registry-professor.js
+    // parentKey 체인 확인). refineToLeaf는 한 번에 리프로 안 뛰고 매
+    // 단계마다 별도 게이트 호출로 한 단계씩만 내려가므로, 실제 LLM처럼
+    // 매 호출마다 그 단계 메뉴에 맞는 다음 id를 순서대로 반환해야 한다
+    // — 예전엔 fetch mock이 고정된 'professor-math' 응답 하나만 매번
+    // 재사용해서, 1단계(professor의 직계 자식 = mathphys 등)에서부터
+    // 화이트리스트 검증에 걸려(professor-math는 직계 자식이 아님) 즉시
+    // 'professor'로 폴백하던 게 실패 원인이었다(코드 버그 아님).
+    const STEP_RESPONSES = ['professor-mathphys', 'professor-math-series', 'professor-math'];
+    let callCount = 0;
+    const capturedPrompts = [];
     mock.method(globalThis, 'fetch', async (url, opts) => {
-      capturedSystemPrompt = JSON.parse(opts.body).messages[0].content;
+      capturedPrompts.push(JSON.parse(opts.body).messages[0].content);
+      const chosen = STEP_RESPONSES[callCount] ?? STEP_RESPONSES[STEP_RESPONSES.length - 1];
+      callCount++;
       return {
         ok: true,
-        json: async () => ({ choices: [{ message: { content: '{"id": "professor-math"}' } }] }),
+        json: async () => ({ choices: [{ message: { content: JSON.stringify({ id: chosen }) } }] }),
       };
     });
     const { refineToLeaf } = await import('../../gopang/ai/subject-gate.js?t=' + Date.now());
     const result = await refineToLeaf('professor', '초등학생인데 구구단 산수 좀 가르쳐 주세요');
     assert.equal(result, 'professor-math');
-    assert.ok(capturedSystemPrompt.includes('구구단'), '게이트 메뉴에 초등 동의어(구구단)가 포함돼야 함');
+    // '구구단' 동의어는 professor-math 자신이 후보로 뜨는 마지막 단계
+    // (professor-math-series의 자식 목록) 메뉴에만 실린다 — 첫 단계
+    // (professor의 직계 자식) 메뉴에는 없는 게 정상이므로 전체 단계
+    // 메뉴 중 하나에라도 포함되면 통과로 본다.
+    assert.ok(capturedPrompts.some(p => p.includes('구구단')), '게이트 메뉴에 초등 동의어(구구단)가 포함돼야 함');
     mock.restoreAll();
   });
 });
