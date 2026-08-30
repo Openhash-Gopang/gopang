@@ -78,7 +78,7 @@
 .site-nav-highlight-sub {
   position: absolute; top: 54px; right: 20px; margin: 6px 0 0;
   color: #b3bfd1; font-size: 12px; line-height: 1.5; text-align: right;
-  max-width: 340px; font-family: 'Pretendard', sans-serif;
+  white-space: nowrap; font-family: 'Pretendard', sans-serif;
 }
 @media (max-width: 900px) {
   .site-nav-highlight a span.label-text { display: none; }
@@ -119,12 +119,12 @@
   color: #b3bfd1; font-size: 15px; line-height: 1.7; margin: 0 0 24px;
   max-width: 520px; font-family: 'Pretendard', sans-serif;
 }
-.site-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 0.5cm; }
+.site-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1cm; }
 .site-hero-actions a {
   display: flex; align-items: center; gap: 5px;
   background: #1a2e5c;
   border: 1px solid rgba(255,255,255,0.45); color: #fff; font-size: 13.5px; font-weight: 600;
-  padding: 9.9px 20px; border-radius: 20px; white-space: nowrap;
+  padding: 5.1px 20px; border-radius: 20px; white-space: nowrap;
   text-decoration: none; font-family: 'Pretendard', sans-serif;
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
