@@ -20,24 +20,9 @@
   <span class="ps-topbar-title">혼디 프로젝트 지원</span>
 </header>
 
-<div class="subscribe-box" style="max-width:860px; margin:24px auto 0;">
-  <div class="h">구독 방법</div>
-  <ol>
-    <li>아래 입금 계좌로 이용료를 입금하십시오.</li>
-    <li>입금 즉시 사용자 대시보드에 GDC로 자동 충전되며, 구독 종류(기본 요금제, 월 정액제, 연간 구독)는 입금액에 따라 자동으로 결정됩니다.</li>
-  </ol>
-  <div class="account-line">
-    <span class="label">입금 계좌</span>
-    <span class="acct">기업은행 315-092028-04-011 에이아이시티주식회사</span>
-  </div>
-</div>
-
 <section class="ps-hero">
   <div class="ps-hero-inner">
-    <div class="ps-hero-title-row">
-      <h1 class="ps-hero-title">국내 AI 서버 구축을 위해 <span>혼디 프로젝트를 지원해 주십시오</span></h1>
-      <a href="#support" class="ps-hero-gdc-btn">혼디 이용료(GDC) 충전</a>
-    </div>
+    <h1 class="ps-hero-title">국내 AI 서버 구축을 위해 <span>혼디 프로젝트를 지원해 주십시오</span></h1>
     <p class="ps-hero-sub">혼디는 5천만 국민 각자에게, 그리고 수백만에 이르는 기관·부서 각각에게 전담 AI 비서를 제공하는 전자동 AI 정부 플랫폼입니다. 2026년 9월 현재 완성도는 90% 수준이지만, 서버 자원의 한계로 설계 성능의 절반밖에 발휘하지 못하고 있습니다. 지금 가입하시면 국내 AI 서버 구축에 직접 동참하시게 됩니다.</p>
   </div>
 </section>
@@ -157,15 +142,11 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 /* ── 페이지 타이틀 영역 ── */
 .ps-hero { background: var(--surface); padding: 44px 8% 36px; border-bottom: 1px solid var(--border); }
 .ps-hero-inner { max-width: 860px; margin: 0 auto; }
-.ps-hero-title-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .ps-hero-title {
   font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; color: var(--navy);
   line-height: 1.4; margin: 14px 0 14px;
 }
 .ps-hero-title span { color: var(--brand); display: block; margin-top: 2px; }
-.ps-hero-gdc-btn { font-size: 13.5px; font-weight: 700; padding: 11px 20px; border-radius: 8px; text-decoration: none; background: var(--brand); color: #fff; box-shadow: var(--el-1); white-space: nowrap; flex-shrink: 0; transition: box-shadow 0.15s, transform 0.15s, background 0.15s; }
-.ps-hero-gdc-btn:hover { background: var(--brand-dk); box-shadow: var(--el-2); transform: translateY(-1px); }
-.ps-hero-gdc-btn:active { box-shadow: var(--el-1); transform: translateY(0); }
 .ps-hero-sub { font-size: 13.5px; color: var(--text3); line-height: 1.8; max-width: 100%; margin-bottom: 18px; }
 
 /* ── 판결 정확도 강조 수치 (섹션 본문 내 인라인 스탯) ── */
@@ -339,117 +320,76 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
   <div class="toc-inner">
     <div class="toc-label">목차</div>
     <ul class="toc-list">
-      <li><a href="#why-hondi"><span class="n">1</span>왜 지금, AI 정부인가</a></li>
-      <li><a href="#coverage"><span class="n">2</span>정부 전 기관에서 삶의 전 영역까지</a></li>
-      <li><a href="#why-now"><span class="n">3</span>완성도 90%, 그러나 성능은 절반</a></li>
-      <li><a href="#support"><span class="n">4</span>지원 방법과 요금제</a></li>
-      <li><a href="#next-steps"><span class="n">5</span>앞으로의 계획</a></li>
+      <li><a href="#pricing-plans"><span class="n">1</span>혼디 요금제</a></li>
+      <li><a href="#subscribe-method"><span class="n">2</span>구독 방법</a></li>
+      <li><a href="#support"><span class="n">3</span>서버 구축 현황과 얼리 서포터 혜택</a></li>
+      <li><a href="#next-steps"><span class="n">4</span>앞으로의 계획</a></li>
     </ul>
   </div>
 </div>
 
-<!-- 1. 왜 지금, AI 정부인가 (구 verdict-intro + overview + platform 통합) -->
-<section class="section" id="why-hondi">
+<!-- 1. 혼디 요금제 (요금제 선택 — 결제 전 가장 먼저 볼 내용) -->
+<section class="section" id="pricing-plans">
   <div class="section-inner">
-    <div class="section-tag">01 — Why Hondi</div>
-    <h2 class="section-title">왜 지금, AI 정부인가</h2>
-    <div class="section-body">
-      <p>대한민국 정부는 오래전부터 디지털 행정의 기반을 다져왔습니다. 공공데이터포털(data.go.kr)은 정부와 공공기관이 보유한 데이터를 국민과 기업이 자유롭게 활용할 수 있도록 개방하는 창구이며, 국가법령정보센터를 비롯한 법령·정책 문헌 플랫폼(dpaper.kr 등)은 방대한 법령·판례·정책 자료를 디지털로 축적해 왔습니다. 정부24는 각종 민원과 행정 서비스를 하나의 창구에서 신청·발급할 수 있도록 통합한 대표적 전자정부 서비스입니다.</p>
-      <p>이처럼 데이터 개방, 법령·정책 디지털화, 민원 통합이라는 세 축은 이미 훌륭한 인프라로 자리 잡았습니다. 이제 남은 과제는 이 방대한 데이터와 서비스를 국민 개개인의 언어로 <strong>'이해하고, 판단하고, 실행'</strong>해 줄 AI 계층입니다. 바로, 혼디입니다.</p>
-      <p>혼디는 카톡처럼 메시징 앱인 동시에, 사람과 AI, 그리고 AI와 AI가 대화하는 플랫폼입니다. 혼디는 5천만 국민 각자에게, 그리고 수백만에 이르는 기관·부서 각각에게 전담 AI 비서를 제공합니다.</p>
-      <p>그 결과, 지금까지 사람과 사람이 직접 주고받던 반복적·정형적 업무(민원 문의, 서류 확인, 자격 조회, 신청·접수, 인허가 등)를 국민의 AI 비서와 기관의 AI 비서가 서로 대화하며 처리하는 <strong>AI-AI 업무 수행 구조</strong>로 전환합니다. 사람은 판단과 결정이 필요한 순간에만 개입하면 됩니다.</p>
-      <p>혼디는 기존 AI와 달리, 사용자의 질문에 답하는 데 그치지 않고 사용자의 지시를 직접 수행하는 에이전트를 지향합니다. 즉, '알려주는 AI'가 아니라, 직접 뛰고 '해결해 주는 AI'입니다.</p>
-      <p>혼디는 한국 사회를 수천만 개의 AI 모듈(= AI 비서)들 간의 네트워크로 재구성합니다. 그중 하나는 오직 여러분 한 사람만의 이익을 위해 복무합니다.</p>
+    <div class="section-tag">01 — 혼디 요금제</div>
+    <h2 class="section-title">혼디 요금제</h2>
+    <div class="section-sub">사용자의 이용 패턴에 맞춰 아래 세 가지 요금제 중 하나를 선택하십시오.</div>
+
+    <div class="plan-grid">
+      <div class="plan-card">
+        <div class="name">종량제</div>
+        <div class="price">월 1,000원<small> 기본료 +α</small></div>
+        <div class="desc">기본료에 더해 혼디 서비스 각각의 사용량에 따라 부과됩니다. 서비스별로 실제 쓴 만큼만 추가 과금되어, 사용량이 적은 사용자에게 유리합니다.</div>
+      </div>
+      <div class="plan-card">
+        <div class="name">정액제</div>
+        <div class="price">월 10,000원</div>
+        <div class="desc">일정한 한도 내에서 모든 서비스를 무제한 이용할 수 있습니다. 사용량이 많거나 예측이 어려운 사용자에게 유리합니다.</div>
+      </div>
+      <div class="plan-card featured">
+        <div class="name">연간 GDC 충전형</div>
+        <div class="price">연 100,000원<small> (정가 12만 원)</small></div>
+        <div class="desc">개발 진행 상황 정기 리포트를 제공하는, 장기 이용자를 위한 절감형 요금제입니다. 할인·특별 혜택은 아래 안내를 참고하십시오.</div>
+      </div>
     </div>
 
-    <h3 class="sub-heading">이미 증명된 실력 — 대법원 판결 예측 정확도</h3>
-    <div class="section-body">
-      <div class="stat-inline">75~90%</div>
-      <div class="stat-inline-label">대법원 공개 판례 300건 자체 테스트 일치도</div>
-      <p>법원 소송은 1심에서 3심까지 수년, 수천만 원이 소요됩니다. 혼디는 예상 대법원 판결문을 단 3분 만에 거의 완벽한 법리로 작성하며, 대법원 공개 판례 300건으로 자체 테스트한 결과 실제 판결문과 일치도가 약 75~90%입니다(공개 판례 300건에서 1~2심 판결문의 대법원 판결문 일치도는 약 45%).</p>
-      <p>소송을 접수하기도 전에 수년 뒤 대법원 판결문을 신뢰할 만한 정확도로 예측할 수 있을 뿐 아니라, 왜 그런 결론이 나올 수밖에 없는지를 차근차근 설명해 줍니다. <a href="https://klaw.hondi.net" target="_blank" rel="noopener">klaw.hondi.net에서 직접 확인하십시오 →</a></p>
-      <p style="margin-top:20px"><strong>2026년 9월 현재, 혼디의 완성도는 90% 수준입니다.</strong> 지금 혼디에 가입하여, 혼디의 완성을 지원하십시오.</p>
+    <div class="plan-footnote">
+      종량제·정액제는 GDC 잔액 차감 방식으로 운영되며, 월 단위 자동 결제 또는 수동 충전 중 선택할 수 있습니다. 정액제의 "일정한 한도"는 서비스 안정성을 위한 과도한 어뷰징 방지 목적이며, 일반적인 사용 범위에서는 사실상 무제한으로 운영됩니다.
+    </div>
+
+    <div style="background:var(--bg-subtle,#f8f9fa); border:1px solid var(--border,#e5e7eb); border-left:4px solid var(--brand); border-radius:0 12px 12px 0; padding:16px 20px; margin:0;">
+      <div style="font-size:13px;font-weight:700;color:var(--text2,#374151);margin-bottom:6px">정직한 고지</div>
+      <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0 0 10px">2026년 9월 현재 혼디는 베타(필드) 테스트 단계이며, 개발 완료 시점은 12월 말입니다. 이 단계에서 혼디는 정상적인 완성 서비스 수준에 미치지 못하며 여러 종류의 오류나 결함이 발생할 수 있습니다.</p>
+      <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0">이러한 한계를 알고도 혼디의 완성에 동참하고자 하시는 분들의 구독을 추천드리며, 혼디 사용자들 간의 디지털 화폐(GDC) 결제는 별도의 고지 시점까지 자제하십시오.</p>
     </div>
   </div>
 </section>
 
-<!-- 2. 정부 전 기관에서 삶의 전 영역까지 (구 gov-network + life-domains 통합) -->
-<section class="section" id="coverage">
+<!-- 2. 구독 방법 (요금제를 정했다면 다음은 결제 — 기존 최상단 플로팅 박스를 본문 흐름 안으로 이동) -->
+<section class="section" id="subscribe-method">
   <div class="section-inner">
-    <div class="section-tag">02 — Coverage</div>
-    <h2 class="section-title">정부 전 기관에서 삶의 전 영역까지</h2>
+    <div class="section-tag">02 — Subscribe</div>
+    <h2 class="section-title">구독 방법</h2>
+    <div class="section-sub">혼디 이용료(GDC)를 아래 계좌로 입금하면, 자동으로 충전됩니다. <strong><a href="/pages/dashboard.html">대시보드</a></strong>에 로그인하여 충전 및 비용 내역을 확인하십시오.</div>
 
-    <h3 class="sub-heading" style="margin-top:0;padding-top:0;border-top:none;">중앙부처부터 읍면동까지, 정부 전 기관을 연결</h3>
-    <div class="section-body">
-      <p>혼디는 입법·사법·행정 3부와 중앙정부 각 부처, 광역 도청·시청, 기초 시·군·구, 그리고 읍·면·동 주민센터, 공기업에 이르는 대한민국 행정 체계 전반에 걸쳐 AI 라우팅 인프라(gov-tree)를 구축하고 있으며, 이미 주요 단계를 완료하였습니다.</p>
-      <ul class="reason-list">
-        <li>전국 15개 광역 단위를 대상으로 기관 데이터베이스를 확장 구축 <b>(초기 대비 3배 이상 증가)</b></li>
-        <li>광역·기초 지자체 간 <b>동명(同名) 기관·부서 자동 구분 체계</b> 마련</li>
-        <li>세무·사법 등 국민 체감도가 높은 기관부터 <b>실사용 시나리오 기반 현장 검증</b> 진행</li>
-      </ul>
-      <p style="margin-top:18px">각 기관은 고유의 관할과 절차를 갖고 있으며, 혼디의 AI 비서는 국민을 엉뚱한 기관으로 떠넘기지 않고 관할 경계를 스스로 인식하여 해당 기관의 창구에서 신청·제출·처리까지 직접 수행하는 것을 최우선 원칙으로 삼고 있습니다.</p>
-      <p>혼디는 이미 한국의 주요 기관과 부서 각각의 업무를 보조할 AI 비서를 구축하였습니다. 여러분이 속한 기관과 부서의 AI 비서를 혼디에서 직접 확인해 보십시오.</p>
-    </div>
-
-    <h3 class="sub-heading">의료·교육·금융·교통, 삶의 전 영역으로</h3>
-    <div class="section-body">
-      <p>혼디는 정부 서비스를 넘어 의료, 교육, 금융, 교통 등 국민 생활과 맞닿은 사회 인프라 전반에서 상담이 아닌 <strong>실행</strong>을 수행합니다. 500여 개의 전문가 AI 페르소나가 사용자를 대신하여 각 영역의 업무를 직접 처리합니다.</p>
-      <ul class="domain-list">
-        <li><b>의료</b>인간 의사를 보조하는 AI 의사 시스템, 문진·기록·처방 보조 등 진료 업무를 직접 수행</li>
-        <li><b>교육</b>유치원부터 대학원까지 과목별 AI 교수를 제공하여 학습 지도와 과제 관리를 직접 수행</li>
-        <li><b>금융</b>전자동 디지털 금융 시스템, 상담이 아닌 실제 금융 절차·거래를 AI가 직접 처리</li>
-        <li><b>교통 등 생활 인프라</b>지역 공공서비스와 연계해 안내에 그치지 않고 신청·처리까지 직접 수행</li>
-      </ul>
+    <div class="subscribe-box" style="margin-top:16px">
+      <ol>
+        <li>아래 입금 계좌로 이용료를 입금하십시오.</li>
+        <li>입금 즉시 사용자 대시보드에 GDC로 자동 충전되며, 구독 종류(기본 요금제, 월 정액제, 연간 구독)는 입금액에 따라 자동으로 결정됩니다.</li>
+      </ol>
+      <div class="account-line">
+        <span class="label">입금 계좌</span>
+        <span class="acct">기업은행 315-092028-04-011 에이아이시티주식회사</span>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- 3. 완성도 90%, 그러나 성능은 절반 (구 tech + why-now 통합) -->
-<section class="section" id="why-now">
-  <div class="section-inner">
-    <div class="section-tag">03 — Why Now</div>
-    <h2 class="section-title">완성도 90%, 그러나 설계 성능의 절반만 발휘</h2>
-    <div class="section-body">
-      <p>혼디는 자체 개발한 <strong>MoTE(Mixture of Task Experts)</strong> 및 <strong>Openhash</strong> 기술을 통해 기존 범용 AI 서비스 대비 운영 비용을 절반 이하로 절감할 수 있는 구조를 갖추고 있습니다. 질문의 성격에 맞는 전문 AI 페르소나에게 작업을 분산시키고, Openhash로 위변조 불가능하게 기록합니다.</p>
-    </div>
-    <a class="tech-link-card" href="/pages/project-support-technical.html">
-      <div>
-        <div class="t">기술적 상세 보기</div>
-        <div class="d">국내 오픈소스 LLM 후보 비교와 인프라 구축 비용 추산을 별도 페이지에서 확인하십시오.</div>
-      </div>
-      <div class="arrow">→</div>
-    </a>
-
-    <div class="section-body" style="margin-top:28px">
-      <p>혼디는 현재 기능적으로 약 90% 완성 단계에 도달했습니다. 그러나 실제 서비스는 설계된 성능의 약 50%밖에 발휘하지 못하고 있습니다.</p>
-    </div>
-
-    <div class="progress-compare">
-      <div class="progress-card done">
-        <div class="label">기능 완성도</div>
-        <div class="progress-bar"><div class="fill"></div></div>
-        <div class="pct">90%</div>
-        <div class="desc">두뇌(설계)는 이미 완성되었습니다.</div>
-      </div>
-      <div class="progress-card perf">
-        <div class="label">실제 발휘 성능</div>
-        <div class="progress-bar"><div class="fill"></div></div>
-        <div class="pct">50%</div>
-        <div class="desc">그 두뇌가 마음껏 움직일 신체(서버 자원)가 아직 충분하지 않습니다.</div>
-      </div>
-    </div>
-
-    <div class="section-body" style="margin-top:20px">
-      <p>그 이유는 소프트웨어가 아니라 인프라에 있습니다. 5천만 국민과 수백만 기관이 동시에 AI 비서를 통해 대화하려면 이에 걸맞은 대규모 AI 컴퓨터 자원이 필요하지만, 현재는 제한된 서버 자원 안에서 응답 속도와 동시 처리량을 조절하며 운영하고 있습니다.</p>
-    </div>
-  </div>
-</section>
-
-<!-- 4. 지원 방법과 요금제 (구 server-plan + pricing + report 통합 — 중복 제거) -->
+<!-- 3. 서버 구축 현황과 얼리 서포터 혜택 (구 '지원 방법과 요금제' 중 요금제·구독방법을 분리하고 남은 내용) -->
 <section class="section" id="support">
   <div class="section-inner">
-    <div class="section-tag">04 — Support</div>
-    <h2 class="section-title">지원 방법과 요금제</h2>
+    <div class="section-tag">03 — Support</div>
+    <h2 class="section-title">서버 구축 현황과 얼리 서포터 혜택</h2>
     <div class="section-body">
       <p>제주 지역에서 혼디를 시험 운용하기 위해서는 제주 지역 43개 읍·면·동 각각에 서버 1대씩 설치해야 합니다.</p>
     </div>
@@ -475,38 +415,6 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
       <div class="footline">여러분의 구독료는 더 빠르고, 더 정확하며, 국민 개개인의 데이터가 국내에 머무는 안전한 혼디 인프라를 만드는 데 쓰입니다. <strong>지금, 혼디와 함께 한국형 AI 정부의 현장 테스트에 참여해 주십시오.</strong></div>
       <div class="footline" style="margin-top:14px;padding-top:14px"><strong>2026년 가입자 특별 혜택(1+1):</strong> 2026년 중 가입하여 1년 구독(10만 원)을 결제하시면, 구독 기간을 1년 추가하여 총 2년으로 연장해 드립니다.</div>
     </div>
-    </div>
-
-    <h3 class="sub-heading">혼디 요금제</h3>
-    <div class="section-sub">사용자의 이용 패턴에 맞춰 아래 세 가지 요금제 중 선택할 수 있습니다. 혼디 이용료(GDC)를 아래 계좌로 입금하면, 자동으로 충전됩니다. <strong><a href="/pages/dashboard.html">대시보드</a></strong>에 로그인하여 충전 및 비용 내역을 확인하십시오.</div>
-
-    <div class="plan-grid">
-      <div class="plan-card">
-        <div class="name">종량제</div>
-        <div class="price">월 1,000원<small> 기본료 +α</small></div>
-        <div class="desc">기본료에 더해 혼디 서비스 각각의 사용량에 따라 부과됩니다. 서비스별로 실제 쓴 만큼만 추가 과금되어, 사용량이 적은 사용자에게 유리합니다.</div>
-      </div>
-      <div class="plan-card">
-        <div class="name">정액제</div>
-        <div class="price">월 10,000원</div>
-        <div class="desc">일정한 한도 내에서 모든 서비스를 무제한 이용할 수 있습니다. 사용량이 많거나 예측이 어려운 사용자에게 유리합니다.</div>
-      </div>
-      <div class="plan-card featured">
-        <div class="name">연간 GDC 충전형</div>
-        <div class="price">연 100,000원<small> (정가 12만 원)</small></div>
-        <div class="desc">개발 진행 상황 정기 리포트를 제공하는, 장기 이용자를 위한 절감형 요금제입니다. 할인·특별 혜택은 위 안내를 참고하십시오.</div>
-      </div>
-    </div>
-
-    <div class="plan-footnote">
-      종량제·정액제는 GDC 잔액 차감 방식으로 운영되며, 월 단위 자동 결제 또는 수동 충전 중 선택할 수 있습니다. 정액제의 "일정한 한도"는 서비스 안정성을 위한 과도한 어뷰징 방지 목적이며, 일반적인 사용 범위에서는 사실상 무제한으로 운영됩니다.
-    </div>
-
-    <div style="background:var(--bg-subtle,#f8f9fa); border:1px solid var(--border,#e5e7eb); border-left:4px solid var(--brand); border-radius:0 12px 12px 0; padding:16px 20px; margin:0 0 24px;">
-      <div style="font-size:13px;font-weight:700;color:var(--text2,#374151);margin-bottom:6px">정직한 고지</div>
-      <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0 0 10px">혼디 이용료는 반대급부가 아니라, 실제로 제공되는 AI 비서 서비스에 대해 에이아이시티주식회사가 받는 정당한 매출입니다. 다만 2026년 9월 현재 혼디는 베타(필드) 테스트 단계이며, 개발 완료 시점은 12월 말입니다. 이 단계에서 혼디는 정상적인 완성 서비스 수준에 미치지 못하며 여러 종류의 오류나 결함이 발생할 수 있습니다.</p>
-      <p style="font-size:13.5px;color:var(--text2,#374151);line-height:1.7;margin:0">이러한 한계를 알고도 혼디의 완성에 동참하고자 하시는 분들의 구독을 추천드리며, 혼디 사용자들 간의 디지털 화폐(GDC) 결제는 별도의 고지 시점까지 자제하십시오.</p>
-    </div>
 
     <div class="section-body" style="margin-top:32px">
       <h3 class="sub-heading">지원자 전용 — 개발 리포트 12개 분야</h3>
@@ -530,10 +438,10 @@ h3.sub-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
   </div>
 </section>
 
-<!-- 5. 앞으로의 계획 (구 next-steps — 내부 '초안 검토용 메모' 라벨 제거) -->
+<!-- 4. 앞으로의 계획 (구 next-steps — 내부 '초안 검토용 메모' 라벨 제거) -->
 <section class="section" id="next-steps">
   <div class="section-inner">
-    <div class="section-tag">05 — Roadmap</div>
+    <div class="section-tag">04 — Roadmap</div>
     <h2 class="section-title">앞으로의 계획</h2>
     <div class="section-sub">서버 구축과 함께 준비하고 있는 항목들입니다.</div>
 
