@@ -167,8 +167,18 @@ let _committeeSpCache = new Map(); // 위원회코드 → composed text
 async function _loadCommitteeList(fetchTextFn) {
   if (_committeeListCache) return _committeeListCache;
   const raw = await fetchTextFn(_COMMITTEE_MASTER_DATA_PATH);
-  const data = JSON.parse(raw);
-  _committeeListCache = data.위원회목록;
+  let data = null;
+  try { data = JSON.parse(raw); } catch { data = null; }
+  const list = Array.isArray(data?.위원회목록) ? data.위원회목록 : null;
+  if (!list) {
+    // 마스터데이터 로드 실패(파일 없음/네트워크 실패/스키마 불일치) — 다른
+    // 국가기관 폴백들과 동일하게 크래시 대신 빈 라우팅 테이블로 안전하게
+    // 건너뛴다(호출부가 그 다음 안전망으로 계속 진행). 실패는 캐시하지
+    // 않아 다음 호출에서 재시도 가능하다.
+    console.warn('[national-division-router] 위원회 마스터데이터 로드 실패 — 위원회 라우팅 건너뜀');
+    return [];
+  }
+  _committeeListCache = list;
   return _committeeListCache;
 }
 
