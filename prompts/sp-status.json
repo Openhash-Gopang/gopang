@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
   "status": "in-progress",
-  "note": "15차 배치(정부기관 라우팅 — 준정부기관 58건 전체) 완료. 전체 2,011개 중 288건 평가됨.",
+  "note": "16차 배치(정부기관 라우팅 — 집행기관 템플릿 34건 전체) 완료. 전체 2,011개 중 322건 평가됨.",
   "baseline": {
     "file": "prompts/archive/SP-01_klaw_v15.1.txt",
     "name": "K-Law · SP-01 · v15.1",
@@ -13867,6 +13867,1638 @@
           "id": "honesty",
           "score": 85,
           "note": "미검증 항목을 확정된 것처럼 서술하지 않고 DATA_REQUIREMENT로 구조화."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md",
+      "name": "광주경찰청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "광주경찰청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "경찰청 소관의 치안 유지·수사 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.2.md",
+      "name": "광주지방고용노동청 제주근로개선지도센터",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "광주지방고용노동청 제주근로개선지도센터(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "고용노동부 소관의 근로기준 감독·근로개선 지도 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
+      "name": "광주지방식품의약품안전청 제주수입식품검사소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "광주지방식품의약품안전청 제주수입식품검사소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "식품의약품안전처 소관의 수입식품 검사 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.2.md",
+      "name": "국립농산물품질관리원 제주지원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국립농산물품질관리원 제주지원(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "농림축산식품부 소관의 농산물 품질 관리·인증 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-FORESTSEED-TEMPLATE_v1.0.md",
+      "name": "국립산림품종관리센터 제주지소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국립산림품종관리센터 제주지소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "산림청 소관의 산림 품종 관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.2.md",
+      "name": "국립수산물품질관리원 제주지원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국립수산물품질관리원 제주지원(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "해양수산부 소관의 수산물 품질 관리·인증 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.2.md",
+      "name": "국립제주검역소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국립제주검역소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "질병관리청 소관의 검역 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.2.md",
+      "name": "국민건강보험공단 제주지사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국민건강보험공단 제주지사(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "보건복지부 소관의 건강보험 부과·급여 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md",
+      "name": "국민연금공단 제주지역본부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "국민연금공단 제주지역본부(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "보건복지부 소관의 국민연금 가입·납부·수급 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.2.md",
+      "name": "근로복지공단 제주지사",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "근로복지공단 제주지사(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "고용노동부 소관의 산재보험·근로자 복지 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-FORESTRESEARCH-TEMPLATE_v1.0.md",
+      "name": "난대·아열대산림연구소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "난대·아열대산림연구소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "산림청 소관의 산림 연구 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.2.md",
+      "name": "농림축산검역본부 제주지역본부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "농림축산검역본부 제주지역본부(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "농림축산식품부 소관의 동물 검역 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-FORESTCOOP-TEMPLATE_v1.0.md",
+      "name": "산림조합중앙회 제주지역본부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "산림조합중앙회 제주지역본부(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "산림청 소관의 산림조합 지원 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.2.md",
+      "name": "서울서부지방검찰청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "서울서부지방검찰청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "법무부 소관의 수사·기소 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.2.md",
+      "name": "서울서부지방법원",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "서울서부지방법원(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "법원행정처 소관의 재판·사건관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
+      "name": "서해지방해양경찰청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "서해지방해양경찰청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "해양경찰청 소관의 해양 치안·구조 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.2.md",
+      "name": "영산강유역환경청 제주주재사무실",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "영산강유역환경청 제주주재사무실(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "기후에너지환경부 소관의 환경 인허가·단속 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-VETERANS-TEMPLATE_v1.2.md",
+      "name": "울산보훈지청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "울산보훈지청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "국가보훈부 소관의 보훈 대상자 지원 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "name": "인천지방해양수산청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "인천지방해양수산청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "해양수산부 소관의 항만 관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.2.md",
+      "name": "전북지방병무청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "전북지방병무청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "병무청 소관의 병역 판정·징집 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-CUSTOMS-TEMPLATE_v1.0.md",
+      "name": "제주세관",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주세관(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "관세청 소관의 통관·관세 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-TAX-TEMPLATE_v1.3.md",
+      "name": "제주세무서",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주세무서(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "국세청 소관의 세무 신고·징수 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-RADIO-TEMPLATE_v1.0.md",
+      "name": "제주전파관리소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주전파관리소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "과학기술정보통신부 소관의 전파 관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md",
+      "name": "제주준법지원센터",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주준법지원센터(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "법무부 소관의 보호관찰 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.2.md",
+      "name": "제주지방노동위원회",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주지방노동위원회(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "고용노동부 소관의 노동쟁의 조정 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.2.md",
+      "name": "제주지방우정청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주지방우정청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "과학기술정보통신부 소관의 우편·우체국금융 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.2.md",
+      "name": "제주지방조달청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주지방조달청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "조달청 소관의 공공조달 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
+      "name": "제주출입국·외국인청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "제주출입국·외국인청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "법무부 소관의 출입국·체류 관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "name": "청주기상지청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "청주기상지청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "기상청 소관의 기상 예보 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-STAT-TEMPLATE_v1.0.md",
+      "name": "충청지방통계청",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "충청지방통계청(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "통계청 소관의 통계 조사 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.2.md",
+      "name": "한국공항공사 제주공항",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "한국공항공사 제주공항(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "국토교통부 소관의 공항 운영 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-BOK-TEMPLATE_v1.1.md",
+      "name": "한국은행 제주본부",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "한국은행 제주본부(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "한국은행 소관의 통화 정책·발권 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.2.md",
+      "name": "한국지능정보사회진흥원 제주스마트쉼센터",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "한국지능정보사회진흥원 제주스마트쉼센터(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "과학기술정보통신부 소관의 디지털 리터러시·인터넷 과의존 예방 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
+        }
+      ]
+    },
+    {
+      "file": "prompts/gov-tree/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md",
+      "name": "호남지방데이터청 제주사무소",
+      "cat": "gov-national",
+      "cat_label": "중앙정부·정책기관 · 집행기관 템플릿(agencies/templates)",
+      "purpose": "호남지방데이터청 제주사무소(전국 어디서나 동일한 소속·정책·절차를 갖는 국가기관의 지역사무소 클래스)을 대표하는 AI 레이어 — '{지사명}' 자리표시자만 지역마다 다르고 나머지는 전국 공유되는 싱글턴 템플릿.",
+      "goal": "국가데이터처 소관의 공공데이터 관리 업무를 온라인에서 우선 해결하고, 방문이 필요한 경우에만 PDV_REQUEST로 관할 지사를 확인하며, 예약·담당자 사전전달 등 아직 미연동된 기능을 실제로 되는 것처럼 말하지 않는 것이 목표.",
+      "version": "v1.0~1.3 표기(파일명)/실제 최신은 헤더 기준",
+      "version_date": "2026-07-24",
+      "completeness": 80,
+      "breakdown": [
+        {
+          "id": "purpose",
+          "score": 90,
+          "note": "국가기관 클래스-인스턴스(싱글턴) 아키텍처를 명확히 선언 — 전국 공유 지식과 지역별 자리표시자(지사명)를 구분."
+        },
+        {
+          "id": "evidence",
+          "score": 78,
+          "note": "법적 근거는 상위 NATIONAL-SP-OVERLAY 클래스에 이미 기재되어 있다며 단일출처원칙에 따라 중복 기재하지 않음."
+        },
+        {
+          "id": "schema",
+          "score": 88,
+          "note": "§INPUT/OUTPUT_SCHEMA, §CAPABILITIES, DATA_REQUIREMENT, PDV_REQUEST 실증 예시까지 완비된 표준 템플릿."
+        },
+        {
+          "id": "edge_case",
+          "score": 88,
+          "note": "온라인 우선·오프라인 전환 원칙(§8)으로 방문 필요 여부 판단 기준을 명확히 규정."
+        },
+        {
+          "id": "self_check",
+          "score": 60,
+          "note": "공백 고지 응답 예시(§5)를 통해 미연동 정보를 지어내지 않도록 구체적 대응 문구까지 준비."
+        },
+        {
+          "id": "versioning",
+          "score": 55,
+          "note": "파일명 버전과 문서 내부 헤더 버전이 불일치하는 경우가 많음(예: 파일명 v1.0, 헤더 v1.3) — 이 카테고리 전반의 공통 패턴."
+        },
+        {
+          "id": "honesty",
+          "score": 93,
+          "note": "'아직 안 되는 것(정직 고지 필수)' 섹션에서 방문예약·담당자 사전전달 기능이 설계만 되고 아직 미구현임을 명시하고, 사용자가 예약을 요청해도 실제로 할 수 있는 것처럼 말하지 않도록 강제 — 이 프로젝트 전체에서 가장 정교한 '기능 과장 금지' 사례."
         }
       ]
     }
