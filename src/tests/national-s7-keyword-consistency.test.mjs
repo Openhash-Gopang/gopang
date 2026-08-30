@@ -16,7 +16,12 @@ const dictMatch = routerSrc.match(/const _NAT_AGENCY_DOMAIN_KEYWORDS = \{([\s\S]
 assert.ok(dictMatch, '_NAT_AGENCY_DOMAIN_KEYWORDS를 gov-router.js에서 찾지 못함');
 const kwMap = {};
 for (const line of dictMatch[1].split('\n')) {
-  const m = line.match(/^\s*(\w+):\s*\[(.*?)\],?\s*$/);
+  // ★ 2026-08-30 수정 — 원래 정규식(`\],?\s*$`)은 줄 끝에 인라인 주석이
+  // 붙은 항목(예: immigration/mma/veterans, `],  // ★ 2026-08-23 ...`)을
+  // 못 파싱해 조용히 빈 배열로 취급했다 — 실제 런타임 사전은 정상인데
+  // 이 테스트만 오탐하는 파서 결함이었다(직접 확인: 세 도메인 다
+  // _kwMatch로는 정상 매칭됨). 줄 끝 `// ...` 주석을 선택적으로 허용한다.
+  const m = line.match(/^\s*(\w+):\s*\[(.*?)\],?\s*(?:\/\/.*)?$/);
   if (m) kwMap[m[1]] = [...m[2].matchAll(/'([^']+)'/g)].map(x => x[1]);
 }
 
