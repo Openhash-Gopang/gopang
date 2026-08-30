@@ -268,7 +268,10 @@ describe('N-20: _buildUniversalIntegrityContext가 실제로 ctxBlock 조립에 
     // 추가되면서 이 정규식이 옛 문자열 그대로 남아 프로덕션 코드보다 뒤처져
     // 있었다(§U5 순서 원칙 자체는 production에서 계속 지켜지고 있었음 —
     // integrityBlock이 여전히 맨 앞. 실패한 건 테스트의 낡은 매칭 문자열).
-    assert.match(raw, /const ctxBlock = integrityBlock \+ shareBlock \+ pdvReviewBlock \+ jobKscoReviewBlock \+ firstContact \+ faqBlock/,
+    // ★ 2026-08-30 갱신 — paHandoffBlock이 그 사이 조립부에 추가로
+    // 합류하며 정규식이 또 한 번 뒤처졌다(같은 유형의 노후화 반복 —
+    // integrityBlock 맨 앞 원칙은 여전히 지켜지고 있음).
+    assert.match(raw, /const ctxBlock = integrityBlock \+ shareBlock \+ pdvReviewBlock \+ jobKscoReviewBlock \+ paHandoffBlock \+ firstContact \+ faqBlock/,
       'integrityBlock이 조립 순서 맨 앞이어야 함(§U5 — 판단원칙이 정체성보다 먼저 와야 한다는 UNIVERSAL-INTEGRITY 자신의 설계 원칙)');
   });
 
