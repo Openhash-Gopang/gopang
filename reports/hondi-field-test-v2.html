@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 전자동 AI정부 현장테스트 v2 수정본</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-soft:#4d4d4d; --paper:#ffffff;
+    --line:#c8c8c8; --line-strong:#1a1a1a;
+    --navy:#0B2545; --gold:#C99A2E; --accent:#205295;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#f4f5f7;font-family:'Pretendard',sans-serif;color:var(--ink);}
+  @page{ size:A4; margin:10mm 12mm; }
+  .sheet{ width:210mm; margin:16px auto; background:var(--paper); padding:14mm 16mm; position:relative; border:1px solid #ddd; }
+  @media print{ body{background:none;} .sheet{ box-shadow:none; margin:0 auto; width:auto; border:none; padding:0; } }
+  @media (max-width:640px){ .sheet{ width:100%; margin:0; padding:24px 18px; border:none; } }
+
+  .brand{ font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+  h1{ font-size:19px; font-weight:800; color:var(--navy); line-height:1.4; margin:0 0 14px; padding-bottom:12px; border-bottom:1.5px solid var(--navy); }
+
+  .notice{
+    padding:12px 16px; margin:0 0 16px;
+    font-size:12.5px; line-height:1.7; color:var(--ink-soft);
+    background:#FBF8EF; border:1px solid #E9DFC3; border-left:3px solid var(--gold);
+    border-radius:0 4px 4px 0;
+  }
+  .notice .h{ font-weight:700; color:var(--navy); margin-bottom:4px; }
+
+  h2{ font-size:14px; font-weight:800; margin:18px 0 8px; color:var(--navy); }
+  p{ font-size:13px; line-height:1.75; margin:0 0 8px; color:var(--ink); text-align:justify; }
+  ul.list{ margin:6px 0 10px 18px; }
+  ul.list li{ font-size:13px; line-height:1.7; margin-bottom:4px; color:var(--ink); }
+
+  .stat-row{ display:flex; margin:14px 0; padding:10px 0; border-top:1px solid #C7D4E6; border-bottom:1px solid #C7D4E6; }
+  .stat-row .item{ flex:1; padding:0 8px; text-align:center; }
+  .stat-row .item + .item{ border-left:1px solid #C7D4E6; }
+  .stat-row .item .num{ display:block; font-size:18px; font-weight:800; color:var(--accent); margin-bottom:3px; }
+  .stat-row .item .lbl{ font-size:11px; color:var(--ink-soft); line-height:1.5; }
+
+  .cta-box{ border:1px solid #C7D4E6; background:#F4F7FB; border-radius:4px; padding:16px 18px; margin:16px 0; }
+  .cta-box h3{ font-size:14px; color:var(--navy); margin-bottom:8px; }
+  .cta-box p{ font-size:12.5px; }
+
+  .footer{ margin-top:20px; padding-top:12px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-soft); line-height:1.7; }
+  .footer-meta{ margin-top:10px; font-size:12px; color:var(--ink-soft); }
+  .footer-url{ text-align:right; font-size:13px; color:var(--navy); font-weight:700; margin-top:6px; }
+  @media (max-width:640px){ .stat-row{ flex-direction:column; gap:10px; } .stat-row .item + .item{ border-left:none; border-top:1px solid #C7D4E6; padding-top:10px; } }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="brand">혼디 · 제주 특산품 (hondi.net)</div>
+  <h1>9/1 테스트 시작. 전자동 AI 정부를 지금 경험해 보세요.</h1>
+
+  <div class="notice">
+    <div class="h">정직한 고지</div>
+    혼디 이용료는 반대급부가 아니라, 실제로 제공되는 AI 비서 서비스에 대해 에이아이시티주식회사가 받는 정당한 매출입니다.
+    다만 2026년 9월 현재 혼디는 베타(필드) 테스트 단계이며, 개발 완료 시점은 12월 말입니다. 이 단계에서 혼디는 정상적인
+    완성 서비스 수준에 미치지 못하며 여러 종류의 오류나 결함이 발생할 수 있습니다. 이러한 한계를 알고도 혼디의 완성에
+    동참하고자 하시는 분들의 구독을 추천드립니다.
+  </div>
+
+  <h2>1. 대한민국, AI 정부를 향해 나아가다</h2>
+  <p>
+    대한민국 정부는 오래전부터 디지털 행정의 기반을 다져왔습니다. 공공데이터포털(data.go.kr)은 정부와 공공기관이 보유한
+    데이터를 국민과 기업이 자유롭게 활용할 수 있도록 개방하는 창구이며, 국가법령정보센터를 비롯한 법령·정책 문헌
+    플랫폼(dpaper.kr 등)은 방대한 법령·판례·정책 자료를 디지털로 축적해 왔습니다. 정부24는 각종 민원과 행정 서비스를
+    하나의 창구에서 신청·발급할 수 있도록 통합한 대표적 전자정부 서비스입니다.
+  </p>
+  <p>
+    이제 남은 과제는 이 방대한 데이터와 서비스를 국민 개개인의 언어로 '이해하고, 판단하고, 실행'해 줄 AI 계층입니다.
+    바로, 혼디입니다.
+  </p>
+
+  <h2>2. 혼디, 사람과 AI를 잇는 메시징 플랫폼</h2>
+  <p>
+    혼디는 카톡처럼 메시징 앱인 동시에, 사람과 AI, 그리고 AI와 AI가 대화하는 플랫폼입니다. 혼디는 5천만 국민 각자에게,
+    그리고 수백만에 이르는 기관·부서 각각에게 전담 AI 비서를 제공합니다. 혼디는 사용자의 질문에 답하는 데 그치지 않고
+    사용자의 지시를 직접 수행하는 에이전트를 지향합니다.
+  </p>
+
+  <div class="stat-row">
+    <div class="item"><span class="num">75~90%</span><span class="lbl">대법원 공개 판례 300건<br>자체 테스트 일치도(klaw.hondi.net)</span></div>
+    <div class="item"><span class="num">500여</span><span class="lbl">분야별<br>전문가 AI 페르소나</span></div>
+    <div class="item"><span class="num">90%</span><span class="lbl">2026년 9월 현재<br>기능 완성도</span></div>
+  </div>
+
+  <h2>3. 중앙부처부터 읍면동까지, 정부 전 기관을 연결</h2>
+  <p>
+    혼디는 입법·사법·행정 3부와 중앙정부 각 부처, 광역 도청·시청, 기초 시·군·구, 읍·면·동 주민센터, 공기업에 이르는
+    대한민국 행정 체계 전반에 걸쳐 AI 라우팅 인프라(gov-tree)를 구축하고 있으며, 이미 주요 단계를 완료하였습니다.
+  </p>
+  <ul class="list">
+    <li>전국 15개 광역 단위를 대상으로 기관 데이터베이스를 확장 구축 (초기 대비 3배 이상 증가)</li>
+    <li>광역·기초 지자체 간 동명(同名) 기관·부서 자동 구분 체계 마련</li>
+    <li>세무·사법 등 국민 체감도가 높은 기관부터 실사용 시나리오 기반 현장 검증 진행</li>
+  </ul>
+
+  <h2>4. 의료·교육·금융·교통, 삶의 전 영역으로</h2>
+  <p>
+    혼디는 정부 서비스를 넘어 의료, 교육, 금융, 교통 등 국민 생활과 맞닿은 사회 인프라 전반에서 상담이 아닌 실행을
+    수행합니다. 500여 개의 전문가 AI 페르소나가 사용자를 대신하여 각 영역의 업무를 직접 처리합니다.
+  </p>
+
+  <h2>5. MoTE·Openhash 기술로, AI 비용을 절반 이하로</h2>
+  <p>
+    혼디는 자체 개발한 MoTE(Mixture of Task Experts) 및 Openhash 기술을 통해 기존 범용 AI 서비스 대비 운영 비용을
+    절반 이하로 절감할 수 있는 구조를 갖추고 있습니다.
+  </p>
+
+  <h2>6. 완성도 90%, 그러나 설계 성능의 절반만 발휘</h2>
+  <p>
+    혼디는 현재 기능적으로 약 90% 완성 단계에 도달했습니다. 그러나 실제 서비스는 설계된 성능의 약 50%밖에 발휘하지
+    못하고 있습니다. 이유는 소프트웨어가 아니라 인프라에 있습니다 — 두뇌(설계)는 이미 완성되었지만, 그 두뇌가 마음껏
+    움직일 수 있는 서버 자원이 아직 충분히 갖춰지지 않은 상태입니다.
+  </p>
+
+  <div class="cta-box">
+    <h3>지금, 혼디와 함께 한국형 AI 정부의 현장 테스트에 참여해 주십시오</h3>
+    <p>
+      제주 지역에서 혼디를 시험 운용하기 위해서는 제주 지역 43개 읍·면·동 각각에 서버 1대씩 설치해야 하며, 총 비용은
+      약 9억 원입니다. 여러분의 구독료는 더 빠르고, 더 정확하며, 국민 개개인의 데이터가 국내에 머무는 안전한 혼디
+      인프라를 만드는 데 쓰입니다. 가입은 전화번호만으로 즉시 가능합니다. 자세한 설명은 PC로 hondi.net에 접속해 보세요.
+    </p>
+  </div>
+
+  <div class="footer">
+    ※ 위 구독료는 실제로 제공되는 혼디 서비스에 대한 정당한 이용료이며, 지분·증권·수익을 제공하는 투자가 아닙니다.
+    에이아이시티주식회사(2024년 설립)는 아직 매출 및 재무제표가 없습니다. 향후 지분투자 유치를 진행할 경우, 자본시장법에
+    따라 금융위원회에 등록된 온라인소액투자중개업자를 통해 별도로 안내해 드립니다.<br>
+    ※ 혼디는 현재 베타(필드 테스트) 단계이며, 그 성능·정확도·결과물이 실제 환경에서 동일하게 재현됨을 보장하지 않습니다.
+    법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.
+    <div class="footer-meta">혼디 개발 총괄 도영민 · 제주시 한림읍 · tensor.city@gmail.com</div>
+    <div class="footer-url">hondi.net</div>
+  </div>
+
+</div>
+</body>
+</html>
