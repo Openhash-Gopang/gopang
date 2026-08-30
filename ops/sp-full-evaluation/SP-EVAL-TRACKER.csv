@@ -1184,64 +1184,64 @@
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-PRESOFFICE_v1.1.md,NAT Policy Presoffice,재평가완료,81,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/SP-NAT-POLICY-SUPREMECOURT_v1.1.md,NAT Policy Supremecourt,재평가완료,81,단순 안내형 SP 특성상 자체 확신도 출력 장치는 없음.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/policy-bodies/templates/SP-NAT-POLICY-TEMPLATE_v1.0.md,NAT Policy Template,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-AT_v1.2.md,NAT QGOV AT,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-GEPS_v1.2.md,NAT QGOV GEPS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HF_v1.2.md,NAT QGOV HF,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HIRA_v1.2.md,NAT QGOV HIRA,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HRDKOREA_v1.2.md,NAT QGOV Hrdkorea,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCA2_v1.2.md,NAT QGOV KCA2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCA3_v1.2.md,NAT QGOV KCA3,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KDIC_v1.2.md,NAT QGOV KDIC,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEA3_v1.2.md,NAT QGOV KEA3,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEAD_v1.2.md,NAT QGOV KEAD,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KECO_v1.2.md,NAT QGOV KECO,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEIS_v1.2.md,NAT QGOV KEIS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KGS_v1.2.md,NAT QGOV KGS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KISA_v1.2.md,NAT QGOV KISA,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KNPS_v1.2.md,NAT QGOV KNPS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KPX2_v1.2.md,NAT QGOV KPX2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KR_v1.2.md,NAT QGOV KR,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KRAJ_v1.2.md,NAT QGOV KRAJ,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KRC2_v1.2.md,NAT QGOV KRC2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KSPO_v1.2.md,NAT QGOV KSPO,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KTO_v1.2.md,NAT QGOV KTO,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KALIS_v1.2.md,NAT QGOV Kalis,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KAMCO_v1.2.md,NAT QGOV Kamco,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCOMWEL_v1.2.md,NAT QGOV Kcomwel,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEIT2_v1.2.md,NAT QGOV Keit2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEITI_v1.2.md,NAT QGOV Keiti,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KESCO_v1.2.md,NAT QGOV Kesco,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KIAT2_v1.2.md,NAT QGOV Kiat2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KICOX_v1.2.md,NAT QGOV Kicox,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOAGI_v1.2.md,NAT QGOV Koagi,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KODIT3_v1.2.md,NAT QGOV Kodit3,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KODIT4_v1.2.md,NAT QGOV Kodit4,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOELSA_v1.2.md,NAT QGOV Koelsa,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOFIA2_v1.2.md,NAT QGOV Kofia2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOFOWI_v1.2.md,NAT QGOV Kofowi,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOICA2_v1.2.md,NAT QGOV Koica2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOMSA2_v1.2.md,NAT QGOV Komsa2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KORAD_v1.2.md,NAT QGOV Korad,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSAF_v1.2.md,NAT QGOV Kosaf,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSHA2_v1.2.md,NAT QGOV Kosha2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSMES_v1.2.md,NAT QGOV Kosmes,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSSA_v1.2.md,NAT QGOV Kossa,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOTRA2_v1.2.md,NAT QGOV Kotra2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOTSA2_v1.2.md,NAT QGOV Kotsa2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KPETRO_v1.2.md,NAT QGOV Kpetro,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KSURE_v1.2.md,NAT QGOV Ksure,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KVMC2_v1.2.md,NAT QGOV Kvmc2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-LX2_v1.2.md,NAT QGOV LX2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NHIS_v1.2.md,NAT QGOV NHIS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NIA2_v1.2.md,NAT QGOV NIA2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NIE_v1.2.md,NAT QGOV NIE,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NPS_v1.2.md,NAT QGOV NPS,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NRF_v1.2.md,NAT QGOV NRF,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-POSTFIN2_v1.2.md,NAT QGOV Postfin2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-POSTLOG2_v1.2.md,NAT QGOV Postlog2,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-QIA3_v1.2.md,NAT QGOV QIA3,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-SEMAS_v1.2.md,NAT QGOV Semas,미착수,,,,
-4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-TS_v1.2.md,NAT QGOV TS,미착수,,,,
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-AT_v1.2.md,NAT QGOV AT,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-GEPS_v1.2.md,NAT QGOV GEPS,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HF_v1.2.md,NAT QGOV HF,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HIRA_v1.2.md,NAT QGOV HIRA,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-HRDKOREA_v1.2.md,NAT QGOV Hrdkorea,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCA2_v1.2.md,NAT QGOV KCA2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCA3_v1.2.md,NAT QGOV KCA3,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KDIC_v1.2.md,NAT QGOV KDIC,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEA3_v1.2.md,NAT QGOV KEA3,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEAD_v1.2.md,NAT QGOV KEAD,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KECO_v1.2.md,NAT QGOV KECO,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEIS_v1.2.md,NAT QGOV KEIS,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KGS_v1.2.md,NAT QGOV KGS,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KISA_v1.2.md,NAT QGOV KISA,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KNPS_v1.2.md,NAT QGOV KNPS,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KPX2_v1.2.md,NAT QGOV KPX2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KR_v1.2.md,NAT QGOV KR,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KRAJ_v1.2.md,NAT QGOV KRAJ,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KRC2_v1.2.md,NAT QGOV KRC2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KSPO_v1.2.md,NAT QGOV KSPO,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KTO_v1.2.md,NAT QGOV KTO,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KALIS_v1.2.md,NAT QGOV Kalis,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KAMCO_v1.2.md,NAT QGOV Kamco,재평가완료,79,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KCOMWEL_v1.2.md,NAT QGOV Kcomwel,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEIT2_v1.2.md,NAT QGOV Keit2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KEITI_v1.2.md,NAT QGOV Keiti,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KESCO_v1.2.md,NAT QGOV Kesco,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KIAT2_v1.2.md,NAT QGOV Kiat2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KICOX_v1.2.md,NAT QGOV Kicox,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOAGI_v1.2.md,NAT QGOV Koagi,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KODIT3_v1.2.md,NAT QGOV Kodit3,재평가완료,79,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KODIT4_v1.2.md,NAT QGOV Kodit4,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOELSA_v1.2.md,NAT QGOV Koelsa,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOFIA2_v1.2.md,NAT QGOV Kofia2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOFOWI_v1.2.md,NAT QGOV Kofowi,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOICA2_v1.2.md,NAT QGOV Koica2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOMSA2_v1.2.md,NAT QGOV Komsa2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KORAD_v1.2.md,NAT QGOV Korad,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSAF_v1.2.md,NAT QGOV Kosaf,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSHA2_v1.2.md,NAT QGOV Kosha2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSMES_v1.2.md,NAT QGOV Kosmes,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOSSA_v1.2.md,NAT QGOV Kossa,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOTRA2_v1.2.md,NAT QGOV Kotra2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KOTSA2_v1.2.md,NAT QGOV Kotsa2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KPETRO_v1.2.md,NAT QGOV Kpetro,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KSURE_v1.2.md,NAT QGOV Ksure,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-KVMC2_v1.2.md,NAT QGOV Kvmc2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-LX2_v1.2.md,NAT QGOV LX2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NHIS_v1.2.md,NAT QGOV NHIS,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NIA2_v1.2.md,NAT QGOV NIA2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NIE_v1.2.md,NAT QGOV NIE,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NPS_v1.2.md,NAT QGOV NPS,재평가완료,84,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-NRF_v1.2.md,NAT QGOV NRF,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-POSTFIN2_v1.2.md,NAT QGOV Postfin2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-POSTLOG2_v1.2.md,NAT QGOV Postlog2,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-QIA3_v1.2.md,NAT QGOV QIA3,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-SEMAS_v1.2.md,NAT QGOV Semas,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
+4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/qgov/SP-NAT-QGOV-TS_v1.2.md,NAT QGOV TS,재평가완료,80,'계산 가능한 것은 계산한다' 원칙에 따른 개략 계산 시 최신 계수 재검증 필요를 함께 고지하도록 설계됨.,,2026-08-30
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-ARIRANGMEDIA_v1.1.md,NAT Unlisted Arirangmedia,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-CAMCOFMC_v1.1.md,NAT Unlisted Camcofmc,미착수,,,,
 4-정부기관라우팅,중앙정부·정책기관,prompts/gov-tree/09-national/unlisted/SP-NAT-UNLISTED-EXFM_v1.1.md,NAT Unlisted EXFM,미착수,,,,
