@@ -1878,6 +1878,34 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
+      <!-- ①-b GDC 충전 현황 (2026-08-31 신설 — /admin/gdc-summary 연동) -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:14px;font-weight:700;color:#111">💳 GDC 충전 현황</div>
+          <span id="gdc-summary-month" style="font-size:12px;color:#9ca3af">불러오는 중…</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
+            <div id="gdc-signup-bonus" style="font-size:20px;font-weight:800;color:#111">—</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px">가입 축하 충전 (무료)</div>
+            <div id="gdc-signup-bonus-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
+            <div id="gdc-manual-charge" style="font-size:20px;font-weight:800;color:#111">—</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px">유상 충전 (계좌입금)</div>
+            <div id="gdc-manual-charge-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
+            <div id="gdc-ai-usage" style="font-size:20px;font-weight:800;color:#111">—</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px">AI 사용량 비용(DeepSeek 등)</div>
+            <div id="gdc-ai-usage-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+          </div>
+        </div>
+        <div id="gdc-summary-note" style="font-size:11px;color:#9ca3af;margin-top:12px;line-height:1.6">
+          사용자 간 결제(혼디마켓 P2P)와 원장 무결성(BIVM) 검증은 아직 집계가 배선되지 않았습니다 — 별도 작업 예정.
+        </div>
+      </div>
+
       <!-- ② 무료 체험 기간 -->
       <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
         <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">⏱ 무료 체험 기간</div>
@@ -2222,6 +2250,7 @@ function _showAdminBody() {
   _renderKeyList();
   _loadTrialSettings();
   _loadStats();
+  _loadGdcSummary();
   _loadCFCredentials();
   _renderSubdomainList();
   _loadAutoRefreshStatus();
@@ -2242,10 +2271,62 @@ async function _loadStats() {
     (data.items||[]).forEach(u => { (now-new Date(u.created).getTime()<=trialMs)?trial++:expired++; });
     document.getElementById('stat-trial').textContent   = trial;
     document.getElementById('stat-expired').textContent = expired;
-    document.getElementById('stat-paid').textContent    = '—';
+    // stat-paid는 _loadGdcSummary()가 채운다(유상 충전 이력 기준 "유료
+    // 사용자" 정의 — /admin/gdc-summary 참고). 그 호출이 아직 끝나지
+    // 않았거나 실패했을 때를 위한 잠정값만 여기서 둔다.
+    if (document.getElementById('stat-paid').textContent === '—') {
+      document.getElementById('stat-paid').textContent = '…';
+    }
   } catch(e) {
     ['stat-total','stat-trial','stat-expired','stat-paid'].forEach(id=>{ document.getElementById(id).textContent='?'; });
     console.warn('[stats]', e.message);
+  }
+}
+
+// ── GDC 충전 현황 (2026-08-31 신설) ──────────────────────────────
+// /admin/gdc-summary(worker.js handleAdminGdcSummary) 연동. 이 엔드포인트가
+// "유료 사용자"(유상 충전 이력 기준)도 함께 내려주므로, 위 stat-paid도
+// 여기서 채운다 — _loadStats()가 세운 하드코딩 '—'을 대체.
+// 사용자 간 결제(P2P)·BIVM 무결성은 아직 null로 내려온다(엔드포인트
+// 주석 참고) — 이 화면에서는 안내 문구로만 표시하고 숫자를 지어내지 않는다.
+async function _loadGdcSummary() {
+  const fmtGdc = n => (typeof n === 'number' ? n.toLocaleString('ko-KR') : '—');
+  try {
+    const res = await fetch(`${WORKER_URL}/admin/gdc-summary`, {signal:AbortSignal.timeout(10000), headers:_adminAuthHeaders()});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'API_ERROR');
+
+    document.getElementById('gdc-summary-month').textContent = `${data.month} 기준`;
+
+    const paying = data.subscribers.paying;
+    const rate   = data.subscribers.conversion_rate;
+    document.getElementById('stat-paid').textContent =
+      paying.toLocaleString() + (rate != null ? ` (${rate}%)` : '');
+
+    const sb = data.gdc_charge.signup_bonus;
+    document.getElementById('gdc-signup-bonus').textContent       = `${fmtGdc(sb.total_gdc)} GDC(₮)`;
+    document.getElementById('gdc-signup-bonus-count').textContent = `${sb.count.toLocaleString()}건`;
+
+    const mc = data.gdc_charge.manual_charge;
+    document.getElementById('gdc-manual-charge').textContent       = `${fmtGdc(mc.total_gdc)} GDC(₮)`;
+    document.getElementById('gdc-manual-charge-count').textContent = `${mc.count.toLocaleString()}건 · ${fmtGdc(mc.total_krw)}원 입금 확인`;
+
+    const ai = data.ai_usage;
+    document.getElementById('gdc-ai-usage').textContent       = `${(ai.total_krw/1000).toLocaleString('ko-KR',{maximumFractionDigits:1})} 천원`;
+    document.getElementById('gdc-ai-usage-count').textContent = `${ai.count.toLocaleString()}건 · ${fmtGdc(ai.total_gdc)} GDC 차감`;
+
+    const noteParts = [];
+    if (data.p2p_market == null) noteParts.push('사용자 간 결제(혼디마켓 P2P) 집계 미배선');
+    if (data.bivm_check == null) noteParts.push('BIVM 원장 무결성 검증 미배선');
+    document.getElementById('gdc-summary-note').textContent =
+      noteParts.length ? noteParts.join(' · ') : '집계 정상';
+  } catch(e) {
+    document.getElementById('gdc-summary-month').textContent = '조회 실패';
+    if (document.getElementById('stat-paid').textContent === '…') {
+      document.getElementById('stat-paid').textContent = '?';
+    }
+    ['gdc-signup-bonus','gdc-manual-charge','gdc-ai-usage'].forEach(id=>{ document.getElementById(id).textContent='—'; });
+    console.warn('[gdc-summary]', e.message);
   }
 }
 
