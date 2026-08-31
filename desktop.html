@@ -1012,6 +1012,11 @@ document.addEventListener('keydown', function (e) {
     <a href="./integrated-system.html" class="outline"><span class="dot"></span><span class="label-text">입법.사법.행정 통합 체계</span></a>
     <a href="#" class="outline" onclick="loadPage('rule-of-law');return false;"><span class="dot"></span><span class="label-text">법치 국가: K-Law</span></a>
     <a href="./docs/hondi_interactive_manual.html" class="outline"><span class="dot"></span><span class="label-text">사용법</span></a>
+    <!-- 2026-08-31 신설 — 사용자 발화가 어떻게 특정 SP 호출로 이어지는지
+         보여주는 라우팅 아키텍처 페이지 진입점. 다른 두 개(입법·사법·행정
+         통합 체계, 사용법)와 동일하게 SPA loadPage()를 거치지 않는
+         독립 standalone 페이지라 일반 href로 연결한다. -->
+    <a href="./pages/routing-architecture.html" class="outline"><span class="dot"></span><span class="label-text">라우팅</span></a>
   </div>
 
   <!-- 2026-08-27 — 헤더 하단 탭(입법~계획 11개, 공익 K-서비스 4개, 전문가
