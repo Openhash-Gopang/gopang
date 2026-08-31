@@ -76,6 +76,11 @@ body {
    스타일시트(site-header.css)는 다른 모든 페이지가 함께 참조하므로
    거기는 그대로 두고, desktop.html 쪽 규칙만 되돌린다. */
 
+/* 히어로 버튼 그룹(AI 정부+법치 국가 / 사용법 / 라우팅 / 제안) 위치
+   조정 — site-header.css의 기존 margin-top:1cm에 1cm를 더해 총 2cm
+   내림. 공용 파일은 다른 페이지도 함께 쓰므로 여기서만 오버라이드. */
+.site-hero-actions { margin-top: 2cm; }
+
 /* ── pw-* 클래스: 원래 통계 카드 5개(2026-08-29 본문 융합 후 삭제)의
    펼침 패널에서 쓰던 스타일. 카드는 사라졌지만 같은 클래스를 본문
    섹션(cost-comparison·feature-summary·pricing)에서 그대로 재사용하므로
@@ -1016,6 +1021,7 @@ document.addEventListener('keydown', function (e) {
          통합 체계, 사용법)와 동일하게 SPA loadPage()를 거치지 않는
          독립 standalone 페이지라 일반 href로 연결한다. -->
     <a href="./pages/routing-architecture.html" class="outline"><span class="dot"></span><span class="label-text">라우팅</span></a>
+    <a href="/feedback.html" class="outline"><span class="dot"></span><span class="label-text">제안</span></a>
   </div>
 
   <!-- 2026-08-27 — 헤더 하단 탭(입법~계획 11개, 공익 K-서비스 4개, 전문가
