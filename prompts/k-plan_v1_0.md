@@ -29,7 +29,7 @@
 > 아래 문서만 따로 고치면 문서 간 파편화가 발생한다 — 이 문서가
 > 바뀌면 아래 문서도 함께 갱신해야 한다.
 > - `pages/k-services.html` `#kplan` — K-Plan 탭 사용자 대면 초안
-> - `docs/plan-architecture.html` — K-Plan 처리 흐름 다이어그램
+> - `pages/plan-architecture.html` — K-Plan 처리 흐름 다이어그램
 > - `highlights/hondi-network.html` — K-Plan을 언급하는 혼디넷 소개 페이지
 
 ---
