@@ -50,6 +50,11 @@ EXPERT_TAG_RE = re.compile(r"\[\s*EXPERT\s*:\s*([\w\-]+)\s*\]", re.IGNORECASE)
 KINTENT_TAG_RE = re.compile(r"\[\s*CALL_KINTENT\s*:", re.IGNORECASE)
 KSEARCH_TAG_RE = re.compile(r"\[\s*KSEARCH_HANDOFF\s*:", re.IGNORECASE)
 WEBSEARCH_TAG_RE = re.compile(r"\[\s*WEB_SEARCH\s*:", re.IGNORECASE)
+# 2026-08-31 추가 — [SEARCH: query=..., type=user] (혼디 사용자/엔티티
+# 검색, §TAGS 참조)도 WEB_SEARCH와 같은 사각지대였다 — scenarios_no_name_
+# leak_100_20260831.json no=9776에서 정상 발동([SEARCH: query=상담 이력,
+# type=user])했는데도 채점 분기가 없어 LIVE-FAIL로 오채점됐다.
+USERSEARCH_TAG_RE = re.compile(r"\[\s*SEARCH\s*:[^\]]*type\s*=\s*user", re.IGNORECASE)
 
 # 2026-08-01 추가 — ktelecom/kestate는 '미구현'이 아니라 시스템 전환형
 # switch 서비스였음이 뒤늦게 확인됐다(call-ai.js에 [CALL_KTELECOM:]/
@@ -179,6 +184,11 @@ def grade(scenario, raw_text, call_err):
         if WEBSEARCH_TAG_RE.search(raw_text or ""):
             return "LIVE-PASS", "[WEB_SEARCH: ...] 발동 확인"
         return "LIVE-FAIL", f"[WEB_SEARCH: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
+
+    if expected_id == "user-search-tag":
+        if USERSEARCH_TAG_RE.search(raw_text or ""):
+            return "LIVE-PASS", "[SEARCH: ..., type=user] 발동 확인"
+        return "LIVE-FAIL", f"[SEARCH: ..., type=user] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
 
     # 2026-08-01 신설 — ktelecom/kestate는 expected_type="GWP"이지만 정상
     # 경로 태그 문법은 [GWP: id]가 아니라 [CALL_KTELECOM:]/[CALL_KESTATE:]다

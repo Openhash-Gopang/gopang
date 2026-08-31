@@ -622,12 +622,12 @@
   {
     "no": 9762,
     "utterance": "이혼 절차를 진행하면서 재산 분할이랑 자녀 양육비 문제까지 순서대로 정리하고 싶어요",
-    "expected_type": "PLATFORM",
-    "expected_id": "k-intent",
-    "expected_name": "K-Intent 오케스트레이션",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "2026-08-31 정정 — 이혼·재산분할·양육비 전부 하나의 통합 법률 상담 범위(klaw)로 충분, CALL_KINTENT 필요한 진짜 교차기관 사례가 아니었음(제 기대값 오류)"
   },
   {
     "no": 9763,
@@ -642,12 +642,12 @@
   {
     "no": 9764,
     "utterance": "개인파산 신청하려고 하는데 뭐부터 해야 하는지 전체 절차를 순서대로 안내받고 싶어요",
-    "expected_type": "PLATFORM",
-    "expected_id": "k-intent",
-    "expected_name": "K-Intent 오케스트레이션",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "2026-08-31 정정 — 개인파산 절차 안내는 klaw 단일 범위로 충분(제 기대값 오류)"
   },
   {
     "no": 9765,
@@ -667,7 +667,7 @@
     "expected_name": "K-Intent 오케스트레이션",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "여러 기관·절차 조합 필요 [2026-08-31 재검증 — kpolice(신고)+klaw(법적대응)+kestate/kgov(거처) 세 기관 교차라 CALL_KINTENT 기대값 유지. 라이브는 kpolice로 잘못 좁혀감 — 미해결로 남김]"
   },
   {
     "no": 9767,
@@ -677,7 +677,7 @@
     "expected_name": "K-Intent 오케스트레이션",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "여러 기관·절차 조합 필요 [2026-08-31 재검증 — kinsurance(연금)와 kfinance/kgdc(개인 자산) 두 기관 교차라 CALL_KINTENT 기대값 유지. 라이브는 kgov로 잘못 좁혀감 — 미해결로 남김]"
   },
   {
     "no": 9768,
@@ -692,12 +692,12 @@
   {
     "no": 9769,
     "utterance": "작은 가게를 폐업하려고 하는데 세금 정산이랑 관련 신고까지 전체 절차를 안내받고 싶어요",
-    "expected_type": "PLATFORM",
-    "expected_id": "k-intent",
-    "expected_name": "K-Intent 오케스트레이션",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "2026-08-31 정정 — 폐업+세금정산+신고는 kbusiness 고유 범위(제 기대값 오류)"
   },
   {
     "no": 9770,
@@ -763,11 +763,11 @@
     "no": 9776,
     "utterance": "제가 예전에 여기서 상담했던 내용을 다시 확인하고 싶어요",
     "expected_type": "PLATFORM",
-    "expected_id": "ambiguous-short",
-    "expected_name": "PDV 조회 필요 — 구체적 맥락 없이는 되묻기 기대",
+    "expected_id": "user-search-tag",
+    "expected_name": "SEARCH(사용자 상담이력 조회)",
     "category": "3단계-INFO경로2PDV",
     "static_verdict": "N/A",
-    "basis": "과거 대화 참조인데 구체적 맥락이 없어 그대로 반영 불가"
+    "basis": "2026-08-31 정정 — 라이브 응답이 실제로 [SEARCH: query=상담 이력, type=user]를 정확히 발동했는데 채점 스키마가 없어 오탐 FAIL. live_smoketest.py에 user-search-tag 분기 신설로 정정"
   },
   {
     "no": 9777,
@@ -843,11 +843,11 @@
     "no": 9784,
     "utterance": "지방세인 재산세는 언제까지 납부해야 하는지 알고 싶어요",
     "expected_type": "GWP",
-    "expected_id": "kregionalgov",
-    "expected_name": "전국 지방행정 AI",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
     "category": "정부기관트랙",
     "static_verdict": "PASS",
-    "basis": "지방세는 지자체(자치사무) 소관"
+    "basis": "2026-08-31 정정 — scenarios.json(no=56/284) 선례 확인: 관공서를 특정하지 않은 일반 재산세 문의는 ktax가 정답(기존 원 시나리오가 오판정), \"제주시청 세무과에\"처럼 특정 관공서를 지목해야 kregionalgov가 정답"
   },
   {
     "no": 9785,
