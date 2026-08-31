@@ -12375,6 +12375,12 @@ export default {
     if (pathname === '/admin/tx-recent' && request.method === 'GET')
       return handleAdminTxRecent(request, env, corsHeaders);
 
+    // (2026-08-31 신설) GET /admin/gdc-summary — 운영 대시보드(가입자/
+    // 유료전환/GDC 충전/BIVM 무결성) 집계. admin/stats·admin/tx-recent와
+    // 동일 토큰 인증 관례를 따른다.
+    if (pathname === '/admin/gdc-summary' && request.method === 'GET')
+      return handleAdminGdcSummary(request, env, corsHeaders);
+
     // GET /admin/gov-task-drafts — 대기중 GOV_TASK draft 목록 (2026-07-12 위치 정정
     // — 기존엔 POST 전용 게이트 뒤에 있어서 GET 요청이 그 게이트에서 먼저
     // 405로 막히는 죽은 코드였다. admin/stats와 동일하게 게이트 앞으로 이동)
@@ -14128,6 +14134,148 @@ async function handleAdminTxRecent(request, env, corsHeaders) {
     }
     items.sort((a, c) => new Date(c.tx_at) - new Date(a.tx_at));
     return new Response(JSON.stringify({ ok: true, items: items.slice(0, limit) }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GET /admin/gdc-summary?token=&month=YYYY-MM — 운영 대시보드 집계
+// (2026-08-31 신설)
+//
+// 목적: 관리자 대시보드(가입자/유료전환/GDC 충전/사용자간 결제/AI 비용)에
+// 필요한 숫자를 한 번의 호출로 내려준다. 기존 handleAdminStats·
+// handleAdminManualChargesRecent·handleAdminTxRecent가 각각 따로 하던
+// L1 조회를 이 엔드포인트가 재사용·통합한다 — 새 집계 로직을 만들지
+// 않고 이미 검증된 필터 패턴만 재사용했다(handleAdminManualChargesRecent
+// 의 memo~'manual_charge|' 필터, handleAdminUserHistory의 block_type
+// 구분법 그대로).
+//
+// blocks.block_type 분류 (2026-08-20 GDC_CHARGE_MANUAL_v1_0.md,
+// handleAdminUserHistory 주석 기준 — 이 저장소에서 실제로 확인된 값만
+// 사용한다):
+//   - 'deposit'           : GDC 발행/충전 전체. outputs[0].recipient_guid가
+//                           실수령자, buyer_guid는 'gdc-mint' 고정.
+//     · memo가 'signup_bonus:'로 시작    → 가입 축하 충전(무료, 1회/guid)
+//     · memo가 'manual_charge|'로 시작   → 유상 충전(계좌입금 확인)
+//   - 'ai_usage_charge'   : AI 사용량 차감. outputs[0]에 cost_krw·model.
+//
+// ⚠️ 정직한 한계 표시 — 다음 두 가지는 이번 배치에 포함하지 않았다:
+//   1. 사용자 간 GDC 결제(혼디마켓 P2P, handleGdcTransfer가 만드는
+//      block_type)는 이 저장소에서 실제 값을 확인하지 못해 집계에서
+//      제외했다. L1 main.pb.js(별도 저장소) 쪽에서 handleGdcTransfer가
+//      만드는 블록의 block_type·purpose 저장 방식을 먼저 확인해야
+//      정확한 필터를 짤 수 있다 — 추측으로 필터를 짜서 0건으로 잘못
+//      보고하느니, 이 항목 자체를 응답에서 `p2p: null`로 명시했다.
+//   2. BIVM(Σδ=0) 무결성 검증은 거래별 balanceBefore/balanceAfter가
+//      필요한데, admin 엔드포인트가 지금 그 값을 내려주지 않는다(신규
+//      집계용 필드 추가가 필요 — 별도 작업). 이 필드 없이 검증하면
+//      "항상 통과"하는 무의미한 체크가 되므로 포함하지 않았다.
+//
+// "유료 사용자"는 이 시점에서 유상 충전(manual_charge) 이력이 있는
+// distinct guid로 정의한다 — 구독제(종량제/정액제/연회원) 결제는 아직
+// 별도 레코드로 남지 않으므로, 그 결제수단이 배선되면 합집합으로
+// 확장해야 한다(이것도 TODO로 남긴다).
+// ═══════════════════════════════════════════════════════════
+async function handleAdminGdcSummary(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const url = new URL(request.url);
+  // 월 단위 집계 — 기본값은 이번 달(서버 UTC 기준, KST 자정 경계 오차는
+  // 이 집계의 목적(운영 현황 개요)에서 감내 가능한 수준으로 판단).
+  const monthParam = url.searchParams.get('month'); // 'YYYY-MM'
+  const now = new Date();
+  const [y, m] = monthParam && /^\d{4}-\d{2}$/.test(monthParam)
+    ? monthParam.split('-').map(Number)
+    : [now.getUTCFullYear(), now.getUTCMonth() + 1];
+  const monthStart = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+  const monthEnd   = new Date(Date.UTC(y, m, 1)).toISOString();
+  const dateClause = `created>='${monthStart}'&&created<'${monthEnd}'`;
+
+  let l1Token;
+  try { l1Token = await _l1AdminToken(env); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 인증 실패: ' + e.message, corsHeaders); }
+  const headers = { 'Authorization': 'Bearer ' + l1Token };
+
+  // 페이지당 최대 500건 — handleAdminStats의 기존 관례("최근 500개")를
+  // 그대로 따름. 월간 거래량이 이를 넘어서면 별도 페이지네이션이
+  // 필요하다(TODO — 파일럿 규모 가정).
+  const PAGE = 500;
+
+  async function fetchBlocks(filter) {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/blocks/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=${PAGE}`,
+      { headers, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status}, filter=${filter})`);
+    const data = await res.json().catch(() => ({ items: [], totalItems: 0 }));
+    return { items: data.items || [], totalItems: data.totalItems ?? (data.items || []).length };
+  }
+
+  function firstOutput(rec) {
+    try { return (JSON.parse(rec.outputs || '[]'))[0] || {}; } catch { return {}; }
+  }
+
+  try {
+    // ── 1. 전체 가입자 ──────────────────────────────────────
+    const profTotalRes = await fetch(
+      `${L1_DEFAULT}/api/collections/profiles/records?perPage=1`,
+      { headers, signal: AbortSignal.timeout(6000) }
+    );
+    const profTotalData = await profTotalRes.json().catch(() => ({ totalItems: 0 }));
+    const totalSignups = profTotalData.totalItems || 0;
+
+    // ── 2. 가입 축하 충전 (무료, 이번 달) ───────────────────
+    const signupBonus = await fetchBlocks(
+      `block_type='deposit'&&memo~'signup_bonus:'&&${dateClause}`
+    );
+    const signupBonusOutputs = signupBonus.items.map(firstOutput);
+    const signupBonusTotalGdc = signupBonusOutputs.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+
+    // ── 3. 유상 충전 (계좌입금 확인, 이번 달) ────────────────
+    const manualCharge = await fetchBlocks(
+      `block_type='deposit'&&memo~'manual_charge|'&&${dateClause}`
+    );
+    const manualChargeOutputs = manualCharge.items.map(firstOutput);
+    const manualChargeTotalGdc = manualChargeOutputs.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+    const manualChargeTotalKrw = manualChargeOutputs.reduce((s, o) => s + (Number(o.krw_amount) || 0), 0);
+
+    // 유료 사용자 = 유상 충전 이력이 있는 distinct guid (전체 기간 기준
+    // — "이번 달 신규 유료 전환"이 아니라 "지금까지 누적 유료 사용자
+    // 수"를 보여주는 게 KPI 취지에 맞으므로, 날짜 필터 없이 별도 조회)
+    const manualChargeAllTime = await fetchBlocks(`block_type='deposit'&&memo~'manual_charge|'`);
+    const payingGuids = new Set(
+      manualChargeAllTime.items.map(firstOutput).map(o => o.recipient_guid).filter(Boolean)
+    );
+
+    // ── 4. AI 사용량 차감(DeepSeek 등, 이번 달) ─────────────
+    const aiUsage = await fetchBlocks(`block_type='ai_usage_charge'&&${dateClause}`);
+    const aiUsageOutputs = aiUsage.items.map(firstOutput);
+    const aiUsageTotalGdc = aiUsageOutputs.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+    const aiUsageTotalKrw = aiUsageOutputs.reduce((s, o) => s + (Number(o.cost_krw) || 0), 0);
+
+    return new Response(JSON.stringify({
+      ok: true,
+      month: `${y}-${String(m).padStart(2, '0')}`,
+      subscribers: {
+        total: totalSignups,
+        paying: payingGuids.size,
+        conversion_rate: totalSignups > 0 ? +(payingGuids.size / totalSignups * 100).toFixed(1) : null,
+        paying_definition: 'manual_charge(유상 충전) 이력이 1건 이상 있는 distinct guid — 구독제 결제 배선 전까지 잠정 정의',
+      },
+      gdc_charge: {
+        signup_bonus: { count: signupBonus.items.length, total_gdc: signupBonusTotalGdc },
+        manual_charge: { count: manualCharge.items.length, total_gdc: manualChargeTotalGdc, total_krw: manualChargeTotalKrw },
+      },
+      ai_usage: {
+        count: aiUsage.items.length,
+        total_gdc: aiUsageTotalGdc,
+        total_krw: aiUsageTotalKrw,
+      },
+      p2p_market: null, // TODO — 위 주석 참고, L1 main.pb.js 쪽 block_type 확인 후 구현
+      bivm_check: null, // TODO — 위 주석 참고, balanceBefore/After 노출 후 구현
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
   }
