@@ -4,98 +4,121 @@
 <link rel="icon" href="data:,">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>제안 현황 — 고팡</title>
+<title>제안 게시판 — 혼디</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 
 :root {
-  --bg:        #f8f9fa;
+  /* ── Material Design 3 토큰 ── */
+  --bg:        #f6f6fb;
   --surface:   #ffffff;
-  --border:    #e5e7eb;
-  --brand:     #3ecf8e;
-  --brand-dk:  #1a9e6a;
-  --text:      #111827;
-  --text-sub:  #6b7280;
-  --text-mute: #9ca3af;
-  --font:      'Inter','Noto Sans KR',sans-serif;
-  --mono:      'DM Mono',monospace;
-  --radius:    10px;
+  --surface-variant: #f0eff6;
+  --border:    #e2e1ec;
+  --outline-variant: #e2e1ec;
+
+  --brand:     #4f46e5;   /* primary */
+  --brand-dk:  #3730a3;   /* primary, darker (hover/active) */
+  --on-brand:  #ffffff;
+  --brand-container:    #e4e1ff;
+  --on-brand-container: #150066;
+
+  --text:      #1c1b1f;   /* on-surface */
+  --text-sub:  #49454f;   /* on-surface-variant */
+  --text-mute: #79747e;   /* outline */
+
+  --error:     #b3261e;
+  --error-container: #f9dedc;
+
+  --font:      'Roboto','Noto Sans KR',sans-serif;
+  --mono:      'Roboto Mono',monospace;
+  --radius:    12px;
+
+  --el-1: 0px 1px 2px rgba(0,0,0,.30), 0px 1px 3px 1px rgba(0,0,0,.15);
+  --el-2: 0px 1px 2px rgba(0,0,0,.30), 0px 2px 6px 2px rgba(0,0,0,.15);
+  --el-3: 0px 1px 3px rgba(0,0,0,.30), 0px 4px 8px 3px rgba(0,0,0,.15);
 }
 
 body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
 
-/* ── Header ── */
+/* ── Header (MD3 Top App Bar) ── */
 .header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
-  height: 56px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: var(--el-1);
 }
-.header-left { display: flex; align-items: center; gap: 12px; }
-.header-logo { font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none; }
-.header-divider { width: 1px; height: 16px; background: var(--border); }
-.header-title { font-size: 14px; color: var(--text-sub); }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-logo { font-size: 16px; font-weight: 700; color: var(--brand); text-decoration: none; letter-spacing: .1px; }
+.header-divider { width: 1px; height: 18px; background: var(--border); }
+.header-title { font-size: 14px; font-weight: 500; color: var(--text-sub); }
 .back-btn {
   display: flex; align-items: center; gap: 6px;
-  font-size: 13px; color: var(--text-sub);
-  text-decoration: none; padding: 6px 10px;
-  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-weight: 500; color: var(--brand);
+  text-decoration: none; padding: 8px 16px;
+  border: 1px solid var(--outline-variant); border-radius: 20px;
   background: var(--surface);
-  transition: border-color .15s;
+  transition: background-color .15s;
 }
-.back-btn:hover { border-color: #9ca3af; }
+.back-btn:hover { background: var(--brand-container); border-color: var(--brand-container); }
 
 /* ── Main ── */
-.main { max-width: 800px; margin: 0 auto; padding: 32px 20px; }
+.main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
 
-/* ── Stats ── */
+/* ── Stats (MD3 Elevated Card) ── */
 .stats { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
 .stat-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 20px;
+  background: var(--surface); border: none; box-shadow: var(--el-1);
+  border-radius: var(--radius); padding: 18px 20px;
   flex: 1; min-width: 120px;
 }
-.stat-num { font-size: 24px; font-weight: 700; color: var(--text); }
-.stat-label { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+.stat-num { font-size: 26px; font-weight: 700; color: var(--brand); font-family: var(--mono); }
+.stat-label { font-size: 12px; font-weight: 500; color: var(--text-sub); margin-top: 4px; }
 
-/* ── Filter ── */
+/* ── Filter row ── */
 .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+
+/* write-btn = MD3 Filled Button */
 .write-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 8px; border: none;
-  background: var(--text); color: #fff; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 20px; border: none;
+  background: var(--brand); color: var(--on-brand); font-size: 14px; font-weight: 500;
   cursor: pointer; font-family: var(--font); white-space: nowrap;
+  box-shadow: var(--el-1); transition: box-shadow .15s, background-color .15s;
 }
-.write-btn:hover { opacity: .88; }
-.filter-bar {
-  display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
-}
+.write-btn:hover { background: var(--brand-dk); box-shadow: var(--el-2); }
+
+/* filter-btn = MD3 Filter Chip */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 .filter-btn {
-  padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--surface); font-size: 13px; color: var(--text-sub);
+  padding: 7px 16px; border-radius: 8px; border: 1px solid var(--outline-variant);
+  background: var(--surface); font-size: 13px; font-weight: 500; color: var(--text-sub);
   cursor: pointer; font-family: var(--font); transition: all .15s;
 }
+.filter-btn:hover { background: var(--surface-variant); }
 .filter-btn.active {
-  background: var(--text); color: #fff; border-color: var(--text);
+  background: var(--brand-container); color: var(--on-brand-container);
+  border-color: var(--brand-container); font-weight: 700;
 }
 
-/* ── Table ── */
-.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+/* ── Table (MD3 Elevated Card) ── */
+.table-wrap { background: var(--surface); border: none; box-shadow: var(--el-1); border-radius: var(--radius); overflow: hidden; }
 .table-header {
   display: grid;
   grid-template-columns: 56px 80px 1fr 90px 100px 90px;
-  gap: 0; padding: 12px 20px;
+  gap: 0; padding: 14px 20px;
+  background: var(--surface-variant);
   border-bottom: 1px solid var(--border);
-  font-size: 11px; font-weight: 600; color: var(--text-mute);
+  font-size: 11px; font-weight: 700; color: var(--text-sub);
   text-transform: uppercase; letter-spacing: .5px;
 }
 .feedback-row {
@@ -104,110 +127,116 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   gap: 0; padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   align-items: start;
-  transition: background .1s;
+  transition: background-color .1s;
 }
 .feedback-row:last-child { border-bottom: none; }
-.feedback-row:hover { background: var(--bg); }
+.feedback-row:hover { background: var(--surface-variant); }
 
 .cell-handle { font-size: 12px; color: var(--text-sub); font-family: var(--mono); }
-.cell-content { font-size: 13px; color: var(--text); line-height: 1.5; }
-.cell-content .admin-note { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
+.cell-content { font-size: 13.5px; color: var(--text); line-height: 1.55; }
+.cell-content .admin-note { font-size: 11.5px; color: var(--text-sub); margin-top: 4px; }
 .cell-category { font-size: 12px; }
 .cell-date { font-size: 11px; color: var(--text-mute); font-family: var(--mono); }
 .cell-status { }
 
-/* ── Category badge ── */
+/* ── Category badge (MD3 Assist Chip, tonal) ── */
 .cat-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; padding: 3px 8px; border-radius: 4px;
-  font-weight: 500;
+  font-size: 11px; padding: 4px 10px; border-radius: 8px;
+  font-weight: 600;
 }
-.cat-bug     { background: #fef2f2; color: #dc2626; }
-.cat-feature { background: #eff6ff; color: #2563eb; }
-.cat-ui      { background: #f5f3ff; color: #7c3aed; }
-.cat-etc     { background: #f9fafb; color: #6b7280; }
-.cat-pending { background: #f9fafb; color: #9ca3af; }
+.cat-bug     { background: #f9dedc; color: #8c1d18; }
+.cat-feature { background: #dde3ff; color: #1a237e; }
+.cat-ui      { background: #ecdcfb; color: #4a148c; }
+.cat-etc     { background: var(--surface-variant); color: var(--text-sub); }
+.cat-pending { background: var(--surface-variant); color: var(--text-mute); }
 
-/* ── Status badge ── */
+/* ── Status badge (MD3 tonal chip) ── */
 .status-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; padding: 3px 8px; border-radius: 4px;
-  font-weight: 500; cursor: default;
+  font-size: 11px; padding: 4px 10px; border-radius: 8px;
+  font-weight: 600; cursor: default;
 }
-.status-pending   { background: #fef9c3; color: #854d0e; }
-.status-reviewing { background: #dbeafe; color: #1d4ed8; }
-.status-accepted  { background: #dcfce7; color: #15803d; }
-.status-rejected  { background: #f1f5f9; color: #64748b; }
+.status-pending   { background: #fff3cd; color: #7a5900; }
+.status-reviewing { background: #dde3ff; color: #1a237e; }
+.status-accepted  { background: #d7f3df; color: #0f5e2c; }
+.status-rejected  { background: var(--surface-variant); color: var(--text-mute); }
 
-/* ── Admin controls ── */
-.admin-controls { display: none; margin-top: 8px; }
+/* ── Admin controls (MD3 Outlined Button, small) ── */
+.admin-controls { display: none; margin-top: 10px; }
 .admin-controls.visible { display: flex; gap: 6px; flex-wrap: wrap; }
 .admin-btn {
-  font-size: 11px; padding: 3px 8px; border-radius: 4px;
-  border: 1px solid var(--border); background: var(--surface);
-  cursor: pointer; font-family: var(--font); color: var(--text-sub);
+  font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 8px;
+  border: 1px solid var(--brand); background: var(--surface);
+  cursor: pointer; font-family: var(--font); color: var(--brand);
   transition: all .15s;
 }
-.admin-btn:hover { background: var(--text); color: #fff; border-color: var(--text); }
+.admin-btn:hover { background: var(--brand-container); }
 
 /* ── Empty ── */
-.empty { text-align: center; padding: 60px 20px; color: var(--text-mute); }
-.empty svg { margin-bottom: 12px; opacity: .3; }
+.empty { text-align: center; padding: 64px 20px; color: var(--text-mute); }
+.empty svg { margin-bottom: 12px; opacity: .35; }
 
-/* ── Upvote ── */
-.cell-vote { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+/* ── Upvote (MD3 Icon Button) ── */
+.cell-vote { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .vote-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 26px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--surface);
+  width: 32px; height: 28px; border-radius: 8px;
+  border: 1px solid var(--outline-variant); background: var(--surface);
   color: var(--text-sub); cursor: pointer; transition: all .15s;
 }
-.vote-btn:hover:not(:disabled) { border-color: var(--brand-dk); color: var(--brand-dk); }
-.vote-btn.voted { background: var(--brand); border-color: var(--brand); color: #fff; cursor: default; }
-.vote-btn:disabled { cursor: default; opacity: .6; }
-.vote-count { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+.vote-btn:hover:not(:disabled) { background: var(--brand-container); border-color: var(--brand-container); color: var(--on-brand-container); }
+.vote-btn.voted { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.vote-btn:disabled { cursor: default; opacity: .55; }
+.vote-count { font-size: 12px; font-weight: 700; color: var(--text-sub); font-family: var(--mono); }
 
 /* ── 비공개 배지 ── */
 .vis-badge {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10.5px; padding: 2px 6px; border-radius: 4px;
-  background: #f3f4f6; color: #6b7280; font-weight: 500; margin-left: 6px;
+  font-size: 10.5px; padding: 3px 8px; border-radius: 8px;
+  background: var(--surface-variant); color: var(--text-sub); font-weight: 600; margin-left: 6px;
 }
 
-/* ── 글쓰기 모달 ── */
+/* ── 글쓰기 모달 (MD3 Dialog) ── */
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  position: fixed; inset: 0; background: rgba(28,27,31,.4);
   display: none; align-items: center; justify-content: center;
   z-index: 2000; padding: 20px;
 }
 .modal-backdrop.open { display: flex; }
 .modal-box {
-  background: var(--surface); border-radius: 14px; padding: 24px;
+  background: var(--surface); border-radius: 28px; padding: 24px;
   width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--el-3);
 }
-.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; color: var(--text); }
 .modal-box textarea {
-  width: 100%; min-height: 120px; padding: 12px; border: 1px solid var(--border);
-  border-radius: 8px; font-family: var(--font); font-size: 13px; resize: vertical;
-  box-sizing: border-box;
+  width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--outline-variant);
+  border-radius: 12px; font-family: var(--font); font-size: 13.5px; resize: vertical;
+  box-sizing: border-box; background: var(--surface-variant);
 }
-.vis-choice { display: flex; gap: 10px; margin: 14px 0; }
+.modal-box textarea:focus { outline: 2px solid var(--brand); outline-offset: -1px; background: var(--surface); }
+.vis-choice { display: flex; gap: 10px; margin: 16px 0; }
 .vis-choice label {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px; border: 1px solid var(--border); border-radius: 8px;
-  font-size: 13px; cursor: pointer; transition: all .15s;
+  padding: 11px; border: 1px solid var(--outline-variant); border-radius: 12px;
+  font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all .15s;
 }
-.vis-choice input { accent-color: var(--brand-dk); }
-.vis-choice label:has(input:checked) { border-color: var(--brand-dk); background: #f0fdf8; font-weight: 600; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.vis-choice input { accent-color: var(--brand); }
+.vis-choice label:has(input:checked) { border-color: var(--brand); background: var(--brand-container); color: var(--on-brand-container); font-weight: 700; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: 18px; }
+
+/* modal-btn.cancel = MD3 Text Button / modal-btn.submit = MD3 Filled Button */
 .modal-btn {
-  padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: var(--font); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: 20px; font-size: 13.5px; font-weight: 500;
+  cursor: pointer; font-family: var(--font); border: none;
 }
-.modal-btn.cancel { background: var(--surface); color: var(--text-sub); }
-.modal-btn.submit { background: var(--text); color: #fff; border-color: var(--text); }
-.modal-btn.submit:disabled { opacity: .5; cursor: default; }
-.modal-error { font-size: 12px; color: #dc2626; margin-top: 8px; display: none; }
+.modal-btn.cancel { background: transparent; color: var(--brand); }
+.modal-btn.cancel:hover { background: var(--brand-container); }
+.modal-btn.submit { background: var(--brand); color: var(--on-brand); box-shadow: var(--el-1); }
+.modal-btn.submit:hover { background: var(--brand-dk); box-shadow: var(--el-2); }
+.modal-btn.submit:disabled { opacity: .5; cursor: default; box-shadow: none; }
+.modal-error { font-size: 12px; font-weight: 500; color: var(--error); margin-top: 10px; display: none; }
 
 /* ── Loading ── */
 .loading { text-align: center; padding: 40px; color: var(--text-mute); font-size: 13px; }
@@ -223,7 +252,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   .filter-row { flex-direction: column; align-items: stretch; }
   .write-btn { justify-content: center; }
   .stats { gap: 8px; }
-  .stat-card { min-width: 80px; padding: 12px; }
+  .stat-card { min-width: 80px; padding: 14px; }
 }
 </style>
 </head>
@@ -232,7 +261,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 <!-- Header -->
 <header class="header">
   <div class="header-left">
-    <a href="/desktop.html" class="header-logo">고팡</a>
+    <a href="/desktop.html" class="header-logo">혼디</a>
     <div class="header-divider"></div>
     <span class="header-title">제안 현황</span>
   </div>
