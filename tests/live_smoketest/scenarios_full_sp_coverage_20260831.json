@@ -81,13 +81,13 @@
   },
   {
     "no": 9508,
-    "utterance": "노후 자금을 어떻게 나눠서 투자하면 좋을지 자산 배분 상담을 받고 싶어요",
+    "utterance": "주식형 펀드 상품에 어떤 것들이 있는지 일반적인 상품 종류를 살펴보고 싶어요",
     "expected_type": "GWP",
     "expected_id": "kfinance",
     "expected_name": "K-Stock",
     "category": "SP전수커버리지-GWP-ECO",
     "static_verdict": "PASS",
-    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=15) 취합. §CATALOG kfinance(89개 자산군 실시간 분석. 포트폴리오. 상품 가입·실행·잔고 조회 자체는 kgdc 소관 — 여기는 분석·조언 전담.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+    "basis": "2026-08-31 재작성 — 원본(\"제 노후 자금 배분 상담\")은 개인 위임의도가 뚜렷해 R1-AC상 financial-planner(EXPERT)가 정답에 더 가까움(테스트 저작 오류). kfinance는 제도적 상품 조회 관점으로 재작성"
   },
   {
     "no": 9509,
@@ -161,13 +161,13 @@
   },
   {
     "no": 9516,
-    "utterance": "혼디 자주 묻는 질문 목록 보여줘",
+    "utterance": "어느 부처가 담당인지 몰라서 그냥 물어보고 싶은데, 신청 자격이 되는지랑 필요한 서류가 뭔지 좀 확인해주세요",
     "expected_type": "GWP",
     "expected_id": "kqna",
     "expected_name": "Gopang QnA",
     "category": "SP전수커버리지-GWP-GOV",
     "static_verdict": "PASS",
-    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=49) 취합. §CATALOG kqna(범부처 질의응답 라우터. SP-CORE + 도메인별 SP(BIZ/ECONOMY/EDU/GOV/INFRA/IP/LEGAL/LOGISTICS/SAFETY) 자체 라우팅.)"
+    "basis": "2026-08-31 재작성 — kqna는 \"범부처 질의응답 라우터\"(자격요건·필요서류 등 절차 문의)인데, 원본은 \"혼디 자체 FAQ 목록\"을 물어 profile-assistant 소관과 혼동됨(테스트 저작 오류)"
   },
   {
     "no": 9517,
@@ -221,13 +221,13 @@
   },
   {
     "no": 9522,
-    "utterance": "제 계정 설정을 바꾸고 싶어요",
+    "utterance": "예전에 연락했던 그 담당자 프로필을 다시 찾아보고 싶어요",
     "expected_type": "GWP",
     "expected_id": "kusers",
     "expected_name": "Gopang Users",
     "category": "SP전수커버리지-GWP-GOV",
     "static_verdict": "PASS",
-    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=51) 취합. §CATALOG kusers(개인/기관 엔티티 검색·해석. GAS(Gopang Address System) v1.6 기반. SP-USERS 자체 라우팅.)"
+    "basis": "2026-08-31 재작성 — kusers는 \"타인/기관 엔티티 검색\"인데, 원본은 \"본인 계정 설정 변경\"을 물어 profile-assistant 소관과 혼동됨(테스트 저작 오류)"
   },
   {
     "no": 9523,
@@ -245,19 +245,19 @@
     "expected_type": "GWP",
     "expected_id": "tool-calculator",
     "expected_name": "계산기",
-    "category": "SP전수커버리지-GWP-TOOL",
-    "static_verdict": "PASS",
-    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=47) 취합. §CATALOG tool-calculator(수식 계산. function calling.)"
+    "category": "SP전수커버리지-GWP-TOOL-미구현",
+    "static_verdict": "N/A",
+    "basis": "2026-08-31 확인 — tool-calculator는 call-ai.js상 fn:null로 명시된 미구현 기능(전용 [CALCULATE:] 태그·실행부 없음). 이 시나리오는 통과할 방법이 구조적으로 없다 — FAIL이 나와도 라우팅 버그가 아니라 미구현 기능의 정상적인 신호다. call-ai.js 주석이 요구하던 \"실사 재현 빈도\" 증거로 이 결과를 인용할 것. [CALCULATE:] 태그 설계 전까지는 SKIP 취급."
   },
   {
     "no": 9525,
     "utterance": "지금 원달러 환율이 대략 얼마인지 궁금해요",
-    "expected_type": "GWP",
-    "expected_id": "tool-web-search",
-    "expected_name": "웹 검색",
+    "expected_type": "PLATFORM",
+    "expected_id": "web-search-tag",
+    "expected_name": "WEB_SEARCH(공개정보 검색)",
     "category": "SP전수커버리지-GWP-TOOL",
     "static_verdict": "PASS",
-    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=45) 취합. §CATALOG tool-web-search(실시간 웹 검색. SP 자동생성 시 의무 사용.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+    "basis": "2026-08-31 스키마 정정 — 원본이 expected_type:GWP, expected_id:tool-web-search로 잘못 채점되고 있었음(라이브 응답은 실제로 정확히 [WEB_SEARCH:...]였는데 스키마 불일치로 FAIL 처리됨). live_smoketest.py 관례(scenarios.json 등)를 따라 PLATFORM/web-search-tag로 정정."
   },
   {
     "no": 9570,

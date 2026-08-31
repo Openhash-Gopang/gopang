@@ -26,7 +26,7 @@
  * LLM 호출 1회 추가)는 0단계 신호가 약할 때만 돈다 — subject-gate.js가
  * "리프가 2개 이상일 때만 게이트를 돈다"로 절충한 것과 동일한 원칙.
  */
-import { narrowCandidates, buildCandidateList, findGwpR2Winner } from './candidate-prefilter.js';
+import { narrowCandidates, buildCandidateList, findGwpR2Winner, findDominantCandidate } from './candidate-prefilter.js';
 import { classifyDomain } from './domain-classifier.js';
 import { getCandidateIdsForDomains } from './domain-taxonomy.js';
 
@@ -75,6 +75,13 @@ export async function buildRoutingHintPart(plainText, gwpRegistryArray, expertRe
     // 줄로 추가해 AC-PRO-CORE §CORE 2단계가 그대로 채택하게 한다.
     const r2Winner = findGwpR2Winner(narrowed);
 
+    // 2026-08-31 2차 신설 — 최우선후보(압도적 단일 후보) 확정.
+    // findGwpR2Winner는 "GWP끼리 문자열 포함관계"라는 좁은 조건만 잡고,
+    // 이건 그보다 넓은 "경쟁자가 사실상 없는 유일 후보" 케이스를 잡는다.
+    // R2확정과 동시에 뜨는 경우는 없다(R2확정은 후보가 최소 2개 필요,
+    // 이건 정확히 1개일 때만 발동) — 상호 배타적이라 충돌 없음.
+    const dominant = findDominantCandidate(narrowed);
+
     let finalIds;
 
     if (topScore >= WEAK_SIGNAL_THRESHOLD) {
@@ -110,6 +117,9 @@ export async function buildRoutingHintPart(plainText, gwpRegistryArray, expertRe
     // 구성이 달라졌을 가능성에 대한 안전장치).
     if (r2Winner && finalIds.includes(r2Winner.winnerId) && finalIds.includes(r2Winner.loserId)) {
       return `${hintLine}\nR2확정:${r2Winner.winnerId}(사유: '${r2Winner.winnerTrigger}'가 '${r2Winner.loserTrigger}'보다 구체적 — ${r2Winner.loserId} 아님)`;
+    }
+    if (dominant && finalIds.includes(dominant.id)) {
+      return `${hintLine}\n최우선후보:${dominant.id}(사유: 경쟁 후보 없는 유일 매칭, 점수${dominant.score})`;
     }
     return hintLine;
   } catch (e) {

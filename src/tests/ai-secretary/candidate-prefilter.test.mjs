@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-import { narrowCandidates, buildCandidateList, FALLBACK_DOMAINS, findGwpR2Winner } from '../../gopang/ai/candidate-prefilter.js';
+import { narrowCandidates, buildCandidateList, FALLBACK_DOMAINS, findGwpR2Winner, findDominantCandidate } from '../../gopang/ai/candidate-prefilter.js';
 import { EXPERT_REGISTRY } from '../../gopang/ai/expert-registry.js';
 
 // gwp-registry.js는 ES 모듈이 아니라 window 전역에 붙는 브라우저 스크립트라
@@ -135,5 +135,44 @@ describe('findGwpR2Winner — 근본 원인 회귀 테스트 (2026-08-31 신설)
       { id: 'b', kind: 'gwp', label: 'B', score: 3, matched: ['가나다'] },
     ];
     assert.equal(findGwpR2Winner(tie), null);
+  });
+});
+
+describe('findDominantCandidate — 근본 원인 회귀 테스트 (2026-08-31 2차 신설)', () => {
+  // 배경: scenarios_full_sp_coverage_20260831.json 라이브 검증에서
+  // findGwpR2Winner로도 못 잡는 새 실패 유형이 확인됐다 — 경쟁자가
+  // 전혀 없는 압도적 단일 후보(예: dental-hygienist 9점, 나머지 0점)인데도
+  // AC가 더 범용적인 인접 대상이나 CALL_KINTENT로 새는 사례 4건. R2확정과
+  // 같은 배경이라 같은 해법(코드 확정)을 적용한다.
+  test('점수를 얻은 후보가 정확히 하나뿐이면(2점 이상) 확정한다', () => {
+    const single = [
+      { id: 'dental-hygienist', kind: 'expert', label: '치과위생사', score: 9, matched: ['스케일링'] },
+      { id: 'kedu', kind: 'gwp', label: 'K-Edu', score: 0, matched: [] },
+    ];
+    const dom = findDominantCandidate(single);
+    assert.ok(dom, '유일 후보인데 확정되지 않음');
+    assert.equal(dom.id, 'dental-hygienist');
+  });
+
+  test('점수를 얻은 후보가 둘 이상이면(진짜 경쟁) 확정하지 않는다', () => {
+    const competing = [
+      { id: 'fiil-kcleaner', kind: 'gwp', label: 'K-Cleaner', score: 2, matched: ['청소'] },
+      { id: 'kcommerce', kind: 'gwp', label: 'K-Market', score: 2, matched: ['예약'] },
+    ];
+    assert.equal(findDominantCandidate(competing), null);
+  });
+
+  test('유일 후보라도 점수가 1점뿐이면(너무 약한 신호) 확정하지 않는다', () => {
+    const weak = [
+      { id: 'a', kind: 'gwp', label: 'A', score: 1, matched: ['가'] },
+    ];
+    assert.equal(findDominantCandidate(weak), null);
+  });
+
+  test('점수 있는 후보가 아예 없으면 확정하지 않는다', () => {
+    const none = [
+      { id: 'kedu', kind: 'gwp', label: 'K-Edu', score: 0, matched: [] },
+    ];
+    assert.equal(findDominantCandidate(none), null);
   });
 });

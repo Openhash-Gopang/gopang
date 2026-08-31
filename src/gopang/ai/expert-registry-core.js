@@ -203,7 +203,11 @@ export const CORE_REGISTRY = {
     label: '관세사', icon: '🛃', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_customs-broker', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명
-    triggers: ['관세사', '수입 통관', '수출 통관', '관세사에게'],
+    triggers: ['관세사', '수입 통관', '수출 통관', '관세사에게',
+      // 2026-08-31 추가 — 직업명 없는 상황 표현 보강(SP 전수 커버리지
+      // 테스트에서 0단계 로컬 매칭이 이 항목을 아예 못 찾는 게 확인됨,
+      // candidate-prefilter.js 참고)
+      '통관 절차를 대신', '관세 신고를 대행', '통관 절차'],
   },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
@@ -239,7 +243,9 @@ export const CORE_REGISTRY = {
     label: '간호사', icon: '👩‍⚕️', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_nurse', needsMedicalSafety: true,
     // 2026-07-25 신설(주피터 지시) — 인접쌍(전문간호사↔간호사) — 일반 업무 범위만
-    triggers: ['간호사', '간호 상담'],
+    triggers: ['간호사', '간호 상담',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '상처 소독', '수술 후 관리 안내'],
   },
   'physical-therapist': {
     label: '물리치료사', icon: '💪', category: 'HEALTH', ownerAgency: 'khealth',
@@ -298,7 +304,9 @@ export const CORE_REGISTRY = {
     key: 'SP_paramedic', needsMedicalSafety: true,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명. 실제 응급상황은 kemergency(119)가 우선 — 이
     // 페르소나는 사전 상담용으로 한정
-    triggers: ['응급구조사', '응급처치'],
+    triggers: ['응급구조사', '응급처치',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '행사장 응급 대응 인력', '현장 응급상황 대비', '현장 대응 인력'],
   },
   midwife: {
     label: '조산사', icon: '🤱', category: 'HEALTH', ownerAgency: 'khealth',
@@ -401,13 +409,17 @@ export const CORE_REGISTRY = {
     key: 'SP_social-worker', needsMedicalSafety: true,
     // 2026-07-25 신설(주피터 지시) — 인접쌍 구분 키워드 그대로 — '복지제도·자원연계'. 지역행정 welfare 도메인과는
     // 별개(사회복지사는 개인 상담 전문가)
-    triggers: ['사회복지사', '복지제도 상담', '자원연계'],
+    triggers: ['사회복지사', '복지제도 상담', '자원연계',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '복지 제도를 연계', '형편이 어려워졌는데'],
   },
   curator: {
     label: '학예사(큐레이터)', icon: '🎨', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_curator', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 99건 사고실험 I범주('박물관 학예사 상담') 커버
-    triggers: ['학예사', '큐레이터', '전시 상담'],
+    triggers: ['학예사', '큐레이터', '전시 상담',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '전시회 작품 설명', '작품 해설', '전시회 작품'],
   },
   librarian: {
     label: '사서', icon: '📖', category: 'EDU', ownerAgency: 'kedu',
@@ -425,7 +437,9 @@ export const CORE_REGISTRY = {
     label: '보육교사', icon: '🧸', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_childcare-teacher', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명 위주
-    triggers: ['보육교사', '보육 상담'],
+    triggers: ['보육교사', '보육 상담',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '어린이집 담당 선생님', '아이 발달 상담'],
   },
   'lifelong-educator': {
     label: '평생교육사', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
@@ -512,7 +526,9 @@ export const CORE_REGISTRY = {
     label: '가스기술사', icon: '🔥', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_gas-safety-engineer', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명
-    triggers: ['가스기술사', '가스안전 점검'],
+    triggers: ['가스기술사', '가스안전 점검',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '주방 가스 설비 점검', '가스 설비 안전'],
   },
 
   // ── 부동산 (SP-RE-01, 2026-07-06 신설) ────────────────
@@ -544,7 +560,9 @@ export const CORE_REGISTRY = {
     label: '관광통역안내사', icon: '🗺️', category: 'TOURISM', ownerAgency: 'gopang',
     key: 'SP_tour-guide', needsMedicalSafety: false,
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명
-    triggers: ['관광통역안내사', '여행 가이드', '관광 안내'],
+    triggers: ['관광통역안내사', '여행 가이드', '관광 안내',
+      // 2026-08-31 추가 — 상황 표현 보강(위와 동일 배경)
+      '외국인 친구 관광 안내', '서울 구경을 안내'],
   },
   'sports-instructor': {
     label: '생활스포츠지도사', icon: '🏃', category: 'SPORTS', ownerAgency: 'gopang',
