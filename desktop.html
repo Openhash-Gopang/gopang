@@ -2017,6 +2017,47 @@ document.addEventListener("DOMContentLoaded", function () {
         <div id="subdomain-list-status" style="font-size:12px;color:#6b7280;margin-top:8px;min-height:20px"></div>
       </div>
 
+      <!-- ⑤-b 공문 발송 기록 (2026-08-31 신설) — 기관에 보낸 공문(예: 제주도청·
+           행안부·제주TP 등 dpaper.kr 지원 요청)의 발송·회신 이력을 기록한다.
+           worker.js /admin/letters(GET/POST)가 AI_SETUP_SEALS_KV에 JSON
+           배열로 저장 — LLM 키 목록과 동일한 "전체 배열 교체" 관례. -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700;color:#111">📨 공문 발송 기록</div>
+          <button onclick="_addLetterRow()"
+                  style="padding:6px 14px;background:#2563eb;color:#fff;border:none;
+                         border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">+ 공문 추가</button>
+        </div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
+          기관에 보낸 공문의 발송·회신 현황을 기록합니다. 수신 날짜·수신 내용은 회신을 받기 전까지 비워두세요.
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:820px">
+            <thead>
+              <tr style="text-align:left;color:#6b7280">
+                <th style="padding:0 8px 8px 0;font-weight:600;min-width:120px">수신 기관</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">공문 제목</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;min-width:140px">공문 링크</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;width:110px">보낸 날짜</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;width:110px">수신 날짜</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">수신 내용</th>
+                <th style="padding:0 0 8px;width:50px"></th>
+              </tr>
+            </thead>
+            <tbody id="letter-list"></tbody>
+          </table>
+        </div>
+        <div id="letter-list-empty" style="font-size:14px;color:#9ca3af;text-align:center;padding:20px">
+          기록된 공문이 없습니다. "+ 공문 추가"를 눌러 추가하세요.
+        </div>
+        <button onclick="_saveAllLetters()"
+                style="margin-top:16px;width:100%;padding:11px;background:#111;color:#fff;
+                       border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+          전체 저장
+        </button>
+        <div id="letter-save-ok" style="font-size:12px;color:#2563eb;text-align:center;margin-top:8px;display:none"></div>
+      </div>
+
       <!-- ⑥ 자동 갱신 현황 (2026-07-28 신설) — AUTO_REFRESH_MANUAL_v1_0.html의
            세 파이프라인(SP tier 재계산·미등록 태그 집계·사용자 피드백 취합)
            실행 현황을 한눈에 본다. 조회만 하는 패널이라 워크플로 트리거
@@ -2254,6 +2295,7 @@ function _showAdminBody() {
   _loadCFCredentials();
   _renderSubdomainList();
   _loadAutoRefreshStatus();
+  _loadLetters();
 }
 
 // ── 통계 ─────────────────────────────────────────────────────
@@ -2719,6 +2761,102 @@ async function _saveAllKeys() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 공문 발송 기록 (2026-08-31 신설)
+// worker.js GET/POST /admin/letters (AI_SETUP_SEALS_KV, hondi:official_letters)
+// LLM 키 목록과 동일 패턴: 로드 → 화면에서 자유 편집 → "전체 저장"으로
+// 배열 통째 전송. id는 신규 행이면 비워두고, 저장 응답이 채워준 id를
+// 그대로 다시 화면에 반영한다(다음 저장부터 안정적으로 같은 항목을
+// 가리키게 하기 위함 — 순서만으로 항목을 구분하면 삭제/추가 후 어긋남).
+// ══════════════════════════════════════════════════════════════
+let _letters = [];
+
+function _renderLetterList() {
+  const tbody = document.getElementById('letter-list');
+  const empty = document.getElementById('letter-list-empty');
+  tbody.innerHTML = '';
+  empty.style.display = _letters.length ? 'none' : 'block';
+  const cellInput = (cls, i, val, type='text', ph='') =>
+    `<input class="${cls}" data-i="${i}" type="${type}" value="${_esc(val||'')}" placeholder="${_esc(ph)}"
+       style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;box-sizing:border-box">`;
+  _letters.forEach((l, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-inst', i, l.institution, 'text', '예: 제주특별자치도청')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-title', i, l.title, 'text', '공문 제목')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-link', i, l.link, 'text', 'https://...')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-sent', i, l.sent_date, 'date')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-recv-date', i, l.received_date, 'date')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-recv-content', i, l.received_content, 'text', '회신 요약')}</td>
+      <td style="padding:4px 0"><button onclick="_removeLetter(${i})"
+        style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;white-space:nowrap">삭제</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function _addLetterRow() {
+  _letters.push({ id:'', institution:'', title:'', link:'', sent_date:'', received_date:'', received_content:'' });
+  _renderLetterList();
+}
+
+function _removeLetter(i) {
+  _letters.splice(i, 1);
+  _renderLetterList();
+}
+
+async function _loadLetters() {
+  try {
+    const res = await fetch(`${WORKER_URL}/admin/letters`, {signal:AbortSignal.timeout(10000), headers:_adminAuthHeaders()});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || 'API_ERROR');
+    _letters = data.letters || [];
+  } catch(e) {
+    console.warn('[letters]', e.message);
+    _letters = [];
+  }
+  _renderLetterList();
+}
+
+async function _saveAllLetters() {
+  const rows = document.getElementById('letter-list').children;
+  const letters = [];
+  let i = 0;
+  for (const row of rows) {
+    letters.push({
+      id: _letters[i]?.id || '',
+      institution:       row.querySelector('.lt-inst').value.trim(),
+      title:             row.querySelector('.lt-title').value.trim(),
+      link:              row.querySelector('.lt-link').value.trim(),
+      sent_date:         row.querySelector('.lt-sent').value,
+      received_date:     row.querySelector('.lt-recv-date').value,
+      received_content:  row.querySelector('.lt-recv-content').value.trim(),
+    });
+    i++;
+  }
+  const ok = document.getElementById('letter-save-ok');
+  try {
+    const res = await fetch(`${WORKER_URL}/admin/letters`, {
+      method:'POST', headers:{'Content-Type':'application/json', ..._adminAuthHeaders()},
+      body: JSON.stringify({ letters }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      _letters = d.letters || letters; // 서버가 채운 id 반영
+      ok.style.color = '#2563eb';
+      ok.textContent = '✓ 저장됐습니다.';
+    } else {
+      ok.style.color = '#dc2626';
+      ok.textContent = '⚠️ 저장 실패: ' + (d.message || res.status);
+    }
+  } catch(e) {
+    ok.style.color = '#dc2626';
+    ok.textContent = '⚠️ Worker 연결 실패: ' + e.message;
+  }
+  ok.style.display = 'block';
+  setTimeout(()=>{ ok.style.display='none'; }, 4000);
+  _renderLetterList();
+}
+
+// ══════════════════════════════════════════════════════════════
 // ⑤ Cloudflare 서브도메인 자동화
 // 작동 조건: Global API Key + X-Auth-Email 헤더 (Custom Token 불가)
 // 엔드포인트: /zones/{zoneId}/dns_records (언더스코어!)
@@ -2863,6 +3001,9 @@ window._onProviderChange = _onProviderChange;
 window._saveCFCredentials= _saveCFCredentials;
 window._addSubdomainRow  = _addSubdomainRow;
 window._deleteSubdomain  = _deleteSubdomain;
+window._addLetterRow     = _addLetterRow;
+window._removeLetter     = _removeLetter;
+window._saveAllLetters   = _saveAllLetters;
 </script>
 
 
