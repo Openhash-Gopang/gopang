@@ -194,6 +194,7 @@ const EXPERT_ID_ALIAS = {
   'hair-stylist': 'hairdresser', 'hairstylist': 'hairdresser',
   'cook': 'chef', 'baker': 'chef', 'culinary-chef': 'chef',
   'health-education-specialist': 'health-educator', 'public-health-educator': 'health-educator',
+  'hondi-sp': 'hondi-guide', 'hondi': 'hondi-guide', 'platform-guide': 'hondi-guide',
 };
 
 export function resolveExpertId(personaId) {
