@@ -1487,6 +1487,17 @@ export async function openBackupKey() {
       const btn = document.getElementById('_bk-copy-btn');
       btn.textContent = '복사됨';
       setTimeout(() => { btn.textContent = '복사'; }, 1500);
+      // 2026-08-31 신설 — 백업 키를 실제로 내보낸(표시+복사) 시점을
+      // "확인 완료"로 기록한다. 지금까지 이 버튼은 로컬 플래그조차 안
+      // 세팅했다(라이브 UI의 유일한 정상 확인 경로인데도) — 그래서
+      // "지금 저장" 배너를 눌러 키를 복사해도 배너의 원인이 되는 상태가
+      // 전혀 안 바뀌었다. 로컬 플래그 + 계정 단위 서버 기록(다른 기기에도
+      // 반영되도록) 둘 다 여기서 남긴다.
+      const { USER_GUID } = await import('../core/state.js');
+      const { _confirmBackupOnServer } = await import('../core/auth.js');
+      try { localStorage.setItem('gopang_backup_confirmed_v1', '1'); } catch {}
+      document.getElementById('backup-warn-banner')?.classList.remove('show');
+      _confirmBackupOnServer(USER_GUID).catch(() => {});
     } catch { alert('복사에 실패했습니다. 직접 길게 눌러 선택해 주세요.'); }
   };
 

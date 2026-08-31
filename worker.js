@@ -11776,6 +11776,7 @@ export default {
 
     // ── SSO 인증 ──────────────────────────────────────────
     if (pathname === '/auth/issue')              return handleIssue(request, env, corsHeaders);
+    if (pathname === '/auth/confirm-backup')      return handleConfirmBackup(request, env, corsHeaders);
     if (pathname === '/auth/verify')             return handleVerify(request, env, corsHeaders);
     if (pathname === '/auth/refresh')            return handleRefresh(request, env, corsHeaders);
 
@@ -25784,6 +25785,61 @@ async function handleProfilePost(request, env, corsHeaders) {
 
 
   return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
+}
+
+// ── POST /auth/confirm-backup — 2026-08-31 신설 ─────────────────────
+// 배경: 백업 키 저장 확인 여부(_hasConfirmedBackup)가 지금까지 이 기기의
+// localStorage(gopang_backup_confirmed_v1)에만 저장돼 있었다. 그래서
+// 폰에서 이미 백업을 저장한 사용자가 PC에서 device-link로 같은 계정을
+// 열어도, PC 브라우저 입장에선 "확인한 적 없음"이라 매번 다시 경고
+// 배너가 떴다(2026-08-31 라이브 확인 — 실제 재현). 계정(guid) 단위로
+// 이 사실을 서버에 한 번 기록해두면, 어느 기기로 로그인하든 같은 계정이면
+// 다시 안 물어봐도 된다.
+//
+// 서명 규약은 handleProfilePost와 동일하게 `guid:pubkey:ts` 고정
+// 문자열로 통일한다(서명 대상 형식을 흩어두지 않기 위해). TOFU 검증도
+// 동일하게 이 guid에 이미 핀(pin)된 pubkey_ed25519와 서명자가 일치하는지
+// 확인한다 — 아무 서명자나 남의 계정 백업 확인 상태를 조작 못 하게 막는다.
+async function handleConfirmBackup(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, pubkey, signature, ts } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!ts)        return _err(400, 'MISSING_FIELD', 'ts 필수', corsHeaders);
+
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum) || Math.abs(Date.now() - tsNum) > 120000) {
+    return _err(401, 'TS_EXPIRED', '서명 시각이 만료되었습니다', corsHeaders);
+  }
+
+  const sigMsg = `${guid}:${pubkey}:${ts}`;
+  const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  let existing;
+  try {
+    existing = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!existing) return _err(404, 'PROFILE_NOT_FOUND', '', corsHeaders);
+
+  // TOFU: /auth/issue와 동일한 규칙 — 이 guid에 이미 핀된 키가 있는데
+  // 다른 키로 서명했다면 그 계정의 정당한 기기가 아니다.
+  if (existing.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
+    return _err(403, 'PUBKEY_MISMATCH', '이 기기는 해당 계정의 등록된 기기가 아닙니다', corsHeaders);
+  }
+
+  try {
+    await _l1PatchProfile(env, existing.id, { backup_confirmed_at: new Date().toISOString() });
+  } catch (e) {
+    return _err(502, 'L1_PATCH_FAILED', 'L1 갱신 실패: ' + e.message, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
 
