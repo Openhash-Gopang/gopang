@@ -148,3 +148,17 @@ class_name = "DeviceLinkSessionDO"
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["DeviceLinkSessionDO"]
+
+# 2026-08-31 신설 — 공문 메일(기관과의 이메일 왕래) 발신용. worker.js
+# handleAdminLetterSendEmail이 env.EMAIL.send()로 호출한다.
+# ★ 배포 전 필수 — 코드만으로는 끝나지 않는다, 아래 두 가지는 Cloudflare
+# 대시보드에서 1회 수동 설정해야 한다(로컬/CLI로 불가):
+#   1. Workers Paid 플랜 필요 (Email Sending은 Free 플랜 미지원)
+#   2. hondi.net 존 → Email → Email Routing에서 gov-mail.hondi.net
+#      서브도메인에 대해 "Catch-all" 또는 letter-*@gov-mail.hondi.net
+#      패턴 라우팅 규칙을 만들고, 대상을 이 Worker(hondi-proxy)로 지정
+#      — 이게 없으면 인바운드 메일이 email() 핸들러에 전혀 도달하지 않는다.
+#   hondi.net 루트 도메인의 기존 MX(다우오피스, mx1~3.daouoffice.com)는
+#   건드리지 않는다 — gov-mail 서브도메인에만 별도 MX가 붙는다.
+[[send_email]]
+name = "EMAIL"

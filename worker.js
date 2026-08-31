@@ -11747,6 +11747,95 @@ export default {
     ctx.waitUntil(_runExpertPersonaBillingSweep(env).catch(e => console.error('[ExpertPersonaBilling] 스윕 전체 실패:', e.message)));
   },
 
+  // ── 공문 메일 수신 (2026-08-31 신설) ─────────────────────────────
+  // Cloudflare Email Routing 규칙(대시보드에서 별도 설정 필요 — 아래
+  // wrangler.toml 주석 참고)이 gov-mail.hondi.net으로 온 메일을 이
+  // 핸들러로 넘긴다. hondi의 기존 AI 핸드오프 메시지 저장소(ai_messages,
+  // src/worker/ai-chat-handler.js가 이미 쓰던 것)를 그대로 재사용해서
+  // "이메일도 결국 AI-to-AI 메시지"라는 원칙을 지킨다 — 새 컬렉션을
+  // 만들지 않았다.
+  //
+  // 수신 주소 관례: letter-<official_letters의 id>@gov-mail.hondi.net
+  // 이 패턴으로 어느 공문 스레드에 대한 회신인지 식별한다. 패턴에
+  // 맞지 않는 주소로 온 메일은 정중히 거절한다(스팸 백스캐터 방지 —
+  // Cloudflare 권장 패턴).
+  //
+  // ⚠️ 정직한 한계 표시 — 다음은 이번 배치에 포함하지 않았다:
+  //   1. MIME 파싱은 아래 _extractPlainTextBody()가 처리하는 단순
+  //      text/plain·multipart/alternative 케이스만 정확하다. HTML
+  //      전용 메일, base64/quoted-printable 인코딩 본문, 첨부파일
+  //      추출은 아직 처리하지 않는다(본문에 인코딩된 문자열이 그대로
+  //      들어갈 수 있음) — postal-mime 같은 라이브러리 도입이 필요한
+  //      후속 작업이다.
+  //   2. 기존 채팅 UI(chat-shell.js)가 이 ai_messages 세션을 실제로
+  //      렌더링하도록 연결하는 프런트엔드 작업은 별도다. 이번 배치는
+  //      데이터가 올바른 자리(ai_messages)에 올바른 형태로 쌓이는
+  //      것까지만 구현했다.
+  async email(message, env, ctx) {
+    const toAddr = (message.to || '').toLowerCase();
+    const m = toAddr.match(/^letter-([a-z0-9_-]+)@/i);
+    if (!m) {
+      message.setReject('Unrecognized recipient — expected letter-<id>@gov-mail.hondi.net');
+      return;
+    }
+    const letterId = m[1];
+
+    let rawText = '';
+    try { rawText = await new Response(message.raw).text(); }
+    catch (e) { console.error('[email] raw 읽기 실패:', e.message); return; }
+
+    const subject = message.headers?.get?.('subject') || '(제목 없음)';
+    const bodyText = _extractPlainTextBody(rawText);
+    const fromAddr = message.from || 'unknown@unknown';
+
+    ctx.waitUntil((async () => {
+      const kv = env.AI_SETUP_SEALS_KV;
+
+      // ① ai_messages에 수신 기록 (AI-to-AI 메시지 원칙 재사용)
+      await _writeAiMessage(env, {
+        session_id: `email:${letterId}`,
+        sender_guid: `ext:${_slugifyEmailAddr(fromAddr)}`,
+        receiver_guid: 'hondi-gov-mail',
+        content_original: `[제목] ${subject}\n\n${bodyText}`,
+        content_type: 'email_inbound',
+      }).catch(e => console.error('[email] ai_messages 기록 실패:', e.message));
+
+      // ② 공문 발송 기록(hondi:official_letters) 갱신 — 수신 날짜·내용
+      if (kv) {
+        try {
+          const raw = await kv.get('hondi:official_letters');
+          const letters = raw ? JSON.parse(raw) : [];
+          const idx = letters.findIndex(l => l.id === letterId);
+          if (idx >= 0) {
+            letters[idx].received_date = new Date().toISOString().slice(0, 10);
+            letters[idx].received_content = `${subject} — ${bodyText.slice(0, 200)}`;
+            await kv.put('hondi:official_letters', JSON.stringify(letters));
+          } else {
+            console.warn('[email] official_letters에 없는 id:', letterId);
+          }
+        } catch (e) { console.error('[email] official_letters 갱신 실패:', e.message); }
+      }
+
+      // ③ AI 요약(선택적 — DEEPSEEK_API_KEY 없으면 조용히 건너뜀)
+      if (env.DEEPSEEK_API_KEY) {
+        const summary = await deepseekChatText({
+          env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+          messages: [{ role: 'user', content: `다음은 기관에서 온 회신 이메일입니다. 핵심 내용과 다음에 취해야 할 행동을 2~3문장으로 요약해주세요.\n\n제목: ${subject}\n\n${bodyText}` }],
+          max_tokens: 300, temperature: 0.3, timeoutMs: 15000, fallbackText: '',
+        });
+        if (summary) {
+          await _writeAiMessage(env, {
+            session_id: `email:${letterId}`,
+            sender_guid: 'hondi-ai',
+            receiver_guid: 'hondi-gov-mail',
+            content_original: summary,
+            content_type: 'email_ai_summary',
+          }).catch(e => console.error('[email] AI 요약 기록 실패:', e.message));
+        }
+      }
+    })());
+  },
+
   async fetch(request, env, ctx) {
     const corsOrigin = getCorsOrigin(request);
 
@@ -12443,6 +12532,10 @@ export default {
       return handleAdminLettersGet(request, env, corsHeaders);
     if (pathname === '/admin/letters' && request.method === 'POST')
       return handleAdminLettersSet(request, env, corsHeaders);
+    // POST /admin/letters/send-email — 공문 메일 실제 발송(env.EMAIL
+    // send_email 바인딩) + ai_messages/official_letters 기록.
+    if (pathname === '/admin/letters/send-email' && request.method === 'POST')
+      return handleAdminLetterSendEmail(request, env, corsHeaders);
     // (2026-07-14: /free-quota-status 재도입 — "가입자당 100원 무료 한도"
     //  정책으로 복귀. 한도값은 FREE_QUOTA_KRW_LIMIT=100 참조.)
     if (pathname === '/free-quota-status' && request.method === 'GET')
@@ -28155,6 +28248,7 @@ async function handleAdminLettersSet(request, env, corsHeaders) {
     institution: String(l.institution || '').slice(0, 200),
     title: String(l.title || '').slice(0, 300),
     link: String(l.link || '').slice(0, 500),
+    email: String(l.email || '').slice(0, 200),
     sent_date: String(l.sent_date || ''),
     received_date: String(l.received_date || ''),
     received_content: String(l.received_content || '').slice(0, 2000),
@@ -28163,6 +28257,114 @@ async function handleAdminLettersSet(request, env, corsHeaders) {
   await kv.put('hondi:official_letters', JSON.stringify(letters));
 
   return new Response(JSON.stringify({ ok: true, letters, saved_at: new Date().toISOString() }),
+    { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 공문 메일 발송/수신 공용 헬퍼 (2026-08-31 신설)
+// ═══════════════════════════════════════════════════════════
+
+// 매우 단순한 MIME 본문 추출기 — text/plain 단일 파트, 또는
+// multipart/alternative 안의 첫 text/plain 파트만 정확히 처리한다.
+// base64/quoted-printable 디코딩은 하지 않는다(위 email() 핸들러
+// 주석의 "정직한 한계 표시" 참고) — 인코딩된 본문은 그 형태 그대로
+// 반환되므로, AI 요약 품질이 떨어질 수 있다는 걸 알고 쓸 것.
+function _extractPlainTextBody(rawMime) {
+  const headerEnd = rawMime.search(/\r?\n\r?\n/);
+  if (headerEnd < 0) return rawMime.trim();
+  const headerBlock = rawMime.slice(0, headerEnd);
+  let body = rawMime.slice(headerEnd).replace(/^\r?\n\r?\n/, '');
+
+  const ctMatch = headerBlock.match(/^content-type:\s*multipart\/[^;]+;[^\n]*boundary="?([^"\r\n;]+)"?/im);
+  if (ctMatch) {
+    const boundary = ctMatch[1];
+    const parts = body.split(`--${boundary}`).slice(1, -1);
+    for (const part of parts) {
+      if (/content-type:\s*text\/plain/i.test(part)) {
+        const partHeaderEnd = part.search(/\r?\n\r?\n/);
+        if (partHeaderEnd >= 0) {
+          return part.slice(partHeaderEnd).replace(/^\r?\n\r?\n/, '').trim();
+        }
+      }
+    }
+    return body.trim(); // text/plain 파트를 못 찾으면 원본이라도 반환
+  }
+  return body.trim();
+}
+
+// 이메일 주소를 ai_messages.sender_guid 자리에 넣을 수 있는 안전한
+// 문자열로 변환. 실제 지갑 guid가 아니라 "외부 발신자"임을 ext: 접두사로
+// 표시한다 — 이 값이 profiles 컬렉션과 매칭될 거라 가정하는 코드가
+// 어딘가 생기면 이 접두사로 걸러낼 수 있다.
+function _slugifyEmailAddr(addr) {
+  return String(addr).toLowerCase().replace(/[^a-z0-9@.]/g, '').slice(0, 120);
+}
+
+// ai-chat-handler.js의 ai_messages POST 관례를 그대로 재사용하는 공용
+// 헬퍼 — email() 핸들러(수신)와 handleAdminLetterSendEmail(발신) 양쪽이
+// 같은 코드를 복붙하지 않도록 묶었다.
+async function _writeAiMessage(env, { session_id, sender_guid, receiver_guid, content_original, content_type }) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id, sender_guid, receiver_guid, content_original, content_type }),
+  });
+  if (!res.ok) throw new Error(`L1 ai_messages 기록 실패 (HTTP ${res.status})`);
+  return res.json().catch(() => null);
+}
+
+// POST /admin/letters/send-email — 관리자 패널에서 공문 메일 발송.
+// body: { letter_id, to, subject, text }
+// env.EMAIL(send_email 바인딩, wrangler.toml)로 실제 발송하고,
+// ai_messages에 email_outbound로 기록 + official_letters.sent_date를
+// 채운다(비어 있을 때만 — 이미 발송 기록이 있으면 덮어쓰지 않는다).
+async function handleAdminLetterSendEmail(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { letter_id, to, subject, text } = body;
+  if (!letter_id || !to || !subject || !text) {
+    return _err(400, 'MISSING_FIELD', 'letter_id, to, subject, text 필수', corsHeaders);
+  }
+  if (!env.EMAIL) {
+    return _err(500, 'EMAIL_BINDING_MISSING',
+      'send_email 바인딩이 설정되지 않았습니다 — wrangler.toml 확인 및 재배포 필요', corsHeaders);
+  }
+
+  const fromAddr = `letter-${letter_id}@gov-mail.hondi.net`;
+  try {
+    await env.EMAIL.send({
+      to, from: { email: fromAddr, name: '혼디 (AI City Inc.)' }, subject, text,
+    });
+  } catch (e) {
+    return _err(502, 'EMAIL_SEND_FAILED', '메일 발송 실패: ' + e.message, corsHeaders);
+  }
+
+  await _writeAiMessage(env, {
+    session_id: `email:${letter_id}`,
+    sender_guid: 'hondi-gov-mail',
+    receiver_guid: `ext:${_slugifyEmailAddr(to)}`,
+    content_original: `[제목] ${subject}\n\n${text}`,
+    content_type: 'email_outbound',
+  }).catch(e => console.error('[send-email] ai_messages 기록 실패:', e.message));
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (kv) {
+    try {
+      const raw = await kv.get('hondi:official_letters');
+      const letters = raw ? JSON.parse(raw) : [];
+      const idx = letters.findIndex(l => l.id === letter_id);
+      if (idx >= 0 && !letters[idx].sent_date) {
+        letters[idx].sent_date = new Date().toISOString().slice(0, 10);
+        await kv.put('hondi:official_letters', JSON.stringify(letters));
+      }
+    } catch (e) { console.error('[send-email] official_letters 갱신 실패:', e.message); }
+  }
+
+  return new Response(JSON.stringify({ ok: true, from: fromAddr, sent_at: new Date().toISOString() }),
     { status: 200, headers: corsHeaders });
 }
 
