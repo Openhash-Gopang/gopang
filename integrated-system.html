@@ -147,6 +147,60 @@ body {
 
 .refs { font-size: 12.5px; color: var(--text4); line-height: 2; }
 .refs li { margin-bottom: 2px; }
+
+/* ── 2026-08-31 추가 — 다른 형제 페이지(highlights/*.html 등)에는 있지만
+   이 페이지에는 누락되어 있던 핵심 클래스. 사이트 전체 <section> 카드
+   레이아웃, 비교표(cmp-table), 하단 footer가 전부 이 규칙 없이는
+   브라우저 기본 스타일로만 렌더링되어 다른 페이지와 이질적으로
+   보였다 — highlights/gdp-growth.html·desktop.html과 동일한 정의를
+   그대로 가져와 통일한다. ── */
+.section { padding: 64px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag {
+  display: inline-block; font-size: 12px; font-weight: 700; color: var(--brand-dk);
+  background: var(--brand-bg); padding: 4px 10px; border-radius: 99px; margin-bottom: 12px;
+}
+.section-title { font-size: 26px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.section-title strong { font-weight: 600; }
+.section-body { font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75; }
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.section-body p b { color: var(--brand-dk); font-weight: 600; }
+
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+
+.cmp-summary { margin-top: 18px; padding: 16px 20px; background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg); font-size: 14px; line-height: 1.8; color: var(--text); font-weight: 400; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border); background: white;
+  padding: 36px 24px;
+}
+.footer-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+}
+.footer-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Pretendard', sans-serif; font-size: 14px; font-weight: 500; color: var(--text);
+}
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a {
+  color: var(--text3); text-decoration: none; font-size: 14px; font-weight: 400;
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--brand); }
+.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'Pretendard', sans-serif; }
+@media (max-width: 680px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
 </style>
 </head>
 <body>
