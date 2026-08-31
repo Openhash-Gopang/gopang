@@ -197,6 +197,7 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
     <div class="svc-tab" data-svc="ksearch">K-Search</div>
     <div class="svc-tab" data-svc="kbiz">K-Biz</div>
     <div class="svc-tab" data-svc="kplan">K-Plan</div>
+    <div class="svc-tab" data-svc="kwatch">K-Watch</div>
   </div>
 
   <div class="svc-content" id="svcContent">
@@ -1554,6 +1555,37 @@ var SVC_CONTENT = {
       </div>
       <p class="svc-note" style="margin-top:14px;color:var(--text4);font-size:12px;">이 탭의 정본(source of truth)은 <code>prompts/k-plan_v1_0.md</code>입니다 — 이 문서를 고칠 때는 반드시 그 문서를 먼저 갱신하세요.</p>
     </div>
+  `,
+  kwatch: `
+    <div class="svc-detail">
+      <h2>K-Watch — 시민 신고, 접수부터 진행 상황 공개까지</h2>
+      <span class="svc-badge svc-badge-design">설계 단계</span>
+      <p class="svc-lead">사용자가 목격하거나 겪은, 국가 또는 공동체의 대응이 필요한 사건을 관련 기관에 신고하고 대응을 개시시키는 AI입니다. 강도·절도 같은 범죄뿐 아니라 길가의 쓰레기, 도로 위 동물 사체, 배기가스가 심한 차량, 갑작스런 끼어들기, 식당의 고객 차별, 진상 고객 행위 등 부당·불법·편법·오염·파손으로 분류되는 모든 사건이 대상입니다. 신고로 끝나지 않고 대응 기관을 선정하고, 대응 프로세스를 개시시키고, 진행 상황을 대중에 공개합니다.</p>
+
+      <h3>K-Police와 다른 점 — 제3자 목격 신고, 범위의 포괄성, 대중 공개</h3>
+      <p class="svc-note">K-Police는 대화 중 사용자 본인의 위험 신호를 자동 감지해 신고합니다. K-Watch는 사용자가 제3자로서 목격한 사건을 다루며, 범죄를 넘어 생활 속 부당·불법·편법·오염·파손까지 다룹니다. 그리고 대응 기관 선정부터 진행 상황의 대중 공개까지 책임집니다 — 예를 들어 불법 촬영 범죄를 목격해 신고하면, 그 신고가 관계 기관에 의해 어떻게 처리되고 있는지 다중에게 공개하고, 신고자에게는 지속적으로 알림을 전달합니다.</p>
+
+      <h3>처리 흐름 — AC 표준 5단계 체인을 그대로 사용합니다</h3>
+      <p class="svc-note">K-Watch는 K-Plan과 마찬가지로 새로운 파이프라인을 따로 만들지 않고, K-Intent → K-Compose → K-Execute → K-Deliver → K-Report 5단계 체인을 그대로 씁니다. K-Watch만의 차별점은 K-Report 이후 자동으로 이어지는 반추와 경험의 공유입니다.</p>
+      <ol class="svc-flow">
+        <li><b>K-Intent — 신고 내용 파악 (최우선)</b> — 신고 내용의 정확한 파악이 가장 먼저입니다. 사용자가 제공한 문자·영상·음성·소리 등을 종합해 실제로 무슨 일이 있었는지 파악하며, 추측하거나 넘겨짚지 않습니다. 상황이 불분명하면 그럴듯한 해석 하나를 임의로 고르지 않고 반드시 되물어 확증한 뒤에야 다음 단계로 넘어갑니다. 사건의 성격(범죄/생활 신고)과 심각도도 함께 분류합니다.</li>
+        <li><b>K-Compose — 대응 기관 선정</b> — 자료를 곧바로 접수하지 않고 어느 기관이 맞는지부터 판단합니다. 하나의 사건에 여러 기관이 걸쳐 있으면(예: 도로 위 동물 사체 → 지자체 환경과 + 도로관리청) 병행 신고 여부도 판단합니다.</li>
+        <li><b>K-Execute — 신고 접수 실행</b> — 선정된 기관의 신고 창구에 문자·영상·음성 증거를 첨부해 접수하고, 접수 번호를 발급받습니다.</li>
+        <li><b>K-Deliver — 결과 정리</b> — 접수 확인, 담당 부서 배정, 처리 진행 단계를 한눈에 볼 수 있게 정리합니다. 여러 기관에 병행 신고한 경우 기관별로 구분해 보여줍니다.</li>
+        <li><b>K-Report — 기록 및 진행 상황 공개</b> — PDV에 신고 이력을 기록하고, 진행 상황을 대중에 공개하며, 신고자에게는 지속적으로 알림을 전달합니다.</li>
+      </ol>
+
+      <h3>반추 — 신고가 끝나도 K-Watch의 일은 끝나지 않습니다</h3>
+      <p class="svc-note">K-Report로 기록이 남으면 반추 단계가 자동으로 트리거됩니다. 신고 처리 결과를 대조해 <b>분류 결함</b>(애초에 잘못된 기관을 선정했는가), <b>처리 지연·미조치</b>(기관 선정은 맞았으나 대응이 늦었는가), <b>외부 변수</b>(관할 변경 등 예측 불가능한 요인이었는가) 중 어디에 해당하는지 분류하고, 분류 결함이면 같은 오판이 재발하지 않도록 반영합니다.</p>
+
+      <h3>경험의 공유 — 한 사람의 신고 경험이 모두의 자산이 됩니다</h3>
+      <p class="svc-note">반추에서 나온 교훈은 개인 식별 정보를 제외한 모든 경험이 집단 학습 저장소에 쌓여, 다른 사용자의 K-Watch도 참조할 수 있습니다. 고유명사는 상위 카테고리로 추상화됩니다 — 예를 들어 "제주시 한림읍 A식당에서 고객 차별을 신고했다"는 "한 지역 식당에서 고객 차별을 신고했다"로 추상화됩니다. 이 저장소 역시 Openhash 위변조 방지 원칙 위에서 운영됩니다.</p>
+
+      <div class="svc-callout important">
+        아직 없는 기능 — 기관 시스템에 대한 실제 자동 접수 연동(현재는 접수 서식 작성과 안내까지만), 신고 처리 결과의 자동 확인, 신고 대상자에 대한 신원 확인·특정은 지원하지 않습니다. 이 문서는 K-Plan(prompts/k-plan_v1_0.md)과 동일한 구성으로 설계된 초안이며, 아직 실제 서비스 백엔드에 연결되지 않았습니다.
+      </div>
+      <p class="svc-note" style="margin-top:14px;color:var(--text4);font-size:12px;">이 탭의 정본(source of truth)은 <code>prompts/k-watch_v1_0.md</code>입니다 — 이 문서를 고칠 때는 반드시 그 문서를 먼저 갱신하세요.</p>
+    </div>
   `
 };
 var SVC_LABEL = {
@@ -1561,7 +1593,7 @@ var SVC_LABEL = {
   khealth: 'K-Health', kschool: 'K-School', gdc: 'GDC', kstock: 'K-Stock',
   kinsurance: 'K-Insurance', ktax: 'K-Tax', kmarket: 'K-Market', ktraffic: 'K-Traffic',
   klogistics: 'K-Logistics', kcleaner: 'K-Cleaner', kpublic: 'K-Public', kdemocracy: 'K-Democracy',
-  ktelecom: 'K-Telecom', ksearch: 'K-Search', kbiz: 'K-Biz', kplan: 'K-Plan'
+  ktelecom: 'K-Telecom', ksearch: 'K-Search', kbiz: 'K-Biz', kplan: 'K-Plan', kwatch: 'K-Watch'
 };
 
 function renderSvc(key) {

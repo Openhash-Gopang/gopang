@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Watch 아키텍처 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET (routing-architecture.html과 동일 토큰 재사용) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --amber:     #f59e0b;
+  --amber-lt:  #fffbeb;
+  --red:       #ef4444;
+  --red-lt:    #fef2f2;
+  --green:     #16a34a;
+  --green-lt:  #f0fdf4;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 56px 24px; border-bottom: 1px solid var(--border); }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--brand-dk); background: var(--brand-bg); padding: 4px 10px; border-radius: 99px; margin-bottom: 12px; }
+.section-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 18px; line-height: 1.4; }
+.section-title strong { color: var(--brand-dk); }
+.section-body p { color: var(--text3); font-size: 14.5px; margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+
+/* ── 다이어그램 컨테이너 ── */
+.diagram-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px; margin: 24px 0; box-shadow: var(--shadow-sm); overflow-x: auto;
+}
+.diagram-wrap svg { display: block; margin: 0 auto; min-width: 560px; }
+
+/* SVG 내부 재사용 클래스 */
+.node-box { fill: #fff; stroke: var(--border2); stroke-width: 1.4; }
+.node-box.brand { fill: var(--brand-bg); stroke: var(--brand); }
+.node-box.amber { fill: var(--amber-lt); stroke: var(--amber); }
+.node-box.green { fill: var(--green-lt); stroke: var(--green); }
+.node-box.gate { fill: #fff; stroke: var(--text4); stroke-dasharray: 3 3; }
+.node-text { font-family: 'Pretendard', sans-serif; fill: var(--text2); font-size: 13px; text-anchor: middle; }
+.node-text.title { font-weight: 700; fill: var(--text); font-size: 13.5px; }
+.node-text.small { font-size: 11px; fill: var(--text4); }
+.edge-line { stroke: var(--text4); stroke-width: 1.6; fill: none; }
+.edge-line.no { stroke: var(--red); }
+.edge-line.yes { stroke: var(--green); }
+.edge-line.feedback { stroke: var(--text4); stroke-width: 1.4; stroke-dasharray: 5 4; }
+.edge-label { font-family: 'Pretendard', sans-serif; font-size: 11px; fill: var(--text4); }
+.edge-label.no { fill: var(--red); font-weight: 600; }
+.edge-label.yes { fill: var(--green); font-weight: 600; }
+
+/* flow-list (routing-architecture.html과 동일) */
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li {
+  counter-increment: flow; position: relative; padding: 0 0 26px 44px;
+  border-left: 2px solid var(--border); margin-left: 15px;
+}
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code {
+  background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px;
+}
+
+.callout-info {
+  background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg);
+  padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8;
+}
+.callout-warn {
+  background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg);
+  padding: 18px 20px; margin: 20px 0; font-size: 13px; color: var(--text2); line-height: 1.8;
+}
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2.1; }
+.refs li { margin-bottom: 2px; }
+.refs code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; color: var(--text3); }
+
+.tag-chip { display: inline-block; background: var(--bg-subtle); border: 1px solid var(--border2); border-radius: 5px; padding: 1px 7px; font-size: 12px; color: var(--text2); font-family: monospace; }
+</style>
+</head>
+<body>
+<script>
+window.PAGE_HERO = {
+  badge: 'K-Watch 아키텍처',
+  l1: '신고 하나가',
+  l2: 'K-Intent부터 경험의 공유까지 이어지는 경로',
+  sub: 'K-Watch는 K-Plan과 마찬가지로 별도 파이프라인을 새로 만들지 않고, 혼디의 표준 5단계 오케스트레이션 체인(K-Intent → K-Compose → K-Execute → K-Deliver → K-Report)을 그대로 씁니다. 이 페이지는 그 체인 위에 K-Watch만의 차별점인 응급 우선 전환·반추·경험의 공유가 어떻게 이어지는지를 하나의 그림으로 정리한 것입니다.',
+  actions: []
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<!-- ══════════════════ 1. 전체 흐름 개요 (일러스트) ══════════════════ -->
+<section class="section" id="overview">
+  <div class="section-inner">
+    <span class="section-tag">개요</span>
+    <h2 class="section-title">신고 하나가 <strong>K-Report</strong>까지, 그리고 그 다음</h2>
+    <div class="section-body">
+      <p>K-Watch의 처리 흐름 자체는 다른 실행형 모듈과 같은 AC 표준 체인입니다
+      — 다만 그 체인에 들어가기 전에, 생명·신체에 대한 즉각적 위험인지부터
+      가리는 응급 게이트가 있습니다. 위험이 아닌 사안에 한해 K-Intent가
+      신고 내용을 파악하고, K-Compose가 대응 기관을 선정하고, K-Execute가
+      접수를 실행하고, K-Deliver가 결과를 정리하고, K-Report가 기록과
+      공개를 담당합니다. K-Watch를 구분 짓는 것은 이 체인이 아니라, 맨
+      앞의 응급 게이트와 K-Report 이후 자동으로 이어지는
+      <strong>반추</strong>·<strong>경험의 공유</strong>입니다 — 뒤의 두
+      단계는 다시 K-Compose의 판단 근거로 흘러들어가는 순환 구조입니다.</p>
+    </div>
+
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 720 1440" xmlns="http://www.w3.org/2000/svg" role="img"
+           aria-label="사용자의 신고 발화가 생명·신체 위험 게이트, K-Intent 신고 내용 파악 게이트, K-Compose 대응 기관 선정 게이트, K-Execute, K-Deliver, K-Report를 거쳐 반추와 경험의 공유(집단 학습 저장소)로 이어지고, 그 결과가 다시 K-Compose로 피드백되는 순서도">
+
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text4)"></path>
+          </marker>
+          <marker id="arrow-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--red)"></path>
+          </marker>
+          <marker id="arrow-yes" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--green)"></path>
+          </marker>
+        </defs>
+
+        <!-- 0. 사용자 신고 발화 -->
+        <rect x="260" y="10" width="200" height="42" rx="21" class="node-box brand"></rect>
+        <text x="360" y="36" class="node-text title">사용자 신고 발화</text>
+
+        <path d="M360,52 L360,82" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 1. 응급 게이트 (최우선) -->
+        <polygon points="360,84 470,134 360,184 250,134" class="node-box gate"></polygon>
+        <text x="360" y="128" class="node-text title">생명·신체</text>
+        <text x="360" y="144" class="node-text">위험 신호인가?</text>
+
+        <path d="M470,134 L560,134" class="edge-line no" marker-end="url(#arrow-no)"></path>
+        <text x="516" y="124" class="edge-label no">Yes</text>
+        <rect x="560" y="110" width="140" height="48" rx="8" class="node-box amber"></rect>
+        <text x="630" y="130" class="node-text title">즉시 K-119·K-Police</text>
+        <text x="630" y="146" class="node-text small">이하 전부 건너뜀</text>
+
+        <path d="M360,184 L360,214" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="378" y="202" class="edge-label yes">No</text>
+
+        <!-- 2. K-Intent -->
+        <rect x="170" y="216" width="380" height="78" rx="10" class="node-box brand"></rect>
+        <text x="360" y="240" class="node-text title">K-Intent — 신고 내용 파악</text>
+        <text x="360" y="258" class="node-text">문자·영상·음성·소리 종합, 추측하지 않는다</text>
+        <text x="360" y="274" class="node-text small">사건 성격(범죄/생활 신고)·심각도 1차 분류</text>
+
+        <path d="M360,294 L360,324" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 3. 명확성 게이트 -->
+        <polygon points="360,326 470,376 360,426 250,376" class="node-box gate"></polygon>
+        <text x="360" y="372" class="node-text title">신고 내용이</text>
+        <text x="360" y="388" class="node-text">명확한가?</text>
+
+        <path d="M250,376 C120,376 120,242 170,242" class="edge-line no" marker-end="url(#arrow-no)" fill="none"></path>
+        <text x="70" y="308" class="edge-label no">No · 되물어 확증</text>
+
+        <path d="M360,426 L360,456" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="378" y="444" class="edge-label yes">Yes</text>
+
+        <!-- 4. K-Compose -->
+        <rect x="150" y="458" width="420" height="76" rx="10" class="node-box brand"></rect>
+        <text x="360" y="482" class="node-text title">K-Compose — 대응 기관 선정 (핵심 원칙)</text>
+        <text x="360" y="500" class="node-text">곧바로 접수하지 않고 적절한 기관부터 판단</text>
+        <text x="360" y="516" class="node-text small">여러 기관이 걸치면 병행 신고 여부 판단</text>
+
+        <path d="M360,534 L360,564" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 5. 기관 게이트 -->
+        <polygon points="360,566 470,616 360,666 250,616" class="node-box gate"></polygon>
+        <text x="360" y="610" class="node-text title">단일 기관으로</text>
+        <text x="360" y="626" class="node-text">충분한가?</text>
+
+        <path d="M470,616 L560,616" class="edge-line no" marker-end="url(#arrow-no)"></path>
+        <text x="516" y="606" class="edge-label no">복수</text>
+        <rect x="560" y="588" width="140" height="64" rx="8" class="node-box amber"></rect>
+        <text x="630" y="610" class="node-text title">병행 신고 대상 확정</text>
+        <text x="630" y="626" class="node-text small">기관별로 구분해 접수</text>
+        <text x="630" y="640" class="node-text small">예: 환경과 + 도로관리청</text>
+
+        <path d="M630,652 C630,732 400,742 362,792" class="edge-line" marker-end="url(#arrow)" fill="none"></path>
+
+        <path d="M360,666 L360,792" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="380" y="732" class="edge-label yes">단일</text>
+
+        <!-- 6. K-Execute -->
+        <rect x="150" y="794" width="420" height="78" rx="10" class="node-box"></rect>
+        <text x="360" y="818" class="node-text title">K-Execute — 신고 접수 실행</text>
+        <text x="360" y="836" class="node-text">선정된 기관에 문자·영상·음성 증거 첨부해 접수</text>
+        <text x="360" y="852" class="node-text small">접수 번호(추적 식별자) 발급</text>
+
+        <path d="M360,872 L360,902" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 7. K-Deliver -->
+        <rect x="150" y="904" width="420" height="64" rx="10" class="node-box"></rect>
+        <text x="360" y="928" class="node-text title">K-Deliver — 결과 정리</text>
+        <text x="360" y="946" class="node-text small">접수·조사중·조치완료 등 진행 단계 정리</text>
+
+        <path d="M360,968 L360,998" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 8. K-Report -->
+        <rect x="150" y="1000" width="420" height="64" rx="10" class="node-box"></rect>
+        <text x="360" y="1024" class="node-text title">K-Report — 기록 및 진행 상황 공개</text>
+        <text x="360" y="1042" class="node-text small">PDV 기록, 대중 공개, 신고자 지속 알림</text>
+
+        <path d="M360,1064 L360,1094" class="edge-line" marker-end="url(#arrow)"></path>
+        <text x="410" y="1084" class="edge-label">자동 트리거</text>
+
+        <!-- 9. 반추 -->
+        <rect x="110" y="1096" width="500" height="92" rx="10" class="node-box amber"></rect>
+        <text x="360" y="1120" class="node-text title">반추 — 자동 트리거 (강제, 선택 아님)</text>
+        <text x="360" y="1138" class="node-text">분류 결함 · 처리 지연·미조치 · 외부 변수로 원인 분류</text>
+        <text x="360" y="1154" class="node-text small">분류 결함이면 같은 오판이 재발하지 않도록 반영</text>
+        <text x="360" y="1170" class="node-text small">결과는 숨기지 않고 사용자에게 요약 보고</text>
+
+        <path d="M360,1188 L360,1218" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 10. PDV 반영 -->
+        <rect x="170" y="1220" width="380" height="56" rx="10" class="node-box"></rect>
+        <text x="360" y="1244" class="node-text title">PDV에 반영</text>
+        <text x="360" y="1260" class="node-text small">같은 사용자·유사 사건의 다음 K-Compose 근거로</text>
+
+        <path d="M170,1248 C40,1248 40,496 150,496" class="edge-line feedback" marker-end="url(#arrow)" fill="none"></path>
+        <text x="20" y="872" class="edge-label" transform="rotate(-90 20 872)">다음 신고에 반영</text>
+
+        <path d="M360,1276 L360,1306" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 11. 경험의 공유 -->
+        <rect x="140" y="1308" width="440" height="90" rx="12" class="node-box green"></rect>
+        <text x="360" y="1332" class="node-text title">경험의 공유 — 집단 학습 저장소</text>
+        <text x="360" y="1350" class="node-text">개인 식별 정보 제외 · 추상화된 패턴만 저장</text>
+        <text x="360" y="1366" class="node-text small">예: "A식당 고객 차별 신고" → "한 지역 식당 고객 차별 신고"</text>
+        <text x="360" y="1382" class="node-text small">Openhash 위변조 방지 원칙 위에서 운영</text>
+
+        <path d="M580,1332 C700,1332 700,496 570,496" class="edge-line feedback" marker-end="url(#arrow)" fill="none"></path>
+        <text x="700" y="872" class="edge-label" transform="rotate(-90 700 872)">다른 사용자의 K-Compose가 참조</text>
+
+      </svg>
+    </div>
+    <p class="section-body" style="color:var(--text4); font-size:12.5px; margin-top:-8px;">
+      ※ 실선 화살표는 기본 진행, 붉은 점선(No)은 게이트에서 되돌아가는
+      경로, 회색 점선 곡선은 즉시 진행이 아니라 이후 신고에 영향을 주는
+      피드백입니다. K-Watch 고유의 응급 전환·반추·경험의 공유가 없다면
+      이 다이어그램은 K-Intent에서 시작해 K-Report에서 끝나는, 다른
+      실행형 모듈과 동일한 5단계 체인입니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════ 2. 반추와 경험의 공유 상세 ══════════════════ -->
+<section class="section" style="background:var(--bg-alt)" id="retrospection">
+  <div class="section-inner">
+    <span class="section-tag">§1 · K-Watch 고유 단계</span>
+    <h2 class="section-title">체인의 <strong>앞과 뒤</strong>에서 갈리는 것</h2>
+    <div class="section-body">
+      <p>K-Intent~K-Report까지는 다른 실행형 모듈과 다르지 않습니다.
+      K-Watch를 구분 짓는 단계는 그 앞과 뒤입니다 — 체인에 들어가기
+      전의 응급 게이트, 그리고 K-Report 이후 이 사용자를 위한 반추와
+      모든 사용자를 위한 경험의 공유입니다.</p>
+    </div>
+
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">응급 게이트 — 체인에 들어가기 전, 최우선</div>
+        <div class="fl-desc">생명·신체에 대한 즉각적 위험이 감지되면
+        K-Intent의 상세 분류로 들어가기 전에 K-119·K-Police로 즉시
+        전환하고 이하 단계는 건너뜁니다. K-Compose의 "대응 기관
+        선정"과는 다른 판단입니다 — 이건 그 이전에, 지금 당장 생명이
+        위태로운 상황인지를 가르는 관문입니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">반추 — 강제, 선택 기능이 아님</div>
+        <div class="fl-desc">K-Report로 기록이 남으면 자동으로 트리거됩니다.
+        분류·선정(K-Intent·K-Compose)과 실제 처리 결과(K-Deliver·
+        K-Report)를 대조해 어긋난 지점을 <strong>분류 결함</strong>·
+        <strong>처리 지연·미조치</strong>·<strong>외부 변수</strong>
+        중 어디에 해당하는지 분류하고, 분류 결함이면 같은 오판이
+        재발하지 않도록 반영합니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">경험의 공유 — 개인 식별 정보를 제외한 모든 경험</div>
+        <div class="fl-desc">반추에서 나온 교훈은 이름·연락처 등을
+        제외하고 집단 학습 저장소에 쌓여 다른 사용자의 K-Compose도 참조할
+        수 있습니다. 추상화 규칙에 따라 고유명사는 상위 카테고리로
+        치환됩니다 — <code>"A식당에서 고객 차별을 신고했다"</code> →
+        <code>"한 지역 식당에서 고객 차별을 신고했다"</code>.</div>
+      </li>
+      <li>
+        <div class="fl-title">저장소의 위변조 방지 — Openhash</div>
+        <div class="fl-desc">집단 학습 저장소도 Openhash의 위변조 방지
+        원칙 위에서 운영됩니다. 쌓인 교훈이 사후에 조작되지 않는다는
+        보장이 있어야, 다른 사용자의 K-Compose가 그 교훈을 신뢰하고
+        기관 선정의 근거로 쓸 수 있습니다.</div>
+      </li>
+    </ol>
+
+    <div class="callout-info">
+      저장소의 교훈은 참고 자료이지 확정된 통계가 아닙니다 — K-Compose가
+      이를 인용할 때도 "유사 사례에서는 ~한 경향이 있었다" 같은 정성적
+      표현을 씁니다.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 3. 참고 문서 ══════════════════ -->
+<section class="section" id="references">
+  <div class="section-inner">
+    <span class="section-tag">참고</span>
+    <h2 class="section-title">이 페이지가 <strong>취합한 문서</strong></h2>
+    <div class="section-body">
+      <p>이 페이지는 K-Watch의 설계 원칙을 하나의 그림으로 종합한 것입니다.
+      <strong>정본(source of truth)은 언제나 <code>prompts/k-watch_v1_0.md</code>이며,
+      이 페이지는 그 스냅샷입니다.</strong> K-Watch의 원칙을 바꿀 때는
+      이 페이지가 아니라 반드시 그 문서를 먼저 고쳐야 합니다 — 그러지
+      않으면 문서 간 파편화가 발생합니다.</p>
+    </div>
+    <ul class="refs">
+      <li><code>prompts/k-watch_v1_0.md</code> — K-Watch 정체성·K-Intent~K-Report·반추·경험의 공유 원칙(정본, 설계 단계)</li>
+      <li><code>prompts/k-plan_v1_0.md</code> — K-Watch가 동일한 구성을 차용한 원본(K-Plan)</li>
+      <li><code>src/gopang/ai/call-ai.js</code> — K-Intent/K-Compose/K-Execute/K-Deliver/K-Report AC 표준 5단계 체인(K-Watch가 차용한 원본)</li>
+      <li><code>pages/k-services.html</code> <code>#kwatch</code> — K-Watch 탭 사용자 대면 초안</li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>
