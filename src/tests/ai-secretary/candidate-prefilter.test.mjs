@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-import { narrowCandidates, buildCandidateList, FALLBACK_DOMAINS } from '../../gopang/ai/candidate-prefilter.js';
+import { narrowCandidates, buildCandidateList, FALLBACK_DOMAINS, findGwpR2Winner } from '../../gopang/ai/candidate-prefilter.js';
 import { EXPERT_REGISTRY } from '../../gopang/ai/expert-registry.js';
 
 // gwp-registry.js는 ES 모듈이 아니라 window 전역에 붙는 브라우저 스크립트라
@@ -92,5 +92,48 @@ describe('narrowCandidates — topN·minScore 동작', () => {
     const { candidates: result } = narrowCandidates('법률 소송 계약서 판결 형사 민사', candidates, { topN: 3, minScore: 1 });
     assert.ok(result.length <= 3);
     for (const r of result) assert.ok(r.score >= 1 || FALLBACK_DOMAINS.includes(r.id));
+  });
+});
+
+describe('findGwpR2Winner — 근본 원인 회귀 테스트 (2026-08-31 신설)', () => {
+  // 배경: scenarios_routing_branches_20260806.json 라이브 재검증에서
+  // "부가세 신고를 처음 하는 사업자인데 어떻게 준비해야 하나요"가
+  // kbusiness(기대) 대신 ktax로 재차 흡수되는 게 재현됐다. AC-PRO-CORE
+  // 프롬프트에 이미 이 정확한 사례가 R2-AC 규칙 근거로 박혀 있었는데도
+  // 안 지켜졌다 — LLM 판단에 맡기는 한 반복될 문제이므로, 이 결정을
+  // 코드에서 확정해 프롬프트가 재판단하지 않도록 한다. 이 테스트는 그
+  // 확정 로직 자체가 실제 gwp-registry.js 트리거로 정확히 동작하는지
+  // 검증한다 — 회귀가 생기면(레지스트리 trigger가 바뀌어 더 이상
+  // 포함관계가 아니게 되면) 여기서 바로 드러나야 한다.
+  test('"부가세 신고를 처음 하는 사업자인데..." → kbusiness가 ktax를 이겨야 함', () => {
+    const utterance = '부가세 신고를 처음 하는 사업자인데 어떻게 준비해야 하나요';
+    const { candidates: result } = narrowCandidates(utterance, candidates, { topN: 8 });
+    const winner = findGwpR2Winner(result);
+    assert.ok(winner, 'R2 승자가 확정되지 않음 — gwp-registry.js의 trigger 포함관계가 깨졌을 수 있음');
+    assert.equal(winner.winnerId, 'kbusiness', `기대와 다른 승자: ${JSON.stringify(winner)}`);
+    assert.equal(winner.loserId, 'ktax');
+  });
+
+  test('GWP 후보가 하나뿐이면(경쟁 없음) null을 반환한다', () => {
+    const single = [{ id: 'klaw', kind: 'gwp', label: 'K-Law', score: 5, matched: ['판결'] }];
+    assert.equal(findGwpR2Winner(single), null);
+  });
+
+  test('점수는 다르지만 trigger가 서로 포함관계가 아니면(우연한 점수차) 확정하지 않는다', () => {
+    // 안전장치 검증 — 단순 점수차만으로 확정하면 오탐 위험이 있어,
+    // "포함관계"라는 근거가 없으면 null을 반환해야 한다(과잉확정 방지).
+    const noSubstring = [
+      { id: 'a', kind: 'gwp', label: 'A', score: 4, matched: ['가나다라'] },
+      { id: 'b', kind: 'gwp', label: 'B', score: 2, matched: ['마바'] },
+    ];
+    assert.equal(findGwpR2Winner(noSubstring), null);
+  });
+
+  test('동점이면 확정하지 않는다', () => {
+    const tie = [
+      { id: 'a', kind: 'gwp', label: 'A', score: 3, matched: ['가나다'] },
+      { id: 'b', kind: 'gwp', label: 'B', score: 3, matched: ['가나다'] },
+    ];
+    assert.equal(findGwpR2Winner(tie), null);
   });
 });

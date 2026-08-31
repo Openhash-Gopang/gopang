@@ -137,6 +137,58 @@ export function narrowCandidates(utterance, candidates, opts = {}) {
  * 그리고 gwp-registry.js가 ES 모듈이 아니라 window 전역이라 Node
  * import가 안 되는 제약도 자연히 피해간다).
  */
+/**
+ * R2-AC(§CORE, GWP끼리 충돌 시 우선순위) 결정을 여기서 미리 내린다
+ * (2026-08-31 신설 — 근본 원인 수정).
+ *
+ * ★ 배경 — 이 결정을 프롬프트 텍스트로만 맡기면 왜 안 되는가 ★
+ * AC-PRO-CORE §CORE에는 이미 "부가세 신고"(kbusiness, 구체) vs "부가세"
+ * (ktax, 일반) 사례가 R2-AC 규칙의 근거로 명시돼 있고, 이 정확한 문구
+ * 충돌을 고치겠다고 2026-08-06에 규칙까지 신설했다. 그런데도
+ * scenarios_routing_branches_20260806.json 라이브 재검증(2026-08-31)에서
+ * 동일 발화가 다시 ktax로 흡수되는 게 재현됐다 — kestate/ktelecom의
+ * 구식 [GWP:id] 오출력이 "25개 중 23개 습관을 프롬프트 경고 한 줄로
+ * 못 이긴다"고 이미 결론 낸 것과 완전히 같은 실패 유형이다: R2는
+ * "누가 더 구체적인 trigger로 매칭됐는가"라는 순수 문자열 사실이라
+ * 애초에 LLM의 판단(의미론적 이해)이 필요 없는 결정인데, 그걸 후보
+ * 목록만 던져주고 LLM이 매 턴 다시 판단하게 하니 익숙한 서비스(ktax)로
+ * 재차 흡수되는 것이다.
+ *
+ * 이 함수는 narrowCandidates()가 이미 계산해 둔 점수(트리거 길이 기반,
+ * §CORE R2축과 동일 원칙)를 사후에 한 번 더 사용해, GWP끼리 충돌하고
+ * 그 충돌이 "한쪽의 매칭 trigger가 다른 쪽의 매칭 trigger를 문자열로
+ * 포함하는" 명백한 구체성 우위일 때만 승자를 확정한다. 애매하면(포함
+ * 관계가 아니면) 아무것도 확정하지 않고 null을 반환해 기존처럼 AC의
+ * 판단에 맡긴다 — "잘못 확정하는 것이 확정 안 하는 것보다 나쁘다"는
+ * domain-classifier.js와 동일한 안전 원칙.
+ *
+ * @param {Array} narrowed - narrowCandidates()의 candidates 배열
+ *   ({id, kind, label, score, matched}[])
+ * @returns {{winnerId: string, loserId: string, winnerTrigger: string,
+ *   loserTrigger: string} | null}
+ */
+export function findGwpR2Winner(narrowed) {
+  const gwps = (narrowed || [])
+    .filter(c => c.kind === 'gwp' && c.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (gwps.length < 2) return null;
+  const [top, second] = gwps;
+  if (top.score <= second.score) return null; // 동점이면 확정하지 않음
+
+  // top의 매칭 trigger 중 하나가 second의 매칭 trigger 중 하나를
+  // 문자열로 포함해야만 "구체성 우위"로 인정한다(우연한 점수 차이가
+  // 아니라, 실제로 더 좁고 구체적인 표현이라는 근거가 있을 때만).
+  for (const wt of top.matched) {
+    for (const lt of second.matched) {
+      if (wt.includes(lt) && wt !== lt) {
+        return { winnerId: top.id, loserId: second.id, winnerTrigger: wt, loserTrigger: lt };
+      }
+    }
+  }
+  return null;
+}
+
 export function buildCandidateList(gwpRegistryArray, expertRegistryObject) {
   const gwpList = (gwpRegistryArray || [])
     .filter(e => e.status === 'active')

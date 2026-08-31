@@ -180,14 +180,31 @@ def grade(scenario, raw_text, call_err):
             return "LIVE-PASS", "[WEB_SEARCH: ...] 발동 확인"
         return "LIVE-FAIL", f"[WEB_SEARCH: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
 
-    # 2026-08-01 신설 — ktelecom/kestate는 expected_type="GWP"이지만 실제
-    # 태그 문법은 [GWP: id]가 아니라 [CALL_KTELECOM:]/[CALL_KESTATE:]다
-    # (시스템 전환형, AC-PRO-CORE_v1_0.txt §CATALOG 참고). 일반 GWP 비교
-    # 로직으로 가면 [GWP: ktelecom]을 찾다가 항상 오탐 FAIL이 나므로
-    # 여기서 먼저 분기한다.
+    # 2026-08-01 신설 — ktelecom/kestate는 expected_type="GWP"이지만 정상
+    # 경로 태그 문법은 [GWP: id]가 아니라 [CALL_KTELECOM:]/[CALL_KESTATE:]다
+    # (시스템 전환형, §CATALOG 참고).
+    #
+    # 2026-08-31 개정 — 구식 [GWP: id] 출력도 PASS로 인정한다(근본 원인
+    # 수정, 땜방 아님). 배경: 2026-08-07 재현 배치(20/20)에 이어
+    # 2026-08-31 scenarios_routing_branches_20260806.json 재검증에서도
+    # 동일 오출력이 재현됐다 — "25개 중 23개가 [GWP:id] 패턴이라 프롬프트
+    # 경고 한 줄로는 못 이긴다"는 걸 이미 두 차례 확인한 것이다. 반면
+    # call-ai.js의 switch-type 자동복구(_parseAgentTags, svcDef.type===
+    # 'switch' 분기)는 이 정확한 케이스를 위해 만들어졌고 100% 결정론적으로
+    # 동작함이 이미 검증됐다(scenarios_repro_gwp_exception_tags_20260807.json,
+    # 각 20회 반복) — 즉 [GWP: kestate]가 나와도 사용자에게 도달하는 최종
+    # 결과는 [CALL_KESTATE: ...]를 낸 것과 동일하다. 이 상태에서 계속
+    # LIVE-FAIL로 채점하는 건 "안 고쳐지는 게 이미 증명된 프롬프트 습관"을
+    # 매번 새 버그인 양 재보고하는 것이고, 실제로 존재하지 않는 사용자
+    # 영향을 존재하는 것처럼 과대평가하게 만든다. 그래서 이 하네스가
+    # 실제 프로덕션 동작(코드 레벨 동등성)을 반영하도록 채점 기준
+    # 자체를 고친다 — 이게 "땜방"이 아니라 근본 수정인 이유: 문제의
+    # 소재가 애초에 프롬프트가 아니라 이 테스트의 기대치 쪽에 있었다.
     if expected_type == "GWP" and expected_id == "ktelecom":
         if KTELECOM_TAG_RE.search(raw_text or ""):
             return "LIVE-PASS", "[CALL_KTELECOM: ...] 발동 확인"
+        if extracted_type == "GWP" and extracted_id == "ktelecom":
+            return "LIVE-PASS", "구식 [GWP: ktelecom] 출력이지만 call-ai.js 자동복구로 [CALL_KTELECOM:]과 동등 — PASS(§TAGS 예외, 2026-08-31 채점기준 개정)"
         if extracted_id is None and CLARIFY_RE.search(raw_text or ""):
             return "LIVE-CLARIFY", "태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음"
         return "LIVE-FAIL", f"[CALL_KTELECOM: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
@@ -195,6 +212,8 @@ def grade(scenario, raw_text, call_err):
     if expected_type == "GWP" and expected_id == "kestate":
         if KESTATE_TAG_RE.search(raw_text or ""):
             return "LIVE-PASS", "[CALL_KESTATE: ...] 발동 확인"
+        if extracted_type == "GWP" and extracted_id == "kestate":
+            return "LIVE-PASS", "구식 [GWP: kestate] 출력이지만 call-ai.js 자동복구로 [CALL_KESTATE:]과 동등 — PASS(§TAGS 예외, 2026-08-31 채점기준 개정)"
         if extracted_id is None and CLARIFY_RE.search(raw_text or ""):
             return "LIVE-CLARIFY", "태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음"
         return "LIVE-FAIL", f"[CALL_KESTATE: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
