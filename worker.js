@@ -12433,6 +12433,16 @@ export default {
       return handleAdminDefaultKeySet(request, env, corsHeaders);
     if (pathname === '/default-key' && request.method === 'GET')
       return handleDefaultKeyGet(request, env, corsHeaders);
+
+    // ── 공문 발송 기록 (2026-08-31 신설) ─────────────────────────
+    // 기관에 보낸 공문(dpaper.kr 지원 요청 등)의 발송·회신 이력을
+    // 관리자 패널에서 기록·조회한다. hondi_default_llm_keys와 동일한
+    // "AI_SETUP_SEALS_KV에 JSON 배열 통째로 저장" 관례를 그대로
+    // 따른다 — 새 저장 패턴을 만들지 않았다.
+    if (pathname === '/admin/letters' && request.method === 'GET')
+      return handleAdminLettersGet(request, env, corsHeaders);
+    if (pathname === '/admin/letters' && request.method === 'POST')
+      return handleAdminLettersSet(request, env, corsHeaders);
     // (2026-07-14: /free-quota-status 재도입 — "가입자당 100원 무료 한도"
     //  정책으로 복귀. 한도값은 FREE_QUOTA_KRW_LIMIT=100 참조.)
     if (pathname === '/free-quota-status' && request.method === 'GET')
@@ -28096,6 +28106,63 @@ async function handleAdminDefaultKeySet(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({ ok: true, saved_at: new Date().toISOString() }),
+    { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 공문 발송 기록 (2026-08-31 신설)
+// GET  /admin/letters  — 목록 조회
+// POST /admin/letters  — body: { letters: [...] } 전체 배열 저장
+//                        (handleAdminDefaultKeySet의 keys 배열과 동일한
+//                        "부분 수정 없이 전체 교체" 관례 — 목록이 작고
+//                        관리자 1인이 편집하는 화면이라 충돌 우려가
+//                        낮으므로 굳이 항목별 CRUD를 새로 만들지 않았다)
+//
+// 각 항목 필드: { id, institution, title, link, sent_date,
+//                received_date, received_content }
+// id가 없는 신규 항목은 저장 시 서버가 crypto.randomUUID()로 채운다 —
+// 클라이언트가 임시 id를 만들 필요가 없다.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminLettersGet(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  const raw = await kv.get('hondi:official_letters');
+  let letters = [];
+  try { letters = raw ? JSON.parse(raw) : []; } catch { letters = []; }
+
+  return new Response(JSON.stringify({ ok: true, letters }),
+    { status: 200, headers: corsHeaders });
+}
+
+async function handleAdminLettersSet(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const body = await request.json().catch(() => null);
+  if (!body || !Array.isArray(body.letters)) {
+    return _err(400, 'INVALID_JSON', 'letters 배열이 필요합니다', corsHeaders);
+  }
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  const letters = body.letters.map(l => ({
+    id: l.id || crypto.randomUUID(),
+    institution: String(l.institution || '').slice(0, 200),
+    title: String(l.title || '').slice(0, 300),
+    link: String(l.link || '').slice(0, 500),
+    sent_date: String(l.sent_date || ''),
+    received_date: String(l.received_date || ''),
+    received_content: String(l.received_content || '').slice(0, 2000),
+  }));
+
+  await kv.put('hondi:official_letters', JSON.stringify(letters));
+
+  return new Response(JSON.stringify({ ok: true, letters, saved_at: new Date().toISOString() }),
     { status: 200, headers: corsHeaders });
 }
 
