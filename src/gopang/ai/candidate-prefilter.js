@@ -189,6 +189,42 @@ export function findGwpR2Winner(narrowed) {
   return null;
 }
 
+/**
+ * "최우선후보" 결정 — 압도적 단일 후보가 있으면 확정한다 (2026-08-31
+ * 2차 신설 — 근본 원인 수정, R2확정과 같은 계열).
+ *
+ * ★ 배경 ★
+ * scenarios_full_sp_coverage_20260831.json 라이브 검증(2026-08-31)에서
+ * findGwpR2Winner()로 못 잡는 새로운 실패 유형이 확인됐다: GWP-vs-GWP
+ * 충돌이 아니라, 애초에 경쟁자가 없는 압도적 단일 후보인데도(예:
+ * dental-hygienist 점수 9, 2위는 0점) AC가 CALL_KINTENT나 더 범용적인
+ * 인접 전문직(dentist, physician)으로 가버리는 사례가 4건 재현됐다 —
+ * tool-calculator(점수 3, 유일 후보)→kgdc, navigation-officer(점수 2,
+ * 유일 후보)→CALL_KINTENT, dentist(점수 2, 유일 후보)→physician,
+ * dental-hygienist(점수 9, 유일 후보)→dentist. R2확정과 똑같은 근본
+ * 원인(순수 사실을 코드가 이미 계산했는데 LLM이 매 턴 재판단하다
+ * 흔들림)이라 같은 해법을 적용한다 — 단, R2확정은 "GWP끼리 문자열
+ * 포함관계"라는 좁은 조건이라 이 케이스들을 못 잡으므로 별도 함수로
+ * 분리한다: R2확정보다 조건을 넓혀 "경쟁자가 사실상 없는 유일 후보"
+ * 자체를 확정 신호로 쓴다.
+ *
+ * 확정 조건(과잉확정 방지를 위해 보수적으로): 점수 1위 후보가 있고,
+ * 그 뒤를 잇는 모든 후보가 0점이어야 한다(= 진짜 매칭은 이것 하나뿐).
+ * 여러 후보가 동시에 점수를 얻은 경우(진짜 경쟁 상황)는 확정하지
+ * 않고 AC의 판단에 맡긴다 — findGwpR2Winner()와 마찬가지로 "잘못
+ * 확정하는 것이 확정 안 하는 것보다 나쁘다"는 원칙을 따른다.
+ *
+ * @param {Array} narrowed - narrowCandidates()의 candidates 배열
+ * @returns {{id: string, kind: string, score: number} | null}
+ */
+export function findDominantCandidate(narrowed) {
+  const hits = (narrowed || []).filter(c => c.score > 0);
+  if (hits.length !== 1) return null; // 유일하게 점수를 얻은 후보일 때만
+  const only = hits[0];
+  if (only.score < 2) return null; // 너무 약한 신호(1점)는 확정하지 않음
+  return { id: only.id, kind: only.kind, score: only.score };
+}
+
 export function buildCandidateList(gwpRegistryArray, expertRegistryObject) {
   const gwpList = (gwpRegistryArray || [])
     .filter(e => e.status === 'active')
