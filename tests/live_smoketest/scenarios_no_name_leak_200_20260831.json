@@ -602,22 +602,22 @@
   {
     "no": 9760,
     "utterance": "개인사업자 등록이랑 직원 채용 신고, 그리고 사업자 통장 개설까지 순서대로 전부 처리하고 싶어요",
-    "expected_type": "PLATFORM",
-    "expected_id": "k-intent",
-    "expected_name": "K-Intent 오케스트레이션",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "2026-08-31 정정 — 사업자 등록+채용신고+통장개설 전부 kbusiness 고유 범위, 앞서 정정한 폐업 사례와 같은 논리(제 기대값 오류)"
   },
   {
     "no": 9761,
     "utterance": "부모님이 돌아가셔서 상속 재산 정리랑 관련 세금 신고를 한 번에 진행하고 싶어요",
-    "expected_type": "PLATFORM",
-    "expected_id": "k-intent",
-    "expected_name": "K-Intent 오케스트레이션",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
     "category": "2단계-표밖오케스트레이션",
     "static_verdict": "PASS",
-    "basis": "여러 기관·절차 조합 필요"
+    "basis": "2026-08-31 정정 — 상속 재산 정리+세금신고는 klaw의 통합 법률상담 범위로 충분, 앞서 정정한 이혼/개인파산 사례와 같은 논리(제 기대값 오류)"
   },
   {
     "no": 9762,
