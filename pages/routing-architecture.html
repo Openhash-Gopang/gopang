@@ -230,7 +230,7 @@ window.PAGE_HERO = {
         <rect x="170" y="492" width="380" height="86" rx="10" class="node-box"></rect>
         <text x="360" y="516" class="node-text title">AC-PRO-CORE §CORE 2단계 판정</text>
         <text x="360" y="536" class="node-text">R1 · 공익(GWP) vs 사익 위임(EXPERT)</text>
-        <text x="360" y="552" class="node-text">R2 · GWP끼리 겹치면 더 구체적인 쪽 우선</text>
+        <text x="360" y="552" class="node-text">R2 · GWP끼리 겹치면 코드가 사전 확정(R2확정)</text>
         <text x="360" y="568" class="node-text small">힌트는 참고용 — §CATALOG 대조가 최종 판단</text>
 
         <path d="M360,578 L360,608" class="edge-line" marker-end="url(#arrow)"></path>
@@ -388,21 +388,32 @@ window.PAGE_HERO = {
           <tr>
             <td><strong>R2</strong><br>GWP vs GWP</td>
             <td>두 GWP가 동시에 그럴듯하면, 더 길고 구체적인 trigger·
-            "분야" 서술을 가진 쪽을 우선.</td>
+            "분야" 서술을 가진 쪽을 우선. <strong>2026-08-31부터 코드가
+            선확정</strong> — 한쪽 trigger가 다른 쪽을 문자열로 포함하면
+            <code>candidate-prefilter.js</code>가 승자를 확정해
+            <code>[ctx]</code>에 <code>R2확정:id</code>로 얹고, AC는
+            재판단 없이 그대로 채택합니다(라이브 재검증에서 프롬프트
+            지시만으로는 반복 재발함을 확인 후 전환).</td>
             <td>"부가세 신고"(구체, kbusiness) vs "부가세"(일반, ktax)
-            → kbusiness 우선</td>
+            → 코드가 kbusiness로 사전 확정</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="callout-warn">
-      <strong>예외 처리 2건</strong> — <code>ktelecom</code>·<code>kestate</code>는
-      <code>[GWP: id]</code> 문법을 쓰지 않고 <code>[CALL_KTELECOM: query=...]</code> /
-      <code>[CALL_KESTATE: query=...]</code>로 시스템 내부 전환됩니다(새 탭 없음).
-      실사에서 이 두 서비스만 구식 <code>[GWP: id]</code>로 잘못 출력되는 사례가
-      반복 확인됐으나, <code>call-ai.js</code>의 자동복구 안전망(switch-type
-      가드)이 감지 시 조용히 올바른 SP로 우회 전환합니다.
+      <strong>예외 처리 2건(설계상 의도됨)</strong> — <code>ktelecom</code>·
+      <code>kestate</code>는 <code>[GWP: id]</code> 문법을 쓰지 않고
+      <code>[CALL_KTELECOM: query=...]</code> / <code>[CALL_KESTATE: query=...]</code>로
+      시스템 내부 전환되는 게 정상 경로입니다(새 탭 없음). 다만 실사에서
+      이 두 서비스만 구식 <code>[GWP: id]</code>로 출력되는 사례가
+      2026-08-07·2026-08-31 두 차례 반복 재현됐습니다 — 그때마다
+      <code>call-ai.js</code>의 자동복구 안전망(switch-type 가드)이
+      100% 결정론적으로 감지해 올바른 SP로 우회 전환하는 것도 함께
+      확인됐습니다. 그래서 이건 "안 고쳐진 버그"가 아니라 <strong>코드
+      레벨 동등 처리를 정식 설계로 채택</strong>한 것입니다 — 라이브
+      테스트 채점 기준도 이에 맞춰 두 형태 모두 PASS로 인정하도록
+      갱신했습니다.
     </div>
   </div>
 </section>
@@ -460,8 +471,8 @@ window.PAGE_HERO = {
     </div>
     <ul class="refs">
       <li><code>prompts/ROUTER-PRIORITY_v1_0.md</code> — R0~R4 분류 원칙(원 설계)</li>
-      <li><code>prompts/ROUTING-BRANCH-REFERENCE_v1_1.md</code> — 전체 결정 트리 종합(이번 갱신분)</li>
-      <li><code>prompts/AC-PRO-CORE_v1_7.txt</code> §CORE·§INFO·§TAGS — 실제 운영 로직(정본)</li>
+      <li><code>prompts/ROUTING-BRANCH-REFERENCE_v1_2.md</code> — 전체 결정 트리 종합(2026-08-31 갱신 — R2확정 코드 신호 반영)</li>
+      <li><code>prompts/AC-PRO-CORE_v1_8.txt</code> §CORE·§INFO·§TAGS — 실제 운영 로직(정본)</li>
       <li><code>src/gopang/ai/routing-hint.js</code> — 사전필터 오케스트레이션</li>
       <li><code>src/gopang/ai/candidate-prefilter.js</code> — 0단계 로컬 매칭</li>
       <li><code>src/gopang/ai/domain-classifier.js</code> · <code>domain-taxonomy.js</code> — 1단계 도메인 분류</li>

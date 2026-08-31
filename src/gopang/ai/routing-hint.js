@@ -26,7 +26,7 @@
  * LLM 호출 1회 추가)는 0단계 신호가 약할 때만 돈다 — subject-gate.js가
  * "리프가 2개 이상일 때만 게이트를 돈다"로 절충한 것과 동일한 원칙.
  */
-import { narrowCandidates, buildCandidateList } from './candidate-prefilter.js';
+import { narrowCandidates, buildCandidateList, findGwpR2Winner } from './candidate-prefilter.js';
 import { classifyDomain } from './domain-classifier.js';
 import { getCandidateIdsForDomains } from './domain-taxonomy.js';
 
@@ -67,6 +67,14 @@ export async function buildRoutingHintPart(plainText, gwpRegistryArray, expertRe
     const realHits = narrowed.filter(c => c.score > 0);
     const topScore = realHits[0]?.score || 0;
 
+    // 2026-08-31 신설 — R2-AC(GWP끼리 충돌) 결정을 여기서 미리 확정한다.
+    // findGwpR2Winner()는 순수 문자열 포함관계만 보는 결정론적 판단이라
+    // LLM에게 "다시 판단해 달라"고 맡길 이유가 없다 — 오히려 맡기면
+    // ktax↔kbusiness처럼 매 턴 다시 흔들린다(라이브 재현 확인,
+    // ROUTING-BRANCH-REFERENCE 참고). 확정되면 힌트 문자열에 별도
+    // 줄로 추가해 AC-PRO-CORE §CORE 2단계가 그대로 채택하게 한다.
+    const r2Winner = findGwpR2Winner(narrowed);
+
     let finalIds;
 
     if (topScore >= WEAK_SIGNAL_THRESHOLD) {
@@ -96,7 +104,14 @@ export async function buildRoutingHintPart(plainText, gwpRegistryArray, expertRe
     }
 
     if (!finalIds.length) return '';
-    return `라우팅후보:${finalIds.join(',')}`;
+    const hintLine = `라우팅후보:${finalIds.join(',')}`;
+    // r2Winner는 0단계 narrowed 기준으로 계산됐으므로, finalIds에 실제로
+    // 그 둘이 남아있을 때만 덧붙인다(1단계 도메인 폴백 병합으로 후보
+    // 구성이 달라졌을 가능성에 대한 안전장치).
+    if (r2Winner && finalIds.includes(r2Winner.winnerId) && finalIds.includes(r2Winner.loserId)) {
+      return `${hintLine}\nR2확정:${r2Winner.winnerId}(사유: '${r2Winner.winnerTrigger}'가 '${r2Winner.loserTrigger}'보다 구체적 — ${r2Winner.loserId} 아님)`;
+    }
+    return hintLine;
   } catch (e) {
     console.warn('[RoutingHint] 힌트 생성 실패(무시 — 힌트 없이 진행):', e.message);
     return '';
