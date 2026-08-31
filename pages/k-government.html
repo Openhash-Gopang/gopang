@@ -152,6 +152,21 @@ table.svc-table th, table.svc-table td { padding: 10px 14px; border-bottom: 1px 
 table.svc-table thead th { background: #f1f5f9; color: var(--navy); font-weight: 600; white-space: nowrap; }
 table.svc-table tbody tr:last-child td { border-bottom: none; }
 table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
+.svc-flow { counter-reset: flow; margin: 0 0 4px; padding: 0; list-style: none; }
+.svc-flow li {
+  counter-increment: flow; position: relative; padding: 0 0 18px 34px; font-size: 13.5px;
+  color: var(--text3); line-height: 1.6;
+}
+.svc-flow li::before {
+  content: counter(flow); position: absolute; left: 0; top: -1px;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff;
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.svc-flow li::after {
+  content: ''; position: absolute; left: 11px; top: 22px; bottom: 0; width: 1px; background: var(--border);
+}
+.svc-flow li:last-child::after { display: none; }
+.svc-flow li b { color: var(--text); }
 
 .tier-badge {
   display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 5px;
@@ -184,7 +199,7 @@ table.svc-table td.svc-hondi { color: var(--brand-dk); font-weight: 600; }
       <span class="branch-chip brand">입법 — 국민동의청원</span>
     </div>
     <p class="branch-note">두 실제 사례(개인파산·면책 / 건축 인허가부터 준공까지)로 처리 시간이 얼마나 줄어드는지, 그리고 그중 실제로 자동화된 부분과 사람이 직접 해야 하는 부분을 구분한 전체 서사는 아래에서 확인할 수 있습니다.</p>
-    <a class="deep-link" href="./integrated-system.html" target="_blank" rel="noopener">
+    <a class="deep-link" href="../integrated-system.html" target="_blank" rel="noopener">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       입법+사법+행정 통합 시스템 전체 사례 보기
     </a>
@@ -288,7 +303,7 @@ var BRANCH_CONTENT = {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         klaw.hondi.net 바로가기
       </a>
-      <a class="svc-link-btn" href="./pages/klaw-research.html" target="_blank" rel="noopener" style="margin-left:8px;">
+      <a class="svc-link-btn" href="./klaw-research.html" target="_blank" rel="noopener" style="margin-left:8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
         법원 중심에서 변호사 중심으로 축의 이동 — 연구 자료 보기
       </a>
@@ -308,7 +323,7 @@ var BRANCH_CONTENT = {
       </div>
 
       <h3>실제 사례로 보기</h3>
-      <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">개인파산·면책 절차에서 신청부터 면책 결정까지 기존 6~24개월 걸리던 9단계 절차가 혼디를 통해 어떻게 단축되는지, <a href="./integrated-system.html#case-bankruptcy" target="_blank" rel="noopener" style="color:var(--brand-dk); font-weight:600;">통합 시스템 사례 01</a>에서 단계별로 확인할 수 있습니다.</p>
+      <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">개인파산·면책 절차에서 신청부터 면책 결정까지 기존 6~24개월 걸리던 9단계 절차가 혼디를 통해 어떻게 단축되는지, <a href="../integrated-system.html#case-bankruptcy" target="_blank" rel="noopener" style="color:var(--brand-dk); font-weight:600;">통합 시스템 사례 01</a>에서 단계별로 확인할 수 있습니다.</p>
 
       <h3>사후 구제가 아니라 사전 감지</h3>
       <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">K-Law는 소송이 벌어진 뒤 증거를 모으는 게 아니라, 대화가 오가는 그 순간 사기·협박·불공정계약 같은 위법 징후를 실제 법령 조항에 대조해 실시간으로 잡아냅니다. 13개 법령 카테고리(형사 5·민사 4·노동 2·소비자 2)에 걸쳐 패턴을 분류하며, 보이스피싱·공갈협박·전세사기처럼 피해가 즉각적인 5개 유형은 Fast-Path(KL-FP01~05)로 최우선 처리합니다. 자체측정 기준 보이스피싱 탐지율 ≥99.7%, 임대차 위법성 탐지율 ≥93.3%입니다.</p>
@@ -370,7 +385,7 @@ var BRANCH_CONTENT = {
       <p style="font-size:12px; color:var(--text4); margin-top:4px;">전국 단위 행정구역 개편(2026년 하반기 다발적 진행)에 맞춰 지속 갱신됩니다. 제주특별자치도(제주시·서귀포시)가 첫 실사 완료 지역이며, 나머지 14개 광역자치단체는 우선순위에 따라 순차 확대 중입니다.</p>
 
       <h3>실제 사례로 보기</h3>
-      <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">건축 인허가 신청부터 준공 검사까지, 기존 평균 20일이 혼디를 통해 어떻게 1~3일로 단축되는지 <a href="./integrated-system.html#case-permit" target="_blank" rel="noopener" style="color:var(--brand-dk); font-weight:600;">통합 시스템 사례 02</a>에서 확인할 수 있습니다.</p>
+      <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">건축 인허가 신청부터 준공 검사까지, 기존 평균 20일이 혼디를 통해 어떻게 1~3일로 단축되는지 <a href="../integrated-system.html#case-permit" target="_blank" rel="noopener" style="color:var(--brand-dk); font-weight:600;">통합 시스템 사례 02</a>에서 확인할 수 있습니다.</p>
 
       <h3>STEP 0~D — 전문가 페르소나와 동일한 구조</h3>
       <p style="font-size:13.5px; color:var(--text3); line-height:1.7;">모든 행정 기관의 혼디는 사법·전문 분야 AI 페르소나와 같은 절차를 따릅니다. STEP B가 핵심 분기점인데, "할 수 있는 일"의 기준은 데이터 연동 여부가 아니라 <strong>처분권이 실제로 어디에 있는지</strong>입니다. 예를 들어 도청 복지가족국은 복지급여 접수를 "할 수 없는 일"로 분류해 읍면동으로 넘기는 것이 정확한 판단입니다 — 실제 처분권이 읍면동·시청에 있기 때문입니다.</p>
