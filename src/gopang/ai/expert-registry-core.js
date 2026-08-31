@@ -583,4 +583,16 @@ export const CORE_REGISTRY = {
     // 2026-07-25 신설(주피터 지시) — 직업명+법정업무명. kcommerce의 '음식 주문'과는 무관(조리사 자문 전용)
     triggers: ['조리사', '요리 상담', '메뉴 개발'],
   },
+  'hondi-guide': {
+    label: '혼디 SP', icon: '📘', category: 'PLATFORM', ownerAgency: 'gopang',
+    key: 'SP_hondi-guide', needsMedicalSafety: false,
+    // 2026-08-31 신설(주피터 지시) — 혼디 자체(철학·K-서비스·GDC·PDV·Openhash·
+    // 요금·이용법)를 다루는 안내 전문가. domain-taxonomy.js의 'onboarding'
+    // 도메인(PLATFORM 카테고리)에 속해 패러프레이즈 도메인 분류 후보에는
+    // 안 들어간다 — 아래 리터럴 트리거로만 직접 호출된다(prompts/
+    // SP_hondi-guide_v1_0.md 참조).
+    triggers: ['혼디가 뭐예요', '혼디는 뭐하는 서비스', '혼디 사용법', '혼디 이용 방법',
+      'K-서비스가 몇 개', '혼디 요금 체계', 'GDC 충전 방법', 'PDV가 뭐예요',
+      'Openhash가 뭐예요', '혼디 SP', '혼디 버그 신고', '혼디 기능 제안', '혼디 개발 참여'],
+  },
 };
