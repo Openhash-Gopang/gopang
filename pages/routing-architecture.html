@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>라우팅 아키텍처 — 혼디 (Hondi)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+/* ── RESET (integrated-system.html과 동일 토큰 재사용) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3b82f6;
+  --brand-dk:  #1d4ed8;
+  --brand-lt:  #bfdbfe;
+  --brand-bg:  #eff6ff;
+
+  --amber:     #f59e0b;
+  --amber-lt:  #fffbeb;
+  --red:       #ef4444;
+  --red-lt:    #fef2f2;
+  --green:     #16a34a;
+  --green-lt:  #f0fdf4;
+
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.section { padding: 56px 24px; border-bottom: 1px solid var(--border); }
+.section-inner { max-width: 860px; margin: 0 auto; }
+.section-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--brand-dk); background: var(--brand-bg); padding: 4px 10px; border-radius: 99px; margin-bottom: 12px; }
+.section-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 18px; line-height: 1.4; }
+.section-title strong { color: var(--brand-dk); }
+.section-body p { color: var(--text3); font-size: 14.5px; margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+
+/* ── 다이어그램 컨테이너 ── */
+.diagram-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px; margin: 24px 0; box-shadow: var(--shadow-sm); overflow-x: auto;
+}
+.diagram-wrap svg { display: block; margin: 0 auto; min-width: 560px; }
+
+/* SVG 내부 재사용 클래스 */
+.node-box { fill: #fff; stroke: var(--border2); stroke-width: 1.4; }
+.node-box.brand { fill: var(--brand-bg); stroke: var(--brand); }
+.node-box.amber { fill: var(--amber-lt); stroke: var(--amber); }
+.node-box.green { fill: var(--green-lt); stroke: var(--green); }
+.node-box.gate { fill: #fff; stroke: var(--text4); stroke-dasharray: 3 3; }
+.node-text { font-family: 'Pretendard', sans-serif; fill: var(--text2); font-size: 13px; text-anchor: middle; }
+.node-text.title { font-weight: 700; fill: var(--text); font-size: 13.5px; }
+.node-text.small { font-size: 11px; fill: var(--text4); }
+.edge-line { stroke: var(--text4); stroke-width: 1.6; fill: none; }
+.edge-line.no { stroke: var(--red); }
+.edge-line.yes { stroke: var(--green); }
+.edge-label { font-family: 'Pretendard', sans-serif; font-size: 11px; fill: var(--text4); }
+.edge-label.no { fill: var(--red); font-weight: 600; }
+.edge-label.yes { fill: var(--green); font-weight: 600; }
+
+/* flow-list (integrated-system.html과 동일) */
+.flow-list { counter-reset: flow; margin: 24px 0 0; padding: 0; list-style: none; }
+.flow-list li {
+  counter-increment: flow; position: relative; padding: 0 0 26px 44px;
+  border-left: 2px solid var(--border); margin-left: 15px;
+}
+.flow-list li:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.flow-list li::before {
+  content: counter(flow); position: absolute; left: -15px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--brand);
+  color: #fff; font-size: 13px; font-weight: 600; display: flex;
+  align-items: center; justify-content: center;
+}
+.flow-list .fl-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.flow-list .fl-desc { font-size: 13.5px; color: var(--text3); line-height: 1.7; }
+.flow-list .fl-desc code {
+  background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 12.5px;
+}
+
+.callout-info {
+  background: var(--brand-bg); border: 1px solid #bfdbfe; border-radius: var(--radius-lg);
+  padding: 18px 20px; margin: 20px 0; font-size: 13.5px; color: var(--text2); line-height: 1.8;
+}
+.callout-warn {
+  background: #fefce8; border: 1px solid #fde68a; border-radius: var(--radius-lg);
+  padding: 18px 20px; margin: 20px 0; font-size: 13px; color: var(--text2); line-height: 1.8;
+}
+
+.status-table-wrap { overflow-x: auto; margin: 16px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.status-table { width: 100%; border-collapse: collapse; font-family: 'Pretendard', sans-serif; font-size: 12.5px; line-height: 1.6; min-width: 560px; }
+.status-table th, .status-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.status-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.status-table tbody tr:last-child td { border-bottom: none; }
+.status-table code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+
+.refs { font-size: 12.5px; color: var(--text4); line-height: 2.1; }
+.refs li { margin-bottom: 2px; }
+.refs code { background: var(--bg-subtle); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; color: var(--text3); }
+
+.tag-chip { display: inline-block; background: var(--bg-subtle); border: 1px solid var(--border2); border-radius: 5px; padding: 1px 7px; font-size: 12px; color: var(--text2); font-family: monospace; }
+</style>
+</head>
+<body>
+<script>
+window.PAGE_HERO = {
+  badge: '라우팅 아키텍처',
+  l1: '사용자 발화 한 줄이',
+  l2: '특정 SP 호출로 이어지는 경로',
+  sub: '혼디는 수백 개의 SP(System Prompt) 중 어느 것을 부를지 매 발화마다 결정합니다. 이 페이지는 그 결정이 실제로 어떤 코드·문서를 거쳐 내려지는지를 하나의 그림으로 정리한 것입니다.',
+  actions: []
+};
+</script>
+<link rel="stylesheet" href="/assets/site-header.css">
+<script src="/assets/site-header.js"></script>
+
+<div id="site-hero-mount"></div>
+
+<!-- ══════════════════ 1. 전체 흐름 개요 (일러스트) ══════════════════ -->
+<section class="section" id="overview">
+  <div class="section-inner">
+    <span class="section-tag">개요</span>
+    <h2 class="section-title">발화 하나가 <strong>SP 호출</strong>이 되기까지</h2>
+    <div class="section-body">
+      <p>라우팅은 한 번의 판정이 아니라, 비용이 다른 여러 단계를 거치는
+      깔때기입니다. 대부분의 단계는 LLM 호출 없이(로컬 스코어링) 처리되고,
+      신호가 약할 때만 저지연 모델을 한 번 더 부릅니다. 최종 판정은 항상
+      AC(AI 비서)의 §CORE 로직이 맡습니다 — 사전 필터는 후보를 "좁혀줄"
+      뿐 대신 "결정"하지 않습니다.</p>
+    </div>
+
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 720 1560" xmlns="http://www.w3.org/2000/svg" role="img"
+           aria-label="사용자 발화가 응급게이트, 0단계 실행요청 판별, 라우팅 힌트 사전필터, AC-PRO-CORE 판정, 확신도 게이트, 카탈로그 표 안/밖 분기를 거쳐 최종 SP 호출 또는 오케스트레이션으로 이어지는 순서도">
+
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text4)"></path>
+          </marker>
+          <marker id="arrow-no" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--red)"></path>
+          </marker>
+          <marker id="arrow-yes" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--green)"></path>
+          </marker>
+        </defs>
+
+        <!-- 0. 사용자 발화 -->
+        <rect x="260" y="10" width="200" height="42" rx="21" class="node-box brand"></rect>
+        <text x="360" y="36" class="node-text title">사용자 발화</text>
+
+        <path d="M360,52 L360,82" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 1. R0 응급 게이트 -->
+        <polygon points="360,84 470,134 360,184 250,134" class="node-box amber"></polygon>
+        <text x="360" y="128" class="node-text title">R0 · 생명·신체</text>
+        <text x="360" y="144" class="node-text">위험 신호인가?</text>
+
+        <path d="M470,134 L560,134" class="edge-line no" marker-end="url(#arrow-no)"></path>
+        <text x="516" y="124" class="edge-label no">Yes</text>
+        <rect x="560" y="110" width="140" height="48" rx="8" class="node-box amber"></rect>
+        <text x="630" y="130" class="node-text title">즉시 kemergency</text>
+        <text x="630" y="146" class="node-text small">이하 전부 건너뜀</text>
+
+        <path d="M360,184 L360,214" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="378" y="202" class="edge-label yes">No</text>
+
+        <!-- 2. 0단계: 실행요청 vs 잡담 -->
+        <polygon points="360,216 480,266 360,316 240,266" class="node-box gate"></polygon>
+        <text x="360" y="258" class="node-text title">0단계 · 실행요청인가,</text>
+        <text x="360" y="274" class="node-text">잡담·감정 표현인가?</text>
+
+        <path d="M480,266 L560,266" class="edge-line no" marker-end="url(#arrow-no)"></path>
+        <text x="514" y="256" class="edge-label no">잡담</text>
+        <rect x="560" y="242" width="140" height="48" rx="8" class="node-box">
+        </rect>
+        <text x="630" y="262" class="node-text title">AC가 그 자리에서</text>
+        <text x="630" y="278" class="node-text small">직접 응답 (새 탭 없음)</text>
+
+        <path d="M360,316 L360,346" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="380" y="334" class="edge-label yes">실행요청</text>
+
+        <!-- 3. 라우팅 힌트 사전필터 -->
+        <rect x="150" y="348" width="420" height="112" rx="10" class="node-box brand"></rect>
+        <text x="360" y="372" class="node-text title">라우팅 힌트 사전필터 (routing-hint.js)</text>
+
+        <rect x="170" y="384" width="180" height="58" rx="8" class="node-box"></rect>
+        <text x="260" y="404" class="node-text" style="font-weight:600">0단계 · 로컬 문자열 매칭</text>
+        <text x="260" y="420" class="node-text small">candidate-prefilter.js · LLM 미호출</text>
+        <text x="260" y="434" class="node-text small">trigger 점수 ≥4면 그대로 확정</text>
+
+        <path d="M350,413 L370,413" class="edge-line" marker-end="url(#arrow)"></path>
+        <text x="360" y="404" class="edge-label">약함</text>
+
+        <rect x="372" y="384" width="180" height="58" rx="8" class="node-box"></rect>
+        <text x="462" y="404" class="node-text" style="font-weight:600">1단계 · 도메인 분류(LLM 1회)</text>
+        <text x="462" y="420" class="node-text small">domain-classifier.js · 상위 9개 도메인</text>
+        <text x="462" y="434" class="node-text small">실패 시 좁히지 않고 전체 통과</text>
+
+        <path d="M360,460 L360,490" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 4. AC-PRO-CORE §CORE 판정 -->
+        <rect x="170" y="492" width="380" height="86" rx="10" class="node-box"></rect>
+        <text x="360" y="516" class="node-text title">AC-PRO-CORE §CORE 2단계 판정</text>
+        <text x="360" y="536" class="node-text">R1 · 공익(GWP) vs 사익 위임(EXPERT)</text>
+        <text x="360" y="552" class="node-text">R2 · GWP끼리 겹치면 더 구체적인 쪽 우선</text>
+        <text x="360" y="568" class="node-text small">힌트는 참고용 — §CATALOG 대조가 최종 판단</text>
+
+        <path d="M360,578 L360,608" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 5. 확신도 게이트 -->
+        <polygon points="360,610 480,660 360,710 240,660" class="node-box gate"></polygon>
+        <text x="360" y="652" class="node-text title">확신도 게이트</text>
+        <text x="360" y="668" class="node-text">통과하는가?</text>
+
+        <path d="M240,660 C120,660 120,266 236,266" class="edge-line no" marker-end="url(#arrow-no)" fill="none"></path>
+        <text x="130" y="470" class="edge-label no">No · 되묻기 후 재평가</text>
+
+        <path d="M360,710 L360,740" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="380" y="728" class="edge-label yes">Yes</text>
+
+        <!-- 6. §CATALOG 표 안/밖 -->
+        <polygon points="360,742 490,796 360,850 230,796" class="node-box gate"></polygon>
+        <text x="360" y="788" class="node-text title">§CATALOG·§CATALOG-EXPERT</text>
+        <text x="360" y="804" class="node-text">표 안에 있는가?</text>
+
+        <path d="M490,796 L580,796" class="edge-line no" marker-end="url(#arrow-no)"></path>
+        <text x="530" y="786" class="edge-label no">표 밖</text>
+        <rect x="500" y="820" width="200" height="62" rx="8" class="node-box"></rect>
+        <text x="600" y="842" class="node-text title">[CALL_KINTENT] 오케스트레이션</text>
+        <text x="600" y="858" class="node-text small">K-Intent → K-Compose →</text>
+        <text x="600" y="872" class="node-text small">K-Execute → K-Deliver</text>
+        <path d="M580,796 L600,820" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <path d="M360,850 L360,880" class="edge-line yes" marker-end="url(#arrow-yes)"></path>
+        <text x="380" y="868" class="edge-label yes">표 안 · 단일 SP</text>
+
+        <!-- 7. 태그 출력 -->
+        <rect x="190" y="882" width="340" height="66" rx="10" class="node-box green"></rect>
+        <text x="360" y="906" class="node-text title">[GWP: id] 또는 [EXPERT: personaId]</text>
+        <text x="360" y="924" class="node-text small">ktelecom·kestate만 예외 →</text>
+        <text x="360" y="940" class="node-text small">[CALL_KTELECOM] / [CALL_KESTATE] (새 탭 없음)</text>
+
+        <path d="M360,948 L360,978" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 8. manifest-loader -->
+        <rect x="190" y="980" width="340" height="56" rx="10" class="node-box"></rect>
+        <text x="360" y="1002" class="node-text title">manifest-loader.js</text>
+        <text x="360" y="1020" class="node-text small">sp-catalog.json에서 id → 파일명 조회 후 fetch</text>
+
+        <path d="M360,1036 L360,1066" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 9. 프롬프트 조립 -->
+        <rect x="140" y="1068" width="440" height="76" rx="10" class="node-box brand"></rect>
+        <text x="360" y="1092" class="node-text title">시스템 프롬프트 조립 순서</text>
+        <text x="360" y="1110" class="node-text small">UNIVERSAL-INTEGRITY → UNIVERSAL-common →</text>
+        <text x="360" y="1126" class="node-text small">(PROFESSIONAL-common | K-Public_common) → 개별 SP</text>
+
+        <path d="M360,1144 L360,1174" class="edge-line" marker-end="url(#arrow)"></path>
+
+        <!-- 10. 최종 -->
+        <rect x="230" y="1176" width="260" height="48" rx="24" class="node-box green"></rect>
+        <text x="360" y="1204" class="node-text title">새 탭에서 해당 SP가 대화 인계</text>
+
+      </svg>
+    </div>
+    <p class="section-body" style="color:var(--text4); font-size:12.5px; margin-top:-8px;">
+      ※ 실선 화살표는 기본 진행, 붉은 점선 경로는 "확신 부족 → 되묻고 재평가"
+      루프입니다. 이 그림은 K-서비스/전문가 페르소나 트랙 기준이며, 정부기관
+      (Jejudo) 트랙의 별도 분기는 §4에서 다룹니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════ 2. 라우팅 힌트 사전필터 상세 ══════════════════ -->
+<section class="section" style="background:var(--bg-alt)" id="prefilter">
+  <div class="section-inner">
+    <span class="section-tag">§1 · 사전 필터</span>
+    <h2 class="section-title">본 판정 전에 후보부터 <strong>좁혀두기</strong></h2>
+    <div class="section-body">
+      <p>AC-PRO-CORE(§CATALOG)는 93개 이상의 GWP·EXPERT 행을 담고 있습니다.
+      매 발화마다 이 전체를 훑게 하는 대신, LLM 호출이 필요 없는 로컬
+      매칭으로 먼저 후보를 추리고, 신호가 약할 때만 저지연 모델을 한 번
+      더 부릅니다 — <code class="tag-chip">routing-hint.js</code>가 이
+      두 단계를 오케스트레이션합니다.</p>
+    </div>
+
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">0단계 — 로컬 문자열 매칭 (LLM 호출 없음)</div>
+        <div class="fl-desc"><code>candidate-prefilter.js</code>가 발화 텍스트와
+        각 GWP·EXPERT의 trigger·description을 부분일치로 대조해 점수를 매깁니다.
+        더 길고 구체적인 trigger일수록 높은 점수를 받습니다. 최상위 점수가
+        <strong>4 이상</strong>(<code>WEAK_SIGNAL_THRESHOLD</code>)이면 추가
+        호출 없이 상위 8개(<code>MAX_HINT_CANDIDATES</code>)를 그대로 힌트로
+        확정합니다. 순수 부분일치라 리터럴 trigger 단어가 없는 패러프레이즈
+        발화는 못 좁혀준다는 한계가 문서에 명시돼 있습니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">1단계 — 도메인 분류 (신호가 약할 때만, LLM 1회)</div>
+        <div class="fl-desc">0단계 신호가 약하면 <code>domain-classifier.js</code>가
+        <code>domain-taxonomy.js</code>의 상위 도메인 9개(응급·온보딩 제외)
+        중 해당 발화가 속하는 도메인을 저지연 모델에 묻습니다. 실패하면
+        <strong>좁히지 않고 null을 반환</strong>해 전체 후보로 안전하게
+        되돌아갑니다 — 잘못 좁혀 정답을 배제하는 것이 안 좁히는 것보다 더
+        나쁘다는 원칙입니다. 이 폴백 경로는 후보 간 우열이 없어 상한을
+        25개(<code>MAX_DOMAIN_HINT_CANDIDATES</code>)로 넉넉히 둡니다 — 너무
+        세게 자르면 정답 후보를 무작위로 버릴 수 있기 때문입니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">힌트 전달 — system이 아니라 user 메시지 앞 [ctx] 블록</div>
+        <div class="fl-desc">DeepSeek Auto Prompt Caching은 system 메시지가
+        세션 내내 고정될 때만 캐시 할인이 유지됩니다. 그래서 매 턴 달라지는
+        이 힌트는 system을 줄이는 대신, 매번 바뀌는 다른 데이터(GUID·위치·PDV
+        요약)와 같은 방식으로 사용자 메시지 앞 <code>[ctx]</code> 블록에
+        <code>"라우팅후보:id1,id2,..."</code> 형태로 얹습니다. AC-PRO-CORE
+        §CORE 2단계는 이 힌트가 있으면 §CATALOG 전체를 훑기 전에 먼저
+        검토하되, 힌트가 없거나 명백히 안 맞으면 주저 없이 표 전체로
+        돌아갑니다 — 힌트는 표 자체를 대체하지 않습니다.</div>
+      </li>
+    </ol>
+
+    <div class="callout-info">
+      이 사전필터는 <strong>"누가 관련 있어 보이는가"</strong>만 판단합니다 —
+      GWP인지 EXPERT인지, 혹은 그 후보가 실제로 맞는지는 여전히 다음 단계
+      (AC-PRO-CORE §CORE)의 몫입니다.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 3. GWP vs EXPERT / GWP vs GWP 판정 축 ══════════════════ -->
+<section class="section" id="core-judgement">
+  <div class="section-inner">
+    <span class="section-tag">§2 · 본 판정</span>
+    <h2 class="section-title">누구를 부를지 가르는 <strong>두 개의 축</strong></h2>
+    <div class="section-body">
+      <p>후보가 좁혀진 뒤에도 실제 판정은 순서(ordinal)가 아니라
+      <strong>질문의 성격</strong>으로 갈립니다. <code class="tag-chip">ROUTER-PRIORITY_v1_0.md</code>가
+      정한 원칙을 AC-PRO-CORE가 실사 사례로 구체화한 형태입니다.</p>
+    </div>
+
+    <div class="status-table-wrap">
+      <table class="status-table">
+        <thead><tr><th>축</th><th>기준</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>R1</strong><br>GWP vs EXPERT</td>
+            <td>제도·제3자적 관점 질문 → <strong>GWP</strong>가 기본값.<br>
+            개인 이익을 위한 위임 의도가 명시된 경우에만 → <strong>EXPERT</strong>로 우선권 이동.</td>
+            <td>"이혼 절차가 법적으로 어떻게 되나요" → klaw<br>
+            "제 상황에서 유리하게 변호사님께 맡기고 싶어요" → SP_lawyer</td>
+          </tr>
+          <tr>
+            <td><strong>R1 보강</strong><br>trigger 아닌 "분야" 개념 매칭</td>
+            <td>GWP 기본값 판정은 trigger 단어가 우연히 겹치는지가 아니라,
+            그 GWP의 "분야" 칸에 <strong>개념적으로</strong> 속하는지로 판단.
+            단, 그 사무를 전담하는 전용 GWP가 따로 있으면 그쪽이 우선.</td>
+            <td>klaw의 trigger엔 "특허"가 없어도, 전담 GWP가 없는 광의의
+            법률 사무이므로 위임의도 없는 절차 질문이면 klaw 기본값</td>
+          </tr>
+          <tr>
+            <td><strong>R2</strong><br>GWP vs GWP</td>
+            <td>두 GWP가 동시에 그럴듯하면, 더 길고 구체적인 trigger·
+            "분야" 서술을 가진 쪽을 우선.</td>
+            <td>"부가세 신고"(구체, kbusiness) vs "부가세"(일반, ktax)
+            → kbusiness 우선</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout-warn">
+      <strong>예외 처리 2건</strong> — <code>ktelecom</code>·<code>kestate</code>는
+      <code>[GWP: id]</code> 문법을 쓰지 않고 <code>[CALL_KTELECOM: query=...]</code> /
+      <code>[CALL_KESTATE: query=...]</code>로 시스템 내부 전환됩니다(새 탭 없음).
+      실사에서 이 두 서비스만 구식 <code>[GWP: id]</code>로 잘못 출력되는 사례가
+      반복 확인됐으나, <code>call-ai.js</code>의 자동복구 안전망(switch-type
+      가드)이 감지 시 조용히 올바른 SP로 우회 전환합니다.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 4. 정부기관(Jejudo) 트랙 ══════════════════ -->
+<section class="section" style="background:var(--bg-alt)" id="gov-track">
+  <div class="section-inner">
+    <span class="section-tag">§3 · 정부기관 트랙</span>
+    <h2 class="section-title">§CATALOG 밖 — <strong>Jejudo 자치사무</strong> 라우팅</h2>
+    <div class="section-body">
+      <p>위 흐름은 K-서비스(국가사무)·전문가 페르소나 트랙 기준입니다.
+      "자치사무"(제주도·행정시·읍면동 소관)로 갈리면, 별도의 정부기관
+      트리(gov-tree)가 시군구·부서 단위까지 판별을 이어갑니다.</p>
+    </div>
+
+    <ol class="flow-list">
+      <li>
+        <div class="fl-title">국가사무 vs 자치사무 (R2, ROUTER-PRIORITY)</div>
+        <div class="fl-desc">공익 대변으로 분류된 발화는 소관 기관 기준으로
+        다시 갈립니다 — 전국 단일 기관 소관(국세청·소방청 등)이면 K-서비스,
+        제주도·행정시·읍면동 소관이면 정부기관(Jejudo) 트랙입니다. 동일
+        생활영역(예: "세금")이라도 세목에 따라 국세(K-Tax)와 지방세
+        (Jejudo)로 갈립니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">전국 행정구역 분기</div>
+        <div class="fl-desc"><code>national-division-router.js</code>가
+        시·도 단위로, <code>gov-router.js</code>가 시군구·부서 단위까지
+        세부 판별을 수행합니다. 15개 위성 도(province) 저장소로 분리 운영되며,
+        <code>SP-Tree 감사</code>를 통해 고아 부서·라우팅 경로 누락을
+        주기적으로 점검합니다.</div>
+      </li>
+      <li>
+        <div class="fl-title">SP 간 위임(relay) — 최대 1회</div>
+        <div class="fl-desc">두 관할이 동시에 필요한 질의(예: 국세+지방세
+        체납액 합산)를 위해 <code>/gov/relay</code> 전용 위임 메커니즘이
+        있습니다. 무한 위임을 막기 위해 <code>MAX_SP_HOPS=2</code>(위임은
+        최대 1회), <code>MAX_LLM_CALLS_PER_TURN=3</code> 두 겹의 방어선이
+        걸려 있습니다.</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════ 5. 참고 문서 ══════════════════ -->
+<section class="section" id="references">
+  <div class="section-inner">
+    <span class="section-tag">참고</span>
+    <h2 class="section-title">이 페이지가 <strong>취합한 문서·코드</strong></h2>
+    <div class="section-body">
+      <p>이 페이지는 아래 문서·코드에 흩어져 있던 라우팅 판단을 하나의
+      그림으로 종합한 것입니다. 실제 동작의 정본(source of truth)은 항상
+      코드와 AC-PRO-CORE이며, 이 페이지와 <code>ROUTING-BRANCH-REFERENCE</code>는
+      그 스냅샷 요약입니다 — 원본이 바뀌면 함께 갱신이 필요합니다.</p>
+    </div>
+    <ul class="refs">
+      <li><code>prompts/ROUTER-PRIORITY_v1_0.md</code> — R0~R4 분류 원칙(원 설계)</li>
+      <li><code>prompts/ROUTING-BRANCH-REFERENCE_v1_1.md</code> — 전체 결정 트리 종합(이번 갱신분)</li>
+      <li><code>prompts/AC-PRO-CORE_v1_7.txt</code> §CORE·§INFO·§TAGS — 실제 운영 로직(정본)</li>
+      <li><code>src/gopang/ai/routing-hint.js</code> — 사전필터 오케스트레이션</li>
+      <li><code>src/gopang/ai/candidate-prefilter.js</code> — 0단계 로컬 매칭</li>
+      <li><code>src/gopang/ai/domain-classifier.js</code> · <code>domain-taxonomy.js</code> — 1단계 도메인 분류</li>
+      <li><code>src/gopang/ai/manifest-loader.js</code> · <code>prompts/sp-catalog.json</code> — SP 로딩</li>
+      <li><code>src/gopang/gov/gov-router.js</code> · <code>national-division-router.js</code> — 정부기관 트랙</li>
+      <li><code>docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md</code> · <code>SP-ARCHITECTURE-MAP_v1_0.md</code></li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>
