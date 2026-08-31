@@ -632,6 +632,33 @@ export function _hasConfirmedBackup() {
   catch { return false; }
 }
 
+// ── 백업 확인 상태를 서버(계정 단위)에도 기록 (2026-08-31 신설) ──
+// 배경: 지금까지 위 로컬 플래그만 있어서, 폰에서 이미 백업을 저장한
+// 사용자가 PC에서 device-link로 같은 계정을 열어도 PC는 "확인한 적
+// 없음"으로 판단해 배너가 다시 떴다(라이브 검증에서 재현). 이 계정
+// (guid)의 profiles.backup_confirmed_at을 채워두면, 어느 기기로
+// 로그인하든 그 값을 읽어 로컬 플래그를 채울 수 있다(initAuthWithPhone·
+// _finishImport의 backup_confirmed_at 하이드레이션 참고).
+// 실패해도(오프라인 등) 로컬 확인 자체는 이미 끝난 상태라 조용히
+// 무시한다 — 사용자 흐름을 막지 않는다.
+export async function _confirmBackupOnServer(guid) {
+  if (!guid) return;
+  try {
+    const wallet = await _waitForWallet(5000);
+    if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') return;
+    const ts = Date.now();
+    const sigMsg = `${guid}:${wallet.publicKeyB64u}:${ts}`;
+    const signature = await wallet.signPayload(sigMsg);
+    await fetch(`${PROXY_URL}/auth/confirm-backup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, pubkey: wallet.publicKeyB64u, signature, ts }),
+    });
+  } catch (e) {
+    console.warn('[Auth] 백업 확인 서버 기록 실패(무시 — 로컬 확인은 이미 완료):', e.message);
+  }
+}
+
 // ── 백업 키를 본인 이메일로 — mailto (서버를 거치지 않음) ──
 // 서버가 개인키를 보거나 보관하지 않도록, 발송은 전적으로 사용자 기기의
 // 메일 앱이 처리한다(mailto:). 키는 기기 → 사용자 본인 메일함으로만 이동한다.
@@ -1033,6 +1060,14 @@ function _showDeviceMismatchNotice(found, resolve) {
 
       setUser(user);
       console.info('[DeviceLink] 인라인 가져오기 완료:', user.handle);
+
+      // 2026-08-31 신설 — 계정(guid) 단위 백업 확인 상태를 이 새 기기에도
+      // 반영한다. 폰에서 이미 백업 키를 저장했다면 found.backup_confirmed_at에
+      // 그 시각이 있을 것이고, 그러면 이 PC에서 다시 배너를 안 띄운다.
+      if (found?.backup_confirmed_at) {
+        try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
+      }
+
       closeOverlay(user);
     } catch (e) {
       render(`<p style="font-size:13px;color:#dc2626;margin-bottom:16px">지갑 가져오기에 실패했습니다: ${e.message}</p>`);
@@ -1226,6 +1261,10 @@ export async function initAuthWithPhone(digits, countryKey = 'KR', phoneType = '
         console.info('[Auth] 로그인 (통합팝업):', found.handle);
         localStorage.setItem(STORE_KEY, JSON.stringify(user));
         setUser(user);
+        // 2026-08-31 신설 — 계정 단위 백업 확인 상태를 이 기기에도 반영
+        if (found.backup_confirmed_at) {
+          try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
+        }
         resolve(user);
       } else {
         // 신규 사용자 → 검증된 전체 가입 플로우(_showPhonePopup)로 위임
