@@ -286,12 +286,5 @@ K-Compose/K-Execute(SP-20/SP-22 태그 규격)가 전담한다.
 - `tests/live_smoketest/scenarios_routing_branches_20260806.json` —
   이 결정 트리 전체를 커버하는 34건 라이브 회귀 시나리오. 2026-08-31
   재검증(v1_7 기준)에서 12 FAIL을 발견해 이번 v1.2 개정을 유발했다.
-- `tests/live_smoketest/scenarios_full_sp_coverage_20260831.json` —
-  [v1.2 신설] 88개 SP(GWP 26 + EXPERT 루트 62) 전체를 각 1건씩
-  커버하는 통합 배치. 기존 40여 개 시나리오 파일에 흩어져 있던
-  SP별 최고 품질 케이스(검증 이력·최신순 우선)를 취합했고, trigger
-  단어 과다의존이 확인된 5건(GWP)은 자연스러운 문장으로 재작성했다.
-  결정 트리의 "분기"가 아니라 "SP 목록 자체의 전수 커버리지"를
-  검증하는 용도라 위 34건 배치와 상호 보완적이다.
 - `src/tests/ai-secretary/candidate-prefilter.test.mjs` — `findGwpR2Winner()`
   단위 회귀 테스트(부가세/kbusiness 사례 포함, 2026-08-31 신설).

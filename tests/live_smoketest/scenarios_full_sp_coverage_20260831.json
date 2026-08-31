@@ -1,0 +1,882 @@
+[
+  {
+    "no": 9500,
+    "utterance": "집 청소 서비스를 예약하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "fiil-kcleaner",
+    "expected_name": "K-Cleaner",
+    "category": "SP전수커버리지-GWP-ENV",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=43) 취합. §CATALOG fiil-kcleaner(해안·도심 쓰레기 AI 자동 분석·신고.)"
+  },
+  {
+    "no": 9501,
+    "utterance": "사업자 등록 절차를 알고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kbusiness",
+    "expected_name": "K-Business",
+    "category": "SP전수커버리지-GWP-BIZ",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=39) 취합. §CATALOG kbusiness(사업체 재무제표·세금·고용(4대보험) 보조. K-Market 판매자 연동. 개인 세금 신고·절세는 ktax 소관.)"
+  },
+  {
+    "no": 9502,
+    "utterance": "무선 이어폰 추천해줘",
+    "expected_type": "GWP",
+    "expected_id": "kcommerce",
+    "expected_name": "K-Market",
+    "category": "SP전수커버리지-GWP-MKT",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=27) 취합. §CATALOG kcommerce(자율 구매대행 에이전트 — 판매자 탐색·비교·거래·환불/반품/예약 처리 전담.)"
+  },
+  {
+    "no": 9503,
+    "utterance": "제가 만든 수공예품을 온라인에서 직접 팔아보려고 하는데 어떻게 시작하나요",
+    "expected_type": "GWP",
+    "expected_id": "kcommerce_seller",
+    "expected_name": "K-Market(판매자 등록)",
+    "category": "SP전수커버리지-GWP-MKT",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=23) 취합. §CATALOG kcommerce_seller(판매자 등록(중고물품·서비스 판매 시작) — 구매가 아니라 \"내가 판매자가 되고 싶다\"는 요청 전용. 일반 구매/탐색은 kcommerce로.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+  },
+  {
+    "no": 9504,
+    "utterance": "혼디 거버넌스에 안건을 제안하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kdemocracy",
+    "expected_name": "K-Democracy",
+    "category": "SP전수커버리지-GWP-LEG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=37) 취합. §CATALOG kdemocracy(고팡 직접 민주주의 플랫폼(DAWN) 전용 — 국민동의청원·입법예고 등 실제 국가기관 청원/의견 시스템은 kgov 소관.)"
+  },
+  {
+    "no": 9505,
+    "utterance": "이번 수능 국어 영역 시험 일정이 언제인지 알고 싶어요.",
+    "expected_type": "GWP",
+    "expected_id": "kedu",
+    "expected_name": "K-School",
+    "category": "SP전수커버리지-GWP-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_k12_professor_vs_teacher_20260809.json(no=20) 취합. §CORE R1축: '제도 정보, 제3자적 관점 → GWP(K-School)가 기본값'. 시험 '일정'을 묻는 것이지 지도를 요청하는 게 아님"
+  },
+  {
+    "no": 9506,
+    "utterance": "불이 났어요, 도와주세요",
+    "expected_type": "GWP",
+    "expected_id": "kemergency",
+    "expected_name": "K-Emergency",
+    "category": "SP전수커버리지-GWP-EMG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=1) 취합. §CATALOG kemergency(긴급 구조·재난 대응. 119·112 연계.)"
+  },
+  {
+    "no": 9507,
+    "utterance": "전세 매물을 찾고 있어요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "SP전수커버리지-GWP-ECO",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=21) 취합. §CATALOG kestate(부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kgdc)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.)"
+  },
+  {
+    "no": 9508,
+    "utterance": "노후 자금을 어떻게 나눠서 투자하면 좋을지 자산 배분 상담을 받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kfinance",
+    "expected_name": "K-Stock",
+    "category": "SP전수커버리지-GWP-ECO",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=15) 취합. §CATALOG kfinance(89개 자산군 실시간 분석. 포트폴리오. 상품 가입·실행·잔고 조회 자체는 kgdc 소관 — 여기는 분석·조언 전담.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+  },
+  {
+    "no": 9509,
+    "utterance": "적금 상품을 알아보고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kgdc",
+    "expected_name": "GDC",
+    "category": "SP전수커버리지-GWP-ECO",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=13) 취합. §CATALOG kgdc(결제·송금·환전 + 예금·적금·대출·신용평가·투자(재무제표 기반) — 국적통화 FIAT POOL 연동, 무위험 자산 담보 디지털 화폐. (신용·체크카드 상품은 아직 없음 — GDC_ROADMAP.md 기준 미제공) 투자 상품 가입·잔고 조회 자체가 목적이면 여기, 자산 분석·포트폴리오 조언이 목적이면 kfinance(K-Stock) 소관.)"
+  },
+  {
+    "no": 9510,
+    "utterance": "이사를 가서 새 주소로 거주지를 등록해야 하는데 어떻게 하나요",
+    "expected_type": "GWP",
+    "expected_id": "kgov",
+    "expected_name": "K-Public",
+    "category": "SP전수커버리지-GWP-GOV",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=35) 취합. §CATALOG kgov(민원·행정·허가 AI 자동 처리(발급·절차 안내 위주). 특정 시/도/구/읍/면/동 관청을 기관명으로 호출하는 경우는 kregionalgov(전국 지방행정 AI) 소관.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+  },
+  {
+    "no": 9511,
+    "utterance": "독감 증상이 있는데 어느 병원으로 가야 하나요",
+    "expected_type": "GWP",
+    "expected_id": "khealth",
+    "expected_name": "K-Health",
+    "category": "SP전수커버리지-GWP-MED",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=9) 취합. §CATALOG khealth(실거래 기반 건강 위험도 산정. 병원 연동.)"
+  },
+  {
+    "no": 9512,
+    "utterance": "실비보험 청구 절차가 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kinsurance",
+    "expected_name": "K-Insurance",
+    "category": "SP전수커버리지-GWP-ECO",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=17) 취합. §CATALOG kinsurance(공적 보험(건강·산재·고용보험·국민연금) 청구·수급 절차 안내. 지급 결정 권한 없음 — 민간 보험 상품은 미취급. 사업장 4대보험 가입·신고는 kbusiness, 고용보험 행정민원은 kgov 소관.)"
+  },
+  {
+    "no": 9513,
+    "utterance": "계약서 위반으로 손해배상 소송을 하고 싶은데 어떻게 처리되나요",
+    "expected_type": "GWP",
+    "expected_id": "klaw",
+    "expected_name": "K-Law",
+    "category": "SP전수커버리지-GWP-JUS",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=3) 취합. §CATALOG klaw(AI 가상 판결문. K-Law v20.0. 1초·1,000원.)"
+  },
+  {
+    "no": 9514,
+    "utterance": "택배가 아직 도착 안 했는데 배송 조회하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "klogistics",
+    "expected_name": "K-Logistics",
+    "category": "SP전수커버리지-GWP-TRN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=31) 취합. §CATALOG klogistics(주문-출고-배송-반품 전 과정 자동화.)"
+  },
+  {
+    "no": 9515,
+    "utterance": "옆집에서 계속 가정폭력이 있는 것 같아 신고하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kpolice",
+    "expected_name": "K-Police",
+    "category": "SP전수커버리지-GWP-JUS",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=5) 취합. §CATALOG kpolice(실시간 범죄 예측·대응. 경찰청 연동.)"
+  },
+  {
+    "no": 9516,
+    "utterance": "혼디 자주 묻는 질문 목록 보여줘",
+    "expected_type": "GWP",
+    "expected_id": "kqna",
+    "expected_name": "Gopang QnA",
+    "category": "SP전수커버리지-GWP-GOV",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=49) 취합. §CATALOG kqna(범부처 질의응답 라우터. SP-CORE + 도메인별 SP(BIZ/ECONOMY/EDU/GOV/INFRA/IP/LEGAL/LOGISTICS/SAFETY) 자체 라우팅.)"
+  },
+  {
+    "no": 9517,
+    "utterance": "우리 동네 주민센터 민원 처리 시간이 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "kregionalgov",
+    "expected_name": "전국 지방행정 AI",
+    "category": "SP전수커버리지-GWP-GOV",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=33) 취합. §CATALOG kregionalgov(광역시도청·시군구청·읍면동사무소·국가기관 지역사무소 행정 안내(전국 대응, GOV-COMMON SP 트리 자체 라우팅).)"
+  },
+  {
+    "no": 9518,
+    "utterance": "제 개인정보가 유출된 것 같은데 어떻게 확인하나요",
+    "expected_type": "GWP",
+    "expected_id": "ksecurity",
+    "expected_name": "K-Security",
+    "category": "SP전수커버리지-GWP-JUS",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=7) 취합. §CATALOG ksecurity(사이버 보안·개인정보 침해 대응.)"
+  },
+  {
+    "no": 9519,
+    "utterance": "매년 초에 회사에서 처리해주던 세금 정산을 이번엔 제가 직접 챙겨야 하는데 어떻게 준비하나요",
+    "expected_type": "GWP",
+    "expected_id": "ktax",
+    "expected_name": "K-Tax",
+    "category": "SP전수커버리지-GWP-ECO",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=25) 취합. §CATALOG ktax(세액 계산·신고·절세 전략 안내(국세청·홈택스 연동) — 재무제표·손익계산서 등 회계장부 작성 자체는 kbusiness 소관.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+  },
+  {
+    "no": 9520,
+    "utterance": "휴대폰 요금제를 변경하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "SP전수커버리지-GWP-UTL",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=19) 취합. §CATALOG ktelecom(통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관. 최종 실행(개통 등)은 본인이 통신사 앱에서.)"
+  },
+  {
+    "no": 9521,
+    "utterance": "버스 노선 정보를 알고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktransport",
+    "expected_name": "K-Traffic",
+    "category": "SP전수커버리지-GWP-TRN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=29) 취합. §CATALOG ktransport(교통행정 민원 안내(대중교통 노선·도로 공사통제 정보·주정차 단속 및 과태료·운전면허 행정) — 실시간 길찾기/내비게이션이 아님.)"
+  },
+  {
+    "no": 9522,
+    "utterance": "제 계정 설정을 바꾸고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kusers",
+    "expected_name": "Gopang Users",
+    "category": "SP전수커버리지-GWP-GOV",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=51) 취합. §CATALOG kusers(개인/기관 엔티티 검색·해석. GAS(Gopang Address System) v1.6 기반. SP-USERS 자체 라우팅.)"
+  },
+  {
+    "no": 9523,
+    "utterance": "혼디 사용법을 알려줘",
+    "expected_type": "GWP",
+    "expected_id": "profile-assistant",
+    "expected_name": "혼디 안내(튜토리얼·프로필)",
+    "category": "SP전수커버리지-GWP-ONB",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=41) 취합. §CATALOG profile-assistant(앱 사용법 튜토리얼(PHASE -1) 및 프로필 작성/수정(PHASE 0/1). 중단해도 다음 호출 시 이어서 진행.)"
+  },
+  {
+    "no": 9524,
+    "utterance": "35000원의 15% 팁을 계산해줘",
+    "expected_type": "GWP",
+    "expected_id": "tool-calculator",
+    "expected_name": "계산기",
+    "category": "SP전수커버리지-GWP-TOOL",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=47) 취합. §CATALOG tool-calculator(수식 계산. function calling.)"
+  },
+  {
+    "no": 9525,
+    "utterance": "지금 원달러 환율이 대략 얼마인지 궁금해요",
+    "expected_type": "GWP",
+    "expected_id": "tool-web-search",
+    "expected_name": "웹 검색",
+    "category": "SP전수커버리지-GWP-TOOL",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=45) 취합. §CATALOG tool-web-search(실시간 웹 검색. SP 자동생성 시 의무 사용.) [2026-08-31 재작성 — 원본이 trigger 단어 과다의존으로 플래그됨, 자연스러운 문장으로 교체]"
+  },
+  {
+    "no": 9526,
+    "utterance": "공인회계사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "accountant",
+    "expected_name": "공인회계사",
+    "category": "SP전수커버리지-EXPERT-FIN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=57) 취합. §CATALOG-EXPERT accountant"
+  },
+  {
+    "no": 9527,
+    "utterance": "전문간호사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "advanced-practice-nurse",
+    "expected_name": "전문간호사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=93) 취합. §CATALOG-EXPERT advanced-practice-nurse"
+  },
+  {
+    "no": 9528,
+    "utterance": "구매자문한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "advisor",
+    "expected_name": "구매자문(K-Advisor)",
+    "category": "SP전수커버리지-EXPERT-FIN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=111) 취합. §CATALOG-EXPERT advisor"
+  },
+  {
+    "no": 9529,
+    "utterance": "감정평가사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "appraiser",
+    "expected_name": "감정평가사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=61) 취합. §CATALOG-EXPERT appraiser"
+  },
+  {
+    "no": 9530,
+    "utterance": "건축사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "architect",
+    "expected_name": "건축사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=131) 취합. §CATALOG-EXPERT architect"
+  },
+  {
+    "no": 9531,
+    "utterance": "조리사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "chef",
+    "expected_name": "조리사",
+    "category": "SP전수커버리지-EXPERT-CULINARY",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=169) 취합. §CATALOG-EXPERT chef"
+  },
+  {
+    "no": 9532,
+    "utterance": "보육교사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "childcare-teacher",
+    "expected_name": "보육교사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=127) 취합. §CATALOG-EXPERT childcare-teacher"
+  },
+  {
+    "no": 9533,
+    "utterance": "임상심리사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "clinical-psychologist",
+    "expected_name": "임상심리사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=113) 취합. §CATALOG-EXPERT clinical-psychologist"
+  },
+  {
+    "no": 9534,
+    "utterance": "학예사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "curator",
+    "expected_name": "학예사(큐레이터)",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=121) 취합. §CATALOG-EXPERT curator"
+  },
+  {
+    "no": 9535,
+    "utterance": "관세사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "customs-broker",
+    "expected_name": "관세사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=69) 취합. §CATALOG-EXPERT customs-broker"
+  },
+  {
+    "no": 9536,
+    "utterance": "치과위생사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-hygienist",
+    "expected_name": "치과위생사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=87) 취합. §CATALOG-EXPERT dental-hygienist"
+  },
+  {
+    "no": 9537,
+    "utterance": "치과기공사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-technician",
+    "expected_name": "치과기공사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=91) 취합. §CATALOG-EXPERT dental-technician"
+  },
+  {
+    "no": 9538,
+    "utterance": "치과의사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "dentist",
+    "expected_name": "치과의사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=71) 취합. §CATALOG-EXPERT dentist"
+  },
+  {
+    "no": 9539,
+    "utterance": "영양사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "dietitian",
+    "expected_name": "영양사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=95) 취합. §CATALOG-EXPERT dietitian"
+  },
+  {
+    "no": 9540,
+    "utterance": "전기안전기술사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "electrical-safety-engineer",
+    "expected_name": "전기안전기술사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=153) 취합. §CATALOG-EXPERT electrical-safety-engineer"
+  },
+  {
+    "no": 9541,
+    "utterance": "재무설계사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "financial-planner",
+    "expected_name": "재무설계사",
+    "category": "SP전수커버리지-EXPERT-FIN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=59) 취합. §CATALOG-EXPERT financial-planner"
+  },
+  {
+    "no": 9542,
+    "utterance": "소방시설관리사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "fire-safety-manager",
+    "expected_name": "소방시설관리사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=147) 취합. §CATALOG-EXPERT fire-safety-manager"
+  },
+  {
+    "no": 9543,
+    "utterance": "가스기술사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "gas-safety-engineer",
+    "expected_name": "가스기술사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=155) 취합. §CATALOG-EXPERT gas-safety-engineer"
+  },
+  {
+    "no": 9544,
+    "utterance": "미용사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "hairdresser",
+    "expected_name": "미용사",
+    "category": "SP전수커버리지-EXPERT-BEAUTY",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=167) 취합. §CATALOG-EXPERT hairdresser"
+  },
+  {
+    "no": 9545,
+    "utterance": "보건교육사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "health-educator",
+    "expected_name": "보건교육사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=107) 취합. §CATALOG-EXPERT health-educator"
+  },
+  {
+    "no": 9546,
+    "utterance": "산업안전·보건지도사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "industrial-safety-consultant",
+    "expected_name": "산업안전·보건지도사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=143) 취합. §CATALOG-EXPERT industrial-safety-consultant"
+  },
+  {
+    "no": 9547,
+    "utterance": "법무사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "judicial-scrivener",
+    "expected_name": "법무사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=53) 취합. §CATALOG-EXPERT judicial-scrivener"
+  },
+  {
+    "no": 9548,
+    "utterance": "공인노무사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "labor-attorney",
+    "expected_name": "공인노무사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=65) 취합. §CATALOG-EXPERT labor-attorney"
+  },
+  {
+    "no": 9549,
+    "utterance": "조경기술사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "landscape-engineer",
+    "expected_name": "조경기술사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=149) 취합. §CATALOG-EXPERT landscape-engineer"
+  },
+  {
+    "no": 9550,
+    "utterance": "변호사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "lawyer",
+    "expected_name": "변호사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=173) 취합. §CATALOG-EXPERT lawyer"
+  },
+  {
+    "no": 9551,
+    "utterance": "사서한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "librarian",
+    "expected_name": "사서",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=123) 취합. §CATALOG-EXPERT librarian"
+  },
+  {
+    "no": 9552,
+    "utterance": "평생교육사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "lifelong-educator",
+    "expected_name": "평생교육사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=129) 취합. §CATALOG-EXPERT lifelong-educator"
+  },
+  {
+    "no": 9553,
+    "utterance": "손해사정사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "loss-adjuster",
+    "expected_name": "손해사정사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=63) 취합. §CATALOG-EXPERT loss-adjuster"
+  },
+  {
+    "no": 9554,
+    "utterance": "기관사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "marine-engineer",
+    "expected_name": "기관사(선박)",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=141) 취합. §CATALOG-EXPERT marine-engineer"
+  },
+  {
+    "no": 9555,
+    "utterance": "도선사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "marine-pilot",
+    "expected_name": "도선사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=135) 취합. §CATALOG-EXPERT marine-pilot"
+  },
+  {
+    "no": 9556,
+    "utterance": "임상병리사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "medical-lab-technologist",
+    "expected_name": "임상병리사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=83) 취합. §CATALOG-EXPERT medical-lab-technologist"
+  },
+  {
+    "no": 9557,
+    "utterance": "정신건강전문요원한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "mental-health-professional",
+    "expected_name": "정신건강전문요원",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=117) 취합. §CATALOG-EXPERT mental-health-professional"
+  },
+  {
+    "no": 9558,
+    "utterance": "조산사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "midwife",
+    "expected_name": "조산사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=99) 취합. §CATALOG-EXPERT midwife"
+  },
+  {
+    "no": 9559,
+    "utterance": "조선사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "naval-architect",
+    "expected_name": "조선사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=137) 취합. §CATALOG-EXPERT naval-architect"
+  },
+  {
+    "no": 9560,
+    "utterance": "항해사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "navigation-officer",
+    "expected_name": "항해사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=139) 취합. §CATALOG-EXPERT navigation-officer"
+  },
+  {
+    "no": 9561,
+    "utterance": "간호사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "nurse",
+    "expected_name": "간호사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=79) 취합. §CATALOG-EXPERT nurse"
+  },
+  {
+    "no": 9562,
+    "utterance": "작업치료사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "occupational-therapist",
+    "expected_name": "작업치료사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=89) 취합. §CATALOG-EXPERT occupational-therapist"
+  },
+  {
+    "no": 9563,
+    "utterance": "안경사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "optician",
+    "expected_name": "안경사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=103) 취합. §CATALOG-EXPERT optician"
+  },
+  {
+    "no": 9564,
+    "utterance": "응급구조사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "paramedic",
+    "expected_name": "응급구조사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=97) 취합. §CATALOG-EXPERT paramedic"
+  },
+  {
+    "no": 9565,
+    "utterance": "변리사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "patent-attorney",
+    "expected_name": "변리사",
+    "category": "SP전수커버리지-EXPERT-LAW",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=67) 취합. §CATALOG-EXPERT patent-attorney"
+  },
+  {
+    "no": 9566,
+    "utterance": "약사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "pharmacist",
+    "expected_name": "약사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=75) 취합. §CATALOG-EXPERT pharmacist"
+  },
+  {
+    "no": 9567,
+    "utterance": "물리치료사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "physical-therapist",
+    "expected_name": "물리치료사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=81) 취합. §CATALOG-EXPERT physical-therapist"
+  },
+  {
+    "no": 9568,
+    "utterance": "의사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "physician",
+    "expected_name": "의사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=171) 취합. §CATALOG-EXPERT physician"
+  },
+  {
+    "no": 9569,
+    "utterance": "기술사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "professional-engineer",
+    "expected_name": "기술사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=133) 취합. §CATALOG-EXPERT professional-engineer"
+  },
+  {
+    "no": 9570,
+    "utterance": "초등학교 2학년인데 받아쓰기 시험에서 자꾸 틀려서 연습 좀 도와주세요.",
+    "expected_type": "EXPERT",
+    "expected_id": "professor",
+    "expected_name": "교수(1:1 맞춤교육)",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_k12_professor_vs_teacher_20260809.json(no=1) 취합. §CATALOG-EXPERT professor 행 — 세부 전공은 표만 보고는 안 나옴, professor로만 판단하면 과목 게이트가 리프를 정함"
+  },
+  {
+    "no": 9571,
+    "utterance": "방사선사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "radiologic-technologist",
+    "expected_name": "방사선사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=85) 취합. §CATALOG-EXPERT radiologic-technologist"
+  },
+  {
+    "no": 9572,
+    "utterance": "공인중개사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "real-estate-agent",
+    "expected_name": "공인중개사",
+    "category": "SP전수커버리지-EXPERT-REAL_ESTATE",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=157) 취합. §CATALOG-EXPERT real-estate-agent"
+  },
+  {
+    "no": 9573,
+    "utterance": "위생사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "sanitarian",
+    "expected_name": "위생사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=105) 취합. §CATALOG-EXPERT sanitarian"
+  },
+  {
+    "no": 9574,
+    "utterance": "전문상담교사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "school-counselor",
+    "expected_name": "전문상담교사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=115) 취합. §CATALOG-EXPERT school-counselor"
+  },
+  {
+    "no": 9575,
+    "utterance": "정보보안전문가한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "security-engineer",
+    "expected_name": "정보보안전문가",
+    "category": "SP전수커버리지-EXPERT-IT",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=159) 취합. §CATALOG-EXPERT security-engineer"
+  },
+  {
+    "no": 9576,
+    "utterance": "사회복지사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "social-worker",
+    "expected_name": "사회복지사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=119) 취합. §CATALOG-EXPERT social-worker"
+  },
+  {
+    "no": 9577,
+    "utterance": "언어재활사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "speech-language-pathologist",
+    "expected_name": "언어재활사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=101) 취합. §CATALOG-EXPERT speech-language-pathologist"
+  },
+  {
+    "no": 9578,
+    "utterance": "생활스포츠지도사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "sports-instructor",
+    "expected_name": "생활스포츠지도사",
+    "category": "SP전수커버리지-EXPERT-SPORTS",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=165) 취합. §CATALOG-EXPERT sports-instructor"
+  },
+  {
+    "no": 9579,
+    "utterance": "측량 및 지형공간정보기술사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "surveying-engineer",
+    "expected_name": "측량 및 지형공간정보기술사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=151) 취합. §CATALOG-EXPERT surveying-engineer"
+  },
+  {
+    "no": 9580,
+    "utterance": "세무사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "tax-accountant",
+    "expected_name": "세무사",
+    "category": "SP전수커버리지-EXPERT-FIN",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=55) 취합. §CATALOG-EXPERT tax-accountant"
+  },
+  {
+    "no": 9581,
+    "utterance": "이번 학기 과학 수업 설계를 도와주세요.",
+    "expected_type": "EXPERT",
+    "expected_id": "teacher",
+    "expected_name": "교사(정교사)",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_k12_professor_vs_teacher_20260809.json(no=18) 취합. docs/expert_routing_thought_experiment_100_2026-07-07.md 사례 19('이번 학기 과학 수업 설계를 도와주세요(교사 본인)') → teacher와 동일 유형. 이 세트에서 유일하게 professor가 아닌 정답을 넣어 캘리브레이션"
+  },
+  {
+    "no": 9582,
+    "utterance": "관광통역안내사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "tour-guide",
+    "expected_name": "관광통역안내사",
+    "category": "SP전수커버리지-EXPERT-TOURISM",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=163) 취합. §CATALOG-EXPERT tour-guide"
+  },
+  {
+    "no": 9583,
+    "utterance": "한의사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "traditional-medicine-doctor",
+    "expected_name": "한의사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=73) 취합. §CATALOG-EXPERT traditional-medicine-doctor"
+  },
+  {
+    "no": 9584,
+    "utterance": "통역사·번역사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "translator-interpreter",
+    "expected_name": "통역사·번역사",
+    "category": "SP전수커버리지-EXPERT-TRANSLATION",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=161) 취합. §CATALOG-EXPERT translator-interpreter"
+  },
+  {
+    "no": 9585,
+    "utterance": "수의사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "veterinarian",
+    "expected_name": "수의사",
+    "category": "SP전수커버리지-EXPERT-HEALTH",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=77) 취합. §CATALOG-EXPERT veterinarian"
+  },
+  {
+    "no": 9586,
+    "utterance": "기상예보사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "weather-forecaster",
+    "expected_name": "기상예보사",
+    "category": "SP전수커버리지-EXPERT-ENG",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=145) 취합. §CATALOG-EXPERT weather-forecaster"
+  },
+  {
+    "no": 9587,
+    "utterance": "청소년상담사한테 직접 상담받고 싶어요, 연결해주세요",
+    "expected_type": "EXPERT",
+    "expected_id": "youth-counselor",
+    "expected_name": "청소년상담사",
+    "category": "SP전수커버리지-EXPERT-EDU",
+    "static_verdict": "PASS",
+    "basis": "기존 배치 scenarios_full_routing_300_20260808.json(no=125) 취합. §CATALOG-EXPERT youth-counselor"
+  }
+]
