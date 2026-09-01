@@ -37,6 +37,9 @@ h1{font-size:18px;margin-bottom:4px}
     <input id="f-subject" type="text" placeholder="제목">
     <label>내용</label>
     <textarea id="f-text" rows="8" placeholder="내용을 입력하세요"></textarea>
+    <label>첨부파일 <span style="color:#9ca3af">(선택, 최대 25MB)</span></label>
+    <input id="f-file" type="file">
+    <div id="attach-list" style="font-size:12px;color:#374151;margin:-4px 0 10px"></div>
     <button class="submit-btn" id="submit-btn" onclick="sendMail()">보내기</button>
     <div class="err" id="err" style="display:none"></div>
     <div class="ok" id="ok" style="display:none"></div>
@@ -47,6 +50,7 @@ h1{font-size:18px;margin-bottom:4px}
 const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let userGuid = null;
 let userPubkey = null;
+let pendingAttachmentIds = []; // { id, filename } — 업로드 완료된 것만
 
 // 2026-09-01 — K-Mail 전환(worker.js /mail/send 재구현)에 맞춰
 // guid만 보내던 방식에서 profile.html과 동일한 지갑 서명 방식으로
@@ -63,6 +67,50 @@ async function waitForWallet(timeoutMs = 5000) {
     await new Promise(r => setTimeout(r, 200));
   }
   return { guid: null, pubkey: null };
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]); // data URL 접두어 제거
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderAttachList() {
+  const el = document.getElementById('attach-list');
+  el.textContent = pendingAttachmentIds.length
+    ? '첨부됨: ' + pendingAttachmentIds.map(a => a.filename).join(', ')
+    : '';
+}
+
+async function handleFileSelect() {
+  const input = document.getElementById('f-file');
+  const file = input.files[0];
+  if (!file || !userGuid) return;
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    const base64 = await fileToBase64(file);
+    const ts = Date.now().toString();
+    // 서버 sigMsg 형식과 반드시 일치: kmail-attachment-upload:{guid}:{filename}:{ts}
+    const sigMsg = `kmail-attachment-upload:${userGuid}:${file.name}:${ts}`;
+    const signature = await window.gopangWallet.signPayload(sigMsg);
+    const res = await fetch(`${WORKER_URL}/kmail/attachments/upload`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid: userGuid, pubkey: userPubkey, signature, ts, file_base64: base64, filename: file.name, content_type: file.type }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.detail || data.message || ('HTTP ' + res.status));
+    pendingAttachmentIds.push({ id: data.attachment_id, filename: file.name });
+    renderAttachList();
+  } catch (e) {
+    err.textContent = '첨부 업로드 실패: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    input.value = '';
+  }
 }
 
 async function sendMail() {
@@ -87,7 +135,7 @@ async function sendMail() {
 
     const res = await fetch(`${WORKER_URL}/mail/send`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid: userGuid, pubkey: userPubkey, signature, ts, to, subject, text }),
+      body: JSON.stringify({ guid: userGuid, pubkey: userPubkey, signature, ts, to, subject, text, attachment_ids: pendingAttachmentIds.map(a => a.id) }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.message || 'HTTP ' + res.status);
@@ -98,6 +146,8 @@ async function sendMail() {
     document.getElementById('f-to').value = '';
     document.getElementById('f-subject').value = '';
     document.getElementById('f-text').value = '';
+    pendingAttachmentIds = [];
+    renderAttachList();
   } catch (e) {
     err.textContent = '발송 실패: ' + e.message;
     err.style.display = 'block';
@@ -105,6 +155,8 @@ async function sendMail() {
     btn.disabled = false;
   }
 }
+
+document.getElementById('f-file').addEventListener('change', handleFileSelect);
 
 (async function init() {
   const w = await waitForWallet();
