@@ -71,6 +71,15 @@ binding = "AI"
 binding = "PROFILE_MEDIA"
 bucket_name = "hondi-profile-media"
 
+# 2026-09-01 신설 — K-Mail 첨부파일(발신/수신 양쪽). PROFILE_MEDIA와
+# 성격이 다르다 — 프로필 사진은 공개용이라 GET 프록시가 인증 없이
+# 열려 있지만, 메일 첨부는 개인 문서일 수 있어 다운로드도 서명 인증을
+# 거친다(handleKmailAttachmentGet 참조). 버킷은 이미 생성 완료
+# (2026-09-01, wrangler r2 bucket create hondi-kmail-attachments).
+[[r2_buckets]]
+binding = "KMAIL_ATTACHMENTS"
+bucket_name = "hondi-kmail-attachments"
+
 # ★ 배포 전 필수 — 아래 index_name의 Vectorize 인덱스를 먼저 만들어야
 # 한다(로컬에선 실행 못 함, 배포 권한 있는 쪽에서 1회 실행):
 #   wrangler vectorize create hondi-benefit-catalog --dimensions=1024 --metric=cosine
