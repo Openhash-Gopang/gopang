@@ -11938,6 +11938,11 @@ export default {
     // gov-mail(hondi.org, 관리자 전용)과 도메인·인증 방식 모두 별개 —
     // 혼디 사용자 본인 지갑 서명으로 <guid>@hondi.kr에서 발송한다.
     if (pathname === '/mail/send' && request.method === 'POST') return handleUserMailSend(request, env, corsHeaders);
+    // K-Mail 수신자 확정 파이프라인(2026-09-01) — propose(리서치 후보 스테이징)
+    // → list(사용자 확인) → decide(승인/거부). confirmed만 캠페인 발송 대상.
+    if (pathname === '/kmail/contacts/propose' && request.method === 'POST') return handleKmailContactsPropose(request, env, corsHeaders);
+    if (pathname === '/kmail/contacts' && request.method === 'GET') return handleKmailContactsList(request, url, env, corsHeaders);
+    if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
     // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
@@ -28544,6 +28549,142 @@ async function handleUserMailSend(request, env, corsHeaders) {
     ok: true, from: fromAddr, sent_at: new Date().toISOString(),
     quota: { charged_gdc: quota.charged ? quota.chargedGdc : 0, projected_5d_avg: quota.projectedAvg ?? null },
   }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Mail 수신자 확정 파이프라인 (2026-09-01 신설, 설계 §2)
+//
+// "서울대 컴퓨터 관련 학과 교수들에게 보내줘" 같은 자연어 수신자
+// 서술은 절대 곧바로 발송 대상이 되지 않는다 — 리서치 결과를
+// kmail_contacts에 pending_review로 스테이징하고(propose), 사용자가
+// 확인해서(list) 승인/거부해야(decide) confirmed로 바뀐다. confirmed된
+// 것만 kmail_campaigns.contact_ids에 들어갈 자격이 있다(다음 패치에서
+// 캠페인 발송 로직이 이 상태를 검사할 것).
+//
+// propose 호출 주체는 아직 별도 SP가 없어 이 패치에서는 사용자 클라이언트가
+// (리서치 도구를 호출한 뒤) 직접 부르는 것으로 가정 — SP가 붙으면
+// 서버 내부(AI 파이프라인)에서 같은 함수를 호출하도록 바뀔 수 있다.
+// ═══════════════════════════════════════════════════════════
+
+const KMAIL_CONTACTS_PROPOSE_MAX = 50; // 한 번에 스테이징 가능한 후보 상한 — 무분별한 대량 생성 방지
+
+// POST /kmail/contacts/propose
+// body: { guid, pubkey, signature, ts, recipient_query, candidates: [{name, org, dept, email, source_url, confidence, tags}] }
+async function handleKmailContactsPropose(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, recipient_query, candidates } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return _err(400, 'MISSING_FIELD', 'candidates 배열(1개 이상) 필수', corsHeaders);
+  }
+  if (candidates.length > KMAIL_CONTACTS_PROPOSE_MAX) {
+    return _err(400, 'TOO_MANY_CANDIDATES', `한 번에 최대 ${KMAIL_CONTACTS_PROPOSE_MAX}건까지만 스테이징할 수 있습니다`, corsHeaders);
+  }
+
+  const sigMsg = `kmail-contacts-propose:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const valid = candidates.filter(c => c && typeof c.email === 'string' && emailRe.test(c.email));
+  if (valid.length === 0) {
+    return _err(400, 'NO_VALID_CANDIDATES', '유효한 이메일 주소를 가진 후보가 없습니다', corsHeaders);
+  }
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const created = [];
+  for (const c of valid) {
+    try {
+      const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          owner_user_guid: guid,
+          name: c.name || '', org: c.org || '', dept: c.dept || '',
+          email: c.email, tags: c.tags || [],
+          source_url: c.source_url || '', confidence: typeof c.confidence === 'number' ? c.confidence : null,
+          status: 'pending_review',
+          added_via_query: recipient_query || '',
+        }),
+      });
+      const rec = await res.json().catch(() => null);
+      if (res.ok && rec) created.push(rec.id);
+    } catch (e) {
+      console.warn('[K-Mail Contacts] 후보 생성 실패(계속 진행):', e.message);
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, staged: created.length, skipped: candidates.length - valid.length, ids: created }),
+    { status: 200, headers: corsHeaders });
+}
+
+// GET /kmail/contacts?guid=...&pubkey=...&signature=...&ts=...&status=pending_review
+// 본인 소유(owner_user_guid=guid) 연락처 후보만 조회 — status 생략 시 pending_review만.
+async function handleKmailContactsList(request, url, env, corsHeaders) {
+  const guid = url.searchParams.get('guid');
+  const pubkey = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts = url.searchParams.get('ts');
+  const status = url.searchParams.get('status') || 'pending_review';
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!['pending_review', 'confirmed', 'rejected'].includes(status)) {
+    return _err(400, 'INVALID_STATUS', "status는 pending_review/confirmed/rejected 중 하나여야 합니다", corsHeaders);
+  }
+
+  const sigMsg = `kmail-contacts-list:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`owner_user_guid='${guid}' && status='${status}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&sort=-created&perPage=200`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+
+  return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/contacts/decide
+// body: { guid, pubkey, signature, ts, contact_id, decision: 'confirm'|'reject' }
+// 소유권 검사 필수 — contact_id를 알아냈다고 아무나 승인/거부할 수 있으면
+// 안 되므로, 레코드의 owner_user_guid가 서명한 guid와 일치하는지 반드시 확인한다.
+async function handleKmailContactsDecide(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, contact_id, decision } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!contact_id || (decision !== 'confirm' && decision !== 'reject')) {
+    return _err(400, 'MISSING_FIELD', "contact_id 필수, decision은 'confirm' 또는 'reject'여야 합니다", corsHeaders);
+  }
+
+  const sigMsg = `kmail-contacts-decide:${guid}:${contact_id}:${decision}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact_id}`, { headers });
+  if (!getRes.ok) return _err(404, 'CONTACT_NOT_FOUND', '해당 연락처 후보를 찾을 수 없습니다', corsHeaders);
+  const contact = await getRes.json().catch(() => null);
+  if (!contact || contact.owner_user_guid !== guid) {
+    return _err(403, 'NOT_OWNER', '본인이 요청한 연락처 후보만 승인/거부할 수 있습니다', corsHeaders);
+  }
+
+  const newStatus = decision === 'confirm' ? 'confirmed' : 'rejected';
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact_id}`, {
+    method: 'PATCH', headers, body: JSON.stringify({ status: newStatus }),
+  });
+  if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '상태 갱신 실패', corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, contact_id, status: newStatus }), { status: 200, headers: corsHeaders });
 }
 
 // GET /default-key?guid=...&registered_at=ISO8601
