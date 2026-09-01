@@ -27,7 +27,7 @@ h1{font-size:18px;margin-bottom:4px}
 <body>
 <div class="wrap">
   <h1>메일 보내기</h1>
-  <div class="sub">외부 이메일 주소로 메일을 발송합니다.</div>
+  <div class="sub">외부 이메일 주소로 메일을 발송합니다. 발신 주소는 본인 고유 주소(<span id="from-addr-preview">@hondi.kr</span>)로 고정됩니다.</div>
   <div class="note">⚠️ 발송만 가능합니다 — 받은 메일을 여기서 확인하는 기능(수신함)은 아직 없습니다. 답장은 상대방의 실제 이메일로 직접 받으셔야 합니다.</div>
 
   <div class="card">
@@ -46,21 +46,30 @@ h1{font-size:18px;margin-bottom:4px}
 <script>
 const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let userGuid = null;
+let userPubkey = null;
 
+// 2026-09-01 — K-Mail 전환(worker.js /mail/send 재구현)에 맞춰
+// guid만 보내던 방식에서 profile.html과 동일한 지갑 서명 방식으로
+// 교체. 서명 없이는 새 서버가 403(AUTH_REQUIRED)을 돌려준다.
 async function waitForWallet(timeoutMs = 5000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
-    if (window.gopangWallet?.guid) return { guid: window.gopangWallet.guid };
+    if (window.gopangWallet?.guid && window.gopangWallet?.signPayload) {
+      return {
+        guid: window.gopangWallet.guid,
+        pubkey: window.gopangWallet.publicKeyB64u || window.gopangWallet.publicKeyB64 || null,
+      };
+    }
     await new Promise(r => setTimeout(r, 200));
   }
-  return { guid: null };
+  return { guid: null, pubkey: null };
 }
 
 async function sendMail() {
   const err = document.getElementById('err');
   const ok = document.getElementById('ok');
   err.style.display = 'none'; ok.style.display = 'none';
-  if (!userGuid) { err.textContent = '지갑 정보를 아직 불러오지 못했습니다.'; err.style.display = 'block'; return; }
+  if (!userGuid || !userPubkey) { err.textContent = '지갑 정보를 아직 불러오지 못했습니다.'; err.style.display = 'block'; return; }
 
   const to = document.getElementById('f-to').value.trim();
   const subject = document.getElementById('f-subject').value.trim();
@@ -70,13 +79,21 @@ async function sendMail() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   try {
+    const ts = Date.now().toString();
+    // worker.js handleUserMailSend의 sigMsg 조립과 반드시 동일해야
+    // 서명 검증이 통과한다: `kmail-send:${guid}:${to}:${ts}`
+    const sigMsg = `kmail-send:${userGuid}:${to}:${ts}`;
+    const signature = await window.gopangWallet.signPayload(sigMsg);
+
     const res = await fetch(`${WORKER_URL}/mail/send`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid: userGuid, to, subject, text }),
+      body: JSON.stringify({ guid: userGuid, pubkey: userPubkey, signature, ts, to, subject, text }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || data.message || 'HTTP ' + res.status);
-    ok.textContent = '메일을 보냈습니다.';
+    ok.textContent = data.quota?.charged_gdc
+      ? `메일을 보냈습니다. (5일 평균 발송한도 초과로 ₮${data.quota.charged_gdc} 부과됨)`
+      : '메일을 보냈습니다.';
     ok.style.display = 'block';
     document.getElementById('f-to').value = '';
     document.getElementById('f-subject').value = '';
@@ -92,6 +109,11 @@ async function sendMail() {
 (async function init() {
   const w = await waitForWallet();
   userGuid = w.guid;
+  userPubkey = w.pubkey;
+  if (userGuid) {
+    const el = document.getElementById('from-addr-preview');
+    if (el) el.textContent = `${userGuid}@hondi.kr`;
+  }
 })();
 </script>
 </body>
