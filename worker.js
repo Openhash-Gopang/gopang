@@ -11787,6 +11787,9 @@ export default {
     // scheduled 캠페인을 찾아 발송(_kmailSweepDueCampaigns 참고). 동일
     // 10분 주기 크론에 편승 — 별도 wrangler.toml 트리거 불필요.
     ctx.waitUntil(_kmailSweepDueCampaigns(env).catch(e => console.error('[K-Mail Campaign] 스윕 전체 실패:', e.message)));
+    // 2026-09-01 신설 — K-Mail 다이제스트 생성 스윕. digest_at이 지났고
+    // 아직 pending인 캠페인의 회신을 취합해 정리(_kmailSweepDueDigests).
+    ctx.waitUntil(_kmailSweepDueDigests(env).catch(e => console.error('[K-Mail Digest] 스윕 전체 실패:', e.message)));
   },
 
   // ── 공문 메일 수신 (2026-08-31 신설) ─────────────────────────────
@@ -12032,6 +12035,7 @@ export default {
     // → list(사용자 확인) → decide(승인/거부). confirmed만 캠페인 발송 대상.
     if (pathname === '/kmail/contacts/propose' && request.method === 'POST') return handleKmailContactsPropose(request, env, corsHeaders);
     if (pathname === '/kmail/contacts' && request.method === 'GET') return handleKmailContactsList(request, url, env, corsHeaders);
+    if (pathname === '/kmail/mailbox' && request.method === 'GET') return handleKmailMailboxList(request, url, env, corsHeaders);
     if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
     if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
@@ -28766,6 +28770,47 @@ async function handleKmailContactsList(request, url, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { status: 200, headers: corsHeaders });
 }
 
+// GET /kmail/mailbox?box=inbox|sent&guid=...&pubkey=...&signature=...&ts=...&include_deleted=true|false
+// 설계: 보낸함=sender_guid가 나, 받은함=receiver_guid가 나 — session_id
+// (캠페인/즉시발송 스레드 구분)와 무관하게 "나"를 기준으로 합쳐서 보여준다.
+// include_deleted=true가 아니면 kmail_inbound_deleted(자동삭제 규칙에
+// 걸린 것)는 기본적으로 숨긴다 — 소프트 삭제 원칙(설계 §6)이라 데이터는
+// 남아있지만, 평소 받은함 UX에서는 안 보이는 게 맞다.
+async function handleKmailMailboxList(request, url, env, corsHeaders) {
+  const box = url.searchParams.get('box');
+  const guid = url.searchParams.get('guid');
+  const pubkey = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts = url.searchParams.get('ts');
+  const includeDeleted = url.searchParams.get('include_deleted') === 'true';
+  if (box !== 'inbox' && box !== 'sent') {
+    return _err(400, 'INVALID_BOX', "box는 'inbox' 또는 'sent'여야 합니다", corsHeaders);
+  }
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+
+  const sigMsg = `kmail-mailbox:${guid}:${box}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  let filter;
+  if (box === 'sent') {
+    filter = `sender_guid='${guid}' && content_type='kmail_outbound'`;
+  } else {
+    filter = includeDeleted
+      ? `receiver_guid='${guid}' && (content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_digest')`
+      : `receiver_guid='${guid}' && (content_type='kmail_inbound' || content_type='kmail_digest')`;
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=200`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+
+  return new Response(JSON.stringify({ ok: true, box, items: data.items || [] }), { status: 200, headers: corsHeaders });
+}
+
 // POST /kmail/contacts/decide
 // body: { guid, pubkey, signature, ts, contact_id, decision: 'confirm'|'reject' }
 // 소유권 검사 필수 — contact_id를 알아냈다고 아무나 승인/거부할 수 있으면
@@ -29060,6 +29105,82 @@ async function _kmailSweepDueCampaigns(env) {
   const due = data.items || [];
   for (const campaign of due) {
     await _kmailSendCampaign(env, campaign).catch(e => console.error('[K-Mail Campaign] 처리 실패:', campaign.id, e.message));
+  }
+}
+
+// 캠페인 하나의 다이제스트 생성 — "회신이 오면 모레 정오에 정리해줘"의
+// 실행부. 소프트 삭제된 회신(kmail_inbound_deleted)은 다이제스트에서
+// 제외한다 — 사용자가 스팸/불필요로 분류한 걸 요약에 넣는 건 그 판정을
+// 무의미하게 만든다. 회신 0건이어도 digest_at은 마감이므로 반드시
+// 생성한다(사용자가 지정한 시각에 "정리"를 기대하고 있으므로, 회신이
+// 없으면 없다고 알려주는 것도 정리의 일부).
+async function _kmailGenerateDigest(env, campaign) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  // 원 수신자 이메일 목록(참석/미회신 집계용) — 연락처가 그새 지워졌거나
+  // 조회 실패해도 다이제스트 자체는 계속 생성한다(집계 정확도만 저하).
+  const contactIds = Array.isArray(campaign.contact_ids) ? campaign.contact_ids : [];
+  const recipientEmails = [];
+  for (const cid of contactIds) {
+    try {
+      const cRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${cid}`, { headers });
+      if (cRes.ok) { const c = await cRes.json(); if (c.email) recipientEmails.push(c.email); }
+    } catch (e) { /* 무시 */ }
+  }
+
+  const filter = encodeURIComponent(`session_id='kmail:${campaign.id}' && content_type='kmail_inbound'`);
+  const mRes = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records?filter=${filter}&sort=created&perPage=200`, { headers });
+  const mData = await mRes.json().catch(() => ({ items: [] }));
+  const replies = mData.items || [];
+
+  const repliedSlugs = new Set(replies.map(r => (r.sender_guid || '').replace(/^ext:/, '')));
+  const notRepliedCount = recipientEmails.filter(e => !repliedSlugs.has(_slugifyEmailAddr(e))).length;
+
+  let digestText;
+  if (replies.length === 0) {
+    digestText = `[${campaign.subject}] 수신자 ${recipientEmails.length}명 중 아직 회신이 없습니다.`;
+  } else if (env.DEEPSEEK_API_KEY) {
+    const replyText = replies.map((r, i) => `${i + 1}. ${r.content_original}`).join('\n\n');
+    const summary = await deepseekChatText({
+      env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+      messages: [{ role: 'user', content:
+        `다음은 "${campaign.subject}" 메일에 대한 회신들입니다. 참석/불참/문의 등으로 분류해 간단히 정리해주세요(3~5문장, 핵심만).\n\n${replyText}` }],
+      max_tokens: 500, temperature: 0.3, timeoutMs: 20000, fallbackText: '',
+    });
+    digestText = `[${campaign.subject}] 회신 ${replies.length}건 / 미회신 ${notRepliedCount}건\n\n${summary || '(요약 생성 실패 — 회신 원문을 직접 확인해 주세요)'}`;
+  } else {
+    digestText = `[${campaign.subject}] 회신 ${replies.length}건 / 미회신 ${notRepliedCount}건 (DEEPSEEK_API_KEY 미설정으로 AI 요약 생략)`;
+  }
+
+  await _writeAiMessage(env, {
+    session_id: `kmail:${campaign.id}`,
+    sender_guid: 'hondi-ai',
+    receiver_guid: campaign.owner_user_guid,
+    content_original: digestText,
+    content_type: 'kmail_digest',
+  }).catch(e => console.error('[K-Mail Digest] ai_messages 기록 실패:', e.message));
+
+  await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records/${campaign.id}`, {
+    method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ digest_status: 'sent' }),
+  }).catch(e => console.error('[K-Mail Digest] campaign 상태 갱신 실패:', e.message));
+}
+
+// Cron 진입점 — digest_at이 지났고 아직 pending인 캠페인을 찾아
+// 다이제스트를 생성한다. env.EMAIL 여부와 무관(다이제스트는 발송이
+// 아니라 ai_messages 기록이므로) — 그래서 _kmailSweepDueCampaigns와
+// 달리 EMAIL 바인딩 체크가 없다.
+async function _kmailSweepDueDigests(env) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const nowISO = new Date().toISOString();
+  const filter = encodeURIComponent(`digest_status='pending' && digest_at <= '${nowISO}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records?filter=${filter}&perPage=50`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const due = data.items || [];
+  for (const campaign of due) {
+    await _kmailGenerateDigest(env, campaign).catch(e => console.error('[K-Mail Digest] 처리 실패:', campaign.id, e.message));
   }
 }
 
