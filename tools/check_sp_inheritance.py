@@ -87,6 +87,20 @@ FAMILIES = {
         ],
         "strict": False,
     },
+    # 2026-09-01 신설 — K-Biz(경영자문형 Type C, AGENT-SUPPLIER와 동일 번호
+    # 체계의 77개 업종 파일). 자식 파일은 의도적으로 최소 형태다(§3 원칙 —
+    # 업종별 전략 콘텐츠를 SP에 미리 적지 않고 LLM 지식에 위임하므로,
+    # AGENT-SUPPLIER처럼 여러 섹션을 요구하지 않는다). informational로
+    # 시작 — 새 패밀리라 위반 이력을 아직 검증하지 못했다.
+    "K-Biz": {
+        "common_glob": "K-Biz-COMMON_v*.md",
+        "child_glob": "K-Biz/K-Biz-[0-9]*_*.txt",
+        "inherit_pattern": re.compile(r"K-Biz-COMMON(?:\s+v[\d.]+)?\s*상속"),
+        "required_sections": [
+            "## 스키마",
+        ],
+        "strict": False,
+    },
 }
 
 INHERIT_PHRASE_MAX_LINE = 15

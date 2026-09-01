@@ -62,6 +62,14 @@ sp-catalog.json은 "이름 → 최신 파일명", 이 문서는 "이름 → 이�
     지사) — `gov-router.js`의 `-0.8)` 단계 우선순위 가드(정책기관과
     집행기관 사전이 동시 매칭될 때 지사 라우팅이 우선)에 이미 구현돼
     있으나, 이 문서에는 2026-08-03 이전까지 문서화가 빠져 있었다.
+- **K-Biz-COMMON** ← K-Biz-01 ~ 99 (KSIC 업종별 경영자문형 그림자 AI,
+  77개 파일, AGENT-SUPPLIER-01~99와 동일 번호 체계 — 2026-09-01 신설,
+  informational — `tools/check_sp_inheritance.py`의 FAMILIES에 아직
+  등록되지 않아 strict CI 검증은 별도 작업 필요). AGENT-SUPPLIER-COMMON과
+  마찬가지로 "§0 정체성 차이"로 별도 계열임을 명시한다(대고객 응대
+  Type B vs 대사업자 경영자문 Type C). K-Biz-COMMON은 옛 profile-assistant
+  SP(entity_type 6종 전체의 프로필 온보딩)를 §1로 흡수했다 — 아래 E 섹션의
+  profile-assistant 참조는 이 흡수를 반영해 갱신되었다.
 
 ## B. K-Public 정부기관 계열 (SP_hierarchy_inheritance 문서의 H1~H8 원칙 적용 대상)
 
@@ -130,7 +138,9 @@ K-Doctor — 독립. K-Health를 상속하지 않는다(제도 대변과 개인 
 - **business-kr** → k-business를 본문 전체 삽입 방식으로 참조
 - **SP_professional-engineer** → SP_nurse, SP_dietitian을 패턴 참고 사례로 언급
 - **SP_social-worker** → SP_real-estate-agent를 서술 방식 참고 사례로 언급
-- **profile-assistant** → HONDI-CAPABILITIES-COMMON을 참조
+- **K-Biz-COMMON** → HONDI-CAPABILITIES-COMMON을 참조 (옛 profile-assistant가
+  갖고 있던 참조를 그대로 승계 — profile-assistant는 K-Biz-COMMON에 흡수됨,
+  A 섹션 참조)
 
 ## F. 기계 판독용 엣지 목록 (CI·SP-TREE-GUARDIAN 공통 파싱 대상)
 
@@ -152,6 +162,8 @@ ALIAS: kgov = SP-10_kpublic
 AGENT-SUPPLIER-* -> AGENT-SUPPLIER-COMMON
 SP-INDUSTRY-TRANSFORM-* -> SP-INDUSTRY-TRANSFORM-COMMON
 SP-NAT-POLICY-* -> kgov
+K-Biz-* -> K-Biz-COMMON
+K-Biz-COMMON -> HONDI-CAPABILITIES-COMMON
 
 # UNIVERSAL-INTEGRITY 직속 (SP-NN_xxx 전국 서비스 계열, "# 상위 상속" 헤더로 선언)
 SP-02_k119 -> UNIVERSAL-INTEGRITY
@@ -190,6 +202,11 @@ GOV-TIER-IO-SCHEMA -> DATA_REQUIREMENT-SCHEMA
 
 ## 변경 이력
 
+- v1.1 (2026-09-01): K-Biz-COMMON 계열 신설 등록(A 섹션) — AGENT-SUPPLIER와
+  동일 번호 체계의 K-Biz-01~99, informational. profile-assistant SP가
+  K-Biz-COMMON §1로 흡수됨에 따라 E 섹션의 profile-assistant 참조를
+  K-Biz-COMMON 참조로 갱신하고, edges 블록에 `K-Biz-* -> K-Biz-COMMON`·
+  `K-Biz-COMMON -> HONDI-CAPABILITIES-COMMON`을 추가했다.
 - v1.0 (2026-07-29, 같은 날 F 섹션 추가): 신설. 2026-07-29 감사에서 발견된 16개 파일·33건의
   하드코딩된 SP 상호 참조를 실제로 수정하면서 드러난 관계를 기반으로
   A~E 섹션을 채웠다. A, B 섹션은 기존 문서(check_sp_inheritance.py
