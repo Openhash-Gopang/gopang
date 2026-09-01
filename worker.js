@@ -12037,6 +12037,7 @@ export default {
     if (pathname === '/kmail/contacts' && request.method === 'GET') return handleKmailContactsList(request, url, env, corsHeaders);
     if (pathname === '/kmail/mailbox' && request.method === 'GET') return handleKmailMailboxList(request, url, env, corsHeaders);
     if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
+    if (pathname === '/kmail/contacts/update' && request.method === 'POST') return handleKmailContactsUpdate(request, env, corsHeaders);
     if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules' && request.method === 'GET') return handleKmailRuleList(request, url, env, corsHeaders);
@@ -28526,7 +28527,7 @@ async function _kmailFetchRecentSendCounts(env, guid) {
   const headers = { 'Authorization': `Bearer ${token}` };
   const dates = [0, -1, -2, -3, -4].map(o => _kstDateString(o));
   const dateFilter = dates.map(d => `date='${d}'`).join(' || ');
-  const filter = encodeURIComponent(`user_guid='${guid}' && (${dateFilter})`);
+  const filter = encodeURIComponent(`user_guid='${guid.replace(/'/g, "\\'")}' && (${dateFilter})`);
   const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_send_log/records?filter=${filter}&perPage=5`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
   const map = {};
@@ -28725,6 +28726,7 @@ async function handleKmailContactsPropose(request, env, corsHeaders) {
         body: JSON.stringify({
           owner_user_guid: guid,
           name: c.name || '', org: c.org || '', dept: c.dept || '',
+          occupation: c.occupation || '', relationship: c.relationship || '',
           email: c.email, tags: c.tags || [],
           source_url: c.source_url || '', confidence: typeof c.confidence === 'number' ? c.confidence : null,
           status: 'pending_review',
@@ -28743,27 +28745,46 @@ async function handleKmailContactsPropose(request, env, corsHeaders) {
 }
 
 // GET /kmail/contacts?guid=...&pubkey=...&signature=...&ts=...&status=pending_review
-// 본인 소유(owner_user_guid=guid) 연락처 후보만 조회 — status 생략 시 pending_review만.
+// GET /kmail/contacts?guid=...&pubkey=...&signature=...&ts=...&status=pending_review
+//   &q=자유검색어 &relationship=... &occupation=... &org=...
+// 본인 소유(owner_user_guid=guid) 연락처만 조회. status 생략 시
+// pending_review만(기존 승인대기 큐 조회 동작 그대로 유지) —
+// status=confirmed로 넘기면 사실상 "내 주소록 보기"가 되고,
+// status=all이면 상태 무관 전체(주소록+대기중+거부 모두). q/relationship/
+// occupation/org는 전부 부분일치('~') — 여러 방식으로 분류·검색
+// 가능해야 한다는 요구(주피터 지시)를 이 파라미터 조합으로 충족한다.
 async function handleKmailContactsList(request, url, env, corsHeaders) {
   const guid = url.searchParams.get('guid');
   const pubkey = url.searchParams.get('pubkey');
   const signature = url.searchParams.get('signature');
   const ts = url.searchParams.get('ts');
   const status = url.searchParams.get('status') || 'pending_review';
+  const q = (url.searchParams.get('q') || '').trim();
+  const relationship = (url.searchParams.get('relationship') || '').trim();
+  const occupation = (url.searchParams.get('occupation') || '').trim();
+  const org = (url.searchParams.get('org') || '').trim();
   if (!guid || !pubkey || !signature || !ts) {
     return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
   }
-  if (!['pending_review', 'confirmed', 'rejected'].includes(status)) {
-    return _err(400, 'INVALID_STATUS', "status는 pending_review/confirmed/rejected 중 하나여야 합니다", corsHeaders);
+  if (!['pending_review', 'confirmed', 'rejected', 'all'].includes(status)) {
+    return _err(400, 'INVALID_STATUS', "status는 pending_review/confirmed/rejected/all 중 하나여야 합니다", corsHeaders);
   }
 
   const sigMsg = `kmail-contacts-list:${guid}:${ts}`;
   const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
+  const esc = s => s.replace(/'/g, "\\'");
+  const clauses = [`owner_user_guid='${esc(guid)}'`];
+  if (status !== 'all') clauses.push(`status='${status}'`); // status는 위에서 고정 목록으로 검증됨 — 이스케이프 불필요
+  if (q) clauses.push(`(name~'${esc(q)}' || org~'${esc(q)}' || dept~'${esc(q)}' || occupation~'${esc(q)}' || relationship~'${esc(q)}' || email~'${esc(q)}')`);
+  if (relationship) clauses.push(`relationship~'${esc(relationship)}'`);
+  if (occupation) clauses.push(`occupation~'${esc(occupation)}'`);
+  if (org) clauses.push(`org~'${esc(org)}'`);
+
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
-  const filter = encodeURIComponent(`owner_user_guid='${guid}' && status='${status}'`);
+  const filter = encodeURIComponent(clauses.join(' && '));
   const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&sort=-created&perPage=200`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
 
@@ -28796,14 +28817,15 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
+  const guidEsc = guid.replace(/'/g, "\\'");
 
   let filter;
   if (box === 'sent') {
-    filter = `sender_guid='${guid}' && content_type='kmail_outbound'`;
+    filter = `sender_guid='${guidEsc}' && content_type='kmail_outbound'`;
   } else {
     filter = includeDeleted
-      ? `receiver_guid='${guid}' && (content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_digest')`
-      : `receiver_guid='${guid}' && (content_type='kmail_inbound' || content_type='kmail_digest')`;
+      ? `receiver_guid='${guidEsc}' && (content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_digest')`
+      : `receiver_guid='${guidEsc}' && (content_type='kmail_inbound' || content_type='kmail_digest')`;
   }
   const res = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=200`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
@@ -28812,13 +28834,18 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
 }
 
 // POST /kmail/contacts/decide
-// body: { guid, pubkey, signature, ts, contact_id, decision: 'confirm'|'reject' }
+// body: { guid, pubkey, signature, ts, contact_id, decision: 'confirm'|'reject',
+//         occupation?, relationship? }
+// occupation/relationship은 선택 — 특히 decision='confirm'일 때(=주소록에
+// 실제로 편입되는 순간) "이 사람은 내 직장 동료야" 같은 분류를 함께
+// 넣을 수 있게 한다(리서치로는 나와의 관계까지는 알아낼 수 없으므로
+// 사용자가 이 시점에 직접 채우는 게 자연스럽다).
 // 소유권 검사 필수 — contact_id를 알아냈다고 아무나 승인/거부할 수 있으면
 // 안 되므로, 레코드의 owner_user_guid가 서명한 guid와 일치하는지 반드시 확인한다.
 async function handleKmailContactsDecide(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
-  const { guid, pubkey, signature, ts, contact_id, decision } = body;
+  const { guid, pubkey, signature, ts, contact_id, decision, occupation, relationship } = body;
   if (!guid || !pubkey || !signature || !ts) {
     return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
   }
@@ -28841,12 +28868,59 @@ async function handleKmailContactsDecide(request, env, corsHeaders) {
   }
 
   const newStatus = decision === 'confirm' ? 'confirmed' : 'rejected';
+  const patch = { status: newStatus };
+  if (typeof occupation === 'string') patch.occupation = occupation;
+  if (typeof relationship === 'string') patch.relationship = relationship;
   const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact_id}`, {
-    method: 'PATCH', headers, body: JSON.stringify({ status: newStatus }),
+    method: 'PATCH', headers, body: JSON.stringify(patch),
   });
   if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '상태 갱신 실패', corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, contact_id, status: newStatus }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/contacts/update — body: { guid, pubkey, signature, ts, contact_id,
+//   name?, org?, dept?, occupation?, relationship? }
+// decide와 별개로, 이미 confirmed된(=주소록에 있는) 연락처의 분류를
+// 나중에 고치기 위한 엔드포인트 — "이 사람 이제 회사 옮겼어" 같은
+// 갱신을 위해 status 변경 없이 필드만 바꾼다. status 자체는 여기서
+// 건드리지 않는다(그건 decide의 역할).
+async function handleKmailContactsUpdate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, contact_id, name, org, dept, occupation, relationship } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!contact_id) return _err(400, 'MISSING_FIELD', 'contact_id 필수', corsHeaders);
+
+  const sigMsg = `kmail-contacts-update:${guid}:${contact_id}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact_id}`, { headers });
+  if (!getRes.ok) return _err(404, 'CONTACT_NOT_FOUND', '해당 연락처를 찾을 수 없습니다', corsHeaders);
+  const contact = await getRes.json().catch(() => null);
+  if (!contact || contact.owner_user_guid !== guid) {
+    return _err(403, 'NOT_OWNER', '본인 연락처만 수정할 수 있습니다', corsHeaders);
+  }
+
+  const patch = {};
+  for (const [k, v] of Object.entries({ name, org, dept, occupation, relationship })) {
+    if (typeof v === 'string') patch[k] = v;
+  }
+  if (Object.keys(patch).length === 0) {
+    return _err(400, 'NOTHING_TO_UPDATE', '수정할 필드가 하나도 없습니다', corsHeaders);
+  }
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact_id}`, {
+    method: 'PATCH', headers, body: JSON.stringify(patch),
+  });
+  if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '수정 실패', corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, contact_id, updated: Object.keys(patch) }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -28910,7 +28984,7 @@ async function handleKmailRuleList(request, url, env, corsHeaders) {
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
-  const filter = encodeURIComponent(`owner_user_guid='${guid}'`);
+  const filter = encodeURIComponent(`owner_user_guid='${guid.replace(/'/g, "\\'")}'`);
   const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records?filter=${filter}&sort=-created&perPage=100`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
 
@@ -29251,7 +29325,7 @@ async function _handleKmailInboundEmail(message, env, ctx) {
     // 호출한다(규칙을 안 만든 절대다수 사용자는 이 비용 자체를 안 씀).
     let matchedDelete = false;
     try {
-      const filter = encodeURIComponent(`owner_user_guid='${ownerGuid}' && enabled=true && action='auto_delete'`);
+      const filter = encodeURIComponent(`owner_user_guid='${ownerGuid.replace(/'/g, "\\'")}' && enabled=true && action='auto_delete'`);
       const rRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records?filter=${filter}&perPage=20`, {
         headers: { Authorization: `Bearer ${token}` },
       });
