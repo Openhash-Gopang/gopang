@@ -2115,77 +2115,79 @@ document.addEventListener("DOMContentLoaded", function () {
            세 파이프라인(SP tier 재계산·미등록 태그 집계·사용자 피드백 취합)
            실행 현황을 한눈에 본다. 조회만 하는 패널이라 워크플로 트리거
            버튼은 없다 — 수동 실행은 매뉴얼의 gh workflow run 절차를 따른다. -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:14px;font-weight:700;color:#111">🔄 자동 갱신 현황</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px">자동 갱신 현황</div>
           <div style="display:flex;align-items:center;gap:10px">
             <a href="./docs/AUTO_REFRESH_MANUAL_v1_0.html" target="_blank"
-               style="font-size:12px;color:#2563eb;text-decoration:none">매뉴얼 ↗</a>
+               style="font-size:11px;color:var(--ad-dim,#9aa0a8);text-decoration:none">매뉴얼 ↗</a>
             <button onclick="_loadAutoRefreshStatus(true)" id="auto-refresh-reload-btn"
-                    style="padding:5px 12px;background:#374151;color:#fff;border:none;border-radius:8px;
-                           font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">새로고침</button>
+                    style="padding:5px 12px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                           border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                           font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit">새로고침</button>
           </div>
         </div>
-        <div id="auto-refresh-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
-          <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:16px;color:#9ca3af;font-size:13px">
-            <div style="width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#9ca3af;
+        <div id="auto-refresh-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--ad-line,#3c3f46)">
+          <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:16px;color:var(--ad-faint,#6e737a);font-size:12.5px;background:var(--ad-panel2,#33363c)">
+            <div style="width:14px;height:14px;border:2px solid var(--ad-line-strong,#4a4e56);border-top-color:var(--ad-dim,#9aa0a8);
                         border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
             불러오는 중…
           </div>
         </div>
-        <div id="auto-refresh-status-note" style="font-size:11px;color:#9ca3af;margin-top:10px;line-height:1.6"></div>
+        <div id="auto-refresh-status-note" style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:10px;line-height:1.6"></div>
       </div>
 
       <!-- ⑦ 사용자 일괄 삭제 -->
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;color:#991b1b;margin-bottom:10px">🗑 사용자 일괄 삭제</div>
-        <div style="font-size:12px;color:#7f1d1d;margin-bottom:12px;line-height:1.7">
-          한 줄에 하나씩 <code style="background:#fee2e2;padding:1px 4px;border-radius:3px">@handle</code> 또는
-          GUID(IPv6)를 입력하세요. <b>L1 PocketBase + Supabase 9개 테이블 + KV를 전부 삭제</b>하며
-          <b>되돌릴 수 없습니다.</b> 한 번에 최대 100개.
+      <div style="border:1px solid var(--ad-crit,#d16054);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--ad-crit,#d16054);letter-spacing:.3px;margin-bottom:10px">사용자 일괄 삭제</div>
+        <div style="font-size:11px;color:var(--ad-dim,#9aa0a8);margin-bottom:12px;line-height:1.7">
+          한 줄에 하나씩 <code style="background:var(--ad-panel2,#33363c);padding:1px 4px;border-radius:3px">@handle</code> 또는
+          GUID(IPv6)를 입력하세요. L1 PocketBase + Supabase 9개 테이블 + KV를 전부 삭제하며
+          되돌릴 수 없습니다. 한 번에 최대 100개.
         </div>
         <textarea id="bulk-delete-input" rows="5" placeholder="@KR-12345678
 2601:db80:4051:eb31:d7c7:8791:e78c:2d44"
-          style="width:100%;padding:10px 12px;border:1px solid #fca5a5;border-radius:8px;
-                 font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+          style="width:100%;padding:9px 11px;border:1px solid var(--ad-crit,#d16054);border-radius:4px;
+                 background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                 font-size:12px;font-family:var(--ad-mono);resize:vertical;box-sizing:border-box"></textarea>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
           <button onclick="_runBulkDelete()"
-                  style="padding:9px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;
-                         font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+                  style="padding:8px 16px;background:var(--ad-crit,#d16054);color:#1a1112;border:none;border-radius:4px;
+                         font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
             일괄 삭제 실행
           </button>
-          <span id="bulk-delete-status" style="font-size:12px;color:#7f1d1d"></span>
+          <span id="bulk-delete-status" style="font-size:11px;color:var(--ad-dim,#9aa0a8)"></span>
         </div>
-        <pre id="bulk-delete-result" style="display:none;margin-top:12px;padding:12px;background:#fff;
-               border:1px solid #fecaca;border-radius:8px;font-size:11px;line-height:1.6;
+        <pre id="bulk-delete-result" style="display:none;margin-top:12px;padding:12px;background:var(--ad-panel2,#33363c);
+               border:1px solid var(--ad-line,#3c3f46);border-radius:4px;font-size:10.5px;line-height:1.6;color:var(--ad-text,#d7d9dd);
                max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
       </div>
 
       <!-- ⑧ 오류 기록 (2026-06-25) -->
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px">
-        <div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:12px">
-          📋 오류 기록 — 2026-06-25 Cloudflare DNS API
+      <div style="border:1px solid var(--ad-warn,#d6a04a);border-radius:4px;padding:16px 18px">
+        <div style="font-size:12px;color:var(--ad-warn,#d6a04a);letter-spacing:.3px;margin-bottom:12px">
+          오류 기록 — 2026-06-25 Cloudflare DNS API
         </div>
-        <div style="font-size:12px;color:#78350f;line-height:1.9">
-          <b>[오류 1] code:7003 "Could not route to /zones/.../dns/records"</b><br>
+        <div style="font-size:11px;color:var(--ad-dim,#9aa0a8);line-height:1.9">
+          <b style="color:var(--ad-text,#d7d9dd)">[오류 1] code:7003 "Could not route to /zones/.../dns/records"</b><br>
           원인 A: URL 경로 오타 —
-          <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">dns/records</code> (슬래시, 틀림) →
-          <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">dns_records</code> (언더스코어, 정상)<br>
+          <code style="background:var(--ad-panel2,#33363c);padding:1px 4px;border-radius:3px">dns/records</code> (슬래시, 틀림) →
+          <code style="background:var(--ad-panel2,#33363c);padding:1px 4px;border-radius:3px">dns_records</code> (언더스코어, 정상)<br>
           원인 B: Custom API Token의 Zone Resources가 "All zones"일 때 특정 Zone 접근 불가.
           → "Specific zone → hondi.net" + "Zone:Read" 권한 추가 필요.<br><br>
 
-          <b>[오류 2] code:9207 "Request body is invalid"</b><br>
+          <b style="color:var(--ad-text,#d7d9dd)">[오류 2] code:9207 "Request body is invalid"</b><br>
           원인: PowerShell Here-String(@"..."@)이 JSON에 개행문자(CRLF)를 삽입 → CF API 파싱 실패.<br>
           해결:
-          <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">[System.IO.File]::WriteAllText(tmpFile, json)</code>
+          <code style="background:var(--ad-panel2,#33363c);padding:1px 4px;border-radius:3px">[System.IO.File]::WriteAllText(tmpFile, json)</code>
           로 임시 파일 저장 후
-          <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">curl --data-binary "@tmpFile"</code>
+          <code style="background:var(--ad-panel2,#33363c);padding:1px 4px;border-radius:3px">curl --data-binary "@tmpFile"</code>
           로 전송.<br><br>
 
-          <b>[최종 작동 조합]</b><br>
-          ✅ Global API Key (X-Auth-Key + X-Auth-Email) + endpoint: /dns_records + 파일 기반 JSON<br>
-          ❌ Custom Token → Zone routing 오류 반복<br>
-          ❌ PowerShell ConvertTo-Json / Here-String → CRLF 삽입 오류
+          <b style="color:var(--ad-text,#d7d9dd)">[최종 작동 조합]</b><br>
+          Global API Key (X-Auth-Key + X-Auth-Email) + endpoint: /dns_records + 파일 기반 JSON — 정상<br>
+          Custom Token → Zone routing 오류 반복 — 실패<br>
+          PowerShell ConvertTo-Json / Here-String → CRLF 삽입 오류 — 실패
         </div>
       </div>
 
@@ -2814,11 +2816,11 @@ async function _fetchLatestRun(workflowFile, force) {
 }
 
 function _runStatusDot(run) {
-  if (!run) return { color: '#9ca3af', label: '실행 이력 없음' };
-  if (run.status === 'in_progress' || run.status === 'queued') return { color: '#2563eb', label: '실행 중' };
-  if (run.conclusion === 'success') return { color: '#2563eb', label: '성공' };
-  if (run.conclusion === 'failure') return { color: '#dc2626', label: '실패' };
-  return { color: '#9ca3af', label: run.conclusion || run.status || '알 수 없음' };
+  if (!run) return { color: 'var(--ad-faint,#6e737a)', label: '실행 이력 없음' };
+  if (run.status === 'in_progress' || run.status === 'queued') return { color: 'var(--ad-accent,#5b8ec4)', label: '실행 중' };
+  if (run.conclusion === 'success') return { color: 'var(--ad-dim,#9aa0a8)', label: '성공' };
+  if (run.conclusion === 'failure') return { color: 'var(--ad-crit,#d16054)', label: '실패' };
+  return { color: 'var(--ad-faint,#6e737a)', label: run.conclusion || run.status || '알 수 없음' };
 }
 
 // GH API 실패 사유별 카드 표시 문구 — 레이트리밋은 사용자 행동으로
@@ -2833,14 +2835,14 @@ function _runFailText(settledResult) {
 
 function _arCardShell(title, badge, bodyHtml, linkUrl) {
   return `
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px">
+    <div style="background:var(--ad-panel2,#33363c);padding:13px 15px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:700;color:#111">${title}</div>
-        <span style="font-size:10px;font-family:monospace;color:#6b7280;background:#f3f4f6;
-                     border:1px solid #e5e7eb;border-radius:99px;padding:2px 7px">${badge}</span>
+        <div style="font-size:12.5px;color:var(--ad-text,#d7d9dd)">${title}</div>
+        <span style="font-size:10px;font-family:var(--ad-mono);color:var(--ad-faint,#6e737a);background:var(--ad-bg,#26282d);
+                     border:1px solid var(--ad-line,#3c3f46);border-radius:3px;padding:2px 7px">${badge}</span>
       </div>
       ${bodyHtml}
-      ${linkUrl ? `<a href="${linkUrl}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:#2563eb;text-decoration:none">Actions에서 보기 ↗</a>` : ''}
+      ${linkUrl ? `<a href="${linkUrl}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--ad-dim,#9aa0a8);text-decoration:none">Actions에서 보기 ↗</a>` : ''}
     </div>`;
 }
 
@@ -2893,12 +2895,12 @@ async function _loadAutoRefreshStatus(force) {
       '① SP Refresh Scheduler',
       '매일 09:00 KST',
       `
-        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
-          <span style="width:7px;height:7px;border-radius:50%;background:${run1 ? dot1.color : '#d1d5db'};flex-shrink:0"></span>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ad-dim,#9aa0a8);margin-bottom:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:${run1 ? dot1.color : 'var(--ad-faint,#6e737a)'};flex-shrink:0"></span>
           마지막 실행: ${run1 ? _relTimeKo(run1.updated_at) + ' · ' + dot1.label : run1FailText}
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">다음 예정: ${_fmtKST(_nextDailyUTC(0))}</div>
-        <div style="font-size:12px;color:#6b7280">갱신 대기 SP: <strong style="color:#111">${queueRes.status === 'fulfilled' ? _countLabel(queueRaw.length, refreshQueued) : '조회 실패'}</strong></div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a);margin-bottom:4px">다음 예정: ${_fmtKST(_nextDailyUTC(0))}</div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a)">갱신 대기 SP: <span style="color:var(--ad-text,#d7d9dd);font-family:var(--ad-mono)">${queueRes.status === 'fulfilled' ? _countLabel(queueRaw.length, refreshQueued) : '조회 실패'}</span></div>
       `,
       run1 ? run1.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.refresh}`
     );
@@ -2908,12 +2910,12 @@ async function _loadAutoRefreshStatus(force) {
       '② 미등록 태그 집계',
       '①과 동일 워크플로',
       `
-        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
-          <span style="width:7px;height:7px;border-radius:50%;background:${run1 ? dot1.color : '#d1d5db'};flex-shrink:0"></span>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ad-dim,#9aa0a8);margin-bottom:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:${run1 ? dot1.color : 'var(--ad-faint,#6e737a)'};flex-shrink:0"></span>
           마지막 실행: ${run1 ? _relTimeKo(run1.updated_at) + ' · ' + dot1.label : run1FailText}
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">큐 대기(미등록 태그 신호): <strong style="color:#111">${queueRes.status === 'fulfilled' ? _countLabel(queueRaw.length, tagQueued) : '조회 실패'}</strong></div>
-        <div style="font-size:12px;color:#6b7280">읽지 않은 승격 알림: <strong style="color:#111">${escRes.status === 'fulfilled' ? _countLabel(escRaw.length, escTagOnly.length) : '조회 실패'}</strong></div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a);margin-bottom:4px">큐 대기(미등록 태그 신호): <span style="color:var(--ad-text,#d7d9dd);font-family:var(--ad-mono)">${queueRes.status === 'fulfilled' ? _countLabel(queueRaw.length, tagQueued) : '조회 실패'}</span></div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a)">읽지 않은 승격 알림: <span style="color:var(--ad-text,#d7d9dd);font-family:var(--ad-mono)">${escRes.status === 'fulfilled' ? _countLabel(escRaw.length, escTagOnly.length) : '조회 실패'}</span></div>
       `,
       run1 ? run1.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.refresh}`
     );
@@ -2931,12 +2933,12 @@ async function _loadAutoRefreshStatus(force) {
       '③ 사용자 피드백 취합',
       '매주 월 07:00 KST',
       `
-        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
-          <span style="width:7px;height:7px;border-radius:50%;background:${run3 ? dot3.color : '#d1d5db'};flex-shrink:0"></span>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ad-dim,#9aa0a8);margin-bottom:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:${run3 ? dot3.color : 'var(--ad-faint,#6e737a)'};flex-shrink:0"></span>
           마지막 실행: ${run3 ? _relTimeKo(run3.updated_at) + ' · ' + dot3.label : run3FailText}
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">다음 예정: ${_fmtKST(_nextWeeklyUTC(1, 22))}</div>
-        <div style="font-size:12px;color:#6b7280">${reportLine}</div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a);margin-bottom:4px">다음 예정: ${_fmtKST(_nextWeeklyUTC(1, 22))}</div>
+        <div style="font-size:11.5px;color:var(--ad-faint,#6e737a)">${reportLine}</div>
       `,
       run3 ? run3.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.feedback}`
     );
@@ -3205,14 +3207,14 @@ async function _saveAllLetters() {
     const d = await res.json();
     if (d.ok) {
       _letters = d.letters || letters; // 서버가 채운 id 반영
-      ok.style.color = '#2563eb';
+      ok.style.color = 'var(--ad-dim,#9aa0a8)';
       ok.textContent = '✓ 저장됐습니다.';
     } else {
-      ok.style.color = '#dc2626';
+      ok.style.color = 'var(--ad-crit,#d16054)';
       ok.textContent = '⚠️ 저장 실패: ' + (d.message || res.status);
     }
   } catch(e) {
-    ok.style.color = '#dc2626';
+    ok.style.color = 'var(--ad-crit,#d16054)';
     ok.textContent = '⚠️ Worker 연결 실패: ' + e.message;
   }
   ok.style.display = 'block';
