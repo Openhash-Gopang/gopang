@@ -10170,25 +10170,26 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
 // 비용 통제 2단: (1) Cloudflare Cache API로 동일 쿼리 1시간 캐시
 // (캐시 히트는 예산 카운트 안 함), (2) 일일 예산(WEB_SEARCH_DAILY_CAP,
 // 기본 500회) 초과 시 실제 호출을 막고 정직하게 한도 초과를 반환한다.
-async function handleWebSearch(request, env, corsHeaders, ctx) {
-  let payload;
-  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
-  const query = (payload.query || payload.q || '').trim();
-  if (!query) return new Response(JSON.stringify({ error: 'query required' }), { status: 400, headers: corsHeaders });
+// 실제 검색 실행(캐시·예산 체크 포함) — handleWebSearch(공개 엔드포인트)와
+// K-Mail 리서치(_kmailWebSearch, 내부 호출) 양쪽이 공유한다. 반환값은
+// { ok: true, ...result } 또는 { ok: false, status, error, message } —
+// 호출부가 각자 사정에 맞게 Response로 감싸거나 그대로 소비한다.
+async function _performWebSearchCore(env, ctx, query) {
+  if (!query) return { ok: false, status: 400, error: 'MISSING_QUERY', message: 'query required' };
 
   const cacheKey = new Request(`https://web-search-cache.internal/?q=${encodeURIComponent(query.toLowerCase())}`);
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
   if (cached) {
     const body = await cached.json();
-    return new Response(JSON.stringify({ ...body, cache: 'hit' }), { headers: corsHeaders });
+    return { ok: true, ...body, cache: 'hit' };
   }
 
   if (!env.WEB_SEARCH_API_KEY) {
-    return new Response(JSON.stringify({
-      error: 'WEB_SEARCH_NOT_CONFIGURED',
+    return {
+      ok: false, status: 503, error: 'WEB_SEARCH_NOT_CONFIGURED',
       message: 'WEB_SEARCH_API_KEY가 설정되지 않았습니다 — wrangler secret put WEB_SEARCH_API_KEY로 등록하세요.',
-    }), { status: 503, headers: corsHeaders });
+    };
   }
 
   const today = _todayKST();
@@ -10200,11 +10201,11 @@ async function handleWebSearch(request, env, corsHeaders, ctx) {
     usage = null; // 예산 조회 실패는 안전하게 "아직 0회"로 간주(과금 폭주보다 검색 실패가 낫다는 판단)
   }
   if (usage && Number(usage.count) >= cap) {
-    return new Response(JSON.stringify({
-      error: 'DAILY_BUDGET_EXCEEDED',
+    return {
+      ok: false, status: 429, error: 'DAILY_BUDGET_EXCEEDED',
       message: `오늘 웹검색 한도(${cap}회)를 초과했습니다. 내일 다시 시도해주세요.`,
       count: usage.count,
-    }), { status: 429, headers: corsHeaders });
+    };
   }
 
   let searchRes;
@@ -10215,7 +10216,7 @@ async function handleWebSearch(request, env, corsHeaders, ctx) {
       body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'FETCH_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+    return { ok: false, status: 502, error: 'FETCH_FAILED', message: e.message };
   }
 
   // 예산 증분은 API 호출 성공 여부와 무관하게(Serper.dev 쪽에서 이미
@@ -10226,7 +10227,7 @@ async function handleWebSearch(request, env, corsHeaders, ctx) {
 
   if (!searchRes.ok) {
     const errText = await searchRes.text().catch(() => '');
-    return new Response(JSON.stringify({ error: 'SERPER_ERROR', status: searchRes.status, detail: errText }), { status: 502, headers: corsHeaders });
+    return { ok: false, status: 502, error: 'SERPER_ERROR', detail: errText };
   }
 
   const raw = await searchRes.json().catch(() => ({}));
@@ -10245,8 +10246,23 @@ async function handleWebSearch(request, env, corsHeaders, ctx) {
   });
   ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
 
-  return new Response(JSON.stringify(result), { headers: corsHeaders });
+  return { ok: true, ...result };
 }
+
+async function handleWebSearch(request, env, corsHeaders, ctx) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const query = (payload.query || payload.q || '').trim();
+
+  const result = await _performWebSearchCore(env, ctx, query);
+  if (!result.ok) {
+    const { ok, status, ...body } = result;
+    return new Response(JSON.stringify(body), { status: status || 500, headers: corsHeaders });
+  }
+  const { ok, ...body } = result;
+  return new Response(JSON.stringify(body), { headers: corsHeaders });
+}
+
 
 // ── 공공데이터포털: 행정표준코드_법정동코드 (2026-07-16 신설) ────────
 // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 1.
@@ -12100,6 +12116,7 @@ export default {
     if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules' && request.method === 'GET') return handleKmailRuleList(request, url, env, corsHeaders);
     if (pathname === '/kmail/rules/toggle' && request.method === 'POST') return handleKmailRuleToggle(request, env, corsHeaders);
+    if (pathname === '/kmail/chat' && request.method === 'POST') return handleKmailChat(request, env, corsHeaders, ctx);
     // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
@@ -29417,6 +29434,267 @@ async function _handleKmailInboundEmail(message, env, ctx) {
       content_type: matchedDelete ? 'kmail_inbound_deleted' : 'kmail_inbound',
     }).catch(e => console.error('[K-Mail email] ai_messages 기록 실패:', e.message));
   })());
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Mail 대화형 비서 (2026-09-01 신설, SP-25_kmail) — "메일" 발화 시
+// gwp-registry.js가 새 탭(pages/kmail-assistant.html)으로 연결하고,
+// 그 탭이 이 엔드포인트로 대화를 이어간다. AC-PRO-CORE 본문·call-ai.js
+// 태그 체계와는 완전히 격리된 자체 프로토콜(KMAIL_SEARCH_CONTACTS/
+// KMAIL_SEND_CAMPAIGN/KMAIL_CREATE_RULE 태그, 이 파일 안에서만 파싱) —
+// 메인 채팅 라우팅을 조금도 건드리지 않기 위한 의도적 설계.
+//
+// ⚠️ 정직한 한계 — 이 SP는 이메일 주소를 스스로 알지 못한다. 수신자
+// 확보는 (a) 사용자가 직접 알려주거나 (b) KMAIL_SEARCH_CONTACTS로
+// 실제 웹 검색(_performWebSearchCore, Serper.dev)을 거치는 두 경로뿐 —
+// 검색 결과에 없는 이메일을 지어내지 않도록 SP 본문에 명시했다.
+// ═══════════════════════════════════════════════════════════
+
+let _kmailSpCache = null;
+let _kmailSpCacheAt = 0;
+let _kmailSpFailedAt = 0;
+const _KMAIL_SP_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchKmailSp(env) {
+  const now = Date.now();
+  if (_kmailSpCache && (now - _kmailSpCacheAt) < _KMAIL_SP_TTL_MS) return _kmailSpCache;
+  if (_kmailSpFailedAt && (now - _kmailSpFailedAt) < _MANIFEST_FAIL_RETRY_MS) {
+    if (_kmailSpCache) return _kmailSpCache;
+    throw new Error('SP-25_kmail 로드 실패(최근 재시도 쿨다운 중)');
+  }
+  try {
+    _kmailSpCache = await _fetchByManifestKeyFromGithub('SP-25_kmail');
+    _kmailSpCacheAt = now;
+    _kmailSpFailedAt = 0;
+    return _kmailSpCache;
+  } catch (e) {
+    _kmailSpFailedAt = now;
+    if (_kmailSpCache) return _kmailSpCache; // 실패해도 낡은 캐시라도 있으면 그걸로 계속 서비스
+    throw e;
+  }
+}
+
+// 캠페인 생성(채팅 경로 전용) — handleKmailCampaignCreate(공개 API,
+// 이미 confirmed인 contact_id들을 받음)와 달리, 여기서는 채팅에서 막
+// 확정된 {name,email,...}을 그 자리에서 confirmed 연락처로 만든다(그
+// 대화 자체가 사용자 확인 절차였으므로 pending_review 단계를 또
+// 거치지 않음 — 설계 §2 "확인 단계는 생략 불가" 원칙은 유지하되,
+// 이번엔 채팅 확인이 그 역할을 한다). 이미 같은 이메일로 confirmed된
+// 연락처가 있으면 새로 만들지 않고 재사용한다(중복 방지).
+async function _kmailChatCreateCampaign(env, guid, parsed) {
+  const recipients = Array.isArray(parsed?.recipients) ? parsed.recipients : [];
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const validRecipients = recipients.filter(r => r && typeof r.email === 'string' && emailRe.test(r.email));
+  if (validRecipients.length === 0) throw new Error('유효한 수신자가 없습니다');
+  if (validRecipients.length > KMAIL_CAMPAIGN_MAX_RECIPIENTS) {
+    throw new Error(`한 캠페인 최대 수신자는 ${KMAIL_CAMPAIGN_MAX_RECIPIENTS}명입니다`);
+  }
+  const subject = (parsed?.subject || '').trim();
+  const mailBody = (parsed?.body || '').trim();
+  if (!subject || !mailBody) throw new Error('subject/body 누락');
+  const sendAtDate = new Date(parsed?.send_at);
+  if (isNaN(sendAtDate.getTime())) throw new Error('send_at 형식 오류');
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const guidEsc = guid.replace(/'/g, "\\'");
+
+  const contactIds = [];
+  for (const r of validRecipients) {
+    const emailEsc = r.email.replace(/'/g, "\\'");
+    const filter = encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${emailEsc}' && status='confirmed'`);
+    const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&perPage=1`, { headers });
+    const findData = await findRes.json().catch(() => ({ items: [] }));
+    if (findData.items && findData.items[0]) {
+      contactIds.push(findData.items[0].id);
+      continue;
+    }
+    const createRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        owner_user_guid: guid, name: r.name || '', org: r.org || '', dept: r.dept || '',
+        occupation: r.occupation || '', relationship: r.relationship || '',
+        email: r.email, tags: [], source_url: '', confidence: null,
+        status: 'confirmed', added_via_query: '(K-Mail 대화 중 직접 확정)',
+      }),
+    });
+    if (!createRes.ok) throw new Error(`연락처 생성 실패(${r.email})`);
+    const created = await createRes.json();
+    contactIds.push(created.id);
+  }
+
+  const record = {
+    owner_user_guid: guid, recipient_query: '', contact_ids: contactIds,
+    subject, body: mailBody, send_at: sendAtDate.toISOString(), status: 'scheduled',
+    collect_replies_until: parsed?.collect_replies_until ? new Date(parsed.collect_replies_until).toISOString() : null,
+    digest_at: parsed?.digest_at ? new Date(parsed.digest_at).toISOString() : null,
+    digest_status: parsed?.digest_at ? 'pending' : 'none',
+  };
+  const campRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records`, {
+    method: 'POST', headers, body: JSON.stringify(record),
+  });
+  if (!campRes.ok) throw new Error('캠페인 생성 실패');
+  const campaign = await campRes.json();
+
+  return { campaignId: campaign.id, recipientCount: contactIds.length, sendAt: record.send_at };
+}
+
+async function _kmailChatCreateRule(env, guid, ruleText) {
+  const trimmed = ruleText.trim().slice(0, KMAIL_RULE_TEXT_MAX_LEN);
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ owner_user_guid: guid, rule_text: trimmed, action: 'auto_delete', enabled: true }),
+  });
+  if (!res.ok) throw new Error('규칙 생성 실패');
+  const created = await res.json();
+  return created.id;
+}
+
+// POST /kmail/chat — body: { guid, pubkey, signature, ts, messages: [{role,content},...] }
+// 한 요청 = 대화 한 턴. 대화 이력 전체를 클라이언트가 들고 있다가 매번
+// 함께 보낸다(서버는 세션 상태를 갖지 않음 — 무상태 유지가 단순하고,
+// 대화 길이도 40턴으로 제한해 무한정 커지지 않게 막는다).
+async function handleKmailChat(request, env, corsHeaders, ctx) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, messages } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return _err(400, 'MISSING_FIELD', 'messages 배열(1개 이상) 필수', corsHeaders);
+  }
+  if (messages.length > 40) {
+    return _err(400, 'TOO_MANY_MESSAGES', '대화가 너무 깁니다 — 새 대화로 시작해 주세요', corsHeaders);
+  }
+
+  const sigMsg = `kmail-chat:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  if (!env.DEEPSEEK_API_KEY) return _err(500, 'DEEPSEEK_KEY_MISSING', 'DEEPSEEK_API_KEY secret 미설정', corsHeaders);
+
+  let sp;
+  try {
+    sp = await _fetchKmailSp(env);
+  } catch (e) {
+    return _err(502, 'SP_LOAD_FAILED', 'K-Mail SP 로드 실패: ' + e.message, corsHeaders);
+  }
+
+  const nowKST = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).format(new Date()).replace(' ', 'T') + '+09:00';
+  const systemPrompt = sp.replace(/\{\{NOW\}\}/g, nowKST).replace(/\{\{GUID\}\}/g, guid);
+
+  const cleanMessages = messages
+    .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .slice(-30)
+    .map(m => ({ role: m.role, content: m.content.slice(0, 4000) }));
+  if (cleanMessages.length === 0) return _err(400, 'MISSING_FIELD', '유효한 메시지가 없습니다', corsHeaders);
+
+  let reply;
+  try {
+    reply = await deepseekChatText({
+      env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+      messages: [{ role: 'system', content: systemPrompt }, ...cleanMessages],
+      max_tokens: 800, temperature: 0.4, timeoutMs: 20000, fallbackText: '',
+    });
+  } catch (e) {
+    return _err(502, 'AI_CALL_FAILED', 'AI 호출 실패: ' + e.message, corsHeaders);
+  }
+  if (!reply) return _err(502, 'AI_EMPTY_REPLY', 'AI 응답이 비어있습니다', corsHeaders);
+
+  const searchMatch = reply.match(/KMAIL_SEARCH_CONTACTS\s*(\{[\s\S]*\})\s*$/);
+  const sendMatch = reply.match(/KMAIL_SEND_CAMPAIGN\s*(\{[\s\S]*\})\s*$/);
+  const ruleMatch = reply.match(/KMAIL_CREATE_RULE\s*(\{[\s\S]*\})\s*$/);
+
+  // ── ① 웹 검색 요청 태그 ──────────────────────────────────────
+  if (searchMatch) {
+    let parsed = null;
+    try { parsed = JSON.parse(searchMatch[1]); } catch (e) { /* 아래에서 queries=[]로 처리 */ }
+    const queries = Array.isArray(parsed?.queries) ? parsed.queries.slice(0, 3).filter(q => typeof q === 'string' && q.trim()) : [];
+    const cleanReplyText = reply.slice(0, searchMatch.index).trim();
+
+    if (queries.length === 0) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+
+    const searchResults = [];
+    for (const q of queries) {
+      const r = await _performWebSearchCore(env, ctx, q).catch(() => null);
+      searchResults.push(r?.ok ? { query: q, organic: r.organic, answer_box: r.answer_box } : { query: q, error: true });
+    }
+
+    const searchContext = `[검색 결과]\n${JSON.stringify(searchResults)}\n\n위 검색 결과를 바탕으로, 실제로 확인되는 이름·이메일·소속만 사용자에게 후보로 제시하세요. 이메일을 못 찾았으면 정직하게 말하고 사용자에게 직접 물어보세요. (이 메시지 자체는 사용자에게 보이지 않습니다 — 자연스러운 답변만 작성하세요.)`;
+    let followUpReply;
+    try {
+      followUpReply = await deepseekChatText({
+        env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+        messages: [
+          { role: 'system', content: systemPrompt }, ...cleanMessages,
+          { role: 'assistant', content: cleanReplyText || '검색 중입니다...' },
+          { role: 'user', content: searchContext },
+        ],
+        max_tokens: 800, temperature: 0.4, timeoutMs: 20000,
+        fallbackText: '검색은 완료됐지만 결과 정리에 실패했습니다. 다시 시도해 주세요.',
+      });
+    } catch (e) {
+      followUpReply = '검색은 완료됐지만 결과 정리 중 오류가 발생했습니다: ' + e.message;
+    }
+
+    return new Response(JSON.stringify({ ok: true, reply: followUpReply, action: { type: 'searched_contacts', queries } }),
+      { status: 200, headers: corsHeaders });
+  }
+
+  // ── ② 캠페인 확정 태그 ───────────────────────────────────────
+  if (sendMatch) {
+    const cleanReplyText = reply.slice(0, sendMatch.index).trim();
+    let parsed;
+    try { parsed = JSON.parse(sendMatch[1]); } catch (e) {
+      return new Response(JSON.stringify({
+        ok: true, reply: cleanReplyText || '발송 정보를 정확히 파악하지 못했습니다. 다시 말씀해 주시겠어요?', action: null,
+      }), { status: 200, headers: corsHeaders });
+    }
+    try {
+      const result = await _kmailChatCreateCampaign(env, guid, parsed);
+      return new Response(JSON.stringify({
+        ok: true,
+        reply: `${cleanReplyText}\n\n✅ 예약 완료 — 수신자 ${result.recipientCount}명, 발송 예정: ${result.sendAt}`,
+        action: { type: 'campaign_created', campaign_id: result.campaignId },
+      }), { status: 200, headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({
+        ok: true, reply: `${cleanReplyText}\n\n(발송 예약 처리 중 오류: ${e.message})`, action: null,
+      }), { status: 200, headers: corsHeaders });
+    }
+  }
+
+  // ── ③ 필터 규칙 등록 태그 ────────────────────────────────────
+  if (ruleMatch) {
+    const cleanReplyText = reply.slice(0, ruleMatch.index).trim();
+    let parsed = null;
+    try { parsed = JSON.parse(ruleMatch[1]); } catch (e) { /* 아래에서 처리 */ }
+    const ruleText = (parsed?.rule_text || '').trim();
+    if (!ruleText) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+    try {
+      const ruleId = await _kmailChatCreateRule(env, guid, ruleText);
+      return new Response(JSON.stringify({
+        ok: true, reply: `${cleanReplyText}\n\n✅ 규칙을 등록했습니다.`, action: { type: 'rule_created', rule_id: ruleId },
+      }), { status: 200, headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({
+        ok: true, reply: `${cleanReplyText}\n\n(규칙 등록 중 오류: ${e.message})`, action: null,
+      }), { status: 200, headers: corsHeaders });
+    }
+  }
+
+  // ── 태그 없음 — 그냥 대화 ────────────────────────────────────
+  return new Response(JSON.stringify({ ok: true, reply, action: null }), { status: 200, headers: corsHeaders });
 }
 
 // GET /default-key?guid=...&registered_at=ISO8601
