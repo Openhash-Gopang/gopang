@@ -28887,6 +28887,23 @@ async function handleKmailContactsList(request, url, env, corsHeaders) {
 // include_deleted=true가 아니면 kmail_inbound_deleted(자동삭제 규칙에
 // 걸린 것)는 기본적으로 숨긴다 — 소프트 삭제 원칙(설계 §6)이라 데이터는
 // 남아있지만, 평소 받은함 UX에서는 안 보이는 게 맞다.
+// content_original은 "[제목] X\n\nY" 형태로 저장돼 있다(handleUserMailSend/
+// _kmailSendOneEmail/_handleKmailInboundEmail 전부 동일 관례) — UI가 매번
+// 파싱하지 않도록 여기서 한 번에 subject/body로 갈라서 내려준다.
+function _kmailSplitSubjectBody(contentOriginal) {
+  const m = String(contentOriginal || '').match(/^\[제목\] (.*?)\n\n([\s\S]*)$/);
+  if (m) return { subject: m[1], body: m[2] };
+  return { subject: '(제목 없음)', body: contentOriginal || '' };
+}
+
+// GET /kmail/mailbox?box=inbox|sent|thread&guid=...&pubkey=...&signature=...&ts=...
+//   &include_deleted=true|false&with=상대이메일(box=thread일 때 필수)
+// 설계: 보낸함=sender_guid가 나, 받은함=receiver_guid가 나, 스레드=특정
+// 상대 이메일과 주고받은 것 전체(방향 무관) — session_id(캠페인/즉시발송
+// 구분)와 무관하게 "나" 또는 "그 상대"를 기준으로 합쳐서 보여준다.
+// include_deleted=true가 아니면 kmail_inbound_deleted(자동삭제 규칙에
+// 걸린 것)는 기본적으로 숨긴다 — 소프트 삭제 원칙(설계 §6)이라 데이터는
+// 남아있지만, 평소 받은함/스레드 UX에서는 안 보이는 게 맞다.
 async function handleKmailMailboxList(request, url, env, corsHeaders) {
   const box = url.searchParams.get('box');
   const guid = url.searchParams.get('guid');
@@ -28894,8 +28911,12 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
   const signature = url.searchParams.get('signature');
   const ts = url.searchParams.get('ts');
   const includeDeleted = url.searchParams.get('include_deleted') === 'true';
-  if (box !== 'inbox' && box !== 'sent') {
-    return _err(400, 'INVALID_BOX', "box는 'inbox' 또는 'sent'여야 합니다", corsHeaders);
+  const withEmail = (url.searchParams.get('with') || '').trim();
+  if (box !== 'inbox' && box !== 'sent' && box !== 'thread') {
+    return _err(400, 'INVALID_BOX', "box는 'inbox', 'sent', 'thread' 중 하나여야 합니다", corsHeaders);
+  }
+  if (box === 'thread' && !withEmail) {
+    return _err(400, 'MISSING_FIELD', "box=thread일 때는 with(상대방 이메일)가 필수입니다", corsHeaders);
   }
   if (!guid || !pubkey || !signature || !ts) {
     return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
@@ -28907,11 +28928,18 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
-  const guidEsc = guid.replace(/'/g, "\\'");
+  const esc = s => String(s).replace(/'/g, "\\'");
+  const guidEsc = esc(guid);
 
   let filter;
   if (box === 'sent') {
     filter = `sender_guid='${guidEsc}' && content_type='kmail_outbound'`;
+  } else if (box === 'thread') {
+    const slugEsc = esc(_slugifyEmailAddr(withEmail));
+    const typeFilter = includeDeleted
+      ? `(content_type='kmail_outbound' || content_type='kmail_inbound' || content_type='kmail_inbound_deleted')`
+      : `(content_type='kmail_outbound' || content_type='kmail_inbound')`;
+    filter = `((sender_guid='ext:${slugEsc}' && receiver_guid='${guidEsc}') || (sender_guid='${guidEsc}' && receiver_guid='ext:${slugEsc}')) && ${typeFilter}`;
   } else {
     filter = includeDeleted
       ? `receiver_guid='${guidEsc}' && (content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_digest')`
@@ -28920,7 +28948,19 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
   const res = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=200`, { headers });
   const data = await res.json().catch(() => ({ items: [] }));
 
-  return new Response(JSON.stringify({ ok: true, box, items: data.items || [] }), { status: 200, headers: corsHeaders });
+  const items = (data.items || []).map(m => {
+    const { subject, body } = _kmailSplitSubjectBody(m.content_original);
+    return {
+      id: m.id,
+      direction: m.sender_guid === guid ? 'sent' : 'received',
+      counterparty: (m.sender_guid === guid ? m.receiver_guid : m.sender_guid).replace(/^ext:/, ''),
+      subject, body,
+      content_type: m.content_type,
+      created: m.created,
+    };
+  });
+
+  return new Response(JSON.stringify({ ok: true, box, items }), { status: 200, headers: corsHeaders });
 }
 
 // POST /kmail/contacts/decide
