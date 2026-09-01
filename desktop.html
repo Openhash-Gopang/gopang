@@ -1943,61 +1943,67 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>
 
       <!-- ② 무료 체험 기간 -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">⏱ 무료 체험 기간</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px;margin-bottom:12px">무료 체험 기간</div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <label style="font-size:14px;color:#374151">가입 후 디폴트 키 사용 가능 기간</label>
+          <label style="font-size:13px;color:var(--ad-dim,#9aa0a8)">가입 후 디폴트 키 사용 가능 기간</label>
           <input id="trial-days-input" type="number" min="1" max="365" value="7"
-                 style="width:72px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;
-                        font-size:14px;font-weight:600;text-align:center;font-family:inherit">
-          <span style="font-size:14px;color:#6b7280">일</span>
+                 style="width:70px;padding:6px 9px;border:1px solid var(--ad-line,#3c3f46);border-radius:4px;
+                        background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                        font-family:var(--ad-mono);font-size:13px;text-align:center">
+          <span style="font-size:13px;color:var(--ad-faint,#6e737a)">일</span>
           <button onclick="_saveTrialDays()"
-                  style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;
-                         font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">저장</button>
-          <span id="trial-save-ok" style="font-size:12px;color:#2563eb;display:none">✓ 저장됨</span>
+                  style="padding:7px 14px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                         border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                         font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit">저장</button>
+          <span id="trial-save-ok" style="font-size:11px;color:var(--ad-dim,#9aa0a8);display:none">✓ 저장됨</span>
         </div>
-        <div style="font-size:12px;color:#9ca3af;margin-top:8px">
+        <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:8px">
           체험 만료 후: 이메일로 LLM 키 발급 안내 또는 유료 플랜 전환 안내
         </div>
       </div>
 
       <!-- ③ 디폴트 LLM 키 -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <div style="font-size:14px;font-weight:700;color:#111">🔑 디폴트 LLM 키</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px">디폴트 LLM 키</div>
           <button onclick="_addKeyRow()"
-                  style="padding:6px 14px;background:#2563eb;color:#fff;border:none;
-                         border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">+ 키 추가</button>
+                  style="padding:5px 12px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                         border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                         font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit">+ 키 추가</button>
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
-          키는 Cloudflare KV에 저장되어 <b>모든 사용자에게 자동 적용</b>됩니다.
-          <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">hondi_default_llm_keys</code>
+        <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-bottom:12px;line-height:1.6">
+          키는 Cloudflare KV에 저장되어 모든 사용자에게 자동 적용됩니다.
+          <code style="background:var(--ad-panel2,#33363c);color:var(--ad-dim,#9aa0a8);padding:1px 5px;border-radius:3px;font-family:var(--ad-mono)">hondi_default_llm_keys</code>
         </div>
-        <div id="llm-key-list" style="display:flex;flex-direction:column;gap:10px"></div>
-        <div id="llm-key-empty" style="font-size:14px;color:#9ca3af;text-align:center;padding:20px">
+        <div id="llm-key-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="llm-key-empty" style="font-size:12.5px;color:var(--ad-faint,#6e737a);text-align:center;padding:18px">
           등록된 키가 없습니다. "+ 키 추가"를 눌러 추가하세요.
         </div>
         <button onclick="_saveAllKeys()"
-                style="margin-top:16px;width:100%;padding:11px;background:#111;color:#fff;
-                       border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+                style="margin-top:14px;width:100%;padding:10px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                       border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                       font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
           전체 저장
         </button>
-        <div id="key-save-ok" style="font-size:12px;color:#2563eb;text-align:center;margin-top:8px;display:none">
+        <div id="key-save-ok" style="font-size:11px;color:var(--ad-dim,#9aa0a8);text-align:center;margin-top:8px;display:none">
           ✓ 저장되었습니다.
         </div>
       </div>
 
       <!-- ④ 체험 만료 안내 메시지 -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">📢 체험 만료 시 안내 메시지</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px;margin-bottom:12px">체험 만료 시 안내 메시지</div>
         <textarea id="trial-expired-msg" rows="3"
-                  style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;
-                         font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box"
+                  style="width:100%;padding:9px 11px;border:1px solid var(--ad-line,#3c3f46);border-radius:4px;
+                         background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                         font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box"
                   placeholder="예) AI 비서 무료 체험 기간이 종료됐습니다."></textarea>
         <button onclick="_saveExpiredMsg()"
-                style="margin-top:10px;padding:9px 20px;background:#2563eb;color:#fff;border:none;
-                       border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">저장</button>
-        <span id="msg-save-ok" style="font-size:12px;color:#2563eb;margin-left:10px;display:none">✓ 저장됨</span>
+                style="margin-top:10px;padding:8px 18px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                       border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                       font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit">저장</button>
+        <span id="msg-save-ok" style="font-size:11px;color:var(--ad-dim,#9aa0a8);margin-left:10px;display:none">✓ 저장됨</span>
       </div>
 
       <!-- ⑤ Cloudflare 서브도메인 관리 -->
@@ -3034,25 +3040,25 @@ function _renderKeyList() {
     const cp=PROVIDERS.find(p=>p.id===(k.provider||'gemini'))||PROVIDERS[0];
     const row=document.createElement('div');
     row.setAttribute('data-row',i);
-    row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px';
+    row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--ad-panel2,#33363c);border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:11px';
     row.innerHTML=`
       <select class="ak-prov" data-i="${i}" onchange="_onProviderChange(this)"
-        style="padding:7px 8px;border:1px solid #d1d5db;border-radius:7px;font-size:14px;font-family:inherit;background:#f9fafb;flex-shrink:0">
+        style="padding:6px 8px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;font-size:13px;font-family:inherit;background:var(--ad-bg,#26282d);color:var(--ad-text,#d7d9dd);flex-shrink:0">
         ${PROVIDERS.map(p=>`<option value="${p.id}" ${k.provider===p.id?'selected':''}>${p.label}</option>`).join('')}
       </select>
       <select class="ak-model" data-i="${i}"
-        style="padding:7px 8px;border:1px solid #d1d5db;border-radius:7px;font-size:14px;font-family:inherit;background:#f9fafb;flex-shrink:0;max-width:200px">
+        style="padding:6px 8px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;font-size:13px;font-family:inherit;background:var(--ad-bg,#26282d);color:var(--ad-text,#d7d9dd);flex-shrink:0;max-width:200px">
         ${cp.models.map(m=>`<option value="${m.id}" ${k.model===m.id?'selected':''}>${m.label}</option>`).join('')}
       </select>
       <input class="ak-label" data-i="${i}" type="text" value="${_esc(k.label||'')}" placeholder="설명"
-        style="flex:1;min-width:100px;padding:7px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:14px;font-family:inherit">
+        style="flex:1;min-width:100px;padding:6px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;font-size:13px;font-family:inherit;background:var(--ad-bg,#26282d);color:var(--ad-text,#d7d9dd)">
       <input class="ak-key" data-i="${i}" type="password" value="${_esc(k.key||'')}" placeholder="API Key"
-        style="flex:2;min-width:160px;padding:7px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:14px;font-family:monospace"
+        style="flex:2;min-width:160px;padding:6px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;font-size:13px;font-family:var(--ad-mono,monospace);background:var(--ad-bg,#26282d);color:var(--ad-text,#d7d9dd)"
         onfocus="this.type='text'" onblur="this.type='password'">
-      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#374151;white-space:nowrap;cursor:pointer">
-        <input class="ak-active" data-i="${i}" type="checkbox" ${k.active?'checked':''} style="width:15px;height:15px;accent-color:#2563eb"> 활성
+      <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ad-dim,#9aa0a8);white-space:nowrap;cursor:pointer">
+        <input class="ak-active" data-i="${i}" type="checkbox" ${k.active?'checked':''} style="width:14px;height:14px;accent-color:#5b8ec4"> 활성
       </label>
-      <button onclick="_removeKey(${i})" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;flex-shrink:0">삭제</button>`;
+      <button onclick="_removeKey(${i})" style="background:none;border:1px solid var(--ad-crit,#d16054);color:var(--ad-crit,#d16054);border-radius:3px;padding:5px 10px;font-size:11.5px;cursor:pointer;flex-shrink:0">삭제</button>`;
     list.appendChild(row);
   });
 }
