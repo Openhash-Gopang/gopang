@@ -2046,18 +2046,20 @@ document.addEventListener("DOMContentLoaded", function () {
                          border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">+ 공문 추가</button>
         </div>
         <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
-          기관에 보낸 공문의 발송·회신 현황을 기록합니다. 수신 날짜·수신 내용은 회신을 받기 전까지 비워두세요.
+          기관에 보낸 공문의 발송·회신 현황을 기록합니다. 수신 날짜·수신 내용은 회신이 오면 gov-mail.hondi.net을 통해 자동으로 채워집니다(설정 후). "발송" 버튼은 이메일 주소가 채워진 행에서만 동작합니다.
         </div>
         <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:820px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:960px">
             <thead>
               <tr style="text-align:left;color:#6b7280">
                 <th style="padding:0 8px 8px 0;font-weight:600;min-width:120px">수신 기관</th>
                 <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">공문 제목</th>
                 <th style="padding:0 8px 8px 0;font-weight:600;min-width:140px">공문 링크</th>
+                <th style="padding:0 8px 8px 0;font-weight:600;min-width:150px">수신 이메일</th>
                 <th style="padding:0 8px 8px 0;font-weight:600;width:110px">보낸 날짜</th>
                 <th style="padding:0 8px 8px 0;font-weight:600;width:110px">수신 날짜</th>
                 <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">수신 내용</th>
+                <th style="padding:0 8px 8px 0;width:60px"></th>
                 <th style="padding:0 0 8px;width:50px"></th>
               </tr>
             </thead>
@@ -2797,13 +2799,21 @@ function _renderLetterList() {
        style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;box-sizing:border-box">`;
   _letters.forEach((l, i) => {
     const tr = document.createElement('tr');
+    const canSend = !!(l.id && l.email);
     tr.innerHTML = `
       <td style="padding:4px 8px 4px 0">${cellInput('lt-inst', i, l.institution, 'text', '예: 제주특별자치도청')}</td>
       <td style="padding:4px 8px 4px 0">${cellInput('lt-title', i, l.title, 'text', '공문 제목')}</td>
       <td style="padding:4px 8px 4px 0">${cellInput('lt-link', i, l.link, 'text', 'https://...')}</td>
+      <td style="padding:4px 8px 4px 0">${cellInput('lt-email', i, l.email, 'email', 'to@institution.go.kr')}</td>
       <td style="padding:4px 8px 4px 0">${cellInput('lt-sent', i, l.sent_date, 'date')}</td>
       <td style="padding:4px 8px 4px 0">${cellInput('lt-recv-date', i, l.received_date, 'date')}</td>
       <td style="padding:4px 8px 4px 0">${cellInput('lt-recv-content', i, l.received_content, 'text', '회신 요약')}</td>
+      <td style="padding:4px 0">
+        <button onclick="_sendLetterEmail(${i})" ${canSend ? '' : 'disabled'}
+          title="${canSend ? '' : '먼저 전체 저장 후, 이메일 주소를 채워야 발송할 수 있습니다'}"
+          style="background:none;border:1px solid ${canSend ? '#93c5fd' : '#e5e7eb'};color:${canSend ? '#2563eb' : '#9ca3af'};
+                 border-radius:6px;padding:5px 8px;font-size:11px;cursor:${canSend ? 'pointer' : 'not-allowed'};white-space:nowrap">발송</button>
+      </td>
       <td style="padding:4px 0"><button onclick="_removeLetter(${i})"
         style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;white-space:nowrap">삭제</button></td>`;
     tbody.appendChild(tr);
@@ -2811,7 +2821,7 @@ function _renderLetterList() {
 }
 
 function _addLetterRow() {
-  _letters.push({ id:'', institution:'', title:'', link:'', sent_date:'', received_date:'', received_content:'' });
+  _letters.push({ id:'', institution:'', title:'', link:'', email:'', sent_date:'', received_date:'', received_content:'' });
   _renderLetterList();
 }
 
@@ -2843,6 +2853,7 @@ async function _saveAllLetters() {
       institution:       row.querySelector('.lt-inst').value.trim(),
       title:             row.querySelector('.lt-title').value.trim(),
       link:              row.querySelector('.lt-link').value.trim(),
+      email:             row.querySelector('.lt-email').value.trim(),
       sent_date:         row.querySelector('.lt-sent').value,
       received_date:     row.querySelector('.lt-recv-date').value,
       received_content:  row.querySelector('.lt-recv-content').value.trim(),
@@ -2871,6 +2882,45 @@ async function _saveAllLetters() {
   ok.style.display = 'block';
   setTimeout(()=>{ ok.style.display='none'; }, 4000);
   _renderLetterList();
+}
+
+// 발송 전 반드시 _saveAllLetters()를 거쳐야 letter.id가 서버에서
+// 확정된다(신규 행은 id가 비어있는 채로 시작 — crypto.randomUUID()는
+// 서버 쪽에서만 채운다, handleAdminLettersSet 주석 참고). 그래서 버튼은
+// l.id && l.email이 둘 다 있을 때만 활성화된다(_renderLetterList의
+// canSend 조건). 제목·본문은 매번 프롬프트로 받는다 — 별도 작성 폼을
+//새로 만들지 않고, 이미 있는 공문 초안(공문 초안 문서)을 복사해
+// 붙여넣는 흐름을 그대로 지원한다.
+async function _sendLetterEmail(i) {
+  const l = _letters[i];
+  if (!l || !l.id || !l.email) {
+    alert('먼저 "전체 저장"을 눌러 저장한 뒤, 수신 이메일 주소를 채워주세요.');
+    return;
+  }
+  const subject = prompt('제목을 입력하세요:', l.title || '');
+  if (subject === null) return;
+  const text = prompt('본문을 입력하세요 (공문 초안 내용을 붙여넣으세요):', '');
+  if (text === null) return;
+  if (!subject.trim() || !text.trim()) {
+    alert('제목과 본문을 모두 입력해야 합니다.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${WORKER_URL}/admin/letters/send-email`, {
+      method: 'POST', headers: {'Content-Type':'application/json', ..._adminAuthHeaders()},
+      body: JSON.stringify({ letter_id: l.id, to: l.email, subject: subject.trim(), text: text.trim() }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      alert(`발송했습니다 (발신 주소: ${d.from})`);
+      await _loadLetters(); // sent_date가 서버에서 갱신됐을 수 있으니 다시 불러온다
+    } else {
+      alert('발송 실패: ' + (d.message || res.status));
+    }
+  } catch(e) {
+    alert('Worker 연결 실패: ' + e.message);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3021,6 +3071,7 @@ window._deleteSubdomain  = _deleteSubdomain;
 window._addLetterRow     = _addLetterRow;
 window._removeLetter     = _removeLetter;
 window._saveAllLetters   = _saveAllLetters;
+window._sendLetterEmail  = _sendLetterEmail;
 </script>
 
 
