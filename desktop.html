@@ -2007,83 +2007,90 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>
 
       <!-- ⑤ Cloudflare 서브도메인 관리 -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:14px;font-weight:700;color:#111">🌐 서브도메인 관리 (hondi.net)</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px">서브도메인 관리 (hondi.net)</div>
           <button onclick="_addSubdomainRow()"
-                  style="padding:6px 14px;background:#2563eb;color:#fff;border:none;
-                         border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">+ 추가</button>
+                  style="padding:5px 12px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                         border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                         font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit">+ 추가</button>
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
+        <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-bottom:12px;line-height:1.6">
           Cloudflare 자격증명을 저장하면 서브도메인 추가 시 자동으로 CNAME 레코드가 생성됩니다.<br>
-          ※ <b>Global API Key + Email</b> 조합만 작동합니다 (Custom Token은 CORS 문제 있음 — 하단 오류 기록 참조).<br>
-          Target: <code style="background:#f3f4f6;padding:1px 4px;border-radius:4px">openhash-gopang.github.io</code> / DNS only
+          Global API Key + Email 조합만 작동합니다 (Custom Token은 CORS 문제 있음 — 하단 오류 기록 참조).<br>
+          Target: <code style="background:var(--ad-panel2,#33363c);color:var(--ad-dim,#9aa0a8);padding:1px 4px;border-radius:3px;font-family:var(--ad-mono)">openhash-gopang.github.io</code> / DNS only
         </div>
 
         <!-- CF 자격증명 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
-            <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Global API Key</label>
+            <label style="font-size:11px;color:var(--ad-dim,#9aa0a8);display:block;margin-bottom:4px">Global API Key</label>
             <input id="cf-api-key" type="text" placeholder="cfk_..."
-                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
-                          font-size:12px;font-family:monospace;box-sizing:border-box">
+                   style="width:100%;padding:7px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;
+                          background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                          font-size:12px;font-family:var(--ad-mono);box-sizing:border-box">
           </div>
           <div>
-            <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Email</label>
+            <label style="font-size:11px;color:var(--ad-dim,#9aa0a8);display:block;margin-bottom:4px">Email</label>
             <input id="cf-email" type="email" placeholder="Tensor.city@gmail.com"
-                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
+                   style="width:100%;padding:7px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;
+                          background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
                           font-size:12px;font-family:inherit;box-sizing:border-box">
           </div>
           <div>
-            <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Zone ID</label>
+            <label style="font-size:11px;color:var(--ad-dim,#9aa0a8);display:block;margin-bottom:4px">Zone ID</label>
             <input id="cf-zone-id" type="text" placeholder="fd842cd737258a783e510e06fafbb07e"
-                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
-                          font-size:12px;font-family:monospace;box-sizing:border-box">
+                   style="width:100%;padding:7px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;
+                          background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                          font-size:12px;font-family:var(--ad-mono);box-sizing:border-box">
           </div>
           <div>
-            <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Target (CNAME 값)</label>
+            <label style="font-size:11px;color:var(--ad-dim,#9aa0a8);display:block;margin-bottom:4px">Target (CNAME 값)</label>
             <input id="cf-target" type="text" value="openhash-gopang.github.io"
-                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
-                          font-size:12px;font-family:monospace;box-sizing:border-box">
+                   style="width:100%;padding:7px 9px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;
+                          background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                          font-size:12px;font-family:var(--ad-mono);box-sizing:border-box">
           </div>
         </div>
         <button onclick="_saveCFCredentials()"
-                style="padding:7px 16px;background:#374151;color:#fff;border:none;border-radius:8px;
-                       font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px">
+                style="padding:6px 14px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                       border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                       font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:14px">
           자격증명 저장 (localStorage)
         </button>
-        <span id="cf-cred-ok" style="font-size:12px;color:#2563eb;margin-left:8px;display:none">✓ 저장됨</span>
+        <span id="cf-cred-ok" style="font-size:11px;color:var(--ad-dim,#9aa0a8);margin-left:8px;display:none">✓ 저장됨</span>
 
         <!-- 서브도메인 목록 -->
-        <div id="subdomain-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
-        <div id="subdomain-list-status" style="font-size:12px;color:#6b7280;margin-top:8px;min-height:20px"></div>
+        <div id="subdomain-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+        <div id="subdomain-list-status" style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:8px;min-height:18px"></div>
       </div>
 
       <!-- ⑤-b 공문 발송 기록 (2026-08-31 신설) — 기관에 보낸 공문(예: 제주도청·
            행안부·제주TP 등 dpaper.kr 지원 요청)의 발송·회신 이력을 기록한다.
            worker.js /admin/letters(GET/POST)가 AI_SETUP_SEALS_KV에 JSON
            배열로 저장 — LLM 키 목록과 동일한 "전체 배열 교체" 관례. -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <div style="font-size:14px;font-weight:700;color:#111">📨 공문 발송 기록</div>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px">공문 발송 기록</div>
           <button onclick="_addLetterRow()"
-                  style="padding:6px 14px;background:#2563eb;color:#fff;border:none;
-                         border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">+ 공문 추가</button>
+                  style="padding:5px 12px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                         border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                         font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit">+ 공문 추가</button>
         </div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
+        <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-bottom:12px;line-height:1.6">
           기관에 보낸 공문의 발송·회신 현황을 기록합니다. 수신 날짜·수신 내용은 회신이 오면 gov-mail.hondi.net을 통해 자동으로 채워집니다(설정 후). "발송" 버튼은 이메일 주소가 채워진 행에서만 동작합니다.
         </div>
         <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:960px">
+          <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:960px">
             <thead>
-              <tr style="text-align:left;color:#6b7280">
-                <th style="padding:0 8px 8px 0;font-weight:600;min-width:120px">수신 기관</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">공문 제목</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;min-width:140px">공문 링크</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;min-width:150px">수신 이메일</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;width:110px">보낸 날짜</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;width:110px">수신 날짜</th>
-                <th style="padding:0 8px 8px 0;font-weight:600;min-width:160px">수신 내용</th>
+              <tr style="text-align:left;color:var(--ad-faint,#6e737a)">
+                <th style="padding:0 8px 8px 0;font-weight:400;min-width:120px">수신 기관</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;min-width:160px">공문 제목</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;min-width:140px">공문 링크</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;min-width:150px">수신 이메일</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;width:110px">보낸 날짜</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;width:110px">수신 날짜</th>
+                <th style="padding:0 8px 8px 0;font-weight:400;min-width:160px">수신 내용</th>
                 <th style="padding:0 8px 8px 0;width:60px"></th>
                 <th style="padding:0 0 8px;width:50px"></th>
               </tr>
@@ -2091,15 +2098,16 @@ document.addEventListener("DOMContentLoaded", function () {
             <tbody id="letter-list"></tbody>
           </table>
         </div>
-        <div id="letter-list-empty" style="font-size:14px;color:#9ca3af;text-align:center;padding:20px">
+        <div id="letter-list-empty" style="font-size:12.5px;color:var(--ad-faint,#6e737a);text-align:center;padding:18px">
           기록된 공문이 없습니다. "+ 공문 추가"를 눌러 추가하세요.
         </div>
         <button onclick="_saveAllLetters()"
-                style="margin-top:16px;width:100%;padding:11px;background:#111;color:#fff;
-                       border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+                style="margin-top:14px;width:100%;padding:10px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                       border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;
+                       font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
           전체 저장
         </button>
-        <div id="letter-save-ok" style="font-size:12px;color:#2563eb;text-align:center;margin-top:8px;display:none"></div>
+        <div id="letter-save-ok" style="font-size:11px;color:var(--ad-dim,#9aa0a8);text-align:center;margin-top:8px;display:none"></div>
       </div>
 
       <!-- ⑥ 자동 갱신 현황 (2026-07-28 신설) — AUTO_REFRESH_MANUAL_v1_0.html의
@@ -3123,7 +3131,7 @@ function _renderLetterList() {
   empty.style.display = _letters.length ? 'none' : 'block';
   const cellInput = (cls, i, val, type='text', ph='') =>
     `<input class="${cls}" data-i="${i}" type="${type}" value="${_esc(val||'')}" placeholder="${_esc(ph)}"
-       style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;box-sizing:border-box">`;
+       style="width:100%;padding:6px 8px;border:1px solid var(--ad-line-strong,#4a4e56);border-radius:3px;font-size:11.5px;font-family:inherit;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);box-sizing:border-box">`;
   _letters.forEach((l, i) => {
     const tr = document.createElement('tr');
     const canSend = !!(l.id && l.email);
@@ -3138,11 +3146,11 @@ function _renderLetterList() {
       <td style="padding:4px 0">
         <button onclick="_sendLetterEmail(${i})" ${canSend ? '' : 'disabled'}
           title="${canSend ? '' : '먼저 전체 저장 후, 이메일 주소를 채워야 발송할 수 있습니다'}"
-          style="background:none;border:1px solid ${canSend ? '#93c5fd' : '#e5e7eb'};color:${canSend ? '#2563eb' : '#9ca3af'};
-                 border-radius:6px;padding:5px 8px;font-size:11px;cursor:${canSend ? 'pointer' : 'not-allowed'};white-space:nowrap">발송</button>
+          style="background:none;border:1px solid ${canSend ? 'var(--ad-line-strong,#4a4e56)' : 'var(--ad-line,#3c3f46)'};color:${canSend ? 'var(--ad-dim,#9aa0a8)' : 'var(--ad-faint,#6e737a)'};
+                 border-radius:3px;padding:5px 8px;font-size:10.5px;cursor:${canSend ? 'pointer' : 'not-allowed'};white-space:nowrap">발송</button>
       </td>
       <td style="padding:4px 0"><button onclick="_removeLetter(${i})"
-        style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;white-space:nowrap">삭제</button></td>`;
+        style="background:none;border:1px solid var(--ad-crit,#d16054);color:var(--ad-crit,#d16054);border-radius:3px;padding:5px 8px;font-size:10.5px;cursor:pointer;white-space:nowrap">삭제</button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -3300,14 +3308,14 @@ function _renderSubdomainList() {
   list.innerHTML='';
   subs.forEach((s,i)=>{
     const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px';
+    row.style.cssText='display:flex;align-items:center;gap:8px;background:var(--ad-panel2,#33363c);border:1px solid var(--ad-line,#3c3f46);border-radius:3px;padding:9px 11px';
     row.innerHTML=`
-      <span style="font-size:14px;font-family:monospace;flex:1;color:#111">${s.name}.hondi.net</span>
-      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${s.status==='active'?'#dbeafe':'#fef3c7'};color:${s.status==='active'?'#2563eb':'#92400e'}">
-        ${s.status==='active'?'✓ 활성':'⏳ 대기'}
+      <span style="font-size:13px;font-family:var(--ad-mono);flex:1;color:var(--ad-text,#d7d9dd)">${s.name}.hondi.net</span>
+      <span style="font-size:10.5px;padding:2px 8px;border-radius:3px;background:var(--ad-bg,#26282d);color:${s.status==='active'?'var(--ad-dim,#9aa0a8)':'var(--ad-warn,#d6a04a)'}">
+        ${s.status==='active'?'활성':'대기'}
       </span>
       <button onclick="_deleteSubdomain(${i})"
-              style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">삭제</button>`;
+              style="background:none;border:1px solid var(--ad-crit,#d16054);color:var(--ad-crit,#d16054);border-radius:3px;padding:3px 8px;font-size:10.5px;cursor:pointer">삭제</button>`;
     list.appendChild(row);
   });
 }
@@ -3331,7 +3339,7 @@ async function _createCFRecord(sub) {
   }
   const status=document.getElementById('subdomain-list-status');
   status.textContent=`⏳ ${sub}.hondi.net 추가 중...`;
-  status.style.color='#92400e';
+  status.style.color='var(--ad-warn,#d6a04a)';
   try {
     // api.cloudflare.com CORS 차단 → Worker 프록시 경유
     const res=await fetch(`${WORKER_URL}/admin/cf-dns`, {
@@ -3349,14 +3357,14 @@ async function _createCFRecord(sub) {
       subs.push({name:sub,recordId:data.result?.id,status:'active',created:new Date().toISOString()});
       _saveSubdomains(subs); _renderSubdomainList();
       status.textContent=`✅ ${sub}.hondi.net 추가 완료!`;
-      status.style.color='#2563eb';
+      status.style.color='var(--ad-dim,#9aa0a8)';
     } else {
       status.textContent=`❌ 실패: ${data.errors?.[0]?.message||JSON.stringify(data.errors)}`;
-      status.style.color='#dc2626';
+      status.style.color='var(--ad-crit,#d16054)';
     }
   } catch(e) {
     status.textContent=`❌ 오류: ${e.message}`;
-    status.style.color='#dc2626';
+    status.style.color='var(--ad-crit,#d16054)';
   }
 }
 
@@ -3374,8 +3382,8 @@ async function _deleteSubdomain(i) {
       );
       const data=await res.json();
       status.textContent=data.success?`✅ ${sub.name}.hondi.net 삭제 완료`:`⚠️ CF 삭제 실패(로컬만 제거): ${data.errors?.[0]?.message}`;
-      status.style.color=data.success?'#2563eb':'#d97706';
-    } catch(e) { status.textContent=`⚠️ 오류(로컬만 제거): ${e.message}`; status.style.color='#d97706'; }
+      status.style.color=data.success?'var(--ad-dim,#9aa0a8)':'var(--ad-warn,#d6a04a)';
+    } catch(e) { status.textContent=`⚠️ 오류(로컬만 제거): ${e.message}`; status.style.color='var(--ad-warn,#d6a04a)'; }
   }
   subs.splice(i,1); _saveSubdomains(subs); _renderSubdomainList();
 }
