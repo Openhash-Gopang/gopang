@@ -12112,6 +12112,8 @@ export default {
     if (pathname === '/kmail/mailbox' && request.method === 'GET') return handleKmailMailboxList(request, url, env, corsHeaders);
     if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
     if (pathname === '/kmail/contacts/update' && request.method === 'POST') return handleKmailContactsUpdate(request, env, corsHeaders);
+    if (pathname === '/kmail/contacts/tag' && request.method === 'POST') return handleKmailContactsTag(request, env, corsHeaders);
+    if (pathname === '/kmail/contacts/merge' && request.method === 'POST') return handleKmailContactsMerge(request, env, corsHeaders);
     if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules' && request.method === 'GET') return handleKmailRuleList(request, url, env, corsHeaders);
@@ -28846,14 +28848,19 @@ async function handleKmailContactsPropose(request, env, corsHeaders) {
 // API)와 K-Mail 채팅의 KMAIL_LOOKUP_CONTACTS(§ handleKmailChat 하단)
 // 양쪽이 공유한다. 이스케이프 로직을 두 곳에 복붙하면 한쪽만 고치고
 // 다른 쪽을 놓치는 사고가 나기 쉬워 묶었다.
-async function _kmailQueryContacts(env, guid, { status = 'confirmed', q = '', relationship = '', occupation = '', org = '' } = {}) {
+async function _kmailQueryContacts(env, guid, { status = 'confirmed', q = '', relationship = '', occupation = '', org = '', tag = '' } = {}) {
   const esc = s => String(s).replace(/'/g, "\\'");
   const clauses = [`owner_user_guid='${esc(guid)}'`];
   if (status !== 'all') clauses.push(`status='${esc(status)}'`);
-  if (q) clauses.push(`(name~'${esc(q)}' || org~'${esc(q)}' || dept~'${esc(q)}' || occupation~'${esc(q)}' || relationship~'${esc(q)}' || email~'${esc(q)}')`);
+  // tags는 json 배열이지만 PocketBase 내부적으로 텍스트로 저장돼 '~'가
+  // 그 텍스트에 부분일치한다 — ["세미나초청대상"] 안에 "세미나초청대상"이
+  // 있는지는 이 방식으로 충분히 잡힌다(태그명에 흔치 않은 특수문자가
+  // 없는 한 오탐 위험 낮음, 이 규모에서 전용 JSON 연산자까진 불필요).
+  if (q) clauses.push(`(name~'${esc(q)}' || org~'${esc(q)}' || dept~'${esc(q)}' || occupation~'${esc(q)}' || relationship~'${esc(q)}' || email~'${esc(q)}' || tags~'${esc(q)}')`);
   if (relationship) clauses.push(`relationship~'${esc(relationship)}'`);
   if (occupation) clauses.push(`occupation~'${esc(occupation)}'`);
   if (org) clauses.push(`org~'${esc(org)}'`);
+  if (tag) clauses.push(`tags~'${esc(tag)}'`);
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
@@ -28873,6 +28880,7 @@ async function handleKmailContactsList(request, url, env, corsHeaders) {
   const relationship = (url.searchParams.get('relationship') || '').trim();
   const occupation = (url.searchParams.get('occupation') || '').trim();
   const org = (url.searchParams.get('org') || '').trim();
+  const tag = (url.searchParams.get('tag') || '').trim();
   if (!guid || !pubkey || !signature || !ts) {
     return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
   }
@@ -28884,7 +28892,7 @@ async function handleKmailContactsList(request, url, env, corsHeaders) {
   const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
-  const items = await _kmailQueryContacts(env, guid, { status, q, relationship, occupation, org });
+  const items = await _kmailQueryContacts(env, guid, { status, q, relationship, occupation, org, tag });
   return new Response(JSON.stringify({ ok: true, items }), { status: 200, headers: corsHeaders });
 }
 
@@ -29017,15 +29025,18 @@ async function handleKmailContactsDecide(request, env, corsHeaders) {
 }
 
 // POST /kmail/contacts/update — body: { guid, pubkey, signature, ts, contact_id,
-//   name?, org?, dept?, occupation?, relationship? }
+//   name?, org?, dept?, occupation?, relationship?, add_tags?, remove_tags? }
 // decide와 별개로, 이미 confirmed된(=주소록에 있는) 연락처의 분류를
 // 나중에 고치기 위한 엔드포인트 — "이 사람 이제 회사 옮겼어" 같은
 // 갱신을 위해 status 변경 없이 필드만 바꾼다. status 자체는 여기서
-// 건드리지 않는다(그건 decide의 역할).
+// 건드리지 않는다(그건 decide의 역할). add_tags/remove_tags는 tags
+// 전체를 덮어쓰지 않고 합집합/차집합으로 편집 — "그룹"은 tags의
+// 특수 활용일 뿐 별도 스키마가 아니므로(설계 §2단계), 태그를 통째로
+// 갈아치우면 다른 목적으로 붙여둔 태그까지 날아간다.
 async function handleKmailContactsUpdate(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
-  const { guid, pubkey, signature, ts, contact_id, name, org, dept, occupation, relationship } = body;
+  const { guid, pubkey, signature, ts, contact_id, name, org, dept, occupation, relationship, add_tags, remove_tags } = body;
   if (!guid || !pubkey || !signature || !ts) {
     return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
   }
@@ -29049,6 +29060,12 @@ async function handleKmailContactsUpdate(request, env, corsHeaders) {
   for (const [k, v] of Object.entries({ name, org, dept, occupation, relationship })) {
     if (typeof v === 'string') patch[k] = v;
   }
+  if (Array.isArray(add_tags) || Array.isArray(remove_tags)) {
+    const current = new Set(contact.tags || []);
+    for (const t of (add_tags || [])) if (typeof t === 'string' && t.trim()) current.add(t.trim());
+    for (const t of (remove_tags || [])) current.delete(t);
+    patch.tags = Array.from(current);
+  }
   if (Object.keys(patch).length === 0) {
     return _err(400, 'NOTHING_TO_UPDATE', '수정할 필드가 하나도 없습니다', corsHeaders);
   }
@@ -29058,6 +29075,154 @@ async function handleKmailContactsUpdate(request, env, corsHeaders) {
   if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '수정 실패', corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, contact_id, updated: Object.keys(patch) }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/contacts/tag — body: { guid, pubkey, signature, ts, emails: [...], add_tags?, remove_tags? }
+// "이 사람들 '세미나 초청 대상' 그룹으로 묶어줘" 같은 대화 한 번으로
+// 여러 명에게 동시에 태그를 붙이기 위한 일괄 처리 엔드포인트 —
+// handleKmailContactsUpdate(연락처 1개)를 이메일 목록만큼 반복하지
+// 않아도 되게 한다. 존재하지 않거나 본인 소유가 아닌 이메일은
+// 조용히 건너뛰고 skipped 목록으로 알려준다(그것 때문에 나머지
+// 전원이 실패하면 안 됨).
+async function handleKmailContactsTag(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, emails, add_tags, remove_tags } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!Array.isArray(emails) || emails.length === 0) {
+    return _err(400, 'MISSING_FIELD', 'emails 배열(1개 이상) 필수', corsHeaders);
+  }
+  if (!Array.isArray(add_tags) && !Array.isArray(remove_tags)) {
+    return _err(400, 'MISSING_FIELD', 'add_tags 또는 remove_tags 중 하나는 필수', corsHeaders);
+  }
+
+  const sigMsg = `kmail-contacts-tag:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const guidEsc = guid.replace(/'/g, "\\'");
+
+  const tagged = [];
+  const skipped = [];
+  for (const email of emails) {
+    if (typeof email !== 'string' || !email.trim()) { skipped.push(email); continue; }
+    const emailEsc = email.replace(/'/g, "\\'");
+    const filter = encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${emailEsc}' && status='confirmed'`);
+    const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&perPage=1`, { headers: { Authorization: headers.Authorization } });
+    const findData = await findRes.json().catch(() => ({ items: [] }));
+    const contact = findData.items && findData.items[0];
+    if (!contact) { skipped.push(email); continue; }
+
+    const current = new Set(contact.tags || []);
+    for (const t of (add_tags || [])) if (typeof t === 'string' && t.trim()) current.add(t.trim());
+    for (const t of (remove_tags || [])) current.delete(t);
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ tags: Array.from(current) }),
+    });
+    if (patchRes.ok) tagged.push(email); else skipped.push(email);
+  }
+
+  return new Response(JSON.stringify({ ok: true, tagged, skipped }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/contacts/merge — body: { guid, pubkey, signature, ts, keep_id, merge_id }
+// "이 두 사람 같은 사람인데 중복 등록됐어, 합쳐줘" — merge_id의 정보로
+// keep_id의 빈 필드를 채우고 태그는 합집합, merge_id를 참조하던 모든
+// kmail_campaigns.contact_ids를 keep_id로 바꿔치기(과거 발송 이력이
+// 병합 후에도 안 끊기게), 마지막으로 merge_id 레코드를 삭제한다.
+// 이 순서(참조 재작성 → 삭제)를 지켜야 고아 참조가 안 생긴다.
+// 병합 실제 로직(인증 없음 — 호출부가 이미 guid를 검증했다고 가정) —
+// handleKmailContactsMerge(공개 API, 자체 서명 검증)와 handleKmailChat의
+// KMAIL_MERGE_CONTACTS(채팅 레벨에서 이미 한 번 검증됨) 양쪽이 공유한다.
+// 여기서 다시 서명을 검증하면 채팅 쪽 서명(kmail-chat:...)이 이 함수의
+// sigMsg(kmail-contacts-merge:...)와 안 맞아 항상 실패하므로, 인증은
+// 반드시 호출부 책임으로 둔다.
+async function _kmailMergeContactsCore(env, guid, keepId, mergeId) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const [keepRes, mergeRes] = await Promise.all([
+    fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${keepId}`, { headers }),
+    fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${mergeId}`, { headers }),
+  ]);
+  if (!keepRes.ok || !mergeRes.ok) return { ok: false, error: 'CONTACT_NOT_FOUND' };
+  const keepContact = await keepRes.json();
+  const mergeContact = await mergeRes.json();
+  if (keepContact.owner_user_guid !== guid || mergeContact.owner_user_guid !== guid) {
+    return { ok: false, error: 'NOT_OWNER' };
+  }
+
+  // 빈 필드만 채움(기존 값 보존 — 다른 자동 갱신 로직과 동일 원칙),
+  // 태그는 합집합.
+  const patch = {};
+  for (const f of ['name', 'org', 'dept', 'occupation', 'relationship']) {
+    if (!keepContact[f] && mergeContact[f]) patch[f] = mergeContact[f];
+  }
+  const mergedTags = Array.from(new Set([...(keepContact.tags || []), ...(mergeContact.tags || [])]));
+  if (mergedTags.length !== (keepContact.tags || []).length) patch.tags = mergedTags;
+  if (Object.keys(patch).length > 0) {
+    await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${keepId}`, {
+      method: 'PATCH', headers, body: JSON.stringify(patch),
+    }).catch(e => console.warn('[K-Mail Merge] keep 보강 실패(계속 진행):', e.message));
+  }
+
+  // mergeId를 참조하는 모든 캠페인의 contact_ids를 keepId로 치환.
+  const guidEsc = guid.replace(/'/g, "\\'");
+  const campFilter = encodeURIComponent(`owner_user_guid='${guidEsc}' && contact_ids~'"${mergeId}"'`);
+  const campRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records?filter=${campFilter}&perPage=200`, { headers: { Authorization: headers.Authorization } });
+  const campData = await campRes.json().catch(() => ({ items: [] }));
+  let rewrittenCampaigns = 0;
+  for (const camp of (campData.items || [])) {
+    const ids = Array.isArray(camp.contact_ids) ? camp.contact_ids : [];
+    if (!ids.includes(mergeId)) continue; // 부분일치 오탐 방어(예: id가 서로의 접두어인 경우)
+    const newIds = Array.from(new Set(ids.map(id => id === mergeId ? keepId : id)));
+    const rw = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records/${camp.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ contact_ids: newIds }),
+    });
+    if (rw.ok) rewrittenCampaigns++;
+  }
+
+  const delRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${mergeId}`, { method: 'DELETE', headers });
+  if (!delRes.ok) return { ok: false, error: 'DELETE_FAILED' };
+
+  return { ok: true, keep_id: keepId, merged_from: mergeId, rewritten_campaigns: rewrittenCampaigns };
+}
+
+// POST /kmail/contacts/merge — body: { guid, pubkey, signature, ts, keep_id, merge_id }
+// "이 두 사람 같은 사람인데 중복 등록됐어, 합쳐줘" — 실제 작업은
+// _kmailMergeContactsCore가 한다(순서: 참조 재작성 → 삭제, 이 순서를
+// 지켜야 고아 참조가 안 생긴다).
+async function handleKmailContactsMerge(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, keep_id, merge_id } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!keep_id || !merge_id) return _err(400, 'MISSING_FIELD', 'keep_id, merge_id 필수', corsHeaders);
+  if (keep_id === merge_id) return _err(400, 'SAME_CONTACT', 'keep_id와 merge_id가 같습니다', corsHeaders);
+
+  const sigMsg = `kmail-contacts-merge:${guid}:${keep_id}:${merge_id}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const result = await _kmailMergeContactsCore(env, guid, keep_id, merge_id);
+  if (!result.ok) {
+    const statusMap = { CONTACT_NOT_FOUND: 404, NOT_OWNER: 403, DELETE_FAILED: 502 };
+    const msgMap = {
+      CONTACT_NOT_FOUND: '연락처 중 하나를 찾을 수 없습니다',
+      NOT_OWNER: '본인 연락처만 병합할 수 있습니다',
+      DELETE_FAILED: 'merge_id 삭제 실패(참조는 이미 keep_id로 옮겨짐 — 재시도 시 안전)',
+    };
+    return _err(statusMap[result.error] || 500, result.error, msgMap[result.error] || '병합 실패', corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, ...result }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -29954,6 +30119,89 @@ async function handleKmailChat(request, env, corsHeaders, ctx) {
   const sendMatch = reply.match(/KMAIL_SEND_CAMPAIGN\s*(\{[\s\S]*\})\s*$/);
   const ruleMatch = reply.match(/KMAIL_CREATE_RULE\s*(\{[\s\S]*\})\s*$/);
   const lookupMatch = reply.match(/KMAIL_LOOKUP_CONTACTS\s*(\{[\s\S]*\})\s*$/);
+  const tagMatch = reply.match(/KMAIL_TAG_CONTACTS\s*(\{[\s\S]*\})\s*$/);
+  const mergeMatch = reply.match(/KMAIL_MERGE_CONTACTS\s*(\{[\s\S]*\})\s*$/);
+
+  // ── ⓪-2 중복 연락처 병합 태그 ─────────────────────────────────
+  if (mergeMatch) {
+    let parsed = null;
+    try { parsed = JSON.parse(mergeMatch[1]); } catch (e) { /* 아래에서 처리 */ }
+    const cleanReplyText = reply.slice(0, mergeMatch.index).trim();
+    const keepEmail = (parsed?.keep_email || '').trim();
+    const mergeEmail = (parsed?.merge_email || '').trim();
+    if (!keepEmail || !mergeEmail) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const guidEsc = guid.replace(/'/g, "\\'");
+    const [keepFound, mergeFound] = await Promise.all([
+      fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${keepEmail.replace(/'/g, "\\'")}' && status='confirmed'`)}&perPage=1`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
+      fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${mergeEmail.replace(/'/g, "\\'")}' && status='confirmed'`)}&perPage=1`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
+    ]);
+    const keepContact = keepFound.items && keepFound.items[0];
+    const mergeContact = mergeFound.items && mergeFound.items[0];
+    if (!keepContact || !mergeContact) {
+      return new Response(JSON.stringify({
+        ok: true, reply: `${cleanReplyText}\n\n(두 이메일 중 하나를 주소록에서 찾지 못했습니다 — 정확한 이메일을 확인해 주세요.)`, action: null,
+      }), { status: 200, headers: corsHeaders });
+    }
+
+    const mergeResult = await _kmailMergeContactsCore(env, guid, keepContact.id, mergeContact.id).catch(() => ({ ok: false }));
+
+    if (!mergeResult?.ok) {
+      return new Response(JSON.stringify({
+        ok: true, reply: `${cleanReplyText}\n\n(병합 처리 중 오류가 발생했습니다.)`, action: null,
+      }), { status: 200, headers: corsHeaders });
+    }
+
+    return new Response(JSON.stringify({
+      ok: true, reply: `${cleanReplyText}\n\n✅ 두 연락처를 합쳤습니다 — ${keepEmail}로 통합됐습니다.`,
+      action: { type: 'contacts_merged', keep_id: keepContact.id },
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // ── ⓪-1 주소록 그룹/태그 부여 태그 ────────────────────────────
+  if (tagMatch) {
+    let parsed = null;
+    try { parsed = JSON.parse(tagMatch[1]); } catch (e) { /* 아래에서 처리 */ }
+    const cleanReplyText = reply.slice(0, tagMatch.index).trim();
+    const emails = Array.isArray(parsed?.emails) ? parsed.emails.filter(e => typeof e === 'string') : [];
+    const addTags = Array.isArray(parsed?.add_tags) ? parsed.add_tags : [];
+    const removeTags = Array.isArray(parsed?.remove_tags) ? parsed.remove_tags : [];
+
+    if (emails.length === 0 || (addTags.length === 0 && removeTags.length === 0)) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const guidEsc = guid.replace(/'/g, "\\'");
+    const tagged = [];
+    const skipped = [];
+    for (const email of emails) {
+      const emailEsc = email.replace(/'/g, "\\'");
+      const filter = encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${emailEsc}' && status='confirmed'`);
+      const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&perPage=1`, { headers: { Authorization: headers.Authorization } });
+      const findData = await findRes.json().catch(() => ({ items: [] }));
+      const contact = findData.items && findData.items[0];
+      if (!contact) { skipped.push(email); continue; }
+      const current = new Set(contact.tags || []);
+      for (const t of addTags) if (typeof t === 'string' && t.trim()) current.add(t.trim());
+      for (const t of removeTags) current.delete(t);
+      const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${contact.id}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ tags: Array.from(current) }),
+      });
+      if (patchRes.ok) tagged.push(email); else skipped.push(email);
+    }
+
+    const skipNote = skipped.length > 0 ? ` (주소록에 없어서 건너뛴 이메일: ${skipped.join(', ')})` : '';
+    return new Response(JSON.stringify({
+      ok: true, reply: `${cleanReplyText}\n\n✅ ${tagged.length}명에게 적용했습니다.${skipNote}`,
+      action: { type: 'contacts_tagged', tagged_count: tagged.length, skipped },
+    }), { status: 200, headers: corsHeaders });
+  }
 
   // ── ⓪ 저장된 주소록 조회 태그 ─────────────────────────────────
   if (lookupMatch) {
@@ -29967,9 +30215,10 @@ async function handleKmailChat(request, env, corsHeaders, ctx) {
       relationship: (parsed?.relationship || '').trim(),
       occupation: (parsed?.occupation || '').trim(),
       org: (parsed?.org || '').trim(),
+      tag: (parsed?.tag || '').trim(),
     }).catch(() => []);
 
-    const lookupContext = `[주소록 조회 결과]\n${JSON.stringify(items.map(c => ({ name: c.name, email: c.email, org: c.org, occupation: c.occupation, relationship: c.relationship })))}\n\n위 목록을 사용자에게 자연스럽게 정리해서 보여주세요. 결과가 없으면 없다고 솔직히 말하세요. (이 메시지 자체는 사용자에게 보이지 않습니다.)`;
+    const lookupContext = `[주소록 조회 결과]\n${JSON.stringify(items.map(c => ({ name: c.name, email: c.email, org: c.org, occupation: c.occupation, relationship: c.relationship, tags: c.tags })))}\n\n위 목록을 사용자에게 자연스럽게 정리해서 보여주세요. 결과가 없으면 없다고 솔직히 말하세요. (이 메시지 자체는 사용자에게 보이지 않습니다.)`;
     let followUpReply;
     try {
       followUpReply = await deepseekChatText({
