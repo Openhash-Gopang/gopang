@@ -12116,6 +12116,8 @@ export default {
     if (pathname === '/kmail/contacts/merge' && request.method === 'POST') return handleKmailContactsMerge(request, env, corsHeaders);
     if (pathname === '/kmail/threads/state' && request.method === 'POST') return handleKmailThreadStateSet(request, env, corsHeaders);
     if (pathname === '/kmail/stats' && request.method === 'GET') return handleKmailStats(request, url, env, corsHeaders);
+    if (pathname === '/kmail/settings' && request.method === 'GET') return handleKmailSettingsGet(request, url, env, corsHeaders);
+    if (pathname === '/kmail/settings' && request.method === 'POST') return handleKmailSettingsSet(request, env, corsHeaders);
     if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
     if (pathname === '/kmail/rules' && request.method === 'GET') return handleKmailRuleList(request, url, env, corsHeaders);
@@ -28697,6 +28699,26 @@ async function _kmailCheckAndChargeQuota(env, guid) {
   return { checked: true, charged: !!chargeResult?.ok, chargedGdc: KMAIL_QUOTA_OVERAGE_CHARGE_GDC, projectedAvg };
 }
 
+// 사용자별 K-Mail 설정 조회 — 없으면(아직 한 번도 설정 안 한 사용자)
+// 안전한 기본값을 반환한다. 서명/발신표시명은 발송 경로마다(즉시발송,
+// 캠페인 루프) 매번 조회하면 N+1이 되므로, 호출부가 발신 시작 전에
+// 한 번만 불러서 _kmailSendOneEmail에 넘기는 방식으로 쓴다.
+async function _kmailGetUserSettings(env, guid) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`owner_user_guid='${guid.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records?filter=${filter}&perPage=1`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const row = data.items && data.items[0];
+  return {
+    signature: row?.signature || '',
+    sender_display_name: row?.sender_display_name || '혼디 K-Mail',
+    auto_reply_enabled: row?.auto_reply_enabled || false,
+    auto_reply_text: row?.auto_reply_text || '',
+    auto_reply_until: row?.auto_reply_until || null,
+  };
+}
+
 // 실제 발신 1건 처리(env.EMAIL.send + ai_messages 기록 + 쿼터 판정·과금)
 // — handleUserMailSend(즉시 1건)와 _kmailSendCampaign(예약 캠페인의
 // 수신자 N명 루프) 양쪽이 공유하는 공용 헬퍼. 두 곳에 복붙하면
@@ -28706,9 +28728,13 @@ async function _kmailCheckAndChargeQuota(env, guid) {
 // 회신이 이 주소로 와야 _handleKmailInboundEmail이 어느 캠페인의
 // 회신인지 식별할 수 있다(즉시발송은 캠페인이 없어 생략, 회신은
 // 자연히 <guid>@hondi.kr(발신 주소 그대로)로 온다).
-async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId, replyTo }) {
+// signature/senderName: 호출부가 _kmailGetUserSettings로 한 번만
+// 불러서 넘긴다(위 주석 참고) — 생략하면 서명 없이, 이름은
+// '혼디 K-Mail'로 발송된다.
+async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId, replyTo, signature, senderName }) {
   const fromAddr = `${guid}@hondi.kr`;
-  const sendParams = { to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text };
+  const finalText = signature ? `${text}\n\n${signature}` : text;
+  const sendParams = { to, from: { email: fromAddr, name: senderName || '혼디 K-Mail' }, subject, text: finalText };
   if (replyTo) sendParams.replyTo = replyTo;
   await env.EMAIL.send(sendParams);
 
@@ -28716,7 +28742,7 @@ async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId, rep
     session_id: sessionId,
     sender_guid: guid,
     receiver_guid: `ext:${_slugifyEmailAddr(to)}`,
-    content_original: `[제목] ${subject}\n\n${text}`,
+    content_original: `[제목] ${subject}\n\n${finalText}`,
     content_type: 'kmail_outbound',
   }).catch(e => console.error('[K-Mail] ai_messages 기록 실패:', e.message));
 
@@ -28752,9 +28778,14 @@ async function handleUserMailSend(request, env, corsHeaders) {
       'send_email 바인딩이 설정되지 않았습니다 — wrangler.toml 확인 및 재배포 필요', corsHeaders);
   }
 
+  const settings = await _kmailGetUserSettings(env, guid).catch(() => ({ signature: '', sender_display_name: '혼디 K-Mail' }));
+
   let result;
   try {
-    result = await _kmailSendOneEmail(env, { guid, to, subject, text, sessionId: `kmail:direct:${guid}` });
+    result = await _kmailSendOneEmail(env, {
+      guid, to, subject, text, sessionId: `kmail:direct:${guid}`,
+      signature: settings.signature, senderName: settings.sender_display_name,
+    });
   } catch (e) {
     return _err(502, 'EMAIL_SEND_FAILED', '메일 발송 실패: ' + e.message, corsHeaders);
   }
@@ -28953,12 +28984,12 @@ async function handleKmailMailboxList(request, url, env, corsHeaders) {
 
   let filter;
   if (box === 'sent') {
-    filter = `sender_guid='${guidEsc}' && content_type='kmail_outbound'`;
+    filter = `sender_guid='${guidEsc}' && (content_type='kmail_outbound' || content_type='kmail_auto_reply')`;
   } else if (box === 'thread') {
     const slugEsc = esc(_slugifyEmailAddr(withEmail));
     const typeFilter = includeDeleted
-      ? `(content_type='kmail_outbound' || content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_inbound_blocked')`
-      : `(content_type='kmail_outbound' || content_type='kmail_inbound')`;
+      ? `(content_type='kmail_outbound' || content_type='kmail_auto_reply' || content_type='kmail_inbound' || content_type='kmail_inbound_deleted' || content_type='kmail_inbound_blocked')`
+      : `(content_type='kmail_outbound' || content_type='kmail_auto_reply' || content_type='kmail_inbound')`;
     filter = `((sender_guid='ext:${slugEsc}' && receiver_guid='${guidEsc}') || (sender_guid='${guidEsc}' && receiver_guid='ext:${slugEsc}')) && ${typeFilter}`;
   } else {
     filter = includeDeleted
@@ -29386,6 +29417,70 @@ async function handleKmailStats(request, url, env, corsHeaders) {
 
   const stats = await _kmailGatherStats(env, guid);
   return new Response(JSON.stringify({ ok: true, ...stats }), { status: 200, headers: corsHeaders });
+}
+
+// GET /kmail/settings?guid=...&pubkey=...&signature=...&ts=...
+async function handleKmailSettingsGet(request, url, env, corsHeaders) {
+  const guid = url.searchParams.get('guid');
+  const pubkey = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts = url.searchParams.get('ts');
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  const sigMsg = `kmail-settings-get:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const settings = await _kmailGetUserSettings(env, guid);
+  return new Response(JSON.stringify({ ok: true, ...settings, kmail_address: `${guid}@hondi.kr`, daily_quota_reference: KMAIL_QUOTA_5D_AVG_LIMIT }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/settings — body: { guid, pubkey, signature, ts, signature_text?,
+//   sender_display_name?, auto_reply_enabled?, auto_reply_text?, auto_reply_until? }
+// signature_text로 이름을 붙인 이유: body 필드명이 서명(인증)의
+// signature와 겹치면 클라이언트 코드에서 헷갈리기 쉬워서 명확히 구분.
+async function handleKmailSettingsSet(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, signature_text, sender_display_name, auto_reply_enabled, auto_reply_text, auto_reply_until } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+
+  const sigMsg = `kmail-settings-set:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const patch = {};
+  if (typeof signature_text === 'string') patch.signature = signature_text.slice(0, 1000);
+  if (typeof sender_display_name === 'string') patch.sender_display_name = sender_display_name.slice(0, 100);
+  if (typeof auto_reply_enabled === 'boolean') patch.auto_reply_enabled = auto_reply_enabled;
+  if (typeof auto_reply_text === 'string') patch.auto_reply_text = auto_reply_text.slice(0, 2000);
+  if (typeof auto_reply_until === 'string' || auto_reply_until === null) {
+    patch.auto_reply_until = auto_reply_until ? new Date(auto_reply_until).toISOString() : null;
+  }
+  if (Object.keys(patch).length === 0) return _err(400, 'NOTHING_TO_UPDATE', '수정할 필드가 하나도 없습니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const filter = encodeURIComponent(`owner_user_guid='${guid.replace(/'/g, "\\'")}'`);
+  const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records?filter=${filter}&perPage=1`, { headers: { Authorization: headers.Authorization } });
+  const findData = await findRes.json().catch(() => ({ items: [] }));
+
+  if (findData.items && findData.items[0]) {
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records/${findData.items[0].id}`, {
+      method: 'PATCH', headers, body: JSON.stringify(patch),
+    });
+    if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '설정 갱신 실패', corsHeaders);
+  } else {
+    const createRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records`, {
+      method: 'POST', headers, body: JSON.stringify({ owner_user_guid: guid, ...patch }),
+    });
+    if (!createRes.ok) return _err(502, 'CREATE_FAILED', '설정 생성 실패', corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, updated: Object.keys(patch) }), { status: 200, headers: corsHeaders });
 }
 
 // _handleKmailInboundEmail(email() 핸들러)이 하고, 여기는 규칙
@@ -29828,6 +29923,7 @@ async function handleKmailCampaignCreate(request, env, corsHeaders) {
 async function _kmailSendCampaign(env, campaign) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const settings = await _kmailGetUserSettings(env, campaign.owner_user_guid).catch(() => ({ signature: '', sender_display_name: '혼디 K-Mail' }));
 
   const contactIds = Array.isArray(campaign.contact_ids) ? campaign.contact_ids : [];
   let successCount = 0, failCount = 0;
@@ -29842,6 +29938,7 @@ async function _kmailSendCampaign(env, campaign) {
         subject: campaign.subject, text: campaign.body,
         sessionId: `kmail:${campaign.id}`,
         replyTo: `kmail-${campaign.id}@hondi.kr`,
+        signature: settings.signature, senderName: settings.sender_display_name,
       });
       successCount++;
     } catch (e) {
@@ -30074,7 +30171,58 @@ async function _handleKmailInboundEmail(message, env, ctx) {
       content_original: `[제목] ${subject}\n\n${bodyText}`,
       content_type: isBlocked ? 'kmail_inbound_blocked' : (matchedDelete ? 'kmail_inbound_deleted' : 'kmail_inbound'),
     }).catch(e => console.error('[K-Mail email] ai_messages 기록 실패:', e.message));
+
+    // 부재중 자동응답 — 차단/자동삭제 대상이면 안 보낸다(사용자가 이미
+    // "이 메일 신경 안 씀" 의사를 밝힌 것과 같음). 루프 방지: 발신자가
+    // @hondi.kr(다른 K-Mail 사용자)이면 자동응답끼리 무한 왕복할 수
+    // 있어 건너뛴다 — 외부 발신자에게만 보낸다. 스팸 방지: 같은 상대에게
+    // 24시간 내 이미 자동응답을 보냈으면 또 보내지 않는다(휴가 중 같은
+    // 사람이 여러 번 메일해도 매번 알림 폭탄이 되지 않게).
+    if (!isBlocked && !matchedDelete) try {
+      const emailMatch2 = fromAddr.match(/[^\s<>]+@[^\s<>]+/);
+      const fromEmail = emailMatch2 ? emailMatch2[0] : fromAddr;
+      if (!fromEmail.toLowerCase().endsWith('@hondi.kr')) {
+        const settings = await _kmailGetUserSettings(env, ownerGuid);
+        const autoReplyActive = settings.auto_reply_enabled &&
+          (!settings.auto_reply_until || settings.auto_reply_until > new Date().toISOString());
+        if (autoReplyActive && settings.auto_reply_text) {
+          const fromSlugEsc = _slugifyEmailAddr(fromEmail).replace(/'/g, "\\'");
+          const cutoffIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const throttleFilter = encodeURIComponent(
+            `sender_guid='${ownerGuid.replace(/'/g, "\\'")}' && receiver_guid='ext:${fromSlugEsc}' && content_type='kmail_auto_reply' && created>='${cutoffIso}'`
+          );
+          const thRes = await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records?filter=${throttleFilter}&perPage=1`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const thData = await thRes.json().catch(() => ({ items: [] }));
+          const alreadyRepliedRecently = !!(thData.items && thData.items[0]);
+          if (!alreadyRepliedRecently) {
+            await _kmailSendAutoReply(env, ownerGuid, fromEmail, settings.auto_reply_text, sessionId, settings.sender_display_name);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[K-Mail email] 부재중 자동응답 처리 실패:', e.message);
+    }
   })());
+}
+
+// 부재중 자동응답 전용 발신 — _kmailSendOneEmail과 의도적으로 분리했다:
+// (1) 발송 쿼터(5일 이동평균)를 소비하면 안 된다(사용자가 직접 시킨
+// 발송이 아니라 시스템이 대신 보내는 것), (2) content_type을
+// kmail_outbound가 아니라 kmail_auto_reply로 남겨야 보낸함에서
+// 일반 발송과 구분되고, 위 24시간 스팸 방지 체크도 이 태그를 본다.
+async function _kmailSendAutoReply(env, guid, toEmail, replyText, sessionId, senderDisplayName) {
+  if (!env.EMAIL) return;
+  const fromAddr = `${guid}@hondi.kr`;
+  await env.EMAIL.send({ to: toEmail, from: { email: fromAddr, name: senderDisplayName || '혼디 K-Mail' }, subject: '자동 응답: 부재중 안내', text: replyText });
+  await _writeAiMessage(env, {
+    session_id: sessionId,
+    sender_guid: guid,
+    receiver_guid: `ext:${_slugifyEmailAddr(toEmail)}`,
+    content_original: `[제목] 자동 응답: 부재중 안내\n\n${replyText}`,
+    content_type: 'kmail_auto_reply',
+  }).catch(e => console.error('[K-Mail] 자동응답 ai_messages 기록 실패:', e.message));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -30283,6 +30431,48 @@ async function handleKmailChat(request, env, corsHeaders, ctx) {
   const mergeMatch = reply.match(/KMAIL_MERGE_CONTACTS\s*(\{[\s\S]*\})\s*$/);
   const threadStateMatch = reply.match(/KMAIL_THREAD_STATE\s*(\{[\s\S]*\})\s*$/);
   const statsMatch = reply.match(/KMAIL_GET_STATS\s*(\{[\s\S]*\})?\s*$/);
+  const settingsMatch = reply.match(/KMAIL_SET_SETTINGS\s*(\{[\s\S]*\})\s*$/);
+
+  // ── ⓪-5 계정 설정 변경 태그 ────────────────────────────────
+  if (settingsMatch) {
+    let parsed = null;
+    try { parsed = JSON.parse(settingsMatch[1]); } catch (e) { /* 아래에서 처리 */ }
+    const cleanReplyText = reply.slice(0, settingsMatch.index).trim();
+    if (!parsed || Object.keys(parsed).length === 0) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const patch = {};
+    if (typeof parsed.signature_text === 'string') patch.signature = parsed.signature_text.slice(0, 1000);
+    if (typeof parsed.sender_display_name === 'string') patch.sender_display_name = parsed.sender_display_name.slice(0, 100);
+    if (typeof parsed.auto_reply_enabled === 'boolean') patch.auto_reply_enabled = parsed.auto_reply_enabled;
+    if (typeof parsed.auto_reply_text === 'string') patch.auto_reply_text = parsed.auto_reply_text.slice(0, 2000);
+    if ('auto_reply_until' in parsed) patch.auto_reply_until = parsed.auto_reply_until ? new Date(parsed.auto_reply_until).toISOString() : null;
+
+    if (Object.keys(patch).length === 0) {
+      return new Response(JSON.stringify({ ok: true, reply: cleanReplyText || reply, action: null }), { status: 200, headers: corsHeaders });
+    }
+
+    const guidEsc = guid.replace(/'/g, "\\'");
+    const filter = encodeURIComponent(`owner_user_guid='${guidEsc}'`);
+    const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records?filter=${filter}&perPage=1`, { headers: { Authorization: headers.Authorization } });
+    const findData = await findRes.json().catch(() => ({ items: [] }));
+    let ok2 = false;
+    if (findData.items && findData.items[0]) {
+      const r = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records/${findData.items[0].id}`, { method: 'PATCH', headers, body: JSON.stringify(patch) });
+      ok2 = r.ok;
+    } else {
+      const r = await fetch(`${L1_DEFAULT}/api/collections/kmail_user_settings/records`, { method: 'POST', headers, body: JSON.stringify({ owner_user_guid: guid, ...patch }) });
+      ok2 = r.ok;
+    }
+
+    return new Response(JSON.stringify({
+      ok: true, reply: ok2 ? `${cleanReplyText}\n\n✅ 설정을 저장했습니다.` : `${cleanReplyText}\n\n(설정 저장 중 오류가 발생했습니다.)`,
+      action: ok2 ? { type: 'settings_updated', updated: Object.keys(patch) } : null,
+    }), { status: 200, headers: corsHeaders });
+  }
 
   // ── ⓪-4 발송 현황·통계 조회 태그 ─────────────────────────────
   if (statsMatch) {
