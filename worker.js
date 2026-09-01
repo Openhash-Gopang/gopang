@@ -3864,52 +3864,13 @@ async function handleScheduleDelete(request, env, corsHeaders) {
 
 
 // ═══════════════════════════════════════════════════════════
-// 메일과 문서 송수신 — 시민 티어 신규 항목 (2026-08-11 신설, 발송만)
-//
-// ⚠️ 범위 한정: 이번엔 "발송"만 구현했다. "수신"(외부 이메일함을 혼디
-// 안에서 읽기)은 IMAP 또는 Gmail 등 외부 제공자의 OAuth 연동이 필요한
-// 별도 프로젝트 규모라 이번 범위에 넣지 않았다 — 지어낸 수신함을
-// 보여주지 않는다.
-//
-// 이메일 발송 제공자는 Resend(https://resend.com)를 가정했다 — 임의
-// 선택이며, 실제로는 어느 발송 API를 쓸지 결정 후 RESEND_API_KEY
-// secret을 설정해야 한다(다른 제공자로 바꾸면 이 함수만 교체하면 됨).
+// 메일 발송 — 2026-08-11 발송 전용 프로토타입(handleMailSend, Resend
+// 의존·guid 미검증·고정 발신주소)이 있던 자리. 2026-09-01 K-Mail로
+// 완전히 대체됨 — 실제 구현은 handleUserMailSend(파일 하단,
+// handleAdminLetterSendEmail 근처)로 옮겼고, 라우팅도 그쪽을 가리키게
+// 바뀌었다(아래 라우터의 '/mail/send' 항목 참고). 이 자리는 옛 함수가
+// 있던 위치를 기억하기 위한 표식만 남긴다.
 // ═══════════════════════════════════════════════════════════
-
-async function handleMailSend(request, env, corsHeaders) {
-  let body;
-  try { body = await request.json(); } catch (e) { return _err(400, 'INVALID_JSON', '요청 본문 파싱 실패', corsHeaders); }
-  const guid = (body.guid || '').trim();
-  const to = (body.to || '').trim();
-  const subject = (body.subject || '').trim();
-  const text = (body.text || '').trim();
-  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
-  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return _err(400, 'INVALID_TO', '수신자 이메일 주소가 올바르지 않습니다', corsHeaders);
-  if (!subject) return _err(400, 'MISSING_SUBJECT', 'subject 필수', corsHeaders);
-  if (!text) return _err(400, 'MISSING_TEXT', 'text 필수', corsHeaders);
-  if (!env.RESEND_API_KEY) return _err(500, 'MAIL_KEY_MISSING', 'RESEND_API_KEY secret 미설정', corsHeaders);
-
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // ★ 발신 도메인은 Resend에 별도 인증 등록이 필요 — 미등록이면
-        // 이 호출 자체가 실패한다(발신 주소는 배포 시 확정할 것).
-        from: env.MAIL_FROM_ADDRESS || 'hondi@hondi.net',
-        to: [to], subject,
-        text: `${text}\n\n— 이 메일은 혼디(Hondi) 사용자가 대신 발송을 요청해 전송되었습니다.`,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
-
-    _dlog(env, JSON.stringify({ tag: 'MAIL_SENT', guid, to, subject: subject.slice(0, 50), ts: new Date().toISOString() }));
-    return new Response(JSON.stringify({ ok: true, id: data.id || null }), { headers: corsHeaders });
-  } catch (e) {
-    return _err(502, 'MAIL_SEND_FAILED', e.message, corsHeaders);
-  }
-}
 
 
 // ═══════════════════════════════════════════════════════════
@@ -11973,7 +11934,10 @@ export default {
     if (pathname === '/schedule/save' && request.method === 'POST') return handleScheduleSave(request, env, corsHeaders);
     if (pathname === '/schedule/delete' && request.method === 'POST') return handleScheduleDelete(request, env, corsHeaders);
     // ── 메일 발송(수신은 미구현) — 시민 티어 신규 항목 (2026-08-11 신설) ──
-    if (pathname === '/mail/send' && request.method === 'POST') return handleMailSend(request, env, corsHeaders);
+    // K-Mail 사용자 발신(2026-09-01, handleMailSend 대체 — 위 표식 참고).
+    // gov-mail(hondi.org, 관리자 전용)과 도메인·인증 방식 모두 별개 —
+    // 혼디 사용자 본인 지갑 서명으로 <guid>@hondi.kr에서 발송한다.
+    if (pathname === '/mail/send' && request.method === 'POST') return handleUserMailSend(request, env, corsHeaders);
     // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
@@ -28422,6 +28386,164 @@ async function handleAdminLetterSendEmail(request, env, corsHeaders) {
 
   return new Response(JSON.stringify({ ok: true, from: fromAddr, sent_at: new Date().toISOString() }),
     { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Mail — 2026-09-01 신설. gov-mail(hondi.org, 관리자 전용)과 완전히
+// 분리된, 혼디 사용자 전체가 쓰는 사용자 간 메일 기능. 도메인도
+// hondi.kr로 별도(설계 §0) — 다우오피스(hondi.net)를 건드리지 않는다.
+//
+// 이 패치는 "발신 + 5일 이동평균 쿼터 과금" 골격만 담는다. 자연어 명령
+// 파싱(SP), 수신자 확정 파이프라인(kmail_contacts 승인), 회신 수집·
+// 다이제스트(Cron Trigger), 인바운드 필터 규칙(kmail_rules) 판정은
+// 다음 패치에서 이 함수를 기반으로 이어붙인다 — pb_migrations의 4개
+// 컬렉션(kmail_contacts/campaigns/rules/send_log)은 이미 존재.
+// ═══════════════════════════════════════════════════════════
+
+// KST(Asia/Seoul) 기준 YYYY-MM-DD. offsetDays로 과거 날짜도 구한다
+// (예: offsetDays=-1 → 어제). 쿼터가 하루 단위 집계이므로 UTC가 아니라
+// 반드시 KST 기준이어야 한다 — 이걸 놓치면 자정 무렵 발송이 엉뚱한
+// 날짜의 sent_count로 잡혀 이동평균이 틀어진다.
+function _kstDateString(offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 86400000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d); // en-CA 로케일이 YYYY-MM-DD를 반환
+}
+
+// kmail_send_log에서 이 사용자의 최근 5일(오늘 포함) 기록을 한 번에
+// 조회해 { [date]: sent_count } 맵으로 반환. 없는 날짜는 맵에 아예
+// 안 잡히므로 호출부에서 0으로 취급할 것.
+async function _kmailFetchRecentSendCounts(env, guid) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const dates = [0, -1, -2, -3, -4].map(o => _kstDateString(o));
+  const dateFilter = dates.map(d => `date='${d}'`).join(' || ');
+  const filter = encodeURIComponent(`user_guid='${guid}' && (${dateFilter})`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_send_log/records?filter=${filter}&perPage=5`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const map = {};
+  for (const rec of (data.items || [])) map[rec.date] = { id: rec.id, count: rec.sent_count || 0 };
+  return map;
+}
+
+// 오늘 자 sent_count를 1 증가시킨다(레코드 없으면 새로 생성). 발송이
+// 실제로 성공한 뒤에만 호출할 것 — 실패한 발송까지 카운트하면 정상
+// 이용자가 부당하게 한도에 몰린다.
+async function _kmailIncrementSendLog(env, guid, todayRecord) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const today = _kstDateString(0);
+  if (todayRecord) {
+    await fetch(`${L1_DEFAULT}/api/collections/kmail_send_log/records/${todayRecord.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ sent_count: todayRecord.count + 1 }),
+    });
+  } else {
+    await fetch(`${L1_DEFAULT}/api/collections/kmail_send_log/records`, {
+      method: 'POST', headers, body: JSON.stringify({ user_guid: guid, date: today, sent_count: 1 }),
+    });
+  }
+}
+
+// 5일 이동평균 발송 쿼터(주피터 지시, 2026-09-01): 관리자를 제외한
+// 혼디 사용자는 "이번 1통을 포함한 최근 5일 평균"이 하루 100통을
+// 넘기면 그 1통마다 GDC 10(₮10) 부과. 캠페인 단위가 아니라 1통 단위로
+// 판정한다 — 캠페인 하나가 50통이면 그중 초과분만 과금 대상이 될 수
+// 있으므로, 이 함수는 발신 루프에서 수신자 1명당 한 번씩 호출된다.
+// 관리자 발송(gov-mail)은 이 함수 자체를 호출하지 않는 별도 경로
+// (handleAdminLetterSendEmail)라 여기서 별도 예외 처리가 필요 없다.
+const KMAIL_QUOTA_5D_AVG_LIMIT = 100;
+const KMAIL_QUOTA_OVERAGE_CHARGE_GDC = 10;
+
+async function _kmailCheckAndChargeQuota(env, guid) {
+  let recent;
+  try {
+    recent = await _kmailFetchRecentSendCounts(env, guid);
+  } catch (e) {
+    // 조회 실패 시 쿼터를 건너뛰는(=무제한 통과) 대신, 과금 없이 로그만
+    // 남기고 발송 자체는 막지 않는다 — 이미 메일은 나간 뒤이므로 여기서
+    // 요청을 실패시켜봐야 되돌릴 수 없고, 정상 이용자를 억울하게
+    // 차단하는 게 더 큰 부작용이다(§ _chargeGdcForAiUsage와 동일 철학).
+    console.warn('[K-Mail Quota] 조회 실패(과금 스킵, 발송은 이미 완료됨):', e.message);
+    return { checked: false, charged: false };
+  }
+  const today = _kstDateString(0);
+  const todayRecord = recent[today] || null;
+  const todayCountSoFar = todayRecord ? todayRecord.count : 0;
+  const last4DaysSum = [-1, -2, -3, -4]
+    .map(o => _kstDateString(o))
+    .reduce((sum, d) => sum + (recent[d] ? recent[d].count : 0), 0);
+
+  // 이번 1통까지 포함한 5일 평균 — "오늘 몰아서 보내면 즉시 초과 판정"
+  // 되도록 (last4DaysSum + todayCountSoFar + 1) / 5 로 계산한다.
+  const projectedAvg = (last4DaysSum + todayCountSoFar + 1) / 5;
+  const overage = projectedAvg > KMAIL_QUOTA_5D_AVG_LIMIT;
+
+  await _kmailIncrementSendLog(env, guid, todayRecord).catch(e =>
+    console.warn('[K-Mail Quota] send_log 갱신 실패:', e.message));
+
+  if (!overage) return { checked: true, charged: false, projectedAvg };
+
+  const chargeResult = await _chargeGdcForAiUsage(env, {
+    guid,
+    krwAmount: KMAIL_QUOTA_OVERAGE_CHARGE_GDC * EXCHANGE_RATE_KRW_PER_GDC,
+    serviceId: 'kmail-quota-overage',
+    memo: `K-Mail 5일 평균 발송한도(${KMAIL_QUOTA_5D_AVG_LIMIT}통/일) 초과 — 1통당 ₮${KMAIL_QUOTA_OVERAGE_CHARGE_GDC}`,
+  }).catch(e => {
+    console.warn('[K-Mail Quota] 초과 과금 실패:', e.message);
+    return null;
+  });
+
+  return { checked: true, charged: !!chargeResult?.ok, chargedGdc: KMAIL_QUOTA_OVERAGE_CHARGE_GDC, projectedAvg };
+}
+
+// POST /mail/send — K-Mail 사용자 발신(관리자 gov-mail과 별개 경로).
+// body: { guid, pubkey, signature, ts, to, subject, text }
+// Ed25519 지갑 서명 인증(_verifyClaimsRequester와 동일 패턴 — 이
+// 엔드포인트도 사용자 본인만 자기 주소로 발송할 수 있어야 하므로
+// 재사용). from 주소는 항상 <guid>@hondi.kr 로 고정 — 사용자가 임의
+// 발신자명을 지정할 수 없게 해 스푸핑을 원천 차단한다.
+async function handleUserMailSend(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, to, subject, text } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!to || !subject || !text) {
+    return _err(400, 'MISSING_FIELD', 'to, subject, text 필수', corsHeaders);
+  }
+
+  const sigMsg = `kmail-send:${guid}:${to}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  if (!env.EMAIL) {
+    return _err(500, 'EMAIL_BINDING_MISSING',
+      'send_email 바인딩이 설정되지 않았습니다 — wrangler.toml 확인 및 재배포 필요', corsHeaders);
+  }
+
+  const fromAddr = `${guid}@hondi.kr`;
+  try {
+    await env.EMAIL.send({ to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text });
+  } catch (e) {
+    return _err(502, 'EMAIL_SEND_FAILED', '메일 발송 실패: ' + e.message, corsHeaders);
+  }
+
+  await _writeAiMessage(env, {
+    session_id: `kmail:direct:${guid}`,
+    sender_guid: guid,
+    receiver_guid: `ext:${_slugifyEmailAddr(to)}`,
+    content_original: `[제목] ${subject}\n\n${text}`,
+    content_type: 'kmail_outbound',
+  }).catch(e => console.error('[mail/send] ai_messages 기록 실패:', e.message));
+
+  // 쿼터 판정·과금은 발송이 이미 끝난 뒤 실행 — 실패해도 이미 보낸
+  // 메일을 취소할 수 없으므로 응답 자체는 막지 않는다.
+  const quota = await _kmailCheckAndChargeQuota(env, guid);
+
+  return new Response(JSON.stringify({
+    ok: true, from: fromAddr, sent_at: new Date().toISOString(),
+    quota: { charged_gdc: quota.charged ? quota.chargedGdc : 0, projected_5d_avg: quota.projectedAvg ?? null },
+  }), { status: 200, headers: corsHeaders });
 }
 
 // GET /default-key?guid=...&registered_at=ISO8601
