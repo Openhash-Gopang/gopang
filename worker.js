@@ -11738,6 +11738,15 @@ export default {
   //      것까지만 구현했다.
   async email(message, env, ctx) {
     const toAddr = (message.to || '').toLowerCase();
+
+    // K-Mail(hondi.kr)은 완전히 별도 처리로 분기(2026-09-01 신설) —
+    // Cloudflare Email Routing catch-all이 hondi.org/hondi.kr 둘 다
+    // 이 같은 Worker(hondi-proxy)로 보내므로, 이 분기가 없으면 K-Mail
+    // 회신이 전부 아래 "Unrecognized recipient"로 거부된다.
+    if (toAddr.endsWith('@hondi.kr')) {
+      return _handleKmailInboundEmail(message, env, ctx);
+    }
+
     const m = toAddr.match(/^letter-([a-z0-9_-]+)@/i);
     if (!m) {
       message.setReject('Unrecognized recipient — expected letter-<id>@gov-mail.hondi.net');
@@ -11948,6 +11957,9 @@ export default {
     if (pathname === '/kmail/contacts' && request.method === 'GET') return handleKmailContactsList(request, url, env, corsHeaders);
     if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
     if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
+    if (pathname === '/kmail/rules/create' && request.method === 'POST') return handleKmailRuleCreate(request, env, corsHeaders);
+    if (pathname === '/kmail/rules' && request.method === 'GET') return handleKmailRuleList(request, url, env, corsHeaders);
+    if (pathname === '/kmail/rules/toggle' && request.method === 'POST') return handleKmailRuleToggle(request, env, corsHeaders);
     // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
@@ -28510,9 +28522,15 @@ async function _kmailCheckAndChargeQuota(env, guid) {
 // 수신자 N명 루프) 양쪽이 공유하는 공용 헬퍼. 두 곳에 복붙하면
 // 한쪽만 고치고 다른 쪽을 놓치는 사고가 나기 쉬워 묶었다(파일 상단
 // _writeAiMessage와 동일한 이유).
-async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId }) {
+// replyTo: 캠페인 발송에서만 kmail-<campaign_id>@hondi.kr로 넘어온다 —
+// 회신이 이 주소로 와야 _handleKmailInboundEmail이 어느 캠페인의
+// 회신인지 식별할 수 있다(즉시발송은 캠페인이 없어 생략, 회신은
+// 자연히 <guid>@hondi.kr(발신 주소 그대로)로 온다).
+async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId, replyTo }) {
   const fromAddr = `${guid}@hondi.kr`;
-  await env.EMAIL.send({ to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text });
+  const sendParams = { to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text };
+  if (replyTo) sendParams.replyTo = replyTo;
+  await env.EMAIL.send(sendParams);
 
   await _writeAiMessage(env, {
     session_id: sessionId,
@@ -28704,6 +28722,110 @@ async function handleKmailContactsDecide(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// K-Mail 필터 규칙 관리 (2026-09-01 신설) — "혼디야, 나에게 불필요한
+// 내용의 메일은 도착 즉시 삭제해" 같은 명령이 저장될 자리. 판정 자체는
+// _handleKmailInboundEmail(email() 핸들러)이 하고, 여기는 규칙
+// 생성/조회/on-off 토글만 담당한다. 삭제(레코드 자체 제거)는 이번
+// 패치에 없음 — 안 쓸 규칙은 toggle로 enabled=false 해두면 충분하고,
+// 완전 삭제는 필요성이 확인되면 다음에 추가한다.
+// ═══════════════════════════════════════════════════════════
+
+const KMAIL_RULE_TEXT_MAX_LEN = 500; // pb_migrations kmail_rules.rule_text max와 동일
+
+// POST /kmail/rules/create — body: { guid, pubkey, signature, ts, rule_text }
+// action은 현재 'auto_delete' 하나뿐이라 서버가 고정한다(클라이언트가
+// 임의 문자열을 넣게 하지 않음 — kmail_rules 스키마의 select 옵션과도 일치).
+async function handleKmailRuleCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, rule_text } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  const trimmed = (rule_text || '').trim();
+  if (!trimmed) return _err(400, 'MISSING_FIELD', 'rule_text 필수', corsHeaders);
+  if (trimmed.length > KMAIL_RULE_TEXT_MAX_LEN) {
+    return _err(400, 'RULE_TEXT_TOO_LONG', `rule_text는 ${KMAIL_RULE_TEXT_MAX_LEN}자 이내여야 합니다`, corsHeaders);
+  }
+
+  const sigMsg = `kmail-rule-create:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ owner_user_guid: guid, rule_text: trimmed, action: 'auto_delete', enabled: true }),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    return _err(502, 'RULE_CREATE_FAILED', 'L1 기록 실패: ' + errBody.slice(0, 200), corsHeaders);
+  }
+  const created = await res.json();
+  return new Response(JSON.stringify({ ok: true, rule_id: created.id }), { status: 200, headers: corsHeaders });
+}
+
+// GET /kmail/rules?guid=...&pubkey=...&signature=...&ts=... — 본인 규칙 전체 조회(활성/비활성 무관)
+async function handleKmailRuleList(request, url, env, corsHeaders) {
+  const guid = url.searchParams.get('guid');
+  const pubkey = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts = url.searchParams.get('ts');
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+
+  const sigMsg = `kmail-rule-list:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`owner_user_guid='${guid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records?filter=${filter}&sort=-created&perPage=100`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+
+  return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { status: 200, headers: corsHeaders });
+}
+
+// POST /kmail/rules/toggle — body: { guid, pubkey, signature, ts, rule_id, enabled }
+// 소유권 검사 필수(kmail/contacts/decide와 동일 이유 — rule_id만 알면
+// 아무나 남의 규칙을 껐다 켰다 할 수 있으면 안 됨).
+async function handleKmailRuleToggle(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, rule_id, enabled } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!rule_id || typeof enabled !== 'boolean') {
+    return _err(400, 'MISSING_FIELD', 'rule_id 필수, enabled는 true/false여야 합니다', corsHeaders);
+  }
+
+  const sigMsg = `kmail-rule-toggle:${guid}:${rule_id}:${enabled}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records/${rule_id}`, { headers });
+  if (!getRes.ok) return _err(404, 'RULE_NOT_FOUND', '해당 규칙을 찾을 수 없습니다', corsHeaders);
+  const rule = await getRes.json().catch(() => null);
+  if (!rule || rule.owner_user_guid !== guid) {
+    return _err(403, 'NOT_OWNER', '본인 규칙만 켜고 끌 수 있습니다', corsHeaders);
+  }
+
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records/${rule_id}`, {
+    method: 'PATCH', headers, body: JSON.stringify({ enabled }),
+  });
+  if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '상태 갱신 실패', corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, rule_id, enabled }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
 // K-Mail 캠페인 발송/예약 (2026-09-01 신설)
 //
 // handleUserMailSend(즉시 1건)와 별개로, "confirmed 연락처 여러 명에게
@@ -28817,6 +28939,7 @@ async function _kmailSendCampaign(env, campaign) {
         guid: campaign.owner_user_guid, to: contact.email,
         subject: campaign.subject, text: campaign.body,
         sessionId: `kmail:${campaign.id}`,
+        replyTo: `kmail-${campaign.id}@hondi.kr`,
       });
       successCount++;
     } catch (e) {
@@ -28855,6 +28978,103 @@ async function _kmailSweepDueCampaigns(env) {
   for (const campaign of due) {
     await _kmailSendCampaign(env, campaign).catch(e => console.error('[K-Mail Campaign] 처리 실패:', campaign.id, e.message));
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Mail 인바운드 처리 (2026-09-01 신설) — email() 최상단에서
+// toAddr.endsWith('@hondi.kr')로 분기되어 여기로 온다. 두 수신 패턴:
+//   1. kmail-<campaign_id>@hondi.kr — 캠페인 발송의 Reply-To로 온 회신
+//      (_kmailSendCampaign이 설정). campaign.owner_user_guid로 소유자를 찾는다.
+//   2. <guid>@hondi.kr — 캠페인과 무관하게 그 사용자 앞으로 곧장 온 메일
+//      (즉시발송에 대한 답장 등). 로컬파트 자체를 guid로 취급한다.
+// 두 경우 다 (a) 그 사용자의 kmail_rules(자동삭제 규칙, action=auto_delete
+// 이면서 enabled)를 먼저 LLM으로 판정하고, (b) ai_messages에
+// kmail_inbound(규칙에 걸리면 kmail_inbound_deleted)로 적재한다.
+//
+// 소프트 삭제 원칙(설계 §6): 규칙에 걸려도 레코드 자체는 반드시 남기고
+// content_type 태그로만 구분한다 — ai_messages 스키마에 별도 삭제
+// 플래그 필드가 없어 이 태그 자체가 소프트 삭제 표시다. 오판정으로
+// 중요한 메일이 완전히 사라지는 사고를 막기 위한 장치이므로, 나중에
+// desktop.html에 "삭제된 메일함" 뷰를 추가할 때 이 태그로 걸러서
+// 보여주면 된다(§7 desktop.html 작업에서 이어붙일 것 — 이번 패치엔
+// 미포함).
+//
+// 회신 수집 마감(collect_replies_until)·다이제스트 생성(digest_at 소비)
+// 은 아직 여기 없다 — 이 패치는 "회신이 ai_messages에 올바르게
+// 쌓이는 것"까지만 구현한다. 다이제스트 크론은 다음 패치.
+// ═══════════════════════════════════════════════════════════
+async function _handleKmailInboundEmail(message, env, ctx) {
+  const toAddr = (message.to || '').toLowerCase();
+  const localPart = toAddr.split('@')[0];
+  const campaignMatch = localPart.match(/^kmail-([a-z0-9_-]+)$/i);
+
+  let rawText = '';
+  try { rawText = await new Response(message.raw).text(); }
+  catch (e) { console.error('[K-Mail email] raw 읽기 실패:', e.message); return; }
+
+  const subject = message.headers?.get?.('subject') || '(제목 없음)';
+  const bodyText = _extractPlainTextBody(rawText);
+  const fromAddr = message.from || 'unknown@unknown';
+
+  ctx.waitUntil((async () => {
+    const token = await _l1AdminToken(env);
+    let ownerGuid = null;
+    let sessionId = null;
+
+    if (campaignMatch) {
+      const campaignId = campaignMatch[1];
+      try {
+        const cRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records/${campaignId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cRes.ok) {
+          const campaign = await cRes.json();
+          ownerGuid = campaign.owner_user_guid;
+          sessionId = `kmail:${campaignId}`;
+        }
+      } catch (e) { console.error('[K-Mail email] 캠페인 조회 실패:', e.message); }
+      if (!ownerGuid) {
+        console.warn('[K-Mail email] 존재하지 않는 캠페인 회신 — 폐기:', campaignId);
+        return;
+      }
+    } else {
+      // 캠페인이 아니면 로컬파트를 guid로 취급(즉시발송에 대한 답장 등)
+      ownerGuid = localPart;
+      sessionId = `kmail:direct:${ownerGuid}`;
+    }
+
+    // 자동삭제 규칙 판정 — 이 사용자에게 활성 규칙이 있을 때만 LLM을
+    // 호출한다(규칙을 안 만든 절대다수 사용자는 이 비용 자체를 안 씀).
+    let matchedDelete = false;
+    try {
+      const filter = encodeURIComponent(`owner_user_guid='${ownerGuid}' && enabled=true && action='auto_delete'`);
+      const rRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_rules/records?filter=${filter}&perPage=20`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const rData = await rRes.json().catch(() => ({ items: [] }));
+      const rules = rData.items || [];
+      if (rules.length > 0 && env.DEEPSEEK_API_KEY) {
+        const ruleList = rules.map((r, i) => `${i + 1}. ${r.rule_text}`).join('\n');
+        const verdict = await deepseekChatText({
+          env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+          messages: [{ role: 'user', content:
+            `다음은 사용자가 자기 메일함에 등록한 자동삭제 규칙입니다. 이 메일이 그중 하나에 해당하면 "DELETE", 아니면 "KEEP"이라고만 답하세요(다른 말은 절대 덧붙이지 마세요).\n\n규칙:\n${ruleList}\n\n메일 제목: ${subject}\n메일 본문(일부): ${bodyText.slice(0, 1000)}` }],
+          max_tokens: 10, temperature: 0, timeoutMs: 10000, fallbackText: 'KEEP',
+        });
+        matchedDelete = /DELETE/i.test((verdict || '').trim());
+      }
+    } catch (e) {
+      console.warn('[K-Mail email] 필터 규칙 판정 실패(KEEP으로 폴백):', e.message);
+    }
+
+    await _writeAiMessage(env, {
+      session_id: sessionId,
+      sender_guid: `ext:${_slugifyEmailAddr(fromAddr)}`,
+      receiver_guid: ownerGuid,
+      content_original: `[제목] ${subject}\n\n${bodyText}`,
+      content_type: matchedDelete ? 'kmail_inbound_deleted' : 'kmail_inbound',
+    }).catch(e => console.error('[K-Mail email] ai_messages 기록 실패:', e.message));
+  })());
 }
 
 // GET /default-key?guid=...&registered_at=ISO8601
