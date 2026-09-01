@@ -1,24 +1,33 @@
 name: Live Smoketest — gov-mail 게이트웨이
 
-# 2026-09-01 신설 — gov-mail.hondi.net 공문 메일 게이트웨이가 실제로
-# 배선됐는지 수동으로 확인하는 워크플로. 저장소의 기존 live-smoketest-*
-# 명명 관례를 따랐다. 다만 다른 live-smoketest-*(시나리오 재생 후 결과를
-# results/ 브랜치에 커밋하는 Python 스크립트들)와는 성격이 달라서 —
-# 이 워크플로는 "우리 코드"가 아니라 "Cloudflare 설정 상태"와 "실제
-# 메일 발송" 자체를 확인하는 것이라, 재생할 시나리오 파일도 축적할
-# results/ 것도 없다. 그래서 results 브랜치 커밋 단계는 넣지 않았다
-# (job summary로 충분 — 아래 참고).
+# 2026-09-01 신설 — gov-mail 공문 메일 게이트웨이가 실제로 배선됐는지
+# 수동으로 확인하는 워크플로. 저장소의 기존 live-smoketest-* 명명 관례를
+# 따랐다. 다만 다른 live-smoketest-*(시나리오 재생 후 결과를 results/
+# 브랜치에 커밋하는 Python 스크립트들)와는 성격이 달라서 — 이 워크플로는
+# "우리 코드"가 아니라 "Cloudflare 설정 상태"와 "실제 메일 발송" 자체를
+# 확인하는 것이라, 재생할 시나리오 파일도 축적할 results/ 것도 없다.
+# 그래서 results 브랜치 커밋 단계는 넣지 않았다 (job summary로 충분).
 #
-# 2026-09-01 신설 — gov-mail.hondi.net 공문 메일 게이트웨이가 실제로
-# 배선됐는지 수동으로 확인하는 워크플로. 두 잡은 서로 독립적이다
-# (1번은 인바운드 라우팅 "설정"만 확인, 2번은 아웃바운드 "발송 자체"를
-# 실제로 실행 — 서로 다른 것을 검증하므로 needs로 묶지 않았다).
+# 두 잡은 서로 독립적이다 (1번은 인바운드 라우팅 "설정"만 확인, 2번은
+# 아웃바운드 "발송 자체"를 실제로 실행 — 서로 다른 것을 검증하므로
+# needs로 묶지 않았다).
+#
+# 2026-09-01 업데이트 — 발신/수신 도메인을 gov-mail.hondi.net(서브도메인)
+# 에서 hondi.org(신규 apex 도메인)로 변경. hondi.net Email Routing의
+# "Onboard Domain" 마법사가 서브도메인 선택 없이 항상 apex MX를 바꾸려
+# 드는 문제(Cloudflare 제품 한계) 때문에, 서브도메인 자체를 포기하고
+# 처음부터 메일 전용인 새 apex 도메인(hondi.org)으로 옮겼다. 그래서
+# 아래 잡들은 이제 hondi.net이 아니라 hondi.org 존을 조회한다. hondi.org는
+# apex 전체가 메일 전용이라 다른 서비스와의 MX 충돌 위험이 없다.
 #
 # 필요 GitHub Secrets:
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID  — 이미 등록됨(2026-07-12).
 #     Zone:Email Routing Rules:Read, Zone:Zone:Read, Zone:DNS:Read 권한이
 #     없으면 check-cloudflare-config 잡이 403으로 실패한다 — 그러면
 #     Cloudflare 대시보드에서 토큰 권한을 추가해야 한다(코드로 불가).
+#     ⚠️ 토큰의 Zone Resources가 hondi.net으로만 좁혀져 있으면 hondi.org
+#     조회가 403/빈 결과로 실패한다 — Zone Resources에 hondi.org도
+#     추가(Include: hondi.net, hondi.org 둘 다)해야 한다.
 #   HONDI_ADMIN_EMAIL, HONDI_ADMIN_PASSWORD  — 신규. prompt_admins(L1
 #     PocketBase) 관리자 계정. live-send-test 잡이 로그인해 발급받은
 #     30분짜리 토큰으로 실제 발송을 호출한다.
@@ -29,14 +38,6 @@ name: Live Smoketest — gov-mail 게이트웨이
 # live-send-test는 API 호출이 성공했는지만 확인한다. 수신함에 실제로
 # 도착했는지는 이 워크플로가 확인할 수 없다 — 지정한 수신 주소의
 # 받은편지함을 사람이 직접 봐야 한다.
-#
-# ⚠️ 대시보드 설정 전에 반드시 읽을 것 — Cloudflare 공식 문서: "Email
-# Routing is a zone-level feature that applies to the apex domain by
-# default... you can extend it to subdomains." 즉 gov-mail.hondi.net을
-# 추가하는 온보딩 화면이 hondi.net(apex)의 기존 MX(다우오피스)를 바꾸라고
-# 제안할 수 있다 — 그 화면에서 저장하기 전에 "MX 레코드가 gov-mail.hondi.net
-# 에만 적용되는지, hondi.net 자체는 안 건드리는지"를 반드시 확인하고, 애매하면
-# 저장하지 말고 먼저 확인할 것. 루트 도메인의 다우오피스 메일이 걸려있다.
 
 on:
   workflow_dispatch:
@@ -51,21 +52,21 @@ jobs:
   check-cloudflare-config:
     runs-on: ubuntu-latest
     steps:
-      - name: Zone ID 조회 (hondi.net)
+      - name: Zone ID 조회 (hondi.org)
         id: zone
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           RES=$(curl -s -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?name=hondi.net")
+            "https://api.cloudflare.com/client/v4/zones?name=hondi.org")
           OK=$(echo "$RES" | jq -r '.success')
           if [ "$OK" != "true" ]; then
-            echo "::error::Zone 조회 실패 — 토큰 권한(Zone:Zone:Read) 확인 필요. 응답: $RES"
+            echo "::error::Zone 조회 실패 — 토큰 권한(Zone:Zone:Read) 확인 필요, 또는 CLOUDFLARE_API_TOKEN의 Zone Resources에 hondi.org가 포함되어 있는지 확인 필요. 응답: $RES"
             exit 1
           fi
           ZONE_ID=$(echo "$RES" | jq -r '.result[0].id // empty')
           if [ -z "$ZONE_ID" ]; then
-            echo "::error::hondi.net Zone을 찾을 수 없습니다. 이 API 토큰이 올바른 계정에 속해있는지 확인하세요."
+            echo "::error::hondi.org Zone을 찾을 수 없습니다. 이 API 토큰이 올바른 계정에 속해있는지, Zone Resources에 hondi.org가 포함되어 있는지 확인하세요."
             exit 1
           fi
           echo "zone_id=$ZONE_ID" >> "$GITHUB_OUTPUT"
@@ -86,12 +87,12 @@ jobs:
           ENABLED=$(echo "$RES" | jq -r '.result.enabled')
           echo "Email Routing enabled: $ENABLED"
           if [ "$ENABLED" != "true" ]; then
-            echo "::error::hondi.net 존에 Email Routing이 아직 켜져 있지 않습니다 — Cloudflare 대시보드 → Email → Email Routing에서 활성화하세요."
+            echo "::error::hondi.org 존에 Email Routing이 아직 켜져 있지 않습니다 — Cloudflare 대시보드 → Email → Email Routing에서 활성화하세요."
             exit 1
           fi
           echo "✓ Email Routing 활성화됨"
 
-      - name: gov-mail.hondi.net catch-all 라우팅 규칙 확인
+      - name: hondi.org catch-all 라우팅 규칙 확인
         # Cloudflare Email Routing의 letter-<id>@ 같은 가변 로컬파트는
         # literal 주소 매칭이 아니라 catch-all 규칙(전용 엔드포인트
         # /email/routing/rules/catch_all)으로 처리하는 게 맞다 — 처음
@@ -114,27 +115,28 @@ jobs:
           ACTION_VALUE=$(echo "$RES" | jq -r '.result.actions[0].value[0] // ""')
           echo "catch-all enabled: $ENABLED, action: $ACTION_TYPE -> $ACTION_VALUE"
           if [ "$ENABLED" != "true" ] || [ "$ACTION_TYPE" != "worker" ]; then
-            echo "::warning::hondi.net 존의 catch-all 규칙이 Worker를 가리키고 있지 않습니다. 이 zone-level catch-all이 gov-mail.hondi.net 전용인지, 아니면 apex 전체에 걸리는지는 대시보드에서 직접 확인이 필요합니다 — 아래 참고 사항을 반드시 읽어주세요."
+            echo "::warning::hondi.org 존의 catch-all 규칙이 Worker를 가리키고 있지 않습니다. Routing Rules 탭에서 Catch-all을 Active로 켜고 Action을 'Send to a Worker' → hondi-proxy로 지정하세요."
           else
             echo "✓ catch-all이 Worker($ACTION_VALUE)로 라우팅됨"
           fi
-          echo "::notice::⚠️ 참고 — Cloudflare 공식 문서상 Email Routing은 'zone-level 기능이며 기본적으로 apex 도메인에 적용'되고, 서브도메인은 apex가 먼저 온보딩된 뒤에 추가하는 구조입니다. 대시보드에서 gov-mail.hondi.net을 추가할 때 apex(hondi.net)의 기존 MX(다우오피스)를 변경하라고 제안하는 화면이 나오면 저장하지 말고 먼저 확인하세요 — 루트 도메인 메일이 깨질 수 있습니다."
 
       - name: 필요 DNS 레코드(MX/TXT) 존재 확인
+        # hondi.org는 처음부터 메일 전용 apex 도메인이라 서브도메인 MX
+        # 충돌 위험이 없다 (§1 참고) — apex(hondi.org) 자체의 MX/TXT를 확인한다.
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ZONE_ID: ${{ steps.zone.outputs.zone_id }}
         run: |
           MX=$(curl -s -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=MX&name=gov-mail.hondi.net")
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=MX&name=hondi.org")
           TXT=$(curl -s -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=TXT&name=gov-mail.hondi.net")
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=TXT&name=hondi.org")
           MX_COUNT=$(echo "$MX" | jq -r '.result | length')
           TXT_COUNT=$(echo "$TXT" | jq -r '.result | length')
-          echo "gov-mail.hondi.net MX 레코드: ${MX_COUNT}개"
-          echo "gov-mail.hondi.net TXT 레코드: ${TXT_COUNT}개"
+          echo "hondi.org MX 레코드: ${MX_COUNT}개"
+          echo "hondi.org TXT 레코드: ${TXT_COUNT}개"
           if [ "$MX_COUNT" = "0" ]; then
-            echo "::error::gov-mail.hondi.net에 MX 레코드가 없습니다 — Email Routing을 활성화하면 Cloudflare가 자동 생성하는 레코드입니다. 대시보드에서 서브도메인 라우팅을 다시 확인하세요."
+            echo "::error::hondi.org에 MX 레코드가 없습니다 — Email Routing을 활성화하면 Cloudflare가 자동 생성하는 레코드입니다. 대시보드에서 Email Routing 온보딩을 완료했는지 확인하세요."
             exit 1
           fi
           echo "✓ DNS 레코드 존재 확인"
