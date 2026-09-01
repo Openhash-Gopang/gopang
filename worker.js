@@ -11706,6 +11706,10 @@ export default {
     // 2026-08-15 신설 — 전문가 페르소나(리프) 개별 구독 월정기 결제 스윕.
     // 동일 10분 주기 크론에 편승, 동일하게 멱등(next_billing_at 기준).
     ctx.waitUntil(_runExpertPersonaBillingSweep(env).catch(e => console.error('[ExpertPersonaBilling] 스윕 전체 실패:', e.message)));
+    // 2026-09-01 신설 — K-Mail 예약 캠페인 발송 스윕. send_at이 지난
+    // scheduled 캠페인을 찾아 발송(_kmailSweepDueCampaigns 참고). 동일
+    // 10분 주기 크론에 편승 — 별도 wrangler.toml 트리거 불필요.
+    ctx.waitUntil(_kmailSweepDueCampaigns(env).catch(e => console.error('[K-Mail Campaign] 스윕 전체 실패:', e.message)));
   },
 
   // ── 공문 메일 수신 (2026-08-31 신설) ─────────────────────────────
@@ -11943,6 +11947,7 @@ export default {
     if (pathname === '/kmail/contacts/propose' && request.method === 'POST') return handleKmailContactsPropose(request, env, corsHeaders);
     if (pathname === '/kmail/contacts' && request.method === 'GET') return handleKmailContactsList(request, url, env, corsHeaders);
     if (pathname === '/kmail/contacts/decide' && request.method === 'POST') return handleKmailContactsDecide(request, env, corsHeaders);
+    if (pathname === '/kmail/campaigns/create' && request.method === 'POST') return handleKmailCampaignCreate(request, env, corsHeaders);
     // ── 사회적 활동 관리·모임 추천 — 시민 티어 신규 항목 (2026-08-11 신설) ──
     if (pathname === '/community/groups/list' && request.method === 'GET') return handleGroupList(request, url, env, corsHeaders);
     if (pathname === '/community/groups/create' && request.method === 'POST') return handleGroupCreate(request, env, corsHeaders);
@@ -28500,6 +28505,29 @@ async function _kmailCheckAndChargeQuota(env, guid) {
   return { checked: true, charged: !!chargeResult?.ok, chargedGdc: KMAIL_QUOTA_OVERAGE_CHARGE_GDC, projectedAvg };
 }
 
+// 실제 발신 1건 처리(env.EMAIL.send + ai_messages 기록 + 쿼터 판정·과금)
+// — handleUserMailSend(즉시 1건)와 _kmailSendCampaign(예약 캠페인의
+// 수신자 N명 루프) 양쪽이 공유하는 공용 헬퍼. 두 곳에 복붙하면
+// 한쪽만 고치고 다른 쪽을 놓치는 사고가 나기 쉬워 묶었다(파일 상단
+// _writeAiMessage와 동일한 이유).
+async function _kmailSendOneEmail(env, { guid, to, subject, text, sessionId }) {
+  const fromAddr = `${guid}@hondi.kr`;
+  await env.EMAIL.send({ to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text });
+
+  await _writeAiMessage(env, {
+    session_id: sessionId,
+    sender_guid: guid,
+    receiver_guid: `ext:${_slugifyEmailAddr(to)}`,
+    content_original: `[제목] ${subject}\n\n${text}`,
+    content_type: 'kmail_outbound',
+  }).catch(e => console.error('[K-Mail] ai_messages 기록 실패:', e.message));
+
+  // 쿼터 판정·과금은 발송이 이미 끝난 뒤 실행 — 실패해도 이미 보낸
+  // 메일을 취소할 수 없으므로 호출부 응답 자체는 막지 않는다.
+  const quota = await _kmailCheckAndChargeQuota(env, guid);
+  return { fromAddr, quota };
+}
+
 // POST /mail/send — K-Mail 사용자 발신(관리자 gov-mail과 별개 경로).
 // body: { guid, pubkey, signature, ts, to, subject, text }
 // Ed25519 지갑 서명 인증(_verifyClaimsRequester와 동일 패턴 — 이
@@ -28526,28 +28554,16 @@ async function handleUserMailSend(request, env, corsHeaders) {
       'send_email 바인딩이 설정되지 않았습니다 — wrangler.toml 확인 및 재배포 필요', corsHeaders);
   }
 
-  const fromAddr = `${guid}@hondi.kr`;
+  let result;
   try {
-    await env.EMAIL.send({ to, from: { email: fromAddr, name: '혼디 K-Mail' }, subject, text });
+    result = await _kmailSendOneEmail(env, { guid, to, subject, text, sessionId: `kmail:direct:${guid}` });
   } catch (e) {
     return _err(502, 'EMAIL_SEND_FAILED', '메일 발송 실패: ' + e.message, corsHeaders);
   }
 
-  await _writeAiMessage(env, {
-    session_id: `kmail:direct:${guid}`,
-    sender_guid: guid,
-    receiver_guid: `ext:${_slugifyEmailAddr(to)}`,
-    content_original: `[제목] ${subject}\n\n${text}`,
-    content_type: 'kmail_outbound',
-  }).catch(e => console.error('[mail/send] ai_messages 기록 실패:', e.message));
-
-  // 쿼터 판정·과금은 발송이 이미 끝난 뒤 실행 — 실패해도 이미 보낸
-  // 메일을 취소할 수 없으므로 응답 자체는 막지 않는다.
-  const quota = await _kmailCheckAndChargeQuota(env, guid);
-
   return new Response(JSON.stringify({
-    ok: true, from: fromAddr, sent_at: new Date().toISOString(),
-    quota: { charged_gdc: quota.charged ? quota.chargedGdc : 0, projected_5d_avg: quota.projectedAvg ?? null },
+    ok: true, from: result.fromAddr, sent_at: new Date().toISOString(),
+    quota: { charged_gdc: result.quota.charged ? result.quota.chargedGdc : 0, projected_5d_avg: result.quota.projectedAvg ?? null },
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -28685,6 +28701,160 @@ async function handleKmailContactsDecide(request, env, corsHeaders) {
   if (!patchRes.ok) return _err(502, 'UPDATE_FAILED', '상태 갱신 실패', corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, contact_id, status: newStatus }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// K-Mail 캠페인 발송/예약 (2026-09-01 신설)
+//
+// handleUserMailSend(즉시 1건)와 별개로, "confirmed 연락처 여러 명에게
+// 예약 발송"을 담당한다. 생성은 API(handleKmailCampaignCreate)로 즉시
+// 응답하고, 실제 발송은 send_at이 될 때까지 기다렸다가 기존 10분 주기
+// Cron(export default.scheduled)에 편승해 처리한다 — openbanking·구독
+// 결제 스윕과 동일하게 별도 wrangler.toml 트리거를 추가하지 않았다.
+//
+// 범위 한정: 회신 수집(collect_replies_until)·다이제스트 생성(digest_at)은
+// 이 패치에 포함하지 않는다 — hondi.kr로 오는 회신을 ai_messages에
+// kmail_inbound로 적재하는 email() 핸들러 확장(§8, 필터 규칙 판정과
+// 같이 묶일 예정)이 먼저 있어야 취합할 회신 자체가 존재하기 때문이다.
+// 그래서 campaign.digest_status는 이번 패치에서 'pending'으로 저장까지만
+// 하고, 그걸 소비해서 실제로 다이제스트를 만드는 크론 로직은 다음 패치.
+// ═══════════════════════════════════════════════════════════
+
+const KMAIL_CAMPAIGN_MAX_RECIPIENTS = 200; // 한 캠페인 최대 수신자 — 무분별한 대량 발송 방지(상위 UX 경고는 설계 §발송쿼터 (c) 참고, 아직 미구현)
+
+// POST /kmail/campaigns/create
+// body: { guid, pubkey, signature, ts, subject, body, contact_ids,
+//         send_at?, collect_replies_until?, digest_at? }
+// contact_ids는 전부 owner_user_guid=guid && status='confirmed'여야
+// 한다 — 하나라도 아니면 캠페인 자체를 만들지 않고 어떤 id가 문제인지
+// 돌려준다(설계 §2 "확인 단계는 생략 불가" 원칙을 여기서도 강제).
+async function handleKmailCampaignCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+  const { guid, pubkey, signature, ts, subject, body: mailBody, contact_ids,
+          send_at, collect_replies_until, digest_at } = body;
+  if (!guid || !pubkey || !signature || !ts) {
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature, ts 필수', corsHeaders);
+  }
+  if (!subject || !mailBody) return _err(400, 'MISSING_FIELD', 'subject, body 필수', corsHeaders);
+  if (!Array.isArray(contact_ids) || contact_ids.length === 0) {
+    return _err(400, 'MISSING_FIELD', 'contact_ids 배열(1개 이상) 필수', corsHeaders);
+  }
+  if (contact_ids.length > KMAIL_CAMPAIGN_MAX_RECIPIENTS) {
+    return _err(400, 'TOO_MANY_RECIPIENTS', `한 캠페인 최대 수신자는 ${KMAIL_CAMPAIGN_MAX_RECIPIENTS}명입니다`, corsHeaders);
+  }
+
+  const sigMsg = `kmail-campaign-create:${guid}:${ts}`;
+  const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // 수신자 전원이 본인 소유 + confirmed인지 사전 검증 — 하나라도 어긋나면
+  // 캠페인 자체를 만들지 않는다(부분 생성 없음).
+  const invalidIds = [];
+  for (const cid of contact_ids) {
+    try {
+      const cRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${cid}`, { headers: { Authorization: headers.Authorization } });
+      if (!cRes.ok) { invalidIds.push(cid); continue; }
+      const contact = await cRes.json();
+      if (contact.owner_user_guid !== guid || contact.status !== 'confirmed') invalidIds.push(cid);
+    } catch (e) {
+      invalidIds.push(cid);
+    }
+  }
+  if (invalidIds.length > 0) {
+    return new Response(JSON.stringify({
+      ok: false, error: 'CONTACTS_NOT_CONFIRMED',
+      detail: '본인 소유이면서 승인(confirmed)된 연락처만 캠페인에 넣을 수 있습니다',
+      invalid_contact_ids: invalidIds,
+    }), { status: 400, headers: corsHeaders });
+  }
+
+  const sendAtISO = send_at ? new Date(send_at).toISOString() : new Date().toISOString();
+  const record = {
+    owner_user_guid: guid,
+    recipient_query: '',
+    contact_ids,
+    subject, body: mailBody,
+    send_at: sendAtISO,
+    status: 'scheduled',
+    collect_replies_until: collect_replies_until ? new Date(collect_replies_until).toISOString() : null,
+    digest_at: digest_at ? new Date(digest_at).toISOString() : null,
+    digest_status: digest_at ? 'pending' : 'none',
+  };
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records`, {
+    method: 'POST', headers, body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    return _err(502, 'CAMPAIGN_CREATE_FAILED', 'L1 기록 실패: ' + errBody.slice(0, 200), corsHeaders);
+  }
+  const created = await res.json();
+
+  return new Response(JSON.stringify({ ok: true, campaign_id: created.id, send_at: sendAtISO, recipients: contact_ids.length }),
+    { status: 200, headers: corsHeaders });
+}
+
+// 캠페인 하나를 실제로 발송 — 저장된 subject/body를 confirmed 수신자
+// 전원에게 _kmailSendOneEmail로 보낸다. 발송 도중 소유권/상태가 바뀐
+// 연락처(예: 그 사이 거부로 바뀜)는 건너뛴다 — 캠페인 생성 시점엔
+// confirmed였어도 발송 시점엔 아닐 수 있으므로 재검증한다.
+async function _kmailSendCampaign(env, campaign) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const contactIds = Array.isArray(campaign.contact_ids) ? campaign.contact_ids : [];
+  let successCount = 0, failCount = 0;
+  for (const cid of contactIds) {
+    try {
+      const cRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${cid}`, { headers: { Authorization: headers.Authorization } });
+      if (!cRes.ok) { failCount++; continue; }
+      const contact = await cRes.json();
+      if (contact.status !== 'confirmed' || contact.owner_user_guid !== campaign.owner_user_guid) { failCount++; continue; }
+      await _kmailSendOneEmail(env, {
+        guid: campaign.owner_user_guid, to: contact.email,
+        subject: campaign.subject, text: campaign.body,
+        sessionId: `kmail:${campaign.id}`,
+      });
+      successCount++;
+    } catch (e) {
+      console.error('[K-Mail Campaign] 수신자 발송 실패:', cid, e.message);
+      failCount++;
+    }
+  }
+
+  // 전원 실패면 failed, 1명이라도 성공하면 sent — 캠페인 상태값이
+  // scheduled/sent/failed 3종뿐이라 부분성공을 별도로 표현할 수 없다
+  // (pb_migrations/..._created_kmail_campaigns.js 참고). 부분성공
+  // 상세(성공/실패 수)는 아래 로그로만 남긴다.
+  const newStatus = successCount > 0 ? 'sent' : 'failed';
+  await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records/${campaign.id}`, {
+    method: 'PATCH', headers, body: JSON.stringify({ status: newStatus }),
+  }).catch(e => console.error('[K-Mail Campaign] 상태 갱신 실패:', campaign.id, e.message));
+
+  console.log(JSON.stringify({
+    tag: 'KMAIL_CAMPAIGN_SENT', campaign_id: campaign.id, owner: campaign.owner_user_guid,
+    success: successCount, fail: failCount, ts: new Date().toISOString(),
+  }));
+}
+
+// Cron이 호출하는 진입점 — send_at이 지났고 아직 scheduled인 캠페인을
+// 전부 찾아 발송한다. env.EMAIL 바인딩이 없으면(로컬/테스트 환경 등)
+// 아무 것도 안 하고 조용히 반환 — 크론 전체를 죽이지 않는다.
+async function _kmailSweepDueCampaigns(env) {
+  if (!env.EMAIL) return;
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const nowISO = new Date().toISOString();
+  const filter = encodeURIComponent(`status='scheduled' && send_at <= '${nowISO}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_campaigns/records?filter=${filter}&perPage=50`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const due = data.items || [];
+  for (const campaign of due) {
+    await _kmailSendCampaign(env, campaign).catch(e => console.error('[K-Mail Campaign] 처리 실패:', campaign.id, e.message));
+  }
 }
 
 // GET /default-key?guid=...&registered_at=ISO8601
