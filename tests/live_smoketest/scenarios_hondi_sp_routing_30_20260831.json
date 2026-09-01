@@ -21,12 +21,12 @@
   },
   {
     "no": 3,
-    "utterance": "GDC는 어떻게 충전하나요?",
+    "utterance": "GDC가 정확히 뭔가요?",
     "expected_type": "EXPERT",
     "expected_id": "hondi-guide",
     "expected_name": "혼디 SP",
     "category": "정상경로(혼디 자체 안내)",
-    "basis": "hondi-guide.triggers('GDC 충전 방법') 매칭 — GDC 충전 절차 안내는 실제 결제 실행(GDC_CHARGE_MANUAL)이 아니라 방법 설명이므로 hondi-guide",
+    "basis": "hondi-guide.triggers('GDC가 뭐예요') 매칭 — 2026-08-31 라이브 스모크테스트에서 'GDC 충전 방법' 문구는 실제 GDC 충전 실행 GWP(kgdc)와 겹쳐 [GWP: kgdc]로 새는 것을 확인, 트리거를 개념 설명형('GDC가 뭐예요')으로 정정하고 발화도 그에 맞춰 수정",
     "static_verdict": "PASS"
   },
   {
@@ -183,10 +183,10 @@
     "no": 19,
     "utterance": "국민동의청원에 이 법안 올리고 싶어요, 도와주세요",
     "expected_type": "GWP",
-    "expected_id": "kdemocracy",
-    "expected_name": "K-Democracy",
-    "category": "부정테스트(제안 유사어 — K-Democracy vs hondi-guide 판별)",
-    "basis": "\"제안\"이라는 단어가 있어도 이건 혼디 시스템에 대한 제안이 아니라 실제 입법 청원 — kdemocracy가 정답. hondi-guide로 새면 오발동",
+    "expected_id": "kgov",
+    "expected_name": "K-Public",
+    "category": "부정테스트(제안 유사어 — hondi-guide 오발동 방지, 정답은 kgov)",
+    "basis": "\"제안\"이라는 단어가 있어도 혼디 시스템에 대한 제안이 아니므로 hondi-guide로 새면 안 됨. 2026-08-31 라이브 테스트에서 최초 기대값(kdemocracy)이 틀렸던 것으로 확인 — gwp-registry.js kdemocracy 항목 주석에 \"국민동의청원·입법예고 등 실제 국가기관 청원/의견 시스템은 kgov 소관\"이라고 명시돼 있음(K-Democracy는 혼디 자체 거버넌스 DAWN 전용). 정정 후 정답은 kgov",
     "static_verdict": "PASS"
   },
   {
@@ -252,11 +252,11 @@
   {
     "no": 26,
     "utterance": "이 사건에 대한 최신 뉴스 좀 찾아줘",
-    "expected_type": "GWP",
-    "expected_id": "ksearch",
-    "expected_name": "K-Search",
-    "category": "부정테스트(다른 GWP — hondi-guide와 무관)",
-    "basis": "정보 검색 요청 — hondi-guide(플랫폼 자체 안내)와 무관, ksearch가 정답",
+    "expected_type": "PLATFORM",
+    "expected_id": "web-search-tag",
+    "expected_name": "WEB_SEARCH(공개정보 검색)",
+    "category": "부정테스트(정보 검색 — hondi-guide와 무관, 정답은 WEB_SEARCH 태그)",
+    "basis": "정보 검색 요청 — hondi-guide(플랫폼 자체 안내)와 무관. 2026-08-31 라이브 테스트에서 최초 기대값(ksearch GWP)이 틀렸던 것으로 확인 — 시의성 정보 검색은 GWP가 아니라 [WEB_SEARCH: query=...] 태그로 처리됨(README \"expected_id == 'web-search-tag'\" 채점 규칙 참조 — [WEB_SEARCH:] 발동 여부로 PASS/FAIL 판정, ksearch/KSEARCH_HANDOFF 규칙과는 별개)",
     "static_verdict": "PASS"
   },
   {
