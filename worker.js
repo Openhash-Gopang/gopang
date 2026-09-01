@@ -379,6 +379,83 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
   }), { status: 200, headers: corsHeaders });
 }
 
+// POST /user/gdc-balance { phone_verify_token } — 일반 후원자용 GDC 잔액·
+// 구독 조회 (2026-09-01 신설, 주피터 지시). desktop.html의 "함께
+// 완성하기" 섹션에서 후원자가 입금 후 자기 잔액을 확인하려던 링크가
+// 실수로 관리자 전용 패널(_openAdminPanel, JWT 로그인 필요)로 연결돼
+// 있었던 걸 바로잡는 과정에서 신설 — 관리자 인증과는 완전히 분리된
+// 공개 엔드포인트다.
+//
+// 보안: "전화번호만 알면 아무나 남의 잔액을 볼 수 있는" 구멍을 막기
+// 위해, 원문 전화번호 대신 /biz/phone-otp-verify가 발급하는
+// phone_verify_token(SMS 인증 완료 증명)만 받는다. handleProfileClaim과
+// 같은 파싱·서명 검증 로직을 그대로 재사용하되, 여기서는 claim 대상
+// guid를 미리 알 필요가 없으므로 guid 없는 2필드 토큰을 받아 토큰의
+// 전화번호로 profiles를 직접 검색해 guid를 찾는다(handleProfileClaim은
+// 반대로 guid가 이미 주어진 상태에서 그 프로필의 phone과 일치하는지만
+// 확인한다 — 그래서 로직을 그대로 호출하지 않고 이 필요에 맞게 다시
+// 작성했다).
+async function handleUserGdcBalance(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { phone_verify_token } = body;
+  if (!phone_verify_token) return _err(400, 'MISSING_FIELD', 'phone_verify_token 필수', corsHeaders);
+  if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
+
+  const dotIdx = String(phone_verify_token).lastIndexOf('.');
+  if (dotIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 형식 오류', corsHeaders);
+  const payload = phone_verify_token.slice(0, dotIdx);
+  const sig     = phone_verify_token.slice(dotIdx + 1);
+  const firstColon = payload.indexOf(':');
+  const lastColon  = payload.lastIndexOf(':');
+  if (firstColon < 0 || lastColon < firstColon) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+  const e164 = payload.slice(0, firstColon);
+  const exp  = Number(payload.slice(lastColon + 1));
+  if (!e164 || !Number.isFinite(exp)) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+  if (Date.now() > exp) return _err(401, 'TOKEN_EXPIRED', '전화번호 인증 토큰이 만료됐습니다', corsHeaders);
+  const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+  if (expectedSig !== sig) return _err(401, 'TOKEN_INVALID', '전화번호 인증 토큰 서명이 유효하지 않습니다', corsHeaders);
+
+  // handlePhoneOtpRequest·handleProfileClaim과 동일 관례 — e164는
+  // '+82' + 국내번호(맨 앞 0 포함) 형태. profiles.phone은 그 국내
+  // 형식(하이픈 없는 숫자열)으로 저장돼 있다(handleProfileClaim의
+  // existingPhoneDigits 비교 로직 참고).
+  const domesticPhone = e164.replace(/^\+82/, '');
+  const phoneDigits    = domesticPhone.replace(/\D/g, '');
+  if (!phoneDigits) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token의 전화번호가 올바르지 않습니다', corsHeaders);
+
+  try {
+    const l1Token = await _l1AdminToken(env);
+    const filter  = encodeURIComponent(`phone='${phoneDigits}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${l1Token}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const profile = data.items?.[0];
+    if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '이 전화번호로 등록된 프로필이 없습니다', corsHeaders);
+
+    const guid = profile.guid;
+    const [balanceGdc, sub] = await Promise.all([
+      getBalanceGdcForStatus(guid),
+      _l1GetSubscription(env, guid).catch(() => null),
+    ]);
+
+    const subscribed = !!(sub && sub.status === 'active');
+    return new Response(JSON.stringify({
+      ok: true,
+      balance: balanceGdc ?? 0,
+      subscribed,
+      tier: subscribed ? sub.tier : null,
+      tier_name: subscribed ? (SUBSCRIPTION_TIERS[sub.tier]?.name ?? sub.tier) : null,
+      renews_at: subscribed ? (sub.next_billing_at || null) : null,
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_ERROR', '잔액 조회 실패: ' + e.message, corsHeaders);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // 기기 간 지갑 이전(device-link) — 2026-07-20 신설
 //
@@ -12260,6 +12337,12 @@ export default {
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
+
+    // POST /user/gdc-balance — 일반 후원자용 잔액·구독 조회 (2026-09-01
+    // 신설). 관리자 인증(JWT)과 완전히 분리된 공개 엔드포인트 — 대신
+    // phone_verify_token(전화번호 소유 증명)을 요구한다.
+    if (pathname === '/user/gdc-balance' && request.method === 'POST')
+      return handleUserGdcBalance(request, env, corsHeaders);
     // (2026-07-20 신설: 기기 간 지갑 이전 — PC가 폰과 완전히 같은 개인키를
     // 갖도록, SMS 대신 웹푸시로 폰을 깨우고 폰 화면에 뜬 짧은 코드를 PC에
     // 입력받아 페어링한 뒤, X25519 봉투 암호화로 개인키 자체를 옮긴다.
