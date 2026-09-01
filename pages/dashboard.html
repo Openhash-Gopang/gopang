@@ -756,7 +756,8 @@ document.getElementById('planChipRow').addEventListener('click', function (e) {
 // auth/device-link.html과 동일한 실제 프로토콜을 그대로 사용한다.
 // e164 빌더·자릿수 검증은 회원가입 화면과 100% 동일한 로직을 재사용해
 // (사고실험으로 걸러진) 자릿수 불일치 버그를 다시 만들지 않는다.
-import { _buildKrE164, krNeededDigitsFor, _restoreFromBackupKey } from '/src/gopang/core/auth.js';
+import { _buildKrE164, _buildKrHandle, krNeededDigitsFor, _restoreFromBackupKey } from '/src/gopang/core/auth.js';
+import { L1_URL, setUser } from '/src/gopang/core/state.js';
 
 (() => {
   const WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -943,11 +944,70 @@ import { _buildKrE164, krNeededDigitsFor, _restoreFromBackupKey } from '/src/gop
   backupKeyBtn.addEventListener('click', async () => {
     const key = prompt('백업 키(개인키, Base64URL)를 입력하세요:');
     if (!key) return;
-    const result = await _restoreFromBackupKey(key.trim());
-    if (!result.ok) {
-      alert('복구 실패: ' + (result.detail || result.reason || '알 수 없는 오류'));
+
+    // ★ 2026-09-01 수정 — 기존엔 이 자리에서 guid 없이
+    // _restoreFromBackupKey(key)만 호출했다. guid가 없으면 auth.js의
+    // _restoreFromBackupKey는 (1) wallet.setIdentity를 건너뛰고,
+    // (2) _issueSession 서버 검증 자체를 생략(`if (!guid) return { ok:
+    // true }`)하며, (3) _USER/localStorage(gopang_user_v4)를 전혀
+    // 채우지 않는다 — 즉 형식만 맞는 키면 무엇이든 "성공"으로 판정되고,
+    // 그 뒤 completeLogin()이 로그인 화면만 가려서 실제로는 아무 계정도
+    // 아닌 상태로 대시보드가 열리는 사고였다(device-link.html/auth.js의
+    // 다른 백업 키 입력 경로들은 전부 L1에서 찾은 계정 레코드의 guid를
+    // 먼저 넘겨서 이 문제가 없었다). 여기서도 동일하게 이 번호로 등록된
+    // 계정을 먼저 L1에서 조회해 guid를 확보한 뒤 넘긴다.
+    const digits = phoneInput.value.trim();
+    if (digits.length !== NEEDED_DIGITS) {
+      alert(`먼저 휴대폰 번호 뒷자리 ${NEEDED_DIGITS}자리를 입력해 주세요.`);
       return;
     }
+    const e164  = _buildKrE164('mobile', null, digits);
+    const handle = _buildKrHandle('mobile', null, digits);
+
+    let found;
+    try {
+      // 다른 모든 조회부(_showPhonePopup._submit, initAuthWithPhone 등)와
+      // 동일하게 handle 기준으로 찾는다 — e164는 필터 조건으로 쓰인 전례가
+      // 없는 필드라 스키마 상 확실치 않다.
+      const filter = encodeURIComponent(`handle='${handle}'`);
+      const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data = await res.json();
+      found = data.items?.[0];
+    } catch (e) {
+      alert('계정 조회 중 네트워크 오류가 발생했습니다: ' + e.message);
+      return;
+    }
+    if (!found) {
+      alert('이 번호로 등록된 계정을 찾을 수 없습니다. 먼저 정확한 번호를 입력해 주세요.');
+      return;
+    }
+
+    const result = await _restoreFromBackupKey(key.trim(), found.guid, 'gopang');
+    if (!result.ok) {
+      const msg = result.reason === 'PUBKEY_MISMATCH'
+        ? '이 백업 키는 이 계정의 키가 아닙니다.'
+        : result.reason === 'invalid_key'
+          ? '키 형식이 올바르지 않습니다.'
+          : '복구에 실패했습니다' + (result.detail ? ` (${result.detail}).` : ` (${result.reason}).`);
+      alert('복구 실패: ' + msg);
+      return;
+    }
+
+    const user = {
+      ipv6: found.guid, handle: found.handle,
+      e164: found.e164 || e164,
+      country_code: found.country_code || 'KR',
+      nickname: found.nickname || '',
+      region: found.region || '',
+      name: found.handle, isGuest: false, isTemp: false,
+      registeredAt: found.created,
+    };
+    localStorage.setItem('gopang_user_v4', JSON.stringify(user));
+    setUser(user);
+    if (found.backup_confirmed_at) {
+      try { localStorage.setItem('gopang_backup_confirmed_v1', '1'); } catch {}
+    }
+
     completeLogin();
   });
 
@@ -980,6 +1040,27 @@ import { _buildKrE164, krNeededDigitsFor, _restoreFromBackupKey } from '/src/gop
 
       if (userRecord && userRecord.ipv6) {
         localStorage.setItem('gopang_user_v4', JSON.stringify(userRecord));
+        // ★ 2026-09-01 수정 — localStorage만 채우고 state.js의 _USER/USER_GUID
+        // (setUser)는 갱신하지 않고 있었다. 페이지를 새로고침하면 initAuth()가
+        // localStorage를 다시 읽어 채워지므로 안 드러났지만, 지금처럼 새로고침
+        // 없이 이 페이지 안에서 곧장 대시보드로 넘어가는 경로에서는 같은 세션의
+        // 다른 모듈들이 참조하는 _USER가 로그인 완료 후에도 계속 null로 남는다.
+        setUser(userRecord);
+        // ★ 2026-09-01 추가 — 계정(guid) 단위 백업 확인 상태(2026-08-31
+        // 서버 동기화 기능) 하이드레이션. auth.js의 다른 로그인 경로들
+        // (initAuthWithPhone, _showPhonePopup._loginExisting 등)은 전부
+        // L1 조회로 얻은 found.backup_confirmed_at을 로컬 플래그에
+        // 반영하는데, 이 대시보드 최초 로그인 경로만 빠져 있었다 —
+        // 그대로 두면 폰에서 이미 백업 키를 저장한 사용자에게도 이
+        // PC에서 백업 안내 배너가 다시 뜬다.
+        fetch(`${L1_URL}?filter=${encodeURIComponent(`guid='${userRecord.ipv6}'`)}&perPage=1`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.items?.[0]?.backup_confirmed_at) {
+              try { localStorage.setItem('gopang_backup_confirmed_v1', '1'); } catch {}
+            }
+          })
+          .catch(() => {}); // 실패해도 로그인 흐름을 막지 않음
       }
       if (onboardingFlags) {
         if (onboardingFlags.firstGreeted) localStorage.setItem('hondi_first_greeted', '1');
