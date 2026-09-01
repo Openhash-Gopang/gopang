@@ -28390,7 +28390,7 @@ async function handleAdminLetterSendEmail(request, env, corsHeaders) {
       'send_email 바인딩이 설정되지 않았습니다 — wrangler.toml 확인 및 재배포 필요', corsHeaders);
   }
 
-  const fromAddr = `letter-${letter_id}@gov-mail.hondi.net`;
+  const fromAddr = `letter-${letter_id}@hondi.org`;
   try {
     await env.EMAIL.send({
       to, from: { email: fromAddr, name: '혼디 (AI City Inc.)' }, subject, text,
