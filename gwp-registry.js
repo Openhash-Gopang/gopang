@@ -689,6 +689,24 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 2026-09-01 신설 — K-Mail: 혼디 사용자 간 메일 발송·수신·주소록.
+  // 관리자 전용 공문(hondi.org, gov-mail)과 도메인·인증·목적 모두 별개.
+  // 같은 사이트 내 새 페이지(/pages/kmail-assistant.html)라 kemergency
+  // 같은 별도 서브도메인 신설이 필요 없다 — type:'tab'만으로 충분.
+  // 수신자·발송시각·회신처리는 이 탭 안의 대화(SP-25_kmail)에서 결정.
+  {
+    id: 'kmail', name: 'K-Mail', category: 'UTL',
+    type: 'tab',
+    url: '/pages/kmail-assistant.html',
+    sp_key: 'SP-25_kmail',
+    status: 'active', priority: 8, threshold: 0.75,
+    description: '혼디 사용자 간 메일 발송·수신·주소록 관리(예약발송·회신취합·자동삭제 규칙). 관리자 전용 공문과 무관.',
+    triggers: [
+      '메일 보내', '메일 보내줘', '메일 확인', '메일함', '메일 정리',
+      '이메일 보내', '이메일 확인', '주소록에 추가', '주소록 검색',
+    ],
+  },
+
 ];
 
 // ── L1 pending_agents 동적 로드 (앱 시작 시 1회) ───────────────

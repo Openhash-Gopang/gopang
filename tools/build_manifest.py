@@ -358,6 +358,19 @@ ALLOWLIST_PREFIXES = (
     'AGENCY-AC-COMMON', 'AC-AUTHOR', 'AGENCY-COMMON-TEMPLATE',
     'DEPRECATED_', 'GLOBAL-LOCAL-COMPLIANCE', 'ROUTER-PRIORITY',
     'K-Case', 'jeju-gov-sp-hierarchy', 'README',
+    # 2026-09-01 추가 — K-Mail SP 등록 작업 중 발견: 이 스크립트가 이미
+    # 이 8개 파일 때문에 실패(exit 1) 중이었다. manifest.yml은 push마다
+    # 이 스크립트를 돌리는데, 실패하면 sp-catalog.json 커밋 자체가
+    # 안 되므로 — 이 파일들이 추가된 시점 이후 prompts/에 어떤 변경이
+    # 있었든 전부 조용히 미반영 상태였을 가능성이 있다(SP-25_kmail도
+    # 이 상태에서 추가했다면 똑같이 새지 않고 반영됐을 것). 아래 8개는
+    # 설계도·검토 문서로 보이나(카탈로그 서비스가 아니라 계획서 성격),
+    # k-plan/k-social-match/k-watch 세 개는 실제 서비스 기획 문서일
+    # 가능성도 있어 이후 확인이 필요함(현재는 안전한 기본값으로 보수적
+    # 배제만 함 — 카탈로그 등록이 아니라 문서 취급).
+    'CONTROL-TOWER-PRINCIPLE', 'GOV-TASK-POST-ACCEPTANCE-REVIEW',
+    'ROUTING-BRANCH-REFERENCE', 'k-plan_v1_0', 'k-social-match_v1_0',
+    'k-watch_v1_0',
 )
 
 unrecognized = []
