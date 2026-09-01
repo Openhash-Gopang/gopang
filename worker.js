@@ -28834,6 +28834,28 @@ async function handleKmailContactsPropose(request, env, corsHeaders) {
 // status=all이면 상태 무관 전체(주소록+대기중+거부 모두). q/relationship/
 // occupation/org는 전부 부분일치('~') — 여러 방식으로 분류·검색
 // 가능해야 한다는 요구(주피터 지시)를 이 파라미터 조합으로 충족한다.
+// owner_user_guid + status/q/relationship/occupation/org 조건으로
+// kmail_contacts를 조회하는 공용 로직 — handleKmailContactsList(공개
+// API)와 K-Mail 채팅의 KMAIL_LOOKUP_CONTACTS(§ handleKmailChat 하단)
+// 양쪽이 공유한다. 이스케이프 로직을 두 곳에 복붙하면 한쪽만 고치고
+// 다른 쪽을 놓치는 사고가 나기 쉬워 묶었다.
+async function _kmailQueryContacts(env, guid, { status = 'confirmed', q = '', relationship = '', occupation = '', org = '' } = {}) {
+  const esc = s => String(s).replace(/'/g, "\\'");
+  const clauses = [`owner_user_guid='${esc(guid)}'`];
+  if (status !== 'all') clauses.push(`status='${esc(status)}'`);
+  if (q) clauses.push(`(name~'${esc(q)}' || org~'${esc(q)}' || dept~'${esc(q)}' || occupation~'${esc(q)}' || relationship~'${esc(q)}' || email~'${esc(q)}')`);
+  if (relationship) clauses.push(`relationship~'${esc(relationship)}'`);
+  if (occupation) clauses.push(`occupation~'${esc(occupation)}'`);
+  if (org) clauses.push(`org~'${esc(org)}'`);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(clauses.join(' && '));
+  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&sort=-created&perPage=200`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
 async function handleKmailContactsList(request, url, env, corsHeaders) {
   const guid = url.searchParams.get('guid');
   const pubkey = url.searchParams.get('pubkey');
@@ -28855,21 +28877,8 @@ async function handleKmailContactsList(request, url, env, corsHeaders) {
   const authOk = await _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
-  const esc = s => s.replace(/'/g, "\\'");
-  const clauses = [`owner_user_guid='${esc(guid)}'`];
-  if (status !== 'all') clauses.push(`status='${status}'`); // status는 위에서 고정 목록으로 검증됨 — 이스케이프 불필요
-  if (q) clauses.push(`(name~'${esc(q)}' || org~'${esc(q)}' || dept~'${esc(q)}' || occupation~'${esc(q)}' || relationship~'${esc(q)}' || email~'${esc(q)}')`);
-  if (relationship) clauses.push(`relationship~'${esc(relationship)}'`);
-  if (occupation) clauses.push(`occupation~'${esc(occupation)}'`);
-  if (org) clauses.push(`org~'${esc(org)}'`);
-
-  const token = await _l1AdminToken(env);
-  const headers = { 'Authorization': `Bearer ${token}` };
-  const filter = encodeURIComponent(clauses.join(' && '));
-  const res = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&sort=-created&perPage=200`, { headers });
-  const data = await res.json().catch(() => ({ items: [] }));
-
-  return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { status: 200, headers: corsHeaders });
+  const items = await _kmailQueryContacts(env, guid, { status, q, relationship, occupation, org });
+  return new Response(JSON.stringify({ ok: true, items }), { status: 200, headers: corsHeaders });
 }
 
 // GET /kmail/mailbox?box=inbox|sent&guid=...&pubkey=...&signature=...&ts=...&include_deleted=true|false
@@ -29610,6 +29619,42 @@ async function handleKmailChat(request, env, corsHeaders, ctx) {
   const searchMatch = reply.match(/KMAIL_SEARCH_CONTACTS\s*(\{[\s\S]*\})\s*$/);
   const sendMatch = reply.match(/KMAIL_SEND_CAMPAIGN\s*(\{[\s\S]*\})\s*$/);
   const ruleMatch = reply.match(/KMAIL_CREATE_RULE\s*(\{[\s\S]*\})\s*$/);
+  const lookupMatch = reply.match(/KMAIL_LOOKUP_CONTACTS\s*(\{[\s\S]*\})\s*$/);
+
+  // ── ⓪ 저장된 주소록 조회 태그 ─────────────────────────────────
+  if (lookupMatch) {
+    let parsed = null;
+    try { parsed = JSON.parse(lookupMatch[1]); } catch (e) { /* 아래에서 빈 조건으로 처리 */ }
+    const cleanReplyText = reply.slice(0, lookupMatch.index).trim();
+
+    const items = await _kmailQueryContacts(env, guid, {
+      status: 'confirmed',
+      q: (parsed?.q || '').trim(),
+      relationship: (parsed?.relationship || '').trim(),
+      occupation: (parsed?.occupation || '').trim(),
+      org: (parsed?.org || '').trim(),
+    }).catch(() => []);
+
+    const lookupContext = `[주소록 조회 결과]\n${JSON.stringify(items.map(c => ({ name: c.name, email: c.email, org: c.org, occupation: c.occupation, relationship: c.relationship })))}\n\n위 목록을 사용자에게 자연스럽게 정리해서 보여주세요. 결과가 없으면 없다고 솔직히 말하세요. (이 메시지 자체는 사용자에게 보이지 않습니다.)`;
+    let followUpReply;
+    try {
+      followUpReply = await deepseekChatText({
+        env, apiKey: env.DEEPSEEK_API_KEY, model: resolveDeepseekModel('deepseek-v4-flash'),
+        messages: [
+          { role: 'system', content: systemPrompt }, ...cleanMessages,
+          { role: 'assistant', content: cleanReplyText || '주소록을 확인하고 있습니다...' },
+          { role: 'user', content: lookupContext },
+        ],
+        max_tokens: 800, temperature: 0.4, timeoutMs: 20000,
+        fallbackText: '주소록 조회는 완료됐지만 결과 정리에 실패했습니다. 다시 시도해 주세요.',
+      });
+    } catch (e) {
+      followUpReply = '주소록 조회 중 오류가 발생했습니다: ' + e.message;
+    }
+
+    return new Response(JSON.stringify({ ok: true, reply: followUpReply, action: { type: 'looked_up_contacts', count: items.length } }),
+      { status: 200, headers: corsHeaders });
+  }
 
   // ── ① 웹 검색 요청 태그 ──────────────────────────────────────
   if (searchMatch) {
