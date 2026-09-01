@@ -1831,96 +1831,113 @@ document.addEventListener("DOMContentLoaded", function () {
 <!-- ══════════════════════════════════════════════════════════
      관리자 대시보드
 ══════════════════════════════════════════════════════════ -->
+<style>
+  /* 관리자 대시보드 진회색 관제 화면 톤 (2026-09-01 재구성, 1단계:
+     컨테이너·로그인·통계·GDC 카드). 색상 토큰만 새로 정의하고 구조·id·
+     onclick은 그대로 둔다 — 기능 변경 없이 톤만 바꾸는 게 목적. */
+  #admin-overlay{
+    --ad-bg:#26282d; --ad-panel:#2b2e34; --ad-panel2:#33363c;
+    --ad-line:#3c3f46; --ad-line-strong:#4a4e56;
+    --ad-text:#d7d9dd; --ad-dim:#9aa0a8; --ad-faint:#6e737a;
+    --ad-warn:#d6a04a; --ad-crit:#d16054; --ad-accent:#5b8ec4;
+    --ad-mono:'SFMono-Regular','Consolas',monospace;
+  }
+</style>
 <div id="admin-overlay"
      style="display:none;position:fixed;inset:0;z-index:10000;
             background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
             align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:820px;
-              box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
+  <div style="background:var(--ad-bg,#26282d);border-radius:10px;width:100%;max-width:820px;
+              box-shadow:0 12px 48px rgba(0,0,0,.4);overflow:hidden;margin:auto;color:var(--ad-text,#d7d9dd)">
 
     <!-- 헤더 -->
     <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+                padding:16px 22px;border-bottom:1px solid var(--ad-line,#3c3f46);background:var(--ad-panel,#2b2e34)">
       <div style="display:flex;align-items:center;gap:10px">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ad-dim,#9aa0a8)" stroke-width="1.8">
           <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-        <span style="font-size:14px;font-weight:700;color:#111">관리자 대시보드</span>
+        <span style="font-size:14px;font-weight:500;color:var(--ad-text,#d7d9dd)">관리자 대시보드</span>
       </div>
       <button onclick="closeAdminPanel()"
-              style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:22px;line-height:1;padding:2px 6px">✕</button>
+              style="background:none;border:none;cursor:pointer;color:var(--ad-dim,#9aa0a8);font-size:20px;line-height:1;padding:2px 6px">✕</button>
     </div>
 
     <!-- 로그인 -->
     <div id="admin-login" style="padding:40px 32px;text-align:center">
-      <div style="font-size:14px;color:#6b7280;margin-bottom:20px">관리자 계정으로 로그인하세요</div>
+      <div style="font-size:13px;color:var(--ad-dim,#9aa0a8);margin-bottom:20px">관리자 계정으로 로그인하세요</div>
       <input id="admin-email-input" type="email" placeholder="이메일" autocomplete="username"
-             style="width:100%;max-width:320px;padding:11px 14px;border:1px solid #d1d5db;
-                    border-radius:10px;font-size:16px;outline:none;font-family:inherit;
+             style="width:100%;max-width:320px;padding:10px 12px;border:1px solid var(--ad-line,#3c3f46);
+                    border-radius:4px;font-size:15px;outline:none;font-family:inherit;
+                    background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
                     box-sizing:border-box;display:block;margin:0 auto 10px"
              onkeydown="if(event.key==='Enter')document.getElementById('admin-pw-input')?.focus()">
       <input id="admin-pw-input" type="password" placeholder="패스워드" autocomplete="current-password"
-             style="width:100%;max-width:320px;padding:11px 14px;border:1px solid #d1d5db;
-                    border-radius:10px;font-size:18px;outline:none;font-family:inherit;
+             style="width:100%;max-width:320px;padding:10px 12px;border:1px solid var(--ad-line,#3c3f46);
+                    border-radius:4px;font-size:16px;outline:none;font-family:inherit;
+                    background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
                     box-sizing:border-box;display:block;margin:0 auto 12px"
              onkeydown="if(event.key==='Enter')_adminLogin()">
       <button onclick="_adminLogin()" id="admin-login-btn"
-              style="width:100%;max-width:320px;padding:12px;background:#2563eb;color:#fff;
-                     border:none;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit">
+              style="width:100%;max-width:320px;padding:11px;background:var(--ad-panel2,#33363c);color:var(--ad-text,#d7d9dd);
+                     border:1px solid var(--ad-line-strong,#4a4e56);border-radius:4px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit">
         로그인
       </button>
-      <div id="admin-login-err" style="color:#dc2626;font-size:14px;margin-top:10px;display:none">
+      <div id="admin-login-err" style="color:var(--ad-crit,#d16054);font-size:13px;margin-top:10px;display:none">
         이메일 또는 패스워드가 올바르지 않습니다.
       </div>
     </div>
 
     <!-- 대시보드 본문 -->
-    <div id="admin-body" style="display:none;padding:24px 28px">
+    <div id="admin-body" style="display:none;padding:22px 26px">
 
       <!-- ① 통계 -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:28px">
-        <div style="background:#e0f2fe;border:1px solid #7dd3fc;border-radius:12px;padding:16px;text-align:center">
-          <div id="stat-total" style="font-size:28px;font-weight:800;color:#2563eb">—</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:4px">전체 가입자</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+                  background:var(--ad-line,#3c3f46);border:1px solid var(--ad-line,#3c3f46);border-radius:4px;
+                  overflow:hidden;margin-bottom:20px">
+        <div style="background:var(--ad-panel2,#33363c);padding:14px;text-align:center">
+          <div id="stat-total" style="font-family:var(--ad-mono);font-size:24px;color:var(--ad-text,#d7d9dd)">—</div>
+          <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:4px">전체 가입자</div>
         </div>
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;text-align:center">
-          <div id="stat-trial" style="font-size:28px;font-weight:800;color:#2563eb">—</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:4px">체험 중</div>
+        <div style="background:var(--ad-panel2,#33363c);padding:14px;text-align:center">
+          <div id="stat-trial" style="font-family:var(--ad-mono);font-size:24px;color:var(--ad-text,#d7d9dd)">—</div>
+          <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:4px">체험 중</div>
         </div>
-        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:16px;text-align:center">
-          <div id="stat-expired" style="font-size:28px;font-weight:800;color:#d97706">—</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:4px">체험 만료</div>
+        <div style="background:var(--ad-panel2,#33363c);padding:14px;text-align:center">
+          <div id="stat-expired" style="font-family:var(--ad-mono);font-size:24px;color:var(--ad-text,#d7d9dd)">—</div>
+          <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:4px">체험 만료</div>
         </div>
-        <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;text-align:center">
-          <div id="stat-paid" style="font-size:28px;font-weight:800;color:#7c3aed">—</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:4px">유료 전환</div>
+        <div style="background:var(--ad-panel2,#33363c);padding:14px;text-align:center">
+          <div id="stat-paid" style="font-family:var(--ad-mono);font-size:24px;color:var(--ad-text,#d7d9dd)">—</div>
+          <div style="font-size:11px;color:var(--ad-faint,#6e737a);margin-top:4px">유료 전환</div>
         </div>
       </div>
 
       <!-- ①-b GDC 충전 현황 (2026-08-31 신설 — /admin/gdc-summary 연동) -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:14px;font-weight:700;color:#111">💳 GDC 충전 현황</div>
-          <span id="gdc-summary-month" style="font-size:12px;color:#9ca3af">불러오는 중…</span>
+      <div style="border:1px solid var(--ad-line,#3c3f46);border-radius:4px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:12px;color:var(--ad-faint,#6e737a);letter-spacing:.3px">GDC 충전 현황</div>
+          <span id="gdc-summary-month" style="font-family:var(--ad-mono);font-size:11px;color:var(--ad-faint,#6e737a)">불러오는 중…</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
-          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
-            <div id="gdc-signup-bonus" style="font-size:20px;font-weight:800;color:#111">—</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px">가입 축하 충전 (무료)</div>
-            <div id="gdc-signup-bonus-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+                    background:var(--ad-line,#3c3f46);border:1px solid var(--ad-line,#3c3f46);border-radius:4px;overflow:hidden">
+          <div style="background:var(--ad-panel2,#33363c);padding:12px 14px">
+            <div id="gdc-signup-bonus" style="font-family:var(--ad-mono);font-size:17px;color:var(--ad-text,#d7d9dd)">—</div>
+            <div style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:2px">가입 축하 충전 (무료)</div>
+            <div id="gdc-signup-bonus-count" style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:4px">—</div>
           </div>
-          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
-            <div id="gdc-manual-charge" style="font-size:20px;font-weight:800;color:#111">—</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px">유상 충전 (계좌입금)</div>
-            <div id="gdc-manual-charge-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+          <div style="background:var(--ad-panel2,#33363c);padding:12px 14px">
+            <div id="gdc-manual-charge" style="font-family:var(--ad-mono);font-size:17px;color:var(--ad-text,#d7d9dd)">—</div>
+            <div style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:2px">유상 충전 (계좌입금)</div>
+            <div id="gdc-manual-charge-count" style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:4px">—</div>
           </div>
-          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px">
-            <div id="gdc-ai-usage" style="font-size:20px;font-weight:800;color:#111">—</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px">AI 사용량 비용(DeepSeek 등)</div>
-            <div id="gdc-ai-usage-count" style="font-size:11px;color:#9ca3af;margin-top:4px">—</div>
+          <div style="background:var(--ad-panel2,#33363c);padding:12px 14px">
+            <div id="gdc-ai-usage" style="font-family:var(--ad-mono);font-size:17px;color:var(--ad-text,#d7d9dd)">—</div>
+            <div style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:2px">AI 사용량 비용(DeepSeek 등)</div>
+            <div id="gdc-ai-usage-count" style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:4px">—</div>
           </div>
         </div>
-        <div id="gdc-summary-note" style="font-size:11px;color:#9ca3af;margin-top:12px;line-height:1.6">
+        <div id="gdc-summary-note" style="font-size:10.5px;color:var(--ad-faint,#6e737a);margin-top:12px;line-height:1.6">
           사용자 간 결제(혼디마켓 P2P)와 원장 무결성(BIVM) 검증은 아직 집계가 배선되지 않았습니다 — 별도 작업 예정.
         </div>
       </div>
@@ -2164,72 +2181,118 @@ document.addEventListener("DOMContentLoaded", function () {
 <!-- ══════════════════════════════════════════════════════════
      내 GDC 대시보드 (일반 후원자용 — 관리자 로그인과 무관)
 ══════════════════════════════════════════════════════════ -->
+<style>
+  #user-dash-overlay{
+    --ud-bg:#26282d; --ud-panel:#2b2e34; --ud-panel2:#33363c;
+    --ud-line:#3c3f46; --ud-line-strong:#4a4e56;
+    --ud-text:#d7d9dd; --ud-dim:#9aa0a8; --ud-faint:#6e737a;
+    --ud-warn:#d6a04a; --ud-crit:#d16054;
+    --ud-mono:'SFMono-Regular','Consolas',monospace;
+  }
+  #user-dash-overlay .ud-card{background:var(--ud-bg);border-radius:12px;width:100%;max-width:560px;
+    box-shadow:0 12px 48px rgba(0,0,0,.4);overflow:hidden;margin:auto;color:var(--ud-text);
+    font-family:'Pretendard','Noto Sans KR',sans-serif;}
+  #user-dash-overlay .ud-head{display:flex;align-items:center;justify-content:space-between;
+    padding:16px 20px;border-bottom:1px solid var(--ud-line);background:var(--ud-panel);}
+  #user-dash-overlay .ud-head span{font-size:14px;font-weight:500;color:var(--ud-text);}
+  #user-dash-overlay .ud-close{background:none;border:none;cursor:pointer;color:var(--ud-dim);font-size:20px;line-height:1;padding:2px 6px;}
+  #user-dash-overlay input{width:100%;padding:10px 12px;border:1px solid var(--ud-line);
+    border-radius:4px;font-size:15px;outline:none;font-family:inherit;box-sizing:border-box;
+    display:block;margin-bottom:10px;background:var(--ud-panel2);color:var(--ud-text);}
+  #user-dash-overlay .ud-err{display:none;color:var(--ud-crit);font-size:12px;margin-bottom:10px;}
+  #user-dash-overlay .ud-btn{width:100%;padding:11px;background:var(--ud-panel2);color:var(--ud-text);
+    border:1px solid var(--ud-line-strong);border-radius:4px;font-size:13.5px;font-weight:500;cursor:pointer;}
+  #user-dash-overlay .ud-btn.primary{background:#3b6ea8;border-color:#3b6ea8;color:#fff;}
+  #user-dash-overlay .ud-btn + .ud-btn{margin-top:8px;}
+  #user-dash-overlay .ud-balance{border:1px solid var(--ud-line);border-radius:4px;padding:14px 16px;
+    display:flex;justify-content:space-between;align-items:baseline;margin:16px 20px 0;}
+  #user-dash-overlay .ud-balance .l{font-size:11px;color:var(--ud-faint);}
+  #user-dash-overlay .ud-balance .v{font-family:var(--ud-mono);font-size:22px;color:var(--ud-text);}
+  #user-dash-overlay .ud-sub{font-size:11px;color:var(--ud-faint);padding:0 16px 12px;margin:0 20px 16px;
+    border:1px solid var(--ud-line);border-top:none;border-radius:0 0 4px 4px;}
+  #user-dash-overlay .ud-tabs{display:flex;border-bottom:1px solid var(--ud-line);margin:0 20px 14px;gap:2px;}
+  #user-dash-overlay .ud-tab{padding:9px 12px;font-size:12px;color:var(--ud-faint);cursor:pointer;
+    border-bottom:2px solid transparent;}
+  #user-dash-overlay .ud-tab.active{color:var(--ud-text);border-bottom-color:var(--ud-dim);}
+  #user-dash-overlay .ud-body{padding:0 20px 20px;}
+  #user-dash-overlay .ud-pane{display:none;}
+  #user-dash-overlay .ud-pane.active{display:block;}
+  #user-dash-overlay .ud-rows{border:1px solid var(--ud-line);border-radius:4px;overflow:hidden;}
+  #user-dash-overlay .ud-txn{display:grid;grid-template-columns:12px 1fr auto;align-items:center;gap:10px;
+    padding:10px 12px;border-bottom:1px solid var(--ud-line);background:var(--ud-panel);}
+  #user-dash-overlay .ud-txn:last-child{border-bottom:none;}
+  #user-dash-overlay .ud-dot{width:6px;height:6px;border-radius:50%;background:var(--ud-dim);}
+  #user-dash-overlay .ud-title{color:var(--ud-text);font-size:12.5px;}
+  #user-dash-overlay .ud-meta{color:var(--ud-faint);font-size:11px;margin-top:2px;}
+  #user-dash-overlay .ud-amt{font-family:var(--ud-mono);font-size:12.5px;color:var(--ud-text);text-align:right;white-space:nowrap;}
+  #user-dash-overlay .ud-empty{text-align:center;padding:28px 16px;color:var(--ud-faint);font-size:11.5px;line-height:1.7;}
+</style>
 <div id="user-dash-overlay"
      style="display:none;position:fixed;inset:0;z-index:10000;
             background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
             align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;
-              box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
+  <div class="ud-card">
 
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+    <div class="ud-head">
       <div style="display:flex;align-items:center;gap:10px">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line>
         </svg>
-        <span style="font-size:14px;font-weight:700;color:#111">내 GDC 대시보드</span>
+        <span>내 GDC 대시보드</span>
       </div>
-      <button onclick="closeUserDashboard()"
-              style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:22px;line-height:1;padding:2px 6px">✕</button>
+      <button class="ud-close" onclick="closeUserDashboard()">✕</button>
     </div>
 
-    <div id="user-dash-lookup" style="padding:32px 28px">
-      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">
-        GDC 충전 시 사용한 전화번호로 본인 확인 후 잔액과 구독 상태를 확인할 수 있습니다.
+    <div id="user-dash-lookup" style="padding:28px 24px">
+      <div style="font-size:12.5px;color:var(--ud-dim);margin-bottom:14px;line-height:1.6">
+        GDC 충전 시 사용한 전화번호로 본인 확인 후 잔액과 이용 내역을 확인할 수 있습니다.
       </div>
-      <input id="user-dash-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel"
-             style="width:100%;padding:11px 14px;border:1px solid #d1d5db;
-                    border-radius:10px;font-size:16px;outline:none;font-family:inherit;
-                    box-sizing:border-box;display:block;margin-bottom:10px">
-      <div id="user-dash-err" style="display:none;color:#dc2626;font-size:12.5px;margin-bottom:10px"></div>
-      <button id="user-dash-btn" onclick="_userDashRequestOtp()"
-              style="width:100%;padding:11px;background:#2563eb;color:#fff;border:none;
-                     border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">인증번호 받기</button>
+      <input id="user-dash-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel">
+      <div id="user-dash-err" class="ud-err"></div>
+      <button id="user-dash-btn" class="ud-btn primary" onclick="_userDashRequestOtp()">인증번호 받기</button>
     </div>
 
-    <div id="user-dash-otp" style="display:none;padding:32px 28px">
-      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6">
+    <div id="user-dash-otp" style="display:none;padding:28px 24px">
+      <div style="font-size:12.5px;color:var(--ud-dim);margin-bottom:14px;line-height:1.6">
         <span id="user-dash-otp-phone"></span>로 전송된 인증번호 6자리를 입력하세요.
       </div>
       <input id="user-dash-code" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
-             style="width:100%;padding:11px 14px;border:1px solid #d1d5db;
-                    border-radius:10px;font-size:16px;outline:none;font-family:inherit;
-                    letter-spacing:4px;text-align:center;
-                    box-sizing:border-box;display:block;margin-bottom:10px">
-      <div id="user-dash-otp-err" style="display:none;color:#dc2626;font-size:12.5px;margin-bottom:10px"></div>
-      <button id="user-dash-otp-btn" onclick="_userDashVerifyOtp()"
-              style="width:100%;padding:11px;background:#2563eb;color:#fff;border:none;
-                     border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">확인</button>
-      <button onclick="_userDashReset()"
-              style="width:100%;padding:10px;background:none;color:#374151;border:1px solid #d1d5db;
-                     border-radius:10px;font-size:13px;cursor:pointer">다른 번호로 다시 시작</button>
+             style="letter-spacing:4px;text-align:center;">
+      <div id="user-dash-otp-err" class="ud-err"></div>
+      <button id="user-dash-otp-btn" class="ud-btn primary" onclick="_userDashVerifyOtp()">확인</button>
+      <button class="ud-btn" onclick="_userDashReset()">다른 번호로 다시 시작</button>
     </div>
 
-    <div id="user-dash-result" style="display:none;padding:28px 28px 32px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
-        <div style="background:#f9fafb;border-radius:10px;padding:14px">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:4px">GDC 잔액</div>
-          <div id="user-dash-balance" style="font-size:20px;font-weight:700;color:#111">—</div>
+    <div id="user-dash-result" style="display:none;padding-bottom:24px">
+      <div class="ud-balance">
+        <div class="l">GDC 잔액</div>
+        <div class="v" id="user-dash-balance">—</div>
+      </div>
+      <div class="ud-sub" id="user-dash-renew"></div>
+
+      <div class="ud-tabs">
+        <div class="ud-tab active" data-pane="ud-pane-charge">충전</div>
+        <div class="ud-tab" data-pane="ud-pane-usage">이용료</div>
+        <div class="ud-tab" data-pane="ud-pane-buy">구매</div>
+        <div class="ud-tab" data-pane="ud-pane-sell">판매</div>
+      </div>
+      <div class="ud-body">
+        <div class="ud-pane active" id="ud-pane-charge">
+          <div class="ud-rows" id="ud-charge-rows"></div>
         </div>
-        <div style="background:#f9fafb;border-radius:10px;padding:14px">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:4px">구독 상태</div>
-          <div id="user-dash-sub" style="font-size:15px;font-weight:600;color:#111">—</div>
+        <div class="ud-pane" id="ud-pane-usage">
+          <div class="ud-rows" id="ud-usage-rows"></div>
+        </div>
+        <div class="ud-pane" id="ud-pane-buy">
+          <div class="ud-empty">혼디마켓 구매 내역은 아직 실제 데이터와 연결되지 않았습니다.</div>
+        </div>
+        <div class="ud-pane" id="ud-pane-sell">
+          <div class="ud-empty">혼디마켓 판매 내역은 아직 실제 데이터와 연결되지 않았습니다.</div>
         </div>
       </div>
-      <div id="user-dash-renew" style="font-size:12.5px;color:#6b7280;margin-bottom:18px"></div>
-      <button onclick="_userDashReset()"
-              style="width:100%;padding:10px;background:none;color:#374151;border:1px solid #d1d5db;
-                     border-radius:10px;font-size:13px;cursor:pointer">다른 번호로 조회</button>
+      <div style="padding:0 20px">
+        <button class="ud-btn" onclick="_userDashReset()">다른 번호로 조회</button>
+      </div>
     </div>
 
   </div>
@@ -2254,6 +2317,10 @@ function _userDashReset() {
   document.getElementById('user-dash-otp-err').style.display = 'none';
   document.getElementById('user-dash-phone').value = '';
   document.getElementById('user-dash-code').value = '';
+  document.getElementById('ud-charge-rows').innerHTML = '';
+  document.getElementById('ud-usage-rows').innerHTML = '';
+  document.querySelectorAll('#user-dash-overlay .ud-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('#user-dash-overlay .ud-pane').forEach((p, i) => p.classList.toggle('active', i === 0));
 }
 // 국내 전화번호(010-0000-0000 등)를 +82 e164로 변환 — handlePhoneOtpRequest가
 // 기대하는 형식과 동일한 관례(맨 앞 0을 유지한 채 +82를 붙임).
@@ -2330,13 +2397,13 @@ async function _userDashVerifyOtp() {
       err.style.display = 'block';
       return;
     }
-    document.getElementById('user-dash-balance').textContent = (balData.balance ?? 0).toLocaleString() + ' GDC';
-    document.getElementById('user-dash-sub').textContent =
-      balData.subscribed ? (balData.tier_name || balData.tier || '구독중') : '미구독';
+    document.getElementById('user-dash-balance').textContent = (balData.balance ?? 0).toLocaleString();
+    const subLabel = balData.subscribed ? (balData.tier_name || balData.tier || '구독중') : '미구독';
     document.getElementById('user-dash-renew').textContent =
-      balData.renews_at ? `다음 갱신일: ${balData.renews_at}` : '';
+      subLabel + (balData.renews_at ? ` · 다음 결제 ${balData.renews_at}` : '');
     document.getElementById('user-dash-otp').style.display = 'none';
     document.getElementById('user-dash-result').style.display = 'block';
+    if (balData.guid) _userDashLoadHistory(balData.guid);
   } catch (e) {
     err.textContent = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
     err.style.display = 'block';
@@ -2344,6 +2411,55 @@ async function _userDashVerifyOtp() {
     btn.disabled = false; btn.textContent = '확인';
   }
 }
+
+// 3단계 — guid로 충전·이용료 내역 조회 (공개 조회 엔드포인트, /balance-status·
+// /subscription/status와 같은 관례). 구매·판매(P2P)는 아직 백엔드에
+// 연결되지 않아 화면에 안내 문구만 둔다.
+async function _userDashLoadHistory(guid) {
+  const chargeBox = document.getElementById('ud-charge-rows');
+  const usageBox  = document.getElementById('ud-usage-rows');
+  chargeBox.innerHTML = '<div class="ud-empty">불러오는 중…</div>';
+  usageBox.innerHTML  = '<div class="ud-empty">불러오는 중…</div>';
+  try {
+    const res  = await fetch(`${WORKER_URL}/user/gdc-history?guid=${encodeURIComponent(guid)}&limit=30`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.ok) {
+      chargeBox.innerHTML = '<div class="ud-empty">내역을 불러오지 못했습니다.</div>';
+      usageBox.innerHTML  = '<div class="ud-empty">내역을 불러오지 못했습니다.</div>';
+      return;
+    }
+    const fmtDate = iso => { try { return new Date(iso).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}); } catch { return iso; } };
+    const charges = (data.history || []).filter(h => h.type === 'deposit');
+    const usages  = (data.history || []).filter(h => h.type === 'ai_usage_charge');
+
+    chargeBox.innerHTML = charges.length ? charges.map(h => `
+      <div class="ud-txn">
+        <div class="ud-dot"></div>
+        <div><div class="ud-title">${(h.memo || '').startsWith('signup_bonus:') ? '가입 축하 충전' : '유상 충전'}</div>
+             <div class="ud-meta">${fmtDate(h.created)}</div></div>
+        <div class="ud-amt">+${(h.amount_gdc ?? 0).toLocaleString()}</div>
+      </div>`).join('') : '<div class="ud-empty">충전 내역이 없습니다.</div>';
+
+    usageBox.innerHTML = usages.length ? usages.map(h => `
+      <div class="ud-txn">
+        <div class="ud-dot"></div>
+        <div><div class="ud-title">${h.model ? `AI 사용 (${h.model})` : 'AI 사용료'}</div>
+             <div class="ud-meta">${fmtDate(h.created)}</div></div>
+        <div class="ud-amt">−${(h.amount_gdc ?? 0).toLocaleString()}</div>
+      </div>`).join('') : '<div class="ud-empty">이용료 내역이 없습니다.</div>';
+  } catch (e) {
+    chargeBox.innerHTML = '<div class="ud-empty">서버에 연결할 수 없습니다.</div>';
+    usageBox.innerHTML  = '<div class="ud-empty">서버에 연결할 수 없습니다.</div>';
+  }
+}
+document.querySelectorAll('#user-dash-overlay .ud-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#user-dash-overlay .ud-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#user-dash-overlay .ud-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.pane).classList.add('active');
+  });
+});
 window._openUserDashboard = _openUserDashboard;
 
 // ── 관리자 대시보드 숨김 진입 ────────────────────────────────

@@ -395,6 +395,11 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
 // 반대로 guid가 이미 주어진 상태에서 그 프로필의 phone과 일치하는지만
 // 확인한다 — 그래서 로직을 그대로 호출하지 않고 이 필요에 맞게 다시
 // 작성했다).
+//
+// (2026-09-01 추가) 응답에 guid를 포함시킨다 — 프론트가 이어서
+// GET /user/gdc-history?guid=... 를 호출해 충전·이용료 내역을 받아오기
+// 위함이다(전화번호 인증을 매 요청마다 반복하지 않도록, 이 1회 조회
+// 결과의 guid를 프론트가 세션 동안만 들고 있는다).
 async function handleUserGdcBalance(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -445,6 +450,7 @@ async function handleUserGdcBalance(request, env, corsHeaders) {
     const subscribed = !!(sub && sub.status === 'active');
     return new Response(JSON.stringify({
       ok: true,
+      guid,
       balance: balanceGdc ?? 0,
       subscribed,
       tier: subscribed ? sub.tier : null,
@@ -454,6 +460,58 @@ async function handleUserGdcBalance(request, env, corsHeaders) {
   } catch (e) {
     return _err(502, 'L1_ERROR', '잔액 조회 실패: ' + e.message, corsHeaders);
   }
+}
+
+// GET /user/gdc-history?guid=&limit=<기본30,최대100> — 일반 사용자용 입금·
+// AI 사용료 내역 (2026-09-01 신설). handleAdminUserHistory와 완전히 같은
+// 필터(block_type/seller_guid/buyer_guid 관례)와 매핑 로직을 재사용하되,
+// 관리자 인증(JWT)이 없다 — 대신 이미 있는 GET /balance-status,
+// GET /subscription/status와 동일한 관례(guid만으로 조회, 서명 요구
+// 없음)를 그대로 따랐다. 더 강한 인증이 필요하다고 판단되면 이 세
+// 엔드포인트를 한꺼번에 강화해야 한다(TODO로 남김).
+//
+// 혼디마켓 P2P 구매·판매 내역은 포함하지 않는다 — handleAdminGdcSummary
+// 주석에 이미 남긴 것과 같은 이유로, 그 거래가 blocks에 어떤
+// block_type·필드로 기록되는지 이 저장소에서 아직 확인하지 못했다.
+async function handleUserGdcHistory(request, url, env, corsHeaders) {
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  let limit = parseInt(url.searchParams.get('limit') || '30', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 30;
+  if (limit > 100) limit = 100;
+
+  let items = [];
+  try {
+    const token = await _l1AdminToken(env);
+    const esc = guid.replace(/'/g, "\\'");
+    const filter = `(seller_guid='${esc}'&&block_type='deposit')||(buyer_guid='${esc}'&&block_type='ai_usage_charge')`;
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/blocks/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return _err(502, 'L1_ERROR', `L1 조회 실패 (HTTP ${res.status})`, corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    items = data.items || [];
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  const history = items.map(rec => {
+    let out = {};
+    try { out = (JSON.parse(rec.outputs || '[]'))[0] || {}; } catch (e) { /* 무시 */ }
+    const isDeposit = rec.block_type === 'deposit';
+    return {
+      type: isDeposit ? 'deposit' : 'ai_usage_charge',
+      created: rec.created,
+      amount_gdc: out.amount ?? null,
+      krw_amount: out.krw_amount ?? null,
+      model: !isDeposit ? (out.model || null) : null,
+      memo: out.memo || null,
+    };
+  });
+
+  return new Response(JSON.stringify({ ok: true, guid, count: history.length, history }),
+    { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -12348,6 +12406,12 @@ export default {
     // phone_verify_token(전화번호 소유 증명)을 요구한다.
     if (pathname === '/user/gdc-balance' && request.method === 'POST')
       return handleUserGdcBalance(request, env, corsHeaders);
+
+    // GET /user/gdc-history — 일반 사용자용 충전·이용료 내역 (2026-09-01
+    // 신설). /balance-status·/subscription/status와 동일 관례(guid만으로
+    // 조회).
+    if (pathname === '/user/gdc-history' && request.method === 'GET')
+      return handleUserGdcHistory(request, url, env, corsHeaders);
     // (2026-07-20 신설: 기기 간 지갑 이전 — PC가 폰과 완전히 같은 개인키를
     // 갖도록, SMS 대신 웹푸시로 폰을 깨우고 폰 화면에 뜬 짧은 코드를 PC에
     // 입력받아 페어링한 뒤, X25519 봉투 암호화로 개인키 자체를 옮긴다.
