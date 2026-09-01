@@ -29549,27 +29549,54 @@ async function _kmailChatCreateCampaign(env, guid, parsed) {
   const guidEsc = guid.replace(/'/g, "\\'");
 
   const contactIds = [];
+  let newContactCount = 0;
   for (const r of validRecipients) {
     const emailEsc = r.email.replace(/'/g, "\\'");
+    const newTags = Array.isArray(r.tags) ? r.tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim()) : [];
     const filter = encodeURIComponent(`owner_user_guid='${guidEsc}' && email='${emailEsc}' && status='confirmed'`);
     const findRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records?filter=${filter}&perPage=1`, { headers });
     const findData = await findRes.json().catch(() => ({ items: [] }));
+
     if (findData.items && findData.items[0]) {
-      contactIds.push(findData.items[0].id);
+      // 이미 주소록에 있는 사람 — 지속적으로 갱신되어야 하므로(주피터
+      // 지시), 이번에 새로 알아낸 정보로 빈 필드만 채우고 태그는
+      // 합집합으로 누적한다. 기존에 채워진 값은 덮어쓰지 않는다 —
+      // 검색 결과 하나로 사용자가 이미 손으로 다듬어둔 정보를 조용히
+      // 되돌리면 안 되기 때문(직접 고치는 건 /kmail/contacts/update 몫).
+      const existing = findData.items[0];
+      const patch = {};
+      if (!existing.name && r.name) patch.name = r.name;
+      if (!existing.org && r.org) patch.org = r.org;
+      if (!existing.dept && r.dept) patch.dept = r.dept;
+      if (!existing.occupation && r.occupation) patch.occupation = r.occupation;
+      if (newTags.length) {
+        const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
+        if (mergedTags.length !== (existing.tags || []).length) patch.tags = mergedTags;
+      }
+      if (Object.keys(patch).length > 0) {
+        await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records/${existing.id}`, {
+          method: 'PATCH', headers, body: JSON.stringify(patch),
+        }).catch(e => console.warn('[K-Mail Campaign] 기존 연락처 보강 실패(계속 진행):', e.message));
+      }
+      contactIds.push(existing.id);
       continue;
     }
+
     const createRes = await fetch(`${L1_DEFAULT}/api/collections/kmail_contacts/records`, {
       method: 'POST', headers,
       body: JSON.stringify({
         owner_user_guid: guid, name: r.name || '', org: r.org || '', dept: r.dept || '',
         occupation: r.occupation || '', relationship: r.relationship || '',
-        email: r.email, tags: [], source_url: '', confidence: null,
+        email: r.email, tags: newTags,
+        source_url: (r.source_url || '').slice(0, 500),
+        confidence: typeof r.confidence === 'number' ? r.confidence : null,
         status: 'confirmed', added_via_query: '(K-Mail 대화 중 직접 확정)',
       }),
     });
     if (!createRes.ok) throw new Error(`연락처 생성 실패(${r.email})`);
     const created = await createRes.json();
     contactIds.push(created.id);
+    newContactCount++;
   }
 
   const record = {
@@ -29585,7 +29612,7 @@ async function _kmailChatCreateCampaign(env, guid, parsed) {
   if (!campRes.ok) throw new Error('캠페인 생성 실패');
   const campaign = await campRes.json();
 
-  return { campaignId: campaign.id, recipientCount: contactIds.length, sendAt: record.send_at };
+  return { campaignId: campaign.id, recipientCount: contactIds.length, sendAt: record.send_at, newContactCount };
 }
 
 async function _kmailChatCreateRule(env, guid, ruleText) {
@@ -29745,9 +29772,12 @@ async function handleKmailChat(request, env, corsHeaders, ctx) {
     }
     try {
       const result = await _kmailChatCreateCampaign(env, guid, parsed);
+      const addressBookNote = result.newContactCount > 0
+        ? ` (신규 ${result.newContactCount}명은 주소록에도 등록했습니다)`
+        : '';
       return new Response(JSON.stringify({
         ok: true,
-        reply: `${cleanReplyText}\n\n✅ 예약 완료 — 수신자 ${result.recipientCount}명, 발송 예정: ${result.sendAt}`,
+        reply: `${cleanReplyText}\n\n✅ 예약 완료 — 수신자 ${result.recipientCount}명, 발송 예정: ${result.sendAt}${addressBookNote}`,
         action: { type: 'campaign_created', campaign_id: result.campaignId },
       }), { status: 200, headers: corsHeaders });
     } catch (e) {
