@@ -1,0 +1,42 @@
+[
+  {
+    "no": 1,
+    "title": "phone_verify_token 없이 /klaw/relay 호출 — 로그인 게이트가 막아야 함",
+    "endpoint": "relay",
+    "phone_verify_token": null,
+    "expected_http_status": 400,
+    "expected_error": "LOGIN_REQUIRED",
+    "expect_nonempty_message": true,
+    "finding": "전화번호 로그인 필수화(2026-09-02) — 토큰 없으면 DeepSeek 호출 전에 차단돼야 함"
+  },
+  {
+    "no": 2,
+    "title": "형식이 아예 잘못된 phone_verify_token(점 없음) — /klaw/relay",
+    "endpoint": "relay",
+    "phone_verify_token": "this-is-not-a-real-token",
+    "expected_http_status": 400,
+    "expected_error": "TOKEN_MALFORMED",
+    "expect_nonempty_message": true,
+    "finding": "토큰 파싱 단계에서 안전하게 거부돼야 함(서버 크래시·500 아님)"
+  },
+  {
+    "no": 3,
+    "title": "형식은 맞지만 서명이 조작된 phone_verify_token — /klaw/relay",
+    "endpoint": "relay",
+    "phone_verify_token": "+8201000000000:9999999999999.deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "expected_http_status": 401,
+    "expected_error": "TOKEN_INVALID",
+    "expect_nonempty_message": true,
+    "finding": "서명 위조 시도가 401로 명확히 거부되는지 — GDC 잔고 도용 경로 재확인"
+  },
+  {
+    "no": 4,
+    "title": "phone_verify_token 없이 /klaw/quota 호출",
+    "endpoint": "quota",
+    "phone_verify_token": null,
+    "expected_http_status": 400,
+    "expected_error": null,
+    "expect_nonempty_message": true,
+    "finding": "handleKlawQuota도 클라이언트 guid 대신 토큰을 요구하는지(사고실험 발견 #2 회귀 확인) — 에러 코드명은 LOGIN_REQUIRED가 아니라 MISSING_FIELD일 수 있어 값 비교는 하지 않고 message 존재만 확인"
+  }
+]
