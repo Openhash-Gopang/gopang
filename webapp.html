@@ -1534,11 +1534,18 @@ async function openGdcDashboard() {
     const sub  = await subRes.json().catch(() => null);
     const hist = await histRes.json().catch(() => null);
 
-    document.getElementById('gdc-dash-balance').textContent =
-      (bal?.ok ? (bal.balance_gdc ?? 0) : 0).toLocaleString();
-    document.getElementById('gdc-dash-sub').textContent = sub?.subscribed
-      ? (sub.tier_name || sub.tier || '구독중') + (sub.next_billing_at ? ` · 다음 결제 ${sub.next_billing_at}` : '')
-      : '미구독';
+    if (balRes.ok && bal) {
+      document.getElementById('gdc-dash-balance').textContent = (bal.balance_gdc ?? 0).toLocaleString();
+    } else {
+      document.getElementById('gdc-dash-balance').textContent = '—';
+    }
+    if (subRes.ok && sub) {
+      document.getElementById('gdc-dash-sub').textContent = sub.subscribed
+        ? (sub.tier_name || sub.tier || '구독중') + (sub.next_billing_at ? ` · 다음 결제 ${sub.next_billing_at}` : '')
+        : '미구독';
+    } else {
+      document.getElementById('gdc-dash-sub').textContent = '구독 상태를 불러오지 못했습니다';
+    }
 
     const fmtDate = iso => { try { return new Date(iso).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}); } catch { return iso; } };
     const chargeBox = document.getElementById('gd-charge-rows');
