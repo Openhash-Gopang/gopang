@@ -2551,9 +2551,21 @@ function buildCorsHeaders(corsOrigin, extra = {}) {
   };
 }
 
+// ★ 2026-09-02 사고실험으로 발견·전역 수정 — 지금까지 이 함수의 detail
+// 인자는 항상 사람이 읽을 한국어 메시지였는데, 응답 JSON에는 detail
+// 이름으로만 담겨 있었다. 그런데 여러 클라이언트(webapp.html의
+// _klawCall/_pumpSSE, desktop.html의 phone-otp 플로우 등)는 관례상
+// data.message를 먼저 읽는다 — 그 결과 이 함수를 거친 모든 에러 응답이
+// 실제로는 에러 코드 문자열(예: "LOGIN_REQUIRED")이나 클라이언트 쪽
+// 하드코딩 기본 문구만 노출되고, 서버가 공들여 작성한 구체적 안내문은
+// 한 번도 화면에 뜬 적이 없었다(K-Law 로그인 게이트 사고실험 중 발견).
+// detail은 하위호환을 위해 그대로 남기고 message를 추가하는 것으로
+// 해결한다 — 기존 detail 소비자는 영향 없고, message를 읽는 소비자는
+// 이제부터 실제 메시지를 받는다. 이 함수를 거치는 모든 호출부(수백
+// 곳)가 재배포만으로 한꺼번에 고쳐진다.
 function _err(status, code, detail, corsHeaders) {
   return new Response(
-    JSON.stringify({ ok: false, error: code, detail }),
+    JSON.stringify({ ok: false, error: code, message: detail, detail }),
     { status, headers: corsHeaders }
   );
 }
@@ -3982,7 +3994,9 @@ async function handleKlawQuota(request, url, env, corsHeaders) {
       : resolved.code === 'L1_ERROR' ? 502
       : (resolved.code === 'MISSING_FIELD' || resolved.code === 'TOKEN_MALFORMED') ? 400
       : 401;
-    return new Response(JSON.stringify({ ok: false, error: resolved.code, message: resolved.message }), { status, headers: corsHeaders });
+    // 2026-09-02 — _err()가 이제 message도 함께 반환하므로(위 _err 선언부
+    // 참고) 더 이상 커스텀 Response를 만들 필요가 없다.
+    return _err(status, resolved.code, resolved.message, corsHeaders);
   }
   const guid = resolved.guid;
   try {
@@ -18293,14 +18307,9 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       : 401; // TOKEN_EXPIRED, TOKEN_INVALID
     const code = _klawAuth.code === 'MISSING_FIELD' ? 'LOGIN_REQUIRED' : _klawAuth.code;
     const message = _klawAuth.code === 'MISSING_FIELD' ? '전화번호 로그인이 필요합니다.' : _klawAuth.message;
-    // ★ 2026-09-02 사고실험으로 발견 — _err()는 메시지를 detail 필드에
-    // 담아 반환하는데, 클라이언트(webapp.html _klawCall/_pumpSSE)는
-    // data.message를 먼저 읽는다(handleKlawRelay의 다른 _err() 호출들도
-    // 같은 불일치가 있지만 이번 범위 밖 — 전역 수정은 별도 검토 필요).
-    // 로그인 게이트는 사용자가 즉시 이해해야 하는 안내문이라, 기존
-    // GDC_INSUFFICIENT_BALANCE 응답과 같은 방식으로 message 필드를
-    // 직접 넣어 반환한다.
-    return new Response(JSON.stringify({ ok: false, error: code, message }), { status, headers: corsHeaders });
+    // 2026-09-02 — _err()가 이제 message도 함께 반환하므로(위 _err 선언부
+    // 참고) 더 이상 커스텀 Response를 만들 필요가 없다.
+    return _err(status, code, message, corsHeaders);
   }
   guid = _klawAuth.guid; // 인증된 전화번호 소유자의 guid로 강제 치환
 
