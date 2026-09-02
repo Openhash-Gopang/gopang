@@ -383,6 +383,15 @@ const _STAGE_LABELS = {
   'K-Bank':      '금융 상담',
   'K-Telecom':   '통신 상담',
   'K-Estate':    '부동산 상담',
+  // 2026-09-02 추가 — K-Plan/K-Watch/K-Job을 switch형으로 편입하면서
+  // (_forwardSwitchSP(loader, label)의 label 인자로 'K-Plan'/'K-Watch'/
+  // 'K-Job'이 그대로 들어옴, _handleOrchestrationTags의 label 매핑 참조)
+  // 여기 등록을 빠뜨리면 _friendlyStageLabel이 원문 영문 라벨을 그대로
+  // 반환해 "K-Job 단계로 이동 중…"처럼 사용자에게 노출된다 — 사고실험
+  // 중 발견해 함께 수정.
+  'K-Plan':      '계획 수립',
+  'K-Watch':     '신고 접수',
+  'K-Job':       '구직 상담',
   'AGENT-COMMON': 'AI 비서',
 };
 function _friendlyStageLabel(label) {
