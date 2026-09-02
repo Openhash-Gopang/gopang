@@ -131,6 +131,12 @@ K-Doctor — 독립. K-Health를 상속하지 않는다(제도 대변과 개인 
 - **SP_professional-engineer** → SP_nurse, SP_dietitian을 패턴 참고 사례로 언급
 - **SP_social-worker** → SP_real-estate-agent를 서술 방식 참고 사례로 언급
 - **profile-assistant** → HONDI-CAPABILITIES-COMMON을 참조
+- **k-job** → K-Plan(prompts/k-plan_v1_0.md)·K-Watch(prompts/k-watch_v1_0.md)와
+  동일한 조립 순서(UNIVERSAL-INTEGRITY → UNIVERSAL-common → k-job →
+  job-kr(국가모듈) → agencyPrompt)를 참고 사례로 언급 — 2026-09-02 신설.
+  구직자 개인용 단일 공통 모듈이며, K-Biz-COMMON식 KSIC 업종별 세분화는
+  이번 범위에 포함하지 않는다(§ Q1에 K-Plan·EXPERT 페르소나와의 정체성
+  차이 명시).
 
 ## F. 기계 판독용 엣지 목록 (CI·SP-TREE-GUARDIAN 공통 파싱 대상)
 
@@ -190,6 +196,10 @@ GOV-TIER-IO-SCHEMA -> DATA_REQUIREMENT-SCHEMA
 
 ## 변경 이력
 
+- v1.1 (2026-09-02): k-job(구직자 개인용 구직 보조 AI, 단일 공통
+  모듈) 신설 등록 — E 섹션에 K-Plan·K-Watch를 조립 순서 참고 사례로
+  언급하는 개별 참조로 추가. 아직 sp-catalog.json 최상위 등록만
+  됐을 뿐 worker.js relay·UI wiring은 별도 작업.
 - v1.0 (2026-07-29, 같은 날 F 섹션 추가): 신설. 2026-07-29 감사에서 발견된 16개 파일·33건의
   하드코딩된 SP 상호 참조를 실제로 수정하면서 드러난 관계를 기반으로
   A~E 섹션을 채웠다. A, B 섹션은 기존 문서(check_sp_inheritance.py
