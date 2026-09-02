@@ -1,5 +1,5 @@
 {
-  "AC-PRO-CORE": "AC-PRO-CORE_v1_12.txt",
+  "AC-PRO-CORE": "AC-PRO-CORE_v1_13.txt",
   "AC-FLASH-EXECUTOR": "AC-FLASH-EXECUTOR_v1_0.txt",
   "AC-SHADOW-CORE": "AC-SHADOW-CORE_v1_0.txt",
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.2.txt",
@@ -645,5 +645,7 @@
   "SP-INDUSTRY-TRANSFORM-01": "SP-INDUSTRY-TRANSFORM-01_agriculture_v1.0.txt",
   "SP-INDUSTRY-TRANSFORM-10": "SP-INDUSTRY-TRANSFORM-10_food-manufacturing_v1.0.txt",
   "SP-INDUSTRY-TRANSFORM-56": "SP-INDUSTRY-TRANSFORM-56_restaurants-bars_v1.0.txt",
-  "k-job": "k-job_v1_0.md"
+  "k-job": "k-job_v1_0.md",
+  "k-plan": "k-plan_v1_0.md",
+  "k-watch": "k-watch_v1_0.md"
 }

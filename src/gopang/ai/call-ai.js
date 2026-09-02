@@ -285,11 +285,54 @@ export async function _loadKEstateSP() {
     return null;
   }
 }
+// K-Plan/K-Watch/K-Job 로더 — 2026-09-02 신설. K-Bank/K-Telecom/K-Estate와
+// 동일한 이유(별도 저장소·도메인 불필요)로 처음부터 type:'switch'로
+// 설계된 세 SP(prompts/k-plan_v1_0.md·k-watch_v1_0.md·k-job_v1_0.md)를
+// 이 세션 안 시스템 전환형으로 연결한다. sp_key는 SP-NN 번호 체계가
+// 아니라 k-business와 동일한 평문 이름(sp-catalog.json에 'k-plan'·
+// 'k-watch'·'k-job' 키로 등록 — k-plan/k-watch는 이번에 함께 신규
+// 등록했다, sp-catalog.json 참조).
+let _kPlanSpCache = null;
+export async function _loadKPlanSP() {
+  if (_kPlanSpCache) return _kPlanSpCache;
+  try {
+    _kPlanSpCache = await _loadSpByKey('k-plan', 'K-Plan');
+    return _kPlanSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Plan SP 로드 실패:', e.message);
+    return null;
+  }
+}
+let _kWatchSpCache = null;
+export async function _loadKWatchSP() {
+  if (_kWatchSpCache) return _kWatchSpCache;
+  try {
+    _kWatchSpCache = await _loadSpByKey('k-watch', 'K-Watch');
+    return _kWatchSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Watch SP 로드 실패:', e.message);
+    return null;
+  }
+}
+let _kJobSpCache = null;
+export async function _loadKJobSP() {
+  if (_kJobSpCache) return _kJobSpCache;
+  try {
+    _kJobSpCache = await _loadSpByKey('k-job', 'K-Job');
+    return _kJobSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Job SP 로드 실패:', e.message);
+    return null;
+  }
+}
 // switch 타입 GWP id → 로더 매핑(아래 _parseAgentTags의 GWP 분기가 참조)
 const SWITCH_SP_LOADERS = {
   kbank: _loadKBankSP,
   ktelecom: _loadKTelecomSP,
   kestate: _loadKEstateSP,
+  kplan: _loadKPlanSP,
+  kwatch: _loadKWatchSP,
+  kjob: _loadKJobSP,
 };
 
 // ★ 2026-08-01 신설 — 자동복구 재진입 가드. 라이브 검증(_updateStreamBubble
@@ -1629,11 +1672,17 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   // 이 세션 안에서 시스템 프롬프트만 바꾸는 것으로 충분하다. 하나의
   // 정규식으로 세 태그를 함께 매칭 — 로더는 SWITCH_SP_LOADERS에서
   // 조회(새 서비스 추가 시 이 배열에 한 줄만 추가하면 됨).
-  const switchMatch = fullReply.match(/\[CALL_(KBANK|KTELECOM|KESTATE):\s*query=([^\]]+)\]/);
+  // ── K-Bank/K-Telecom/K-Estate/K-Plan/K-Watch/K-Job 위임 — 2026-07-12
+  // 신설, 2026-09-02 K-Plan/K-Watch/K-Job 추가 ──
+  // K-Search와 동일한 시스템 전환형("모든 SP가 별도 저장소가 필요한
+  // 것은 아니다" — 주피터님 지적으로 재설계). 하나의 정규식으로 여섯
+  // 태그를 함께 매칭 — 로더는 SWITCH_SP_LOADERS에서 조회(새 서비스
+  // 추가 시 이 배열에 한 줄만 추가하면 됨).
+  const switchMatch = fullReply.match(/\[CALL_(KBANK|KTELECOM|KESTATE|KPLAN|KWATCH|KJOB):\s*query=([^\]]+)\]/);
   if (switchMatch) {
     const svcId = switchMatch[1].toLowerCase();
     const loader = SWITCH_SP_LOADERS[svcId];
-    const label = { kbank: 'K-Bank', ktelecom: 'K-Telecom', kestate: 'K-Estate' }[svcId];
+    const label = { kbank: 'K-Bank', ktelecom: 'K-Telecom', kestate: 'K-Estate', kplan: 'K-Plan', kwatch: 'K-Watch', kjob: 'K-Job' }[svcId];
     if (loader) {
       console.log(`[Orchestration] AC 최상위 CALL_${switchMatch[1]} 감지 — ${label}로 전달 전환`);
       await _updateBubble(_stripInternalTags(fullReply));
@@ -4559,7 +4608,7 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         // 서로 덮어쓸 수 없다. 그래도 실제 스트리밍/정지 버튼 UX가 기대대로
         // 되는지는 실배포 환경에서 한 번은 수동 확인 권장(이 하네스는
         // DOM/fetch가 최소 스텁이라 실제 스트림 타이밍까지는 검증 못 함).
-        const label = { ktelecom: 'K-Telecom', kestate: 'K-Estate', kbank: 'K-Bank' }[svcId];
+        const label = { ktelecom: 'K-Telecom', kestate: 'K-Estate', kbank: 'K-Bank', kplan: 'K-Plan', kwatch: 'K-Watch', kjob: 'K-Job' }[svcId];
         const loader = SWITCH_SP_LOADERS[svcId];
         if (_gwpSwitchRecoveryInFlight) {
           // 재진입 — 지금 막 자동복구로 전환한 SP 자신의 응답이 다시
