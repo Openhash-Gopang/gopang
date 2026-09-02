@@ -131,12 +131,20 @@ K-Doctor — 독립. K-Health를 상속하지 않는다(제도 대변과 개인 
 - **SP_professional-engineer** → SP_nurse, SP_dietitian을 패턴 참고 사례로 언급
 - **SP_social-worker** → SP_real-estate-agent를 서술 방식 참고 사례로 언급
 - **profile-assistant** → HONDI-CAPABILITIES-COMMON을 참조
-- **k-job** → K-Plan(prompts/k-plan_v1_0.md)·K-Watch(prompts/k-watch_v1_0.md)와
+- **k-plan** → k-watch·k-job과 동일한 조립 순서(UNIVERSAL-INTEGRITY →
+  UNIVERSAL-common → k-plan → plan-kr(국가모듈) → agencyPrompt)로 설계된
+  단일 공통 SP. 2026-09-02 gwp-registry.js·call-ai.js(SWITCH_SP_LOADERS)에
+  편입 — type:'switch', 태그 `[CALL_KPLAN: query=...]`.
+- **k-watch** → k-plan과 동일한 조립 순서로 설계된 단일 공통 SP.
+  2026-09-02 gwp-registry.js·call-ai.js(SWITCH_SP_LOADERS)에 편입 —
+  type:'switch', 태그 `[CALL_KWATCH: query=...]`.
+- **k-job** → k-plan(prompts/k-plan_v1_0.md)·k-watch(prompts/k-watch_v1_0.md)와
   동일한 조립 순서(UNIVERSAL-INTEGRITY → UNIVERSAL-common → k-job →
   job-kr(국가모듈) → agencyPrompt)를 참고 사례로 언급 — 2026-09-02 신설.
   구직자 개인용 단일 공통 모듈이며, K-Biz-COMMON식 KSIC 업종별 세분화는
   이번 범위에 포함하지 않는다(§ Q1에 K-Plan·EXPERT 페르소나와의 정체성
-  차이 명시).
+  차이 명시). 2026-09-02 gwp-registry.js·call-ai.js(SWITCH_SP_LOADERS)에
+  편입 — type:'switch', 태그 `[CALL_KJOB: query=...]`.
 
 ## F. 기계 판독용 엣지 목록 (CI·SP-TREE-GUARDIAN 공통 파싱 대상)
 
