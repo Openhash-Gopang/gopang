@@ -379,6 +379,53 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
   }), { status: 200, headers: corsHeaders });
 }
 
+// ── phone_verify_token → guid 해석 (2026-09-02 신설) ────────────────
+// handleUserGdcBalance(2026-09-01)가 이미 쓰던 "토큰 파싱·서명 검증 →
+// profiles를 전화번호로 조회해 guid 도출" 로직과 사실상 동일한 필요가
+// K-Law 로그인 게이트(아래 handleKlawRelay)에도 생겨 별도 함수로 뺐다.
+// handleUserGdcBalance 자체는 이미 라이브로 검증된 상태라 건드리지
+// 않고 그대로 둔다 — 이 함수는 K-Law 쪽 신규 호출부에서만 쓴다(중복
+// ~15줄은 감수. 두 곳이 갈라질 위험보다 기존 동작 검증된 코드를
+// 안 건드리는 쪽을 우선함 — 후속 정리 여지로 남겨둠).
+async function _resolveGuidFromPhoneVerifyToken(env, phoneVerifyToken) {
+  if (!phoneVerifyToken) return { ok: false, code: 'MISSING_FIELD', message: 'phone_verify_token 필수' };
+  if (!env.PHONE_VERIFY_SECRET) return { ok: false, code: 'SECRET_NOT_SET', message: 'PHONE_VERIFY_SECRET이 설정되지 않았습니다' };
+
+  const dotIdx = String(phoneVerifyToken).lastIndexOf('.');
+  if (dotIdx < 0) return { ok: false, code: 'TOKEN_MALFORMED', message: 'phone_verify_token 형식 오류' };
+  const payload = phoneVerifyToken.slice(0, dotIdx);
+  const sig     = phoneVerifyToken.slice(dotIdx + 1);
+  const firstColon = payload.indexOf(':');
+  const lastColon  = payload.lastIndexOf(':');
+  if (firstColon < 0 || lastColon < firstColon) return { ok: false, code: 'TOKEN_MALFORMED', message: 'phone_verify_token 페이로드 오류' };
+  const e164 = payload.slice(0, firstColon);
+  const exp  = Number(payload.slice(lastColon + 1));
+  if (!e164 || !Number.isFinite(exp)) return { ok: false, code: 'TOKEN_MALFORMED', message: 'phone_verify_token 페이로드 오류' };
+  if (Date.now() > exp) return { ok: false, code: 'TOKEN_EXPIRED', message: '전화번호 인증 토큰이 만료됐습니다' };
+  const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+  if (expectedSig !== sig) return { ok: false, code: 'TOKEN_INVALID', message: '전화번호 인증 토큰 서명이 유효하지 않습니다' };
+
+  const domesticPhone = e164.replace(/^\+82/, '');
+  const phoneDigits    = domesticPhone.replace(/\D/g, '');
+  if (!phoneDigits) return { ok: false, code: 'TOKEN_MALFORMED', message: 'phone_verify_token의 전화번호가 올바르지 않습니다' };
+
+  try {
+    const l1Token = await _l1AdminToken(env);
+    const filter  = encodeURIComponent(`phone='${phoneDigits}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${l1Token}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const profile = data.items?.[0];
+    if (!profile) return { ok: false, code: 'PROFILE_NOT_FOUND', message: '이 전화번호로 등록된 프로필이 없습니다' };
+    return { ok: true, guid: profile.guid, e164 };
+  } catch (e) {
+    return { ok: false, code: 'L1_ERROR', message: '전화번호 인증 조회 실패: ' + e.message };
+  }
+}
+
 // POST /user/gdc-balance { phone_verify_token } — 일반 후원자용 GDC 잔액·
 // 구독 조회 (2026-09-01 신설, 주피터 지시). desktop.html의 "함께
 // 완성하기" 섹션에서 후원자가 입금 후 자기 잔액을 확인하려던 링크가
@@ -1298,10 +1345,15 @@ function _billingMultiplier(env) {
   return Number.isFinite(v) && v > 0 ? v : BILLING_MULTIPLIER_DEFAULT;
 }
 // usage: DeepSeek 응답의 usage 필드 그대로. priceTier: 'hondi-flash' | 'hondi-pro' 가격표 키.
+// multiplierOverride: 있으면 _billingMultiplier(env)(전역 공유 배수) 대신 이 값을
+// 쓴다 — 2026-09-02 신설, K-Law 베타 기간 전용 배수(flash 10배·pro 5배, 전역
+// 기본과 다름)를 위해 추가. 넘기지 않으면 기존과 100% 동일하게 동작(하위호환).
 // 반환: apiCostKRW(실비) / billedKRW(실제 청구·예산 차감액) / multiplier(적용된 배수)
-function computeBilledKRW(env, usage, priceTier) {
+function computeBilledKRW(env, usage, priceTier, multiplierOverride) {
   const apiCostKRW = _deepseekUsageToKRW(usage, priceTier);
-  const multiplier = _billingMultiplier(env);
+  const multiplier = (Number.isFinite(multiplierOverride) && multiplierOverride > 0)
+    ? multiplierOverride
+    : _billingMultiplier(env);
   return { apiCostKRW, billedKRW: apiCostKRW * multiplier, multiplier };
 }
 
@@ -3912,9 +3964,27 @@ async function handleKlawSessionsSave(request, env, corsHeaders) {
 // 계산식(klaw:steps:${guid}:${day})을 그대로 재사용해, "재생성 버튼도
 // 오늘 3회 한도를 소진시킨다"는 사실을 클라이언트가 미리 보여줄 수
 // 있게 한다. 이 조회 자체는 카운트를 늘리지 않는다(읽기 전용).
+// ★ 2026-09-02 사고실험으로 발견·수정 — handleKlawRelay가 전화번호
+// 로그인 도입 이후로는 클라이언트가 보낸 guid를 버리고
+// phone_verify_token에서 도출한 guid로 stepKey를 기록한다(위 참고).
+// 이 조회 엔드포인트가 여전히 URL의 guid 파라미터를 그대로 신뢰하면,
+// 클라이언트 기기 guid와 실제 과금 guid가 달라져 있는 그대로
+// "오늘 3/3 남음"만 영원히 보여주는(실제 사용량을 절대 못 따라잡는)
+// 표시 버그가 생긴다. 그래서 이 엔드포인트도 phone_verify_token을
+// 요구하도록 바꾸고, guid는 relay와 동일한 방식으로 여기서 직접
+// 도출한다 — 표시일 뿐인 조회라도 조회 대상 자체가 틀리면 의미가 없다.
 async function handleKlawQuota(request, url, env, corsHeaders) {
-  const guid = (url.searchParams.get('guid') || '').trim();
-  if (!guid) return _err(400, 'MISSING_GUID', 'guid 필수', corsHeaders);
+  const phoneVerifyToken = (url.searchParams.get('phone_verify_token') || '').trim();
+  const resolved = await _resolveGuidFromPhoneVerifyToken(env, phoneVerifyToken);
+  if (!resolved.ok) {
+    const status = resolved.code === 'PROFILE_NOT_FOUND' ? 404
+      : resolved.code === 'SECRET_NOT_SET' ? 500
+      : resolved.code === 'L1_ERROR' ? 502
+      : (resolved.code === 'MISSING_FIELD' || resolved.code === 'TOKEN_MALFORMED') ? 400
+      : 401;
+    return new Response(JSON.stringify({ ok: false, error: resolved.code, message: resolved.message }), { status, headers: corsHeaders });
+  }
+  const guid = resolved.guid;
   try {
     const day = _todayKey();
     const stepKey = `klaw:steps:${guid}:${day}`;
@@ -6138,10 +6208,10 @@ async function _l1CreateUsageLog(env, { guid, serviceId, tier, model, hitTokens,
 // 무료 한도가 30시간마다 조용히 리셋되는 심각한 회귀가 생긴다.
 async function _recordAiUsage(env, ctx, {
   guid, serviceId, tier, priceTier, model, usage,
-  logTag, extraLogFields = {}, spendKeys = [], onAfterRecord = null,
+  logTag, extraLogFields = {}, spendKeys = [], onAfterRecord = null, multiplierOverride,
 }) {
   if (!usage) return null;
-  const bill = computeBilledKRW(env, usage, priceTier);
+  const bill = computeBilledKRW(env, usage, priceTier, multiplierOverride);
   console.log(JSON.stringify({
     tag: logTag, guid, tier, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
     multiplier: bill.multiplier, ts: new Date().toISOString(), ...extraLogFields,
@@ -18067,6 +18137,24 @@ function _klawFlatFeeForClaimAmount(claimAmountKrw) {
   return bucket ? { tier: bucket.tier, fee: bucket.fee } : null;
 }
 
+// ── K-Law 베타 기간 한정 정액과금 일시중단 (2026-09-02 신설 — 주피터 지시) ──
+// 2026-12-31까지 위 KLAW_CLAIM_FEE_SCHEDULE 기반 사건단위 정액과금을
+// 중단하고, 판결 생성(case flow, STEP0~C) 포함 K-Law의 모든 호출을
+// 일반 상담과 동일하게 토큰 종량제(handleKlawRelay ④ 경로)로 청구한다.
+// 다만 배수는 전역 공유 배수(BILLING_MULTIPLIER_DEFAULT=10)를 그대로
+// 쓰지 않고 K-Law 전용 베타 배수를 쓴다: flash 10배(전역과 동일)·
+// pro 5배(전역보다 낮음 — pro 원가 자체가 높아 절대 마진액은 충분하다는
+// 판단 + 베타 기간 이용 장벽을 낮추려는 목적). 베타 종료 시각 이후에는
+// _klawBetaUsageBillingActive()가 항상 false가 되어, 기존 정액과금
+// 로직(2026-08-11/12/13 구현분)이 코드 변경 없이 자동 복원된다 —
+// handleKlawRelay 안에서 _klawFlatFee/_klawIsCaseFlow를 계산할 때 이
+// 플래그로 감싸는 방식으로 구현(아래 참고).
+const KLAW_BETA_USAGE_BILLING_UNTIL = '2026-12-31T23:59:59+09:00';
+const KLAW_BETA_MULTIPLIER = { 'klaw-flash': 10, 'klaw-pro': 5 };
+function _klawBetaUsageBillingActive() {
+  return Date.now() <= new Date(KLAW_BETA_USAGE_BILLING_UNTIL).getTime();
+}
+
 function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
 const _KLAW_KV_TTL = 60 * 60 * 30; // 30시간 — 자정 경계 안전마진을 둔 1일 리셋
 
@@ -18180,8 +18268,41 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, case_id, currentLocation } = body || {};
+  let { guid, tier, messages, max_tokens, stream, step_cycle, claim_amount_krw, case_id, currentLocation, phone_verify_token } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  // ── 전화번호 로그인 필수화 (2026-09-02 신설 — 주피터 지시) ──
+  // K-Law는 지금까지 인증 없는 공개 MVP였다(3549행 위쪽 주석 참고 — 고팡
+  // wallet 서명 인증 체계 밖의 별도 guid/기기지문). 이제 실사용량만큼
+  // 실제 GDC가 차감되므로, "본인 확인 없는 guid로 과금·잔액조회"가
+  // 가능한 구멍을 막아야 한다. handleUserGdcBalance(2026-09-01)와 같은
+  // phone_verify_token(SMS 인증 완료 증명, /biz/phone-otp-verify 발급)을
+  // 요구해, 토큰이 가리키는 전화번호의 profiles 레코드에서 guid를 직접
+  // 도출한다 — 클라이언트가 body에 실어 보낸 guid는 신뢰하지 않고
+  // 버린다(그대로 두면 "전화번호는 내 것, guid는 남의 것"으로 남의
+  // GDC 잔고를 차감시키는 경로가 열린다).
+  // ★ 프런트엔드(klaw 저장소 webapp.html)가 아직 OTP 로그인 UI를 붙이기
+  // 전에 이 백엔드만 먼저 배포하면 모든 K-Law 호출이 401로 막힌다 —
+  // 반드시 프런트 로그인 플로우와 함께 배포할 것.
+  const _klawAuth = await _resolveGuidFromPhoneVerifyToken(env, phone_verify_token);
+  if (!_klawAuth.ok) {
+    const status = _klawAuth.code === 'PROFILE_NOT_FOUND' ? 404
+      : _klawAuth.code === 'SECRET_NOT_SET' ? 500
+      : _klawAuth.code === 'L1_ERROR' ? 502
+      : (_klawAuth.code === 'MISSING_FIELD' || _klawAuth.code === 'TOKEN_MALFORMED') ? 400
+      : 401; // TOKEN_EXPIRED, TOKEN_INVALID
+    const code = _klawAuth.code === 'MISSING_FIELD' ? 'LOGIN_REQUIRED' : _klawAuth.code;
+    const message = _klawAuth.code === 'MISSING_FIELD' ? '전화번호 로그인이 필요합니다.' : _klawAuth.message;
+    // ★ 2026-09-02 사고실험으로 발견 — _err()는 메시지를 detail 필드에
+    // 담아 반환하는데, 클라이언트(webapp.html _klawCall/_pumpSSE)는
+    // data.message를 먼저 읽는다(handleKlawRelay의 다른 _err() 호출들도
+    // 같은 불일치가 있지만 이번 범위 밖 — 전역 수정은 별도 검토 필요).
+    // 로그인 게이트는 사용자가 즉시 이해해야 하는 안내문이라, 기존
+    // GDC_INSUFFICIENT_BALANCE 응답과 같은 방식으로 message 필드를
+    // 직접 넣어 반환한다.
+    return new Response(JSON.stringify({ ok: false, error: code, message }), { status, headers: corsHeaders });
+  }
+  guid = _klawAuth.guid; // 인증된 전화번호 소유자의 guid로 강제 치환
 
   // ── 티어 기반 요금 면제 — 2026-08-14 현재 해당 없음 ──
   // 2026-08-11엔 "전문직 티어(all_services_free)"가 있어 K-Law를 무료로
@@ -18255,8 +18376,13 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   // 이미 결제된 사건의 무료 재생성·전문직 무료 티어는 여기서 과금이
   // 일어나지 않으므로 잔액 확인도 건너뛴다 — DeepSeek 호출 자체를
   // 막을 이유가 없다(비용 없는 재생성은 계속 즉시 되어야 함).
-  const _klawFlatFee = step_cycle ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
-  const _klawIsCaseFlow = !!case_id;
+  // 2026-09-02 — 베타 기간 동안은 정액과금 자체를 계산하지 않는다(항상
+  // null/false). 그러면 아래 사전 잔액 확인 블록과 settleKlaw의 사건단위
+  // 분기가 자연스럽게 전부 스킵되어, 모든 호출(STEP0~C 포함)이 ④ 토큰
+  // 종량제 경로로 흐른다 — KLAW_BETA_USAGE_BILLING_UNTIL 선언부 주석 참고.
+  const _klawBetaActive = _klawBetaUsageBillingActive();
+  const _klawFlatFee = (!_klawBetaActive && step_cycle) ? _klawFlatFeeForClaimAmount(claim_amount_krw) : null;
+  const _klawIsCaseFlow = !_klawBetaActive && !!case_id;
   if (!_klawFreeTier && step_cycle && _klawFlatFee) {
     let _klawWillChargeNow = true; // 기본: 이번 호출에서 실제로 청구 시도됨
     if (_klawIsCaseFlow) {
@@ -18316,6 +18442,10 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   }
 
   const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
+  // 2026-09-02 — 베타 기간에는 전역 공유 배수(_billingMultiplier) 대신
+  // K-Law 전용 베타 배수를 쓴다(flash 10배·pro 5배). 베타 종료 후에는
+  // undefined가 되어 computeBilledKRW가 기존처럼 전역 배수로 자동 복귀.
+  const _klawMultiplierOverride = _klawBetaActive ? KLAW_BETA_MULTIPLIER[tierKey] : undefined;
   const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
   // 2026-08-11 신설, 2026-08-12 수정(사고실험으로 발견 — 아래 settleKlaw
   // 주석 참고) — 이번 호출이 "정액 판결 생성 사건 흐름"에 속하는지 판정.
@@ -18473,6 +18603,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
       spendKeys: [userKey, globalKey], onAfterRecord: settleKlaw(usage),
+      multiplierOverride: _klawMultiplierOverride,
     }));
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
@@ -18484,6 +18615,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
       guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage: data.usage,
       logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
       spendKeys: [userKey, globalKey], onAfterRecord: settleKlaw(data.usage),
+      multiplierOverride: _klawMultiplierOverride,
     });
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
