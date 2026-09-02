@@ -296,6 +296,20 @@ body {
 .doc-link-row .doc-link { margin-top: 0; }
 .doc-link-inline { margin-top: 0; vertical-align: baseline; }
 
+/* ── DOC-LINK 강조판(더 크게 + 깜빡임, 2026-09-02 추가) ── */
+.doc-link-emphasis {
+  font-size: 16px;
+  font-weight: 700;
+  animation: doc-link-blink 1.4s ease-in-out infinite;
+}
+@keyframes doc-link-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doc-link-emphasis { animation: none; }
+}
+
 /* ── NAV ── */
 /* ── SIDEBAR ── */
 :root { --sb-w: 52px; --sb-expanded: 220px; }
@@ -1258,7 +1272,7 @@ document.addEventListener("DOMContentLoaded", function () {
       <p><strong>혼디</strong> 심정은 이해가지만, 권하지는 않습니다. 작년에도 와이프에게 걸려서...</p>
       <p class="last"><strong>주피터</strong> "아, 됐고."</p>
     </div>
-    <a class="doc-link" href="./highlights/all-examples.html" target="_blank" rel="noopener">전체 예시 보기 — 주피터의 하루<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    <a class="doc-link doc-link-emphasis" href="./highlights/all-examples.html" target="_blank" rel="noopener">전체 예시 보기 — 주피터의 하루<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
   </div>
 </section>
 
