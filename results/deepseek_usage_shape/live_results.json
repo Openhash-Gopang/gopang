@@ -1,0 +1,198 @@
+[
+  {
+    "model": "deepseek-v4-flash",
+    "call_1": {
+      "status": 200,
+      "elapsed_s": 1.28,
+      "body": {
+        "id": "d98389ca-607e-4584-97ca-7c527cc1c6e2",
+        "object": "chat.completion",
+        "created": 1788318140,
+        "model": "deepseek-v4-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "사용자가 한 단어로만 답"
+            },
+            "logprobs": null,
+            "finish_reason": "length"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1430,
+          "completion_tokens": 10,
+          "total_tokens": 1440,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 10
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 1430
+        },
+        "system_fingerprint": "a26a7955944dc5c60445bff77fac9c8e"
+      }
+    },
+    "call_2": {
+      "status": 200,
+      "elapsed_s": 0.84,
+      "body": {
+        "id": "5b9c0858-d965-41b5-a4eb-1d651953c380",
+        "object": "chat.completion",
+        "created": 1788318142,
+        "model": "deepseek-v4-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "1.  **Analyze the Request**:\n"
+            },
+            "logprobs": null,
+            "finish_reason": "length"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1430,
+          "completion_tokens": 10,
+          "total_tokens": 1440,
+          "prompt_tokens_details": {
+            "cached_tokens": 1408
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 10
+          },
+          "prompt_cache_hit_tokens": 1408,
+          "prompt_cache_miss_tokens": 22
+        },
+        "system_fingerprint": "a26a7955944dc5c60445bff77fac9c8e"
+      }
+    },
+    "checks": {
+      "call_1_http_ok": true,
+      "call_2_http_ok": true,
+      "usage_fields_present": true,
+      "missing_fields": [],
+      "cache_hit_on_repeat": true
+    },
+    "usage_call_2": {
+      "prompt_tokens": 1430,
+      "completion_tokens": 10,
+      "total_tokens": 1440,
+      "prompt_tokens_details": {
+        "cached_tokens": 1408
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 10
+      },
+      "prompt_cache_hit_tokens": 1408,
+      "prompt_cache_miss_tokens": 22
+    },
+    "computed_krw_call_2": 0.0147,
+    "verdict": "LIVE-PASS",
+    "reason": "필드 정상 + 캐시 히트 확인됨 (2차 호출 예상 청구액 0.0147원)"
+  },
+  {
+    "model": "deepseek-v4-pro",
+    "call_1": {
+      "status": 200,
+      "elapsed_s": 1.47,
+      "body": {
+        "id": "36354c44-8402-4ecf-9373-2485330de3b0",
+        "object": "chat.completion",
+        "created": 1788318143,
+        "model": "deepseek-v4-pro",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "우리는 사용자 지시를 따라야 합니다"
+            },
+            "logprobs": null,
+            "finish_reason": "length"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1430,
+          "completion_tokens": 10,
+          "total_tokens": 1440,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 10
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 1430
+        },
+        "system_fingerprint": "a307abda487cd1b463329ccb945ce396"
+      }
+    },
+    "call_2": {
+      "status": 200,
+      "elapsed_s": 1.32,
+      "body": {
+        "id": "7efeb524-4e44-41ff-8872-1659f4c38d1b",
+        "object": "chat.completion",
+        "created": 1788318145,
+        "model": "deepseek-v4-pro",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "우리는 스모크테스트 두 번째 호"
+            },
+            "logprobs": null,
+            "finish_reason": "length"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1430,
+          "completion_tokens": 10,
+          "total_tokens": 1440,
+          "prompt_tokens_details": {
+            "cached_tokens": 1408
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 10
+          },
+          "prompt_cache_hit_tokens": 1408,
+          "prompt_cache_miss_tokens": 22
+        },
+        "system_fingerprint": "a307abda487cd1b463329ccb945ce396"
+      }
+    },
+    "checks": {
+      "call_1_http_ok": true,
+      "call_2_http_ok": true,
+      "usage_fields_present": true,
+      "missing_fields": [],
+      "cache_hit_on_repeat": true
+    },
+    "usage_call_2": {
+      "prompt_tokens": 1430,
+      "completion_tokens": 10,
+      "total_tokens": 1440,
+      "prompt_tokens_details": {
+        "cached_tokens": 1408
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 10
+      },
+      "prompt_cache_hit_tokens": 1408,
+      "prompt_cache_miss_tokens": 22
+    },
+    "computed_krw_call_2": 0.058,
+    "verdict": "LIVE-PASS",
+    "reason": "필드 정상 + 캐시 히트 확인됨 (2차 호출 예상 청구액 0.058원)"
+  }
+]
