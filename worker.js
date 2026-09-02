@@ -2382,6 +2382,13 @@ const VALID_PDV_SCOPES = [
   // source로 등록한다. 이름 충돌 여부(SVC_ALIAS·UNIVERSAL_FORCED_K_SERVICES·
   // DEPT_TASK_TAXONOMY) 확인 완료 — 'kforeign'은 어디에도 선점돼 있지 않음.
   'kforeign',
+  // 2026-09-02 추가 — K-Job(prompts/k-job_v1_0.md) 신설에 따른 신규 scope.
+  // 이력서·자기소개서·면접 피드백·지원 현황(K-Report 단계)은 kassetdecl과
+  // 마찬가지로 특정 정부기관 리포터가 없는 시민 본인 직접 기록 데이터라
+  // 신규 scope가 필요하다. 이름 충돌 없음 확인(SVC_ALIAS·
+  // UNIVERSAL_FORCED_K_SERVICES·VALID_PDV_SCOPES 전수 grep) — 'kplan'은
+  // 이미 제주도청 기획실 scope로 선점돼 있어 'kjob'을 그대로 사용.
+  'kjob',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
@@ -2419,6 +2426,10 @@ const SCOPE_MIN_LEVEL = {
   // 완성 후 이 값들과 함께 일괄 L2로 올리는 걸 권장(개별로 올리면 "왜 얘만
   // L2였지" 식의 비일관성이 생긴다).
   kforeign:'L1',
+  // 2026-09-02 추가 — 이력서·자소서·면접 피드백·지원 현황은 자산·소득만큼
+  // 민감하지는 않되(kassetdecl:L2) 본인 확인은 필요한 수준 — kschool·kstock과
+  // 동일하게 L1로 등록.
+  kjob:'L1',
 };
 // 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
 // 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
@@ -2439,6 +2450,7 @@ const SCOPE_SOURCE_MAP = {
   ktourism:['jeju'], ktransport:['jeju'], kwelfare:['jeju'],
   kassetdecl:null, // pdv_general과 동일 — 정부기관 리포터 없음, 시민 본인이 직접 기록
   kforeign:['jeju'], // 여권과 위임사무 — 다른 jeju발 국가위임사무 scope와 동일 패턴
+  kjob:null, // kassetdecl과 동일 — 정부기관 리포터 없음, 시민 본인이 직접 기록
 };
 
 const SVC_ALIAS = {
