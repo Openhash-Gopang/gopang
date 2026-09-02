@@ -13,8 +13,19 @@
 > 상속하며 여기서 다시 쓰지 않는다.
 >
 > **설계 단계 문서**: K-Plan(prompts/k-plan_v1_0.md)·K-Watch
-> (prompts/k-watch_v1_0.md)와 동일한 구성으로 설계된 초안이며, 아직
-> 실제 서비스 백엔드에 연결되지 않았다.
+> (prompts/k-watch_v1_0.md)와 동일한 구성으로 설계된 초안이다.
+> **과금 경로만 연결됨(2026-09-02)** — `worker.js`의
+> `UNIVERSAL_FORCED_K_SERVICES`에 `service_id: 'kjob'`이 등록되어,
+> 클라이언트가 이 값으로 표준 hondi-chat 경로(`callDeepSeek`)를 호출하면
+> UNIVERSAL-INTEGRITY·UNIVERSAL-common이 서버측에서 강제 주입되고,
+> 과금은 K-Biz/K-Law식 전용 일일 한도 없이 구독자 기본 요금제와 동일한
+> 방식(무료 한도 `_gdcFreeQuotaGate` 소진 후 GDC 정산, flash/pro는
+> `_resolveServerTier`가 매 요청 복잡도로 자동 판단)으로 처리된다.
+> **아직 없는 것**: 이 문서 자체를 클라이언트가 매니페스트로 가져와
+> system 메시지에 조립하는 부분(desktop.html/webapp.html/call-ai.js
+> wiring), PDV 등록(`SVC_ALIAS`/`REGISTERED_SERVICES`에 `kjob` 미등록 —
+> K-Plan·K-Watch와 동일하게 이번 범위 밖), 공개 소개 페이지
+> (`pages/k-services.html`) 반영.
 >
 > **범위 — 2026-09-02 주피터님 지시**: 최초 버전은 **구직자 개인**만
 > 대상으로 한다(이력서·자기소개서 작성, 면접 준비, 구직 활동 관리).
@@ -215,6 +226,12 @@ K-Job은 그 목표가 이미 구직 활동으로 확정된 뒤 실제 실행을
 
 ## 변경 이력
 
+- v1.0 개정 (2026-09-02): `worker.js`의 `UNIVERSAL_FORCED_K_SERVICES`에
+  `'kjob'` 등록 — K-Biz/K-Law식 전용 relay(일일 KRW 캡·독자 요금 티어)를
+  새로 만들지 않고 hondi-chat 기본 경로를 공유하도록 결정(주피터님
+  지시: 구독자 기본 요금제와 동일하게, flash/pro 두 단계 자동 판단
+  유지). 클라이언트 측 매니페스트 조립·UI wiring·PDV 등록은 여전히
+  미완.
 - v1.0 (2026-09-02): 신설. K-Plan(prompts/k-plan_v1_0.md)·
   K-Watch(prompts/k-watch_v1_0.md)와 동일한 구성으로 설계 — AC
   표준 5단계 체인(K-Intent~K-Report)을 그대로 차용하고, K-Report

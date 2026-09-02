@@ -17930,6 +17930,16 @@ const UNIVERSAL_FORCED_K_SERVICES = new Set([
   // 전혀 상속되지 않고 있었다. kcommerce_seller는 kcommerce(이미
   // 목록에 있음)의 판매자 등록 변형이라 원래도 있어야 했다.
   'ktelecom', 'kestate', 'kcommerce_seller', 'ksearch', 'kqna', 'kusers',
+  // 2026-09-02 추가 — K-Job(prompts/k-job_v1_0.md, 구직자 개인용 구직
+  // 보조 AI) 신설. 주피터님 지시로 K-Biz/K-Law식 전용 relay(일일 KRW
+  // 캡·독자 요금 티어)를 새로 만들지 않고, hondi-chat 기본 경로
+  // (callDeepSeek)를 그대로 공유한다 — 무료 한도(_gdcFreeQuotaGate)
+  // 소진 후 GDC 유료 전환, flash/pro는 _resolveServerTier가 매 요청
+  // 복잡도로 자동 판단 — 즉 구독자 기본 요금제와 완전히 동일한 과금.
+  // ※ 'kplan'은 이미 다른 용도(제주도청 기획실 PDV scope, VALID_PDV_SCOPES
+  // 참조)로 선점돼 있어 K-Job에는 재사용하지 않고 'kjob'을 새로 쓴다 —
+  // K-Plan(AI 서비스, prompts/k-plan_v1_0.md)과도 이름이 겹치지 않는다.
+  'kjob',
 ]);
 
 async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
