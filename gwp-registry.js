@@ -340,6 +340,53 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 2026-09-02 신설 — K-Plan/K-Watch/K-Job. 셋 다 K-Telecom/K-Estate와
+  // 동일한 이유(별도 저장소·도메인이 필요 없는 SP)로 type:'switch'로
+  // 등록한다. sp_key는 SP-NN 번호 체계가 아니라 k-business와 동일한
+  // 평문 이름 — sp-catalog.json에 새로 등록한 'k-plan'·'k-watch'·
+  // 'k-job' 키를 그대로 쓴다(call-ai.js SWITCH_SP_LOADERS·
+  // _loadKPlanSP/_loadKWatchSP/_loadKJobSP 참조). 셋 다 SP 문서
+  // 자체에 "아직 실제 서비스 백엔드에 연결되지 않았다"고 명시돼 있던
+  // 설계 단계 문서였으나, 이 커밋으로 AC 오케스트레이션(이 레지스트리
+  // + call-ai.js 태그 디스패치)에 처음 편입된다 — 여전히 status는
+  // 'active'로 등록하되(핸들러가 실제로 동작하므로), K-Report 이후
+  // PDV 기록·집단 학습 저장소 같은 후속 기능은 각 SP 문서의 "아직
+  // 없는 것" 절 그대로 미구현임을 유의.
+  {
+    id: 'kplan', name: 'K-Plan', category: 'UTL',
+    type: 'switch',
+    sp_key: 'k-plan',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '목표를 PDV와 종합해 최적 경로를 설계 — 요청을 곧바로 실행하지 않고 그 요청이 목표 달성의 최선 경로인지부터 평가한다. 다른 실행형 모듈과 달리 대안이 있으면 반드시 제시.',
+    triggers: [
+      '계획을 세워줘','목표를 이루고 싶어','동선 짜줘','스케줄 짜줘',
+      '출장 준비','일정 계획','최선의 방법이 뭘까','어떻게 접근해야',
+    ],
+  },
+  {
+    id: 'kwatch', name: 'K-Watch', category: 'JUS',
+    type: 'switch',
+    sp_key: 'k-watch',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '시민 신고 접수·대응 기관 선정·진행상황 공개. 범죄뿐 아니라 생활 속 부당·불법·편법·오염·파손까지 — 사용자가 제3자로서 목격한 사건 전담(본인 위험 신호 자동감지는 kpolice 소관).',
+    triggers: [
+      '신고하고 싶어','목격했어','불법주차','쓰레기 무단투기',
+      '동물 사체','배기가스 심한 차','고객 차별','진상 고객',
+      '끼어들기 신고',
+    ],
+  },
+  {
+    id: 'kjob', name: 'K-Job', category: 'ECO',
+    type: 'switch',
+    sp_key: 'k-job',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '이력서·자기소개서 작성, 면접 준비, 채용 공고 매칭, 지원 현황 관리 — 구직자 개인용(K-Biz식 업종별 세분화 없이 단일 공통 모듈). 사업주 측 채용·인사·노무 대행은 미포함.',
+    triggers: [
+      '이력서','자기소개서','자소서','면접 준비','모의 면접',
+      '채용 공고','구직','취업 상담','지원 현황','이직 준비',
+    ],
+  },
+
   // ── 2026-07-12 신설 — "판매자로 등록하고 싶다"(중고거래 매물 등록,
   // 서비스 제공자 등록 등)는 kcommerce(구매자용 webapp.html)로 보내면
   // 안 된다 — 250건 사고실험(#48/#57)에서 발견. 조사 결과 판매자 등록

@@ -12,8 +12,8 @@
 > 세션연속성 등, `UNIVERSAL-common.md` — 매니페스트 경유 최신본)을 그대로
 > 상속하며 여기서 다시 쓰지 않는다.
 >
-> **설계 단계 문서**: K-Plan(prompts/k-plan_v1_0.md)·K-Watch
-> (prompts/k-watch_v1_0.md)와 동일한 구성으로 설계된 초안이다.
+> **설계 단계 문서**: K-Plan(SP-TREE-REGISTRY 참조)·K-Watch
+> (SP-TREE-REGISTRY 참조)와 동일한 구성으로 설계된 초안이다.
 > **과금 경로만 연결됨(2026-09-02)** — `worker.js`의
 > `UNIVERSAL_FORCED_K_SERVICES`에 `service_id: 'kjob'`이 등록되어,
 > 클라이언트가 이 값으로 표준 hondi-chat 경로(`callDeepSeek`)를 호출하면

@@ -185,8 +185,8 @@ SP 문서 자체는 정적 텍스트라, 그런 인프라 없이는 "항상 최�
 
 - **근거 우선**: 답할 때는 desktop.html의 "🛠 개발자 문서" 메뉴,
   `docs/MANUAL_INDEX.html`(개발 문서 전체 지도), 각 기능의 정본
-  SP 파일(예: K-Plan은 `prompts/k-plan_v1_0.md`, K-Watch는
-  `prompts/k-watch_v1_0.md`)에서 근거를 찾아 인용한다. 추측으로
+  SP 파일(예: K-Plan·K-Watch는 SP-TREE-REGISTRY 참조)에서 근거를
+  찾아 인용한다. 추측으로
   채우지 않는다.
 - **정본 우선순위**: 같은 주제를 다루는 문서가 여러 개면, 각
   문서 자체에 명시된 정본(Source of Truth) 표기를 따른다 — 파생
